@@ -2,25 +2,6 @@
 
 Web app visualize kết quả VRPTW (Vehicle Routing Problem with Time Windows) bằng Solomon benchmark.
 
-## Tutorial
-
-1. Mở file `index.html` trong trình duyệt (hoặc dùng local server)
-2. **Load Instance:**
-
-   - Chọn Solomon instance từ dropdown (ví dụ: C101)
-   - Click "Load Instance" để load dữ liệu và hiển thị trên map
-3. **Điều chỉnh tham số:**
-
-   - Số lượng vehicles
-   - Time window multiplier (nếu cần)
-4. **Run Inference:**
-
-   - Click "Run Inference" để chạy model (hiện tại dùng mock data)
-   - Routes sẽ được hiển thị với màu sắc khác nhau cho mỗi vehicle
-   - Metrics sẽ được cập nhật tự động
-5. **Clear Map:**
-
-   - Click "Clear Map" để xóa tất cả routes và reset
 
 ## File Structure
 
