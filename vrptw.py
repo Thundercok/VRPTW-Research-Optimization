@@ -75,6 +75,7 @@ BKS: Dict[str, Dict[str, float]] = {
 
 def default_data_path() -> str:
     candidates = [
+        "./data/Solomon", 
         "/kaggle/input/vrptw-benchmark-datasets/data/Solomon",
         "/kaggle/input/datasets/senju14/vrptw-benchmark-datasets/data/Solomon",
         "/content/vrptw-benchmark/data/Solomon",
@@ -1625,6 +1626,68 @@ RLALNSSolver = RLALNSSolver   # alias for transfer pipeline compatibility
 print(f'✅ RLALNSSolver (DDQN-ALNS v11) ready.')
 print(f'   Action space: {N_D}D × {N_R}R = {N_ACTIONS} pairs (no roulette wheel)')
 print(f'   State: 14D per-iteration | Reward: dense hierarchical')
+
+
+class PlateauController:
+    def __init__(self, cfg: Config):
+        self.cfg = cfg
+        self.q = QNet(cfg.ctrl_state_dim, len(MODES), cfg.ctrl_hidden).to(DEVICE)
+        self.q_t = QNet(cfg.ctrl_state_dim, len(MODES), cfg.ctrl_hidden).to(DEVICE)
+        self.q_t.load_state_dict(self.q.state_dict())
+        self.opt = optim.Adam(self.q.parameters(), lr=cfg.ctrl_lr)
+        self.buf = ReplayBuffer(cfg.ctrl_buffer)
+        self.eps = cfg.ctrl_eps_start
+        self.step = 0
+
+    def reset(self) -> None:
+        self.eps = self.cfg.ctrl_eps_start
+
+    def act(self, state: np.ndarray, force_default: bool = False) -> int:
+        if force_default:
+            return MODE_DEFAULT
+        if random.random() < self.eps:
+            return random.randrange(len(MODES))
+        with torch.no_grad():
+            q_values = self.q(torch.tensor(state).unsqueeze(0).to(DEVICE))[0]
+        return int(q_values.argmax().item())
+
+    def observe(
+        self,
+        state: np.ndarray,
+        action: int,
+        reward: float,
+        next_state: np.ndarray,
+        done: float = 0.0,
+    ) -> None:
+        self.buf.push(state, action, reward, next_state, done)
+
+    def train_step(self) -> None:
+        self.step += 1
+        if len(self.buf) < self.cfg.ctrl_batch:
+            return
+
+        s, a, r, ns, d = self.buf.sample(self.cfg.ctrl_batch)
+        s = torch.tensor(s).to(DEVICE)
+        a = torch.tensor(a, dtype=torch.long).to(DEVICE)
+        r = torch.tensor(r).to(DEVICE)
+        ns = torch.tensor(ns).to(DEVICE)
+        d = torch.tensor(d).to(DEVICE)
+
+        qp = self.q(s).gather(1, a.unsqueeze(1)).squeeze(1)
+        with torch.no_grad():
+            an = self.q(ns).argmax(1)
+            qn = self.q_t(ns).gather(1, an.unsqueeze(1)).squeeze(1)
+            target = r + self.cfg.ctrl_gamma * qn * (1 - d)
+
+        loss = F.mse_loss(qp, target)
+        self.opt.zero_grad()
+        loss.backward()
+        nn.utils.clip_grad_norm_(self.q.parameters(), 1.0)
+        self.opt.step()
+
+        if self.step % self.cfg.ctrl_target_freq == 0:
+            self.q_t.load_state_dict(self.q.state_dict())
+        self.eps = max(self.cfg.ctrl_eps_end, self.eps * self.cfg.ctrl_eps_decay)
 
 
 # ── Keep PlateauHybridSolver alias for ALNS++ / ScheduledHybridSolver ─────
