@@ -1,0 +1,82 @@
+{
+  "experiment": {
+    "name": "VRPTW RL-ALNS Benchmark",
+    "device": "cuda",
+    "pytorch": "2.10.0+cu128",
+    "datasets": ["RC1", "RC2"],
+    "instances_per_set": 8,
+    "runs_per_instance": 5
+  },
+
+  "algorithms": ["ALNS", "DQN", "RL-ALNS"],
+
+  "summary": {
+    "RC1": {
+      "ALNS": {
+        "nv": 12.7,
+        "td": 1401.6,
+        "gap_percent": 1.6,
+        "stability": "high",
+        "time_sec": 82.3
+      },
+      "DQN": {
+        "nv": 34.5,
+        "td": 4069.4,
+        "gap_percent": 199.8,
+        "stability": "low",
+        "time_sec": 1.5
+      },
+      "RL-ALNS": {
+        "nv": 12.5,
+        "td": 1405.0,
+        "gap_percent": 2.0,
+        "stability": "very_high",
+        "time_sec": 140.0
+      }
+    }
+  },
+
+  "insights": [
+    {
+      "title": "RL-ALNS improves stability",
+      "detail": "RL-ALNS achieves near-zero variance in NV across most instances"
+    },
+    {
+      "title": "DQN alone fails",
+      "detail": "Pure DQN produces 150%–400% worse total distance"
+    },
+    {
+      "title": "ALNS remains strong baseline",
+      "detail": "ALNS consistently achieves near-optimal solutions with lower runtime"
+    },
+    {
+      "title": "RL adds consistency, not large improvement",
+      "detail": "RL-ALNS slightly improves or matches ALNS but mainly reduces variance"
+    }
+  ],
+
+  "instance_samples": {
+    "RC101": {
+      "ALNS": { "nv": 15.4, "td": 1691.9, "gap": -0.3 },
+      "DQN": { "nv": 44.2, "td": 4244.7, "gap": 150.1 },
+      "RL-ALNS": { "nv": 15.0, "td": 1699.5, "gap": 0.2 }
+    },
+    "RC102": {
+      "ALNS": { "nv": 13.8, "td": 1522.3, "gap": -2.1 },
+      "DQN": { "nv": 37.4, "td": 4226.9, "gap": 171.9 },
+      "RL-ALNS": { "nv": 13.8, "td": 1525.3, "gap": -1.9 }
+    },
+    "RC108": {
+      "ALNS": { "nv": 11.0, "td": 1161.1, "gap": 1.9 },
+      "DQN": { "nv": 27.6, "td": 3905.0, "gap": 242.6 },
+      "RL-ALNS": { "nv": 11.0, "td": 1148.7, "gap": 0.8 }
+    }
+  },
+
+  "conclusion": {
+    "best_algorithm": "ALNS / RL-ALNS (tie)",
+    "worst_algorithm": "DQN",
+    "key_takeaway": "RL is useful for guiding ALNS but not as a standalone solver",
+    "research_claim": "Hybrid RL-ALNS improves robustness rather than raw performance"
+  }
+}
