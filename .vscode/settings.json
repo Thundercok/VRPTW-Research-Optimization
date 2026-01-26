@@ -1,5 +1,9 @@
 {
     "chat.tools.terminal.autoApprove": {
         "c:/D/Github/VRPTW-Research-Optimization/.venv/Scripts/python.exe": true
+    },
+    "workbench.colorCustomizations": {
+        "minimap.background": "#00000000",
+        "scrollbar.shadow": "#00000000"
     }
 }

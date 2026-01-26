@@ -1,0 +1,630 @@
+8.0s 1 0.00s - Debugger warning: It seems that frozen modules are being used, which may
+8.0s 2 0.00s - make the debugger miss breakpoints. Please pass -Xfrozen_modules=off
+8.0s 3 0.00s - to python to disable frozen modules.
+8.0s 4 0.00s - Note: Debugging will proceed. Set PYDEVD_DISABLE_FILE_VALIDATION=1 to disable this validation.
+8.8s 5 0.00s - Debugger warning: It seems that frozen modules are being used, which may
+8.8s 6 0.00s - make the debugger miss breakpoints. Please pass -Xfrozen_modules=off
+8.8s 7 0.00s - to python to disable frozen modules.
+8.8s 8 0.00s - Note: Debugging will proceed. Set PYDEVD_DISABLE_FILE_VALIDATION=1 to disable this validation.
+18.6s 9 ✅ Device : cuda
+18.6s 10 ✅ Config ready — v9.8 (alns_iter=2000, hybrid_iter=2000, n_runs=4, ctrl_start=24, route_reduce_start=72, patience=600, modes=5, MILP_OK=True)
+18.9s 11 ✅ Data & Solution model ready.
+18.9s 12 ✅ Operators: 6D × 4R = 24 combos
+19.0s 13 ✅ Helpers ready.
+19.0s 14 ✅ RoutePool + LocalSearch ready.
+19.0s 15 ✅ QNet ready.
+19.1s 16 ✅ ALNS ready.
+19.1s 17 ✅ DQN solver ready.
+19.2s 18 ✅ PlateauHybridSolver (DDQN-ALNS) v9.8 ready.
+19.2s 19 ✅ Benchmark runner ready.
+19.2s 20 ✅ Transfer learning pipeline ready.
+19.3s 21 ✅ Stats & table utilities ready.
+19.3s 22 ✅ Visualisation ready.
+19.4s 23 Smoke test — RC101
+19.4s 24 
+37.8s 25 ALNS               nv= 16  cost=  1683.8  BKS TD -0.8% NV +2  (18.3s)
+77.4s 26 DDQN-ALNS          nv= 15  cost=  1707.1  BKS TD +0.6% NV +1  (39.6s)
+77.4s 27 
+77.4s 28 ✓ Smoke test passed — v9.8
+129.4s 29 ✅ Convergence plot → /kaggle/working/convergence_RC101.png
+129.6s 30 Total: 48 combos × 4 runs
+129.6s 31 ============================================================
+129.6s 32 
+129.6s 33 [RC101] ALNS
+228.3s 34 run 1/4: nv=15 cost=1702.9 (98.6s) | wall 0.03h
+322.8s 35 run 2/4: nv=16 cost=1682.0 (94.5s) | wall 0.05h
+400.4s 36 run 3/4: nv=15 cost=1720.7 (77.6s) | wall 0.08h
+489.1s 37 run 4/4: nv=15 cost=1730.8 (88.7s) | wall 0.10h
+489.1s 38 → nv=15.2±0.4  td=1709.1±18.6  gap=+0.7%
+489.1s 39 
+489.1s 40 [RC101] ALNS+
+583.0s 41 run 1/4: nv=15 cost=1642.9 (93.9s) | wall 0.13h
+685.6s 42 run 2/4: nv=15 cost=1695.5 (102.6s) | wall 0.15h
+793.6s 43 run 3/4: nv=15 cost=1694.5 (107.9s) | wall 0.18h
+877.7s 44 run 4/4: nv=15 cost=1695.4 (84.1s) | wall 0.21h
+877.7s 45 → nv=15.0±0.0  td=1682.1±22.6  gap=-0.9%
+877.7s 46 
+877.7s 47 [RC101] DDQN-ALNS
+975.0s 48 run 1/4: nv=15 cost=1642.9 (97.3s) | wall 0.23h
+1087.6s 49 run 2/4: nv=15 cost=1695.5 (112.6s) | wall 0.27h
+1199.1s 50 run 3/4: nv=15 cost=1698.9 (111.5s) | wall 0.30h
+1291.1s 51 run 4/4: nv=15 cost=1697.2 (92.1s) | wall 0.32h
+1291.1s 52 → nv=15.0±0.0  td=1683.6±23.5  gap=-0.8%
+1291.1s 53 
+1291.1s 54 [RC102] ALNS
+1393.7s 55 run 1/4: nv=14 cost=1505.4 (102.6s) | wall 0.35h
+1492.9s 56 run 2/4: nv=14 cost=1511.2 (99.2s) | wall 0.38h
+1584.2s 57 run 3/4: nv=14 cost=1512.1 (91.3s) | wall 0.40h
+1684.6s 58 run 4/4: nv=13 cost=1511.4 (100.4s) | wall 0.43h
+1684.6s 59 → nv=13.8±0.4  td=1510.0±2.7  gap=-2.9%
+1684.6s 60 
+1684.6s 61 [RC102] ALNS+
+1797.9s 62 run 1/4: nv=13 cost=1506.3 (113.3s) | wall 0.46h
+1887.5s 63 run 2/4: nv=13 cost=1502.9 (89.6s) | wall 0.49h
+1993.4s 64 run 3/4: nv=13 cost=1526.7 (105.9s) | wall 0.52h
+2096.2s 65 run 4/4: nv=14 cost=1486.5 (102.9s) | wall 0.55h
+2096.2s 66 → nv=13.2±0.4  td=1505.6±14.3  gap=-3.2%
+2096.2s 67 
+2096.2s 68 [RC102] DDQN-ALNS
+2203.2s 69 run 1/4: nv=13 cost=1511.2 (107.0s) | wall 0.58h
+2303.7s 70 run 2/4: nv=13 cost=1504.2 (100.5s) | wall 0.60h
+2408.9s 71 run 3/4: nv=13 cost=1534.4 (105.2s) | wall 0.63h
+2515.1s 72 run 4/4: nv=14 cost=1486.5 (106.2s) | wall 0.66h
+2515.1s 73 → nv=13.2±0.4  td=1509.0±17.2  gap=-2.9%
+2515.1s 74 
+2515.1s 75 [RC103] ALNS
+2615.9s 76 run 1/4: nv=12 cost=1329.4 (100.8s) | wall 0.69h
+2701.9s 77 run 2/4: nv=12 cost=1352.2 (85.9s) | wall 0.71h
+2807.6s 78 run 3/4: nv=12 cost=1357.2 (105.7s) | wall 0.74h
+2927.0s 79 run 4/4: nv=12 cost=1344.4 (119.4s) | wall 0.78h
+2927.0s 80 → nv=12.0±0.0  td=1345.8±10.5  gap=+6.7%
+2927.0s 81 
+2927.0s 82 [RC103] ALNS+
+3040.1s 83 run 1/4: nv=12 cost=1311.9 (113.1s) | wall 0.81h
+3130.6s 84 run 2/4: nv=11 cost=1284.5 (90.5s) | wall 0.83h
+3233.4s 85 run 3/4: nv=11 cost=1271.4 (102.8s) | wall 0.86h
+3367.3s 86 run 4/4: nv=12 cost=1330.4 (133.9s) | wall 0.90h
+3367.3s 87 → nv=11.5±0.5  td=1299.5±23.1  gap=+3.0%
+3367.3s 88 
+3367.3s 89 [RC103] DDQN-ALNS
+3482.2s 90 run 1/4: nv=12 cost=1314.6 (114.9s) | wall 0.93h
+3577.7s 91 run 2/4: nv=11 cost=1286.1 (95.5s) | wall 0.96h
+3679.9s 92 run 3/4: nv=11 cost=1271.4 (102.1s) | wall 0.99h
+3809.2s 93 run 4/4: nv=12 cost=1330.4 (129.3s) | wall 1.02h
+3809.2s 94 → nv=11.5±0.5  td=1300.6±23.2  gap=+3.1%
+3809.2s 95 
+3809.2s 96 [RC104] ALNS
+3906.1s 97 run 1/4: nv=10 cost=1175.9 (96.9s) | wall 1.05h
+3995.1s 98 run 2/4: nv=10 cost=1191.0 (89.0s) | wall 1.07h
+4106.5s 99 run 3/4: nv=10 cost=1160.8 (111.4s) | wall 1.10h
+4204.3s 100 run 4/4: nv=10 cost=1153.2 (97.8s) | wall 1.13h
+4204.3s 101 → nv=10.0±0.0  td=1170.2±14.5  gap=+3.1%
+4204.3s 102 
+4204.3s 103 [RC104] ALNS+
+4303.3s 104 run 1/4: nv=10 cost=1144.2 (99.0s) | wall 1.16h
+4395.1s 105 run 2/4: nv=10 cost=1159.1 (91.8s) | wall 1.18h
+4491.2s 106 run 3/4: nv=10 cost=1149.0 (96.1s) | wall 1.21h
+4603.5s 107 run 4/4: nv=10 cost=1147.6 (112.3s) | wall 1.24h
+4603.5s 108 → nv=10.0±0.0  td=1150.0±5.6  gap=+1.3%
+4603.5s 109 
+4603.5s 110 [RC104] DDQN-ALNS
+4703.0s 111 run 1/4: nv=10 cost=1144.2 (99.5s) | wall 1.27h
+4806.5s 112 run 2/4: nv=10 cost=1159.1 (103.5s) | wall 1.30h
+4903.1s 113 run 3/4: nv=10 cost=1149.0 (96.6s) | wall 1.33h
+5015.3s 114 run 4/4: nv=10 cost=1137.4 (112.2s) | wall 1.36h
+5015.3s 115 → nv=10.0±0.0  td=1147.4±7.9  gap=+1.1%
+5015.3s 116 
+5015.3s 117 💾 Checkpoint saved (4/16 instances, 1.36h elapsed) → /kaggle/working/benchmark_checkpoint.csv
+5015.3s 118 
+5015.3s 119 [RC105] ALNS
+5114.9s 120 run 1/4: nv=15 cost=1583.4 (99.6s) | wall 1.38h
+5240.3s 121 run 2/4: nv=15 cost=1583.4 (125.4s) | wall 1.42h
+5334.3s 122 run 3/4: nv=14 cost=1601.8 (94.0s) | wall 1.45h
+5455.2s 123 run 4/4: nv=14 cost=1606.4 (120.9s) | wall 1.48h
+5455.2s 124 → nv=14.5±0.5  td=1593.8±10.5  gap=-2.2%
+5455.2s 125 
+5455.2s 126 [RC105] ALNS+
+5572.8s 127 run 1/4: nv=15 cost=1563.7 (117.6s) | wall 1.51h
+5683.8s 128 run 2/4: nv=14 cost=1661.4 (111.0s) | wall 1.54h
+5797.2s 129 run 3/4: nv=14 cost=1563.4 (113.4s) | wall 1.57h
+5904.8s 130 run 4/4: nv=14 cost=1581.2 (107.6s) | wall 1.60h
+5904.8s 131 → nv=14.2±0.4  td=1592.4±40.5  gap=-2.3%
+5904.8s 132 
+5904.8s 133 [RC105] DDQN-ALNS
+6028.7s 134 run 1/4: nv=15 cost=1563.7 (123.9s) | wall 1.64h
+6136.0s 135 run 2/4: nv=15 cost=1561.6 (107.3s) | wall 1.67h
+6243.0s 136 run 3/4: nv=14 cost=1558.0 (107.0s) | wall 1.70h
+6355.7s 137 run 4/4: nv=14 cost=1581.2 (112.7s) | wall 1.73h
+6355.7s 138 → nv=14.5±0.5  td=1566.1±8.9  gap=-3.9%
+6355.7s 139 
+6355.7s 140 [RC106] ALNS
+6472.5s 141 run 1/4: nv=13 cost=1417.7 (116.8s) | wall 1.76h
+6615.7s 142 run 2/4: nv=12 cost=1431.5 (143.2s) | wall 1.80h
+6742.8s 143 run 3/4: nv=13 cost=1429.6 (127.1s) | wall 1.84h
+6875.9s 144 run 4/4: nv=13 cost=1403.6 (133.1s) | wall 1.87h
+6875.9s 145 → nv=12.8±0.4  td=1420.6±11.2  gap=-0.3%
+6875.9s 146 
+6875.9s 147 [RC106] ALNS+
+7002.2s 148 run 1/4: nv=13 cost=1408.3 (126.3s) | wall 1.91h
+7124.8s 149 run 2/4: nv=13 cost=1408.0 (122.6s) | wall 1.94h
+7258.7s 150 run 3/4: nv=12 cost=1434.5 (133.9s) | wall 1.98h
+7384.2s 151 run 4/4: nv=13 cost=1394.6 (125.4s) | wall 2.02h
+7384.2s 152 → nv=12.8±0.4  td=1411.4±14.5  gap=-0.9%
+7384.2s 153 
+7384.2s 154 [RC106] DDQN-ALNS
+7503.1s 155 run 1/4: nv=13 cost=1408.3 (118.9s) | wall 2.05h
+7631.2s 156 run 2/4: nv=13 cost=1408.0 (128.1s) | wall 2.08h
+7761.6s 157 run 3/4: nv=12 cost=1482.6 (130.4s) | wall 2.12h
+7902.2s 158 run 4/4: nv=13 cost=1413.5 (140.5s) | wall 2.16h
+7902.2s 159 → nv=12.8±0.4  td=1428.1±31.5  gap=+0.2%
+7902.2s 160 
+7902.2s 161 [RC107] ALNS
+8031.9s 162 run 1/4: nv=12 cost=1264.4 (129.7s) | wall 2.20h
+8150.3s 163 run 2/4: nv=12 cost=1280.5 (118.5s) | wall 2.23h
+8269.2s 164 run 3/4: nv=11 cost=1282.2 (118.8s) | wall 2.26h
+8407.0s 165 run 4/4: nv=12 cost=1294.9 (137.9s) | wall 2.30h
+8407.0s 166 → nv=11.8±0.4  td=1280.5±10.8  gap=+4.1%
+8407.0s 167 
+8407.0s 168 [RC107] ALNS+
+8539.0s 169 run 1/4: nv=12 cost=1262.6 (132.0s) | wall 2.34h
+8656.9s 170 run 2/4: nv=11 cost=1261.4 (117.8s) | wall 2.37h
+8775.4s 171 run 3/4: nv=11 cost=1284.3 (118.6s) | wall 2.40h
+8906.4s 172 run 4/4: nv=12 cost=1261.4 (130.9s) | wall 2.44h
+8906.4s 173 → nv=11.5±0.5  td=1267.4±9.8  gap=+3.0%
+8906.4s 174 
+8906.4s 175 [RC107] DDQN-ALNS
+9041.4s 176 run 1/4: nv=12 cost=1262.6 (135.0s) | wall 2.48h
+9162.0s 177 run 2/4: nv=11 cost=1261.4 (120.6s) | wall 2.51h
+9289.4s 178 run 3/4: nv=12 cost=1254.2 (127.4s) | wall 2.54h
+9418.3s 179 run 4/4: nv=11 cost=1304.5 (128.9s) | wall 2.58h
+9418.3s 180 → nv=11.5±0.5  td=1270.7±19.8  gap=+3.3%
+9418.3s 181 
+9418.3s 182 [RC108] ALNS
+9567.1s 183 run 1/4: nv=11 cost=1164.3 (148.9s) | wall 2.62h
+9709.6s 184 run 2/4: nv=11 cost=1165.7 (142.5s) | wall 2.66h
+9855.0s 185 run 3/4: nv=11 cost=1159.7 (145.4s) | wall 2.70h
+10003.9s 186 run 4/4: nv=10 cost=1167.4 (149.0s) | wall 2.74h
+10003.9s 187 → nv=10.8±0.4  td=1164.3±2.9  gap=+2.1%
+10003.9s 188 
+10003.9s 189 [RC108] ALNS+
+10137.3s 190 run 1/4: nv=11 cost=1154.7 (133.4s) | wall 2.78h
+10253.5s 191 run 2/4: nv=11 cost=1154.8 (116.1s) | wall 2.81h
+10376.8s 192 run 3/4: nv=11 cost=1141.0 (123.3s) | wall 2.85h
+10519.6s 193 run 4/4: nv=11 cost=1157.4 (142.8s) | wall 2.89h
+10519.6s 194 → nv=11.0±0.0  td=1152.0±6.4  gap=+1.1%
+10519.6s 195 
+10519.6s 196 [RC108] DDQN-ALNS
+10653.9s 197 run 1/4: nv=11 cost=1154.1 (134.3s) | wall 2.92h
+10776.0s 198 run 2/4: nv=11 cost=1154.8 (122.1s) | wall 2.96h
+10903.1s 199 run 3/4: nv=11 cost=1141.0 (127.1s) | wall 2.99h
+11068.0s 200 run 4/4: nv=11 cost=1158.0 (164.8s) | wall 3.04h
+11068.0s 201 → nv=11.0±0.0  td=1152.0±6.5  gap=+1.1%
+11068.0s 202 
+11068.0s 203 💾 Checkpoint saved (8/16 instances, 3.04h elapsed) → /kaggle/working/benchmark_checkpoint.csv
+11068.0s 204 
+11068.0s 205 [RC201] ALNS
+11183.5s 206 run 1/4: nv=4 cost=1518.7 (115.5s) | wall 3.07h
+11290.5s 207 run 2/4: nv=4 cost=1477.8 (107.1s) | wall 3.10h
+11404.1s 208 run 3/4: nv=4 cost=1459.4 (113.6s) | wall 3.13h
+11522.3s 209 run 4/4: nv=4 cost=1521.8 (118.2s) | wall 3.16h
+11522.3s 210 → nv=4.0±0.0  td=1494.4±26.7  gap=+6.2%
+11522.3s 211 
+11522.3s 212 [RC201] ALNS+
+11644.9s 213 run 1/4: nv=4 cost=1444.5 (122.6s) | wall 3.20h
+11755.7s 214 run 2/4: nv=4 cost=1492.1 (110.8s) | wall 3.23h
+11873.7s 215 run 3/4: nv=4 cost=1416.8 (118.1s) | wall 3.26h
+11996.5s 216 run 4/4: nv=4 cost=1440.8 (122.8s) | wall 3.30h
+11996.5s 217 → nv=4.0±0.0  td=1448.6±27.3  gap=+3.0%
+11996.5s 218 
+11996.5s 219 [RC201] DDQN-ALNS
+12120.5s 220 run 1/4: nv=4 cost=1444.5 (124.0s) | wall 3.33h
+12229.8s 221 run 2/4: nv=4 cost=1483.6 (109.3s) | wall 3.36h
+12352.1s 222 run 3/4: nv=4 cost=1416.8 (122.3s) | wall 3.40h
+12479.7s 223 run 4/4: nv=4 cost=1440.8 (127.6s) | wall 3.43h
+12479.7s 224 → nv=4.0±0.0  td=1446.4±23.9  gap=+2.8%
+12479.7s 225 
+12479.7s 226 [RC202] ALNS
+12590.7s 227 run 1/4: nv=4 cost=1240.3 (111.0s) | wall 3.46h
+12698.9s 228 run 2/4: nv=4 cost=1216.3 (108.2s) | wall 3.49h
+12799.3s 229 run 3/4: nv=4 cost=1193.3 (100.4s) | wall 3.52h
+12893.9s 230 run 4/4: nv=4 cost=1213.6 (94.6s) | wall 3.55h
+12893.9s 231 → nv=4.0±0.0  td=1215.9±16.7  gap=-11.0%
+12893.9s 232 
+12893.9s 233 [RC202] ALNS+
+13012.6s 234 run 1/4: nv=4 cost=1219.0 (118.7s) | wall 3.58h
+13117.7s 235 run 2/4: nv=4 cost=1271.1 (105.1s) | wall 3.61h
+13231.5s 236 run 3/4: nv=4 cost=1249.8 (113.7s) | wall 3.64h
+13344.8s 237 run 4/4: nv=4 cost=1274.4 (113.3s) | wall 3.67h
+13344.8s 238 → nv=4.0±0.0  td=1253.6±22.1  gap=-8.2%
+13344.8s 239 
+13344.8s 240 [RC202] DDQN-ALNS
+13461.8s 241 run 1/4: nv=4 cost=1219.0 (116.9s) | wall 3.70h
+13569.8s 242 run 2/4: nv=4 cost=1266.3 (108.0s) | wall 3.73h
+13682.4s 243 run 3/4: nv=4 cost=1249.8 (112.6s) | wall 3.76h
+13792.0s 244 run 4/4: nv=4 cost=1270.7 (109.7s) | wall 3.80h
+13792.0s 245 → nv=4.0±0.0  td=1251.5±20.3  gap=-8.4%
+13792.0s 246 
+13792.0s 247 [RC203] ALNS
+13867.2s 248 run 1/4: nv=3 cost=1106.0 (75.2s) | wall 3.82h
+13944.3s 249 run 2/4: nv=3 cost=1106.0 (77.1s) | wall 3.84h
+14020.2s 250 run 3/4: nv=3 cost=1101.0 (75.9s) | wall 3.86h
+14101.0s 251 run 4/4: nv=3 cost=1110.3 (80.8s) | wall 3.88h
+14101.0s 252 → nv=3.0±0.0  td=1105.8±3.3  gap=+5.3%
+14101.0s 253 
+14101.0s 254 [RC203] ALNS+
+14232.3s 255 run 1/4: nv=3 cost=1108.9 (131.3s) | wall 3.92h
+14328.9s 256 run 2/4: nv=3 cost=1076.5 (96.5s) | wall 3.94h
+14427.4s 257 run 3/4: nv=4 cost=999.8 (98.6s) | wall 3.97h
+14520.4s 258 run 4/4: nv=4 cost=1020.5 (92.9s) | wall 4.00h
+14520.4s 259 → nv=3.5±0.5  td=1051.4±43.5  gap=+0.2%
+14520.4s 260 
+14520.4s 261 [RC203] DDQN-ALNS
+14643.5s 262 run 1/4: nv=3 cost=1108.9 (123.2s) | wall 4.03h
+14738.1s 263 run 2/4: nv=3 cost=1076.5 (94.5s) | wall 4.06h
+14851.2s 264 run 3/4: nv=3 cost=1237.9 (113.2s) | wall 4.09h
+14944.4s 265 run 4/4: nv=3 cost=1199.3 (93.2s) | wall 4.12h
+14944.4s 266 → nv=3.0±0.0  td=1155.6±65.4  gap=+10.1%
+14944.4s 267 
+14944.4s 268 [RC204] ALNS
+15010.6s 269 run 1/4: nv=3 cost=805.2 (66.2s) | wall 4.13h
+15075.8s 270 run 2/4: nv=3 cost=845.5 (65.2s) | wall 4.15h
+15137.2s 271 run 3/4: nv=3 cost=823.8 (61.4s) | wall 4.17h
+15202.4s 272 run 4/4: nv=3 cost=839.2 (65.1s) | wall 4.19h
+15202.4s 273 → nv=3.0±0.0  td=828.4±15.5  gap=+3.8%
+15202.4s 274 
+15202.4s 275 [RC204] ALNS+
+15296.3s 276 run 1/4: nv=3 cost=818.7 (94.0s) | wall 4.21h
+15368.8s 277 run 2/4: nv=3 cost=834.4 (72.6s) | wall 4.23h
+15443.6s 278 run 3/4: nv=3 cost=850.5 (74.7s) | wall 4.25h
+15542.4s 279 run 4/4: nv=3 cost=841.5 (98.8s) | wall 4.28h
+15542.4s 280 → nv=3.0±0.0  td=836.3±11.6  gap=+4.7%
+15542.4s 281 
+15542.4s 282 [RC204] DDQN-ALNS
+15631.2s 283 run 1/4: nv=3 cost=818.7 (88.8s) | wall 4.31h
+15711.8s 284 run 2/4: nv=3 cost=828.4 (80.6s) | wall 4.33h
+15787.5s 285 run 3/4: nv=3 cost=850.5 (75.7s) | wall 4.35h
+15881.1s 286 run 4/4: nv=3 cost=840.0 (93.6s) | wall 4.38h
+15881.1s 287 → nv=3.0±0.0  td=834.4±12.0  gap=+4.5%
+15881.1s 288 
+15881.1s 289 💾 Checkpoint saved (12/16 instances, 4.38h elapsed) → /kaggle/working/benchmark_checkpoint.csv
+15881.1s 290 
+15881.1s 291 [RC205] ALNS
+15981.4s 292 run 1/4: nv=4 cost=1346.6 (100.3s) | wall 4.40h
+16083.3s 293 run 2/4: nv=4 cost=1312.1 (101.9s) | wall 4.43h
+16171.7s 294 run 3/4: nv=4 cost=1363.2 (88.5s) | wall 4.46h
+16273.3s 295 run 4/4: nv=4 cost=1334.3 (101.5s) | wall 4.48h
+16273.3s 296 → nv=4.0±0.0  td=1339.0±18.6  gap=+3.2%
+16273.3s 297 
+16273.3s 298 [RC205] ALNS+
+16378.9s 299 run 1/4: nv=4 cost=1331.4 (105.6s) | wall 4.51h
+16487.3s 300 run 2/4: nv=4 cost=1336.3 (108.4s) | wall 4.54h
+16595.1s 301 run 3/4: nv=4 cost=1333.5 (107.8s) | wall 4.57h
+16690.0s 302 run 4/4: nv=4 cost=1349.3 (94.9s) | wall 4.60h
+16690.0s 303 → nv=4.0±0.0  td=1337.6±6.9  gap=+3.1%
+16690.0s 304 
+16690.0s 305 [RC205] DDQN-ALNS
+16796.9s 306 run 1/4: nv=4 cost=1336.7 (106.9s) | wall 4.63h
+16910.3s 307 run 2/4: nv=4 cost=1336.3 (113.4s) | wall 4.66h
+17019.5s 308 run 3/4: nv=4 cost=1333.5 (109.3s) | wall 4.69h
+17115.7s 309 run 4/4: nv=4 cost=1349.3 (96.2s) | wall 4.72h
+17115.7s 310 → nv=4.0±0.0  td=1338.9±6.1  gap=+3.2%
+17115.7s 311 
+17115.7s 312 [RC206] ALNS
+17223.2s 313 run 1/4: nv=3 cost=1184.9 (107.5s) | wall 4.75h
+17322.1s 314 run 2/4: nv=4 cost=1113.6 (98.9s) | wall 4.78h
+17433.2s 315 run 3/4: nv=3 cost=1160.3 (111.0s) | wall 4.81h
+17534.7s 316 run 4/4: nv=4 cost=1145.8 (101.5s) | wall 4.83h
+17534.7s 317 → nv=3.5±0.5  td=1151.2±25.8  gap=+0.4%
+17534.7s 318 
+17534.7s 319 [RC206] ALNS+
+17644.0s 320 run 1/4: nv=3 cost=1265.7 (109.4s) | wall 4.87h
+17734.5s 321 run 2/4: nv=4 cost=1112.7 (90.5s) | wall 4.89h
+17838.7s 322 run 3/4: nv=3 cost=1260.6 (104.1s) | wall 4.92h
+17942.9s 323 run 4/4: nv=4 cost=1089.4 (104.2s) | wall 4.95h
+17942.9s 324 → nv=3.5±0.5  td=1182.1±81.5  gap=+3.1%
+17942.9s 325 
+17942.9s 326 [RC206] DDQN-ALNS
+18054.1s 327 run 1/4: nv=3 cost=1147.4 (111.2s) | wall 4.98h
+18144.9s 328 run 2/4: nv=4 cost=1117.3 (90.9s) | wall 5.00h
+18249.5s 329 run 3/4: nv=4 cost=1113.9 (104.6s) | wall 5.03h
+18354.1s 330 run 4/4: nv=4 cost=1089.4 (104.5s) | wall 5.06h
+18354.1s 331 → nv=3.8±0.4  td=1117.0±20.6  gap=-2.6%
+18354.1s 332 
+18354.1s 333 [RC207] ALNS
+18441.9s 334 run 1/4: nv=3 cost=1085.2 (87.9s) | wall 5.09h
+18533.4s 335 run 2/4: nv=4 cost=1028.7 (91.4s) | wall 5.11h
+18622.3s 336 run 3/4: nv=4 cost=1051.4 (89.0s) | wall 5.14h
+18715.5s 337 run 4/4: nv=3 cost=1095.4 (93.1s) | wall 5.16h
+18715.5s 338 → nv=3.5±0.5  td=1065.2±26.6  gap=+0.4%
+18715.5s 339 
+18715.5s 340 [RC207] ALNS+
+18814.3s 341 run 1/4: nv=4 cost=1026.5 (98.9s) | wall 5.19h
+18931.9s 342 run 2/4: nv=3 cost=1160.2 (117.5s) | wall 5.22h
+19031.4s 343 run 3/4: nv=4 cost=1026.5 (99.5s) | wall 5.25h
+19135.1s 344 run 4/4: nv=4 cost=1027.5 (103.6s) | wall 5.28h
+19135.1s 345 → nv=3.8±0.4  td=1060.2±57.8  gap=-0.1%
+19135.1s 346 
+19135.1s 347 [RC207] DDQN-ALNS
+19233.7s 348 run 1/4: nv=4 cost=1026.5 (98.6s) | wall 5.31h
+19361.7s 349 run 2/4: nv=3 cost=1154.3 (128.0s) | wall 5.34h
+19453.3s 350 run 3/4: nv=4 cost=1023.1 (91.7s) | wall 5.37h
+19553.4s 351 run 4/4: nv=4 cost=1027.5 (100.1s) | wall 5.40h
+19553.4s 352 → nv=3.8±0.4  td=1057.8±55.7  gap=-0.3%
+19553.4s 353 
+19553.4s 354 [RC208] ALNS
+19657.7s 355 run 1/4: nv=3 cost=872.5 (104.3s) | wall 5.42h
+19757.0s 356 run 2/4: nv=3 cost=880.9 (99.4s) | wall 5.45h
+19865.6s 357 run 3/4: nv=3 cost=850.8 (108.6s) | wall 5.48h
+19974.7s 358 run 4/4: nv=3 cost=839.2 (109.1s) | wall 5.51h
+19974.7s 359 → nv=3.0±0.0  td=860.8±16.6  gap=+4.0%
+19974.7s 360 
+19974.7s 361 [RC208] ALNS+
+20098.6s 362 run 1/4: nv=3 cost=848.0 (123.9s) | wall 5.55h
+20205.2s 363 run 2/4: nv=3 cost=854.1 (106.6s) | wall 5.58h
+20299.4s 364 run 3/4: nv=3 cost=842.7 (94.1s) | wall 5.60h
+20456.8s 365 run 4/4: nv=3 cost=832.4 (157.5s) | wall 5.65h
+20456.8s 366 → nv=3.0±0.0  td=844.3±8.0  gap=+1.9%
+20456.8s 367 
+20456.8s 368 [RC208] DDQN-ALNS
+20574.5s 369 run 1/4: nv=3 cost=848.0 (117.7s) | wall 5.68h
+20687.1s 370 run 2/4: nv=3 cost=848.0 (112.6s) | wall 5.71h
+20784.4s 371 run 3/4: nv=3 cost=842.7 (97.3s) | wall 5.74h
+20891.7s 372 run 4/4: nv=3 cost=843.2 (107.2s) | wall 5.77h
+20891.7s 373 → nv=3.0±0.0  td=845.5±2.5  gap=+2.1%
+20891.7s 374 
+20891.7s 375 💾 Checkpoint saved (16/16 instances, 5.77h elapsed) → /kaggle/working/benchmark_checkpoint.csv
+20891.7s 376 
+20891.7s 377 ✅ Benchmark complete in 5.77h → /kaggle/working/benchmark_clean.csv
+20891.7s 378 
+20891.7s 379 --------------------------------------------------------------------------------------
+20891.7s 380 DS  Algorithm             NV   +/-   vsBKS        TD     +/-    Gap%    OT%    Time
+20891.7s 381 --------------------------------------------------------------------------------------
+20891.7s 382 RC1 ALNS               12.59  0.33   +1.09   1399.29   10.20  +1.41%  100.0  112.8s
+20891.7s 383 RC1 ALNS+              12.41  0.29   +0.91   1382.54   17.09  +0.14%  100.0  112.9s
+20891.7s 384 RC1 DDQN-ALNS          12.44  0.30   +0.94   1382.20   17.33  +0.14%  100.0  116.1s
+20891.7s 385 RC2 ALNS                3.50  0.12   +0.25   1132.60   18.73  +1.54%  100.0   94.7s
+20891.7s 386 RC2 ALNS+               3.59  0.18   +0.34   1126.75   32.32  +0.96%  100.0  106.6s
+20891.7s 387 RC2 DDQN-ALNS           3.56  0.11   +0.31   1130.89   25.82  +1.43%  100.0  105.7s
+20891.7s 388 --------------------------------------------------------------------------------------
+20891.7s 389 
+20891.7s 390 ───────────────────────────────────────────────────────────────────────────────────
+20891.7s 391 DS  Algorithm         NV   ±   vsBKS       TD     ±   Gap% CV_NV CV_TD   OT%   Time
+20891.7s 392 ───────────────────────────────────────────────────────────────────────────────────
+20891.7s 393 RC1 ALNS            12.6 0.3    +1.1   1399.3  10.2  +1.4%   2.6   0.7 100.0 112.8s
+20891.7s 394 RC1 ALNS+           12.4 0.3    +0.9   1382.5  17.1  +0.1%   2.3   1.2 100.0 112.9s
+20891.7s 395 RC1 DDQN-ALNS       12.4 0.3    +0.9   1382.2  17.3  +0.1%   2.4   1.2 100.0 116.1s
+20891.7s 396 ───────────────────────────────────────────────────────────────────────────────────
+20891.7s 397 RC2 ALNS             3.5 0.1    +0.2   1132.6  18.7  +1.5%   3.6   1.7 100.0  94.7s
+20891.7s 398 RC2 ALNS+            3.6 0.2    +0.3   1126.8  32.3  +1.0%   5.0   2.9 100.0 106.6s
+20891.7s 399 RC2 DDQN-ALNS        3.6 0.1    +0.3   1130.9  25.8  +1.4%   2.9   2.3 100.0 105.7s
+20891.7s 400 ───────────────────────────────────────────────────────────────────────────────────
+20891.7s 401 CV = std/mean×100%. Negative Gap%: solution beats BKS distance.
+20891.7s 402 
+20891.7s 403 ── Wilcoxon signed-rank — per-instance-mean (n=instances) ──
+20891.7s 404 Comparison                  DS   Metric        W        p  Sig      Better
+20891.7s 405 ──────────────────────────────────────────────────────────────────────
+20891.7s 406 DDQN-ALNS vs ALNS+     RC1  Gap%       11.0   0.6875    —   DDQN-ALNS
+20891.7s 407 DDQN-ALNS vs ALNS+     RC1  NV_mean     0.0   1.0000    —       ALNS+
+20891.7s 408 DDQN-ALNS vs ALNS+     RC2  Gap%       11.0   0.3828    —       ALNS+
+20891.7s 409 DDQN-ALNS vs ALNS+     RC2  NV_mean     1.0   1.0000    —   DDQN-ALNS
+20891.7s 410 DDQN-ALNS vs ALNS      RC1  Gap%        2.0   0.0234    ✅   DDQN-ALNS
+20891.9s 411 DDQN-ALNS vs ALNS      RC1  NV_mean     2.0   0.2500    —   DDQN-ALNS
+20891.9s 412 DDQN-ALNS vs ALNS      RC2  Gap%       16.0   0.8438    —   DDQN-ALNS
+20891.9s 413 DDQN-ALNS vs ALNS      RC2  NV_mean     0.0   0.5000    —        ALNS
+20891.9s 414 ──────────────────────────────────────────────────────────────────────
+20891.9s 415 ✅ = p < 0.05
+20891.9s 416 
+20891.9s 417 ── Wilcoxon signed-rank — per-run paired (n=instances×n_runs) ──
+20891.9s 418 Comparison                  DS       n        W        p  Sig  Effect%      Better
+20891.9s 419 ──────────────────────────────────────────────────────────────────────────────
+20891.9s 420 DDQN-ALNS vs ALNS+     RC1     32     50.0   0.3520    —  +0.025%   DDQN-ALNS
+20891.9s 421 DDQN-ALNS vs ALNS+     RC2     32     50.0   0.5701    —  -0.366%       ALNS+
+20891.9s 422 DDQN-ALNS vs ALNS      RC1     32     75.0   0.0002    ✅  +1.237%   DDQN-ALNS
+20891.9s 423 DDQN-ALNS vs ALNS      RC2     32    222.0   0.4429    —  +0.151%   DDQN-ALNS
+20891.9s 424 ──────────────────────────────────────────────────────────────────────────────
+20891.9s 425 Effect% = mean cost improvement of "Better" over other.
+20891.9s 426 ✅ = p < 0.05  |  per-run n = 16 instances × 4 runs = 64 pairs/family
+20892.9s 427 ✅ dashboard.png saved → /kaggle/working/dashboard.png
+20893.2s 428 📚 Training transfer model (sequential curriculum)...
+20893.2s 429 Epoch 1/2
+20982.3s 430 [1:1] RC104: nv=10, gap=+0.8%
+21074.6s 431 [1:2] RC105: nv=14, gap=-4.0%
+21191.2s 432 [1:3] RC107: nv=12, gap=+1.9%
+21326.2s 433 [1:4] RC108: nv=10, gap=+3.4%
+21414.7s 434 [1:5] RC103: nv=11, gap=+4.3%
+21519.0s 435 [1:6] RC106: nv=13, gap=-2.6%
+21598.2s 436 [1:7] RC101: nv=15, gap=-3.1%
+21687.3s 437 [1:8] RC102: nv=14, gap=-3.7%
+21687.3s 438 Epoch 2/2
+21798.8s 439 [2:1] RC107: nv=11, gap=+2.3%
+21924.6s 440 [2:2] RC108: nv=11, gap=+0.7%
+22026.3s 441 [2:3] RC105: nv=15, gap=-5.0%
+22128.6s 442 [2:4] RC104: nv=10, gap=+1.6%
+22232.1s 443 [2:5] RC102: nv=14, gap=-4.9%
+22345.8s 444 [2:6] RC106: nv=13, gap=-1.2%
+22432.8s 445 [2:7] RC103: nv=11, gap=+5.6%
+22507.4s 446 [2:8] RC101: nv=15, gap=+0.4%
+22507.4s 447 
+22507.4s 448 ✅ Transfer model saved → /kaggle/working/rl_alns_transfer.safetensors
+22507.4s 449 Total: 8 combos × 4 runs
+22507.4s 450 ============================================================
+22507.4s 451 
+22507.4s 452 [RC201] DDQN-ALNS★
+22618.7s 453 run 1/4: nv=4 cost=1444.5 (111.3s) | wall 0.03h
+22717.8s 454 run 2/4: nv=4 cost=1492.1 (99.1s) | wall 0.06h
+22824.2s 455 run 3/4: nv=4 cost=1416.8 (106.4s) | wall 0.09h
+22936.1s 456 run 4/4: nv=4 cost=1440.8 (111.9s) | wall 0.12h
+22936.1s 457 → nv=4.0±0.0  td=1448.6±27.3  gap=+3.0%
+22936.1s 458 
+22936.1s 459 [RC202] DDQN-ALNS★
+23046.5s 460 run 1/4: nv=4 cost=1219.0 (110.4s) | wall 0.15h
+23143.6s 461 run 2/4: nv=4 cost=1271.1 (97.1s) | wall 0.18h
+23247.3s 462 run 3/4: nv=4 cost=1249.8 (103.8s) | wall 0.21h
+23350.4s 463 run 4/4: nv=4 cost=1274.4 (103.1s) | wall 0.23h
+23350.4s 464 → nv=4.0±0.0  td=1253.6±22.1  gap=-8.2%
+23350.4s 465 
+23350.4s 466 [RC203] DDQN-ALNS★
+23462.2s 467 run 1/4: nv=3 cost=1108.9 (111.8s) | wall 0.27h
+23545.3s 468 run 2/4: nv=3 cost=1076.5 (83.1s) | wall 0.29h
+23631.1s 469 run 3/4: nv=4 cost=999.8 (85.8s) | wall 0.31h
+23720.1s 470 run 4/4: nv=4 cost=1020.5 (89.1s) | wall 0.34h
+23720.1s 471 → nv=3.5±0.5  td=1051.4±43.5  gap=+0.2%
+23720.1s 472 
+23720.1s 473 [RC204] DDQN-ALNS★
+23811.2s 474 run 1/4: nv=3 cost=818.7 (91.1s) | wall 0.36h
+23880.7s 475 run 2/4: nv=3 cost=834.4 (69.5s) | wall 0.38h
+23952.5s 476 run 3/4: nv=3 cost=850.5 (71.8s) | wall 0.40h
+24044.8s 477 run 4/4: nv=3 cost=841.5 (92.3s) | wall 0.43h
+24044.8s 478 → nv=3.0±0.0  td=836.3±11.6  gap=+4.7%
+24044.8s 479 
+24044.8s 480 💾 Checkpoint saved (4/8 instances, 0.43h elapsed) → /kaggle/working/benchmark_checkpoint.csv
+24044.8s 481 
+24044.8s 482 [RC205] DDQN-ALNS★
+24145.2s 483 run 1/4: nv=4 cost=1331.4 (100.4s) | wall 0.45h
+24246.2s 484 run 2/4: nv=4 cost=1336.3 (100.9s) | wall 0.48h
+24347.2s 485 run 3/4: nv=4 cost=1333.5 (101.0s) | wall 0.51h
+24435.8s 486 run 4/4: nv=4 cost=1349.3 (88.7s) | wall 0.54h
+24435.8s 487 → nv=4.0±0.0  td=1337.6±6.9  gap=+3.1%
+24435.8s 488 
+24435.8s 489 [RC206] DDQN-ALNS★
+24536.0s 490 run 1/4: nv=3 cost=1265.7 (100.2s) | wall 0.56h
+24618.8s 491 run 2/4: nv=4 cost=1112.7 (82.8s) | wall 0.59h
+24715.2s 492 run 3/4: nv=3 cost=1260.6 (96.4s) | wall 0.61h
+24810.1s 493 run 4/4: nv=4 cost=1089.4 (94.9s) | wall 0.64h
+24810.1s 494 → nv=3.5±0.5  td=1182.1±81.5  gap=+3.1%
+24810.1s 495 
+24810.1s 496 [RC207] DDQN-ALNS★
+24899.7s 497 run 1/4: nv=4 cost=1026.5 (89.6s) | wall 0.66h
+25004.7s 498 run 2/4: nv=3 cost=1160.2 (105.0s) | wall 0.69h
+25093.2s 499 run 3/4: nv=4 cost=1026.5 (88.5s) | wall 0.72h
+25188.0s 500 run 4/4: nv=4 cost=1027.5 (94.8s) | wall 0.74h
+25188.0s 501 → nv=3.8±0.4  td=1060.2±57.8  gap=-0.1%
+25188.0s 502 
+25188.0s 503 [RC208] DDQN-ALNS★
+25308.7s 504 run 1/4: nv=3 cost=848.0 (120.7s) | wall 0.78h
+25417.2s 505 run 2/4: nv=3 cost=854.1 (108.4s) | wall 0.81h
+25513.4s 506 run 3/4: nv=3 cost=842.7 (96.3s) | wall 0.83h
+25671.2s 507 run 4/4: nv=3 cost=832.4 (158.0s) | wall 0.88h
+25671.2s 508 → nv=3.0±0.0  td=844.3±8.0  gap=+1.9%
+25671.2s 509 
+25671.2s 510 💾 Checkpoint saved (8/8 instances, 0.88h elapsed) → /kaggle/working/benchmark_checkpoint.csv
+25671.2s 511 
+25671.2s 512 ✅ Benchmark complete in 0.88h → /kaggle/working/benchmark_transfer.csv
+25671.2s 513 
+25671.2s 514 ───────────────────────────────────────────────────────────────────────────────────
+25671.2s 515 DS  Algorithm         NV   ±   vsBKS       TD     ±   Gap% CV_NV CV_TD   OT%   Time
+25671.2s 516 ───────────────────────────────────────────────────────────────────────────────────
+25671.2s 517 RC2 ALNS             3.5 0.1    +0.2   1132.6  18.7  +1.5%   3.6   1.7 100.0  94.7s
+25671.2s 518 RC2 ALNS+            3.6 0.2    +0.3   1126.8  32.3  +1.0%   5.0   2.9 100.0 106.6s
+25671.2s 519 RC2 DDQN-ALNS        3.6 0.1    +0.3   1130.9  25.8  +1.4%   2.9   2.3 100.0 105.7s
+25671.2s 520 RC2 DDQN-ALNS★       3.6 0.2    +0.3   1126.8  32.3  +1.0%   5.0   2.9 100.0  98.9s
+25671.2s 521 ───────────────────────────────────────────────────────────────────────────────────
+25671.2s 522 CV = std/mean×100%. Negative Gap%: solution beats BKS distance.
+25671.4s 523 ============================================================
+25671.4s 524 FULL RESULTS TABLE
+25671.4s 525 
+25671.4s 526 ───────────────────────────────────────────────────────────────────────────────────
+25671.4s 527 DS  Algorithm         NV   ±   vsBKS       TD     ±   Gap% CV_NV CV_TD   OT%   Time
+25671.4s 528 ───────────────────────────────────────────────────────────────────────────────────
+25671.4s 529 RC1 ALNS            12.6 0.3    +1.1   1399.3  10.2  +1.4%   2.6   0.7 100.0 112.8s
+25671.4s 530 RC1 ALNS+           12.4 0.3    +0.9   1382.5  17.1  +0.1%   2.3   1.2 100.0 112.9s
+25671.4s 531 RC1 DDQN-ALNS       12.4 0.3    +0.9   1382.2  17.3  +0.1%   2.4   1.2 100.0 116.1s
+25671.4s 532 ───────────────────────────────────────────────────────────────────────────────────
+25671.4s 533 RC2 ALNS             3.5 0.1    +0.2   1132.6  18.7  +1.5%   3.6   1.7 100.0  94.7s
+25671.4s 534 RC2 ALNS+            3.6 0.2    +0.3   1126.8  32.3  +1.0%   5.0   2.9 100.0 106.6s
+25671.4s 535 RC2 DDQN-ALNS        3.6 0.1    +0.3   1130.9  25.8  +1.4%   2.9   2.3 100.0 105.7s
+25671.4s 536 RC2 DDQN-ALNS★       3.6 0.2    +0.3   1126.8  32.3  +1.0%   5.0   2.9 100.0  98.9s
+25671.4s 537 ───────────────────────────────────────────────────────────────────────────────────
+25671.4s 538 CV = std/mean×100%. Negative Gap%: solution beats BKS distance.
+25671.4s 539 
+25671.4s 540 ============================================================
+25671.4s 541 STATISTICAL TESTS
+25671.4s 542 
+25671.4s 543 ── Wilcoxon signed-rank — per-instance-mean (n=instances) ──
+25671.4s 544 Comparison                  DS   Metric        W        p  Sig      Better
+25671.4s 545 ──────────────────────────────────────────────────────────────────────
+25671.4s 546 DDQN-ALNS vs ALNS+     RC1  Gap%       11.0   0.6875    —   DDQN-ALNS
+25671.4s 547 DDQN-ALNS vs ALNS+     RC1  NV_mean     0.0   1.0000    —       ALNS+
+25671.4s 548 DDQN-ALNS vs ALNS+     RC2  Gap%       11.0   0.3828    —       ALNS+
+25671.4s 549 DDQN-ALNS vs ALNS+     RC2  NV_mean     1.0   1.0000    —   DDQN-ALNS
+25671.4s 550 DDQN-ALNS vs ALNS      RC1  Gap%        2.0   0.0234    ✅   DDQN-ALNS
+25671.4s 551 DDQN-ALNS vs ALNS      RC1  NV_mean     2.0   0.2500    —   DDQN-ALNS
+25671.4s 552 DDQN-ALNS vs ALNS      RC2  Gap%       16.0   0.8438    —   DDQN-ALNS
+25671.6s 553 DDQN-ALNS vs ALNS      RC2  NV_mean     0.0   0.5000    —        ALNS
+25671.6s 554 DDQN-ALNS★ vs ALNS+     RC2  Gap%        0.0   1.0000    —       ALNS+
+25671.6s 555 DDQN-ALNS★ vs ALNS+     RC2  NV_mean     0.0   1.0000    —       ALNS+
+25671.6s 556 DDQN-ALNS★ vs ALNS      RC2  Gap%       14.0   0.6406    —  DDQN-ALNS★
+25671.6s 557 DDQN-ALNS★ vs ALNS      RC2  NV_mean     0.0   0.5000    —        ALNS
+25671.6s 558 ──────────────────────────────────────────────────────────────────────
+25671.6s 559 ✅ = p < 0.05
+25671.6s 560 
+25671.6s 561 ── Wilcoxon signed-rank — per-run paired (n=instances×n_runs) ──
+25671.6s 562 Comparison                  DS       n        W        p  Sig  Effect%      Better
+25671.6s 563 ──────────────────────────────────────────────────────────────────────────────
+25671.6s 564 DDQN-ALNS vs ALNS+     RC1     32     50.0   0.3520    —  +0.025%   DDQN-ALNS
+25671.6s 565 DDQN-ALNS vs ALNS+     RC2     32     50.0   0.5701    —  -0.366%       ALNS+
+25671.6s 566 DDQN-ALNS vs ALNS      RC1     32     75.0   0.0002    ✅  +1.237%   DDQN-ALNS
+25671.6s 567 DDQN-ALNS vs ALNS      RC2     32    222.0   0.4429    —  +0.151%   DDQN-ALNS
+25671.6s 568 DDQN-ALNS★ vs ALNS+     RC1    n=0  insufficient data
+25671.6s 569 DDQN-ALNS★ vs ALNS+     RC2   n=32  insufficient data
+25671.6s 570 DDQN-ALNS★ vs ALNS      RC1    n=0  insufficient data
+25671.7s 571 DDQN-ALNS★ vs ALNS      RC2     32    211.0   0.3309    —  +0.519%  DDQN-ALNS★
+25671.7s 572 ──────────────────────────────────────────────────────────────────────────────
+25671.7s 573 Effect% = mean cost improvement of "Better" over other.
+25671.7s 574 ✅ = p < 0.05  |  per-run n = 16 instances × 4 runs = 64 pairs/family
+25671.7s 575 
+25671.7s 576 ============================================================
+25671.7s 577 DASHBOARD
+25671.8s 578 /usr/local/lib/python3.12/dist-packages/scipy/stats/_wilcoxon.py:178: RuntimeWarning: invalid value encountered in scalar divide
+25671.8s 579 z = (r_plus - mn) / se
+25671.8s 580 
+25671.8s 581 /usr/local/lib/python3.12/dist-packages/scipy/stats/_wilcoxon.py:178: RuntimeWarning: invalid value encountered in scalar divide
+25671.8s 582 z = (r_plus - mn) / se
+25673.1s 583 ✅ dashboard.png saved → /kaggle/working/dashboard.png
+25673.1s 584 
+25673.1s 585 ============================================================
+25673.1s 586 TRANSFER: DDQN-ALNS★ vs strongest non-RL baseline on RC2
+25673.2s 587 ✅ Transfer comparison plot → /kaggle/working/transfer_comparison.png
+25673.3s 588 
+25673.3s 589 ── RC1 per-instance detail ──
+25673.3s 590 Gap%                 NV_cv                 NV_mean                   TD_mean
+25673.3s 591 Algorithm  ALNS ALNS+ DDQN-ALNS  ALNS ALNS+ DDQN-ALNS    ALNS  ALNS+ DDQN-ALNS     ALNS    ALNS+ DDQN-ALNS
+25673.3s 592 Instance
+25673.3s 593 RC101      0.72 -0.88     -0.79  2.84  0.00      0.00   15.25  15.00     15.00  1709.08  1682.06   1683.59
+25673.3s 594 RC102     -2.88 -3.16     -2.94  3.15  3.27      3.27   13.75  13.25     13.25  1510.04  1505.61   1509.05
+25673.3s 595 RC103      6.67  3.00      3.09  0.00  4.35      4.35   12.00  11.50     11.50  1345.80  1299.54   1300.63
+25673.3s 596 RC104      3.06  1.28      1.05  0.00  0.00      0.00   10.00  10.00     10.00  1170.25  1149.99   1147.43
+25673.3s 597 RC105     -2.19 -2.27     -3.89  3.45  3.04      3.45   14.50  14.25     14.50  1593.77  1592.41   1566.13
+25673.3s 598 RC106     -0.29 -0.94      0.24  3.40  3.40      3.40   12.75  12.75     12.75  1420.60  1411.36   1428.08
+25673.3s 599 RC107      4.06  3.00      3.27  3.69  4.35      4.35   11.75  11.50     11.50  1280.46  1267.41   1270.68
+25673.3s 600 RC108      2.15  1.07      1.07  4.03  0.00      0.00   10.75  11.00     11.00  1164.30  1151.96   1151.98
+25673.3s 601 
+25673.3s 602 ── RC2 per-instance detail ──
+25673.3s 603 Gap%                             NV_cv                             NV_mean                             TD_mean
+25673.3s 604 Algorithm   ALNS ALNS+ DDQN-ALNS DDQN-ALNS★   ALNS  ALNS+ DDQN-ALNS DDQN-ALNS★    ALNS ALNS+ DDQN-ALNS DDQN-ALNS★     ALNS    ALNS+ DDQN-ALNS DDQN-ALNS★
+25673.3s 605 Instance
+25673.3s 606 RC201       6.22  2.96      2.81       2.96   0.00   0.00      0.00       0.00     4.0  4.00      4.00       4.00  1494.41  1448.57   1446.43    1448.57
+25673.3s 607 RC202     -10.97 -8.21     -8.36      -8.21   0.00   0.00      0.00       0.00     4.0  4.00      4.00       4.00  1215.90  1253.56   1251.46    1253.56
+25673.3s 608 RC203       5.35  0.17     10.10       0.17   0.00  14.29      0.00      14.29     3.0  3.50      3.00       3.50  1105.81  1051.40   1155.62    1051.40
+25673.3s 609 RC204       3.75  4.74      4.50       4.74   0.00   0.00      0.00       0.00     3.0  3.00      3.00       3.00   828.44   836.28    834.38     836.28
+25673.3s 610 RC205       3.19  3.08      3.18       3.08   0.00   0.00      0.00       0.00     4.0  4.00      4.00       4.00  1339.04  1337.63   1338.94    1337.63
+25673.3s 611 RC206       0.42  3.12     -2.56       3.12  14.29  14.29     11.55      14.29     3.5  3.50      3.75       3.50  1151.18  1182.09   1117.00    1182.09
+25673.3s 612 RC207       0.38 -0.09     -0.31      -0.09  14.29  11.55     11.55      11.55     3.5  3.75      3.75       3.75  1065.19  1060.18   1057.85    1060.18
+25673.3s 613 RC208       3.95  1.95      2.09       1.95   0.00   0.00      0.00       0.00     3.0  3.00      3.00       3.00   860.82   844.28    845.46     844.28
+25768.2s 614 ✅ Route plot → /kaggle/working/routes_ALNS_RC101.png
+25855.6s 615 ✅ Route plot → /kaggle/working/routes_DDQN-ALNS_RC101.png
+25855.8s 616 Exporting NEXUS demo for RC101...
+25943.5s 617 ALNS        : nv=15, td=1702.9, gap=+0.3%
+26046.9s 618 DDQN-ALNS   : nv=15, td=1642.9, gap=-3.2%
+26150.5s 619 
+26150.5s 620 ✅ nexus_demo.json → /kaggle/working/nexus_demo.json  (47.3 KB)
+26150.5s 621 Total export time: 294.8s
+26150.5s 622 Drop nexus_demo.json into nexus_v2.html to view
+26156.0s 623 /usr/local/lib/python3.12/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\|'
+26156.0s 624 cells[i][c] = re.sub('\\\\\|', '|', cell)
+26156.2s 625 /usr/local/lib/python3.12/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\_'
+26156.2s 626 text = re.sub(r'_', '\_', text) # Escape underscores in display text
+26156.8s 627 [NbConvertApp] Converting notebook __notebook__.ipynb to notebook
+26157.1s 628 [NbConvertApp] Writing 162231 bytes to __notebook__.ipynb
+26159.4s 629 [NbConvertApp] Converting notebook __notebook__.ipynb to html
+26160.7s 630 [NbConvertApp] Writing 837802 bytes to __results__.html
