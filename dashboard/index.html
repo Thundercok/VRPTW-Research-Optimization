@@ -27,10 +27,17 @@
       </button>
     </nav>
 
+    <div class="sidebar-workspace" style="padding: 0 20px; flex-grow: 1; overflow-y: auto;">
+      <h3 class="eyebrow" style="margin-top: 20px;">Loaded Workspaces</h3>
+      <ul id="dataset-list" class="dataset-list stack gap-sm">
+      </ul>
+    </div>
+
     <div class="sidebar-footer stack gap-sm">
       <label class="button button-primary" for="file-input">Load JSON File</label>
       <input id="file-input" type="file" accept=".json" hidden>
       <button class="button" id="load-sample" type="button">Load Sample Data</button>
+      <button class="button" id="save-file" type="button">💾 Save / Export Data</button>
       <p id="data-status" class="status-mini">No file loaded</p>
     </div>
   </aside>
@@ -72,12 +79,13 @@
         <p class="subtle">Raw JSON schema, meta details, and exact node sequences.</p>
       </header>
 
-      <div class="view-content layout"> <div class="stack gap-lg">
-        <div class="card stack gap-sm">
-          <p class="section-title">Dataset Snapshot</p>
-          <dl id="meta-grid" class="meta-grid"></dl>
+      <div class="view-content layout">
+        <div class="stack gap-lg">
+          <div class="card stack gap-sm">
+            <p class="section-title">Dataset Snapshot</p>
+            <dl id="meta-grid" class="meta-grid"></dl>
+          </div>
         </div>
-      </div>
 
         <div class="card stack gap-sm">
           <div class="section-row">

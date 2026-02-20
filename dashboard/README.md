@@ -24,4 +24,4 @@ VRPTW-Dashboard/
 └── views/                 # Nhóm giao diện chính (3 Workspaces)
 ├── DispatchView.js    # Tab 1: Khởi tạo Leaflet Map và điều phối animation xe chạy
 ├── AnalyticsView.js   # Tab 2: Vẽ biểu đồ hội tụ, heatmap (RL-ALNS stats)
-└── InspectorView.js   # Tab 3: Bảng dữ liệu thô (tái sử dụng từ phần app.js cũ của bạn)
+└── InspectorView.js   # Tab 3: Bảng dữ liệu thô (tái sử dụng từ phần main.js cũ của bạn)

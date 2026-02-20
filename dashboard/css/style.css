@@ -1,30 +1,55 @@
 /* =========================================
-   1. CSS VARIABLES & THEME SETUP
+   1. CSS VARIABLES & THEME SETUP (Light Theme - Blue Palette)
    ========================================= */
 :root {
-  /* Bảng màu Dark Mode chuyên nghiệp */
-  --bg-app: #0b1120;
-  --bg-panel: #1e293b;
-  --bg-panel-hover: #334155;
-  --border: #334155;
-  --text-main: #f8fafc;
-  --text-muted: #94a3b8;
-  --accent: #0ea5e9; /* Xanh dương công nghệ */
-  --accent-soft: rgba(14, 165, 233, 0.15);
-  --success: #10b981;
-  --warning: #f59e0b;
-  --danger: #ef4444;
+  /* Dải màu trích xuất từ bảng màu của bạn */
+  --blue-900: #042940; /* Tối nhất */
+  --blue-800: #1a4a6b;
+  --blue-600: #386FA4;
+  --blue-400: #59A5D8;
+  --blue-200: #84D2F6;
+  --blue-100: #A2D4F2; /* Sáng nhất */
 
-  /* Thông số layout */
+  /* Map màu vào hệ thống */
+  --bg-app: #f4f7fb;       /* Nền tổng thể: Xám/Xanh cực nhạt */
+  --bg-panel: #ffffff;     /* Nền các thẻ Card: Trắng tinh */
+  --bg-panel-hover: #f0f4f8;
+  --border: #d0e0ed;       /* Viền: Xanh nhạt */
+
+  --text-main: var(--blue-900);  /* Chữ chính: Xanh đen đậm */
+  --text-muted: var(--blue-600); /* Chữ phụ/Tiêu đề: Xanh lam */
+
+  --accent: var(--blue-400);     /* Màu nhấn (Nút bấm, active) */
+  --accent-soft: #eaf4fb;        /* Nền thẻ active, nền pill */
+
+  --success: #059669; /* Giữ màu xanh lá cho trạng thái Tốt */
+  --warning: #d97706; /* Giữ màu cam cho trạng thái Cảnh báo */
+  --danger:  #dc2626;
+
   --sidebar-width: 280px;
   --radius: 12px;
   --transition: 0.2s ease-in-out;
 }
 
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+/* Chỉnh lại thanh cuộn cho hợp Light Theme */
+::-webkit-scrollbar-thumb { background: var(--blue-200); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--blue-400); }
+
+/* Chỉnh lại bóng đổ (Shadow) cho các Panel nổi lên trên nền trắng */
+.card, .live-fleet-panel {
+  box-shadow: 0 4px 6px -1px rgba(4, 41, 64, 0.05), 0 2px 4px -1px rgba(4, 41, 64, 0.03);
+}
+
+/* Chỉnh lại mặt lưới bản đồ (Map placeholder) cho Light Theme */
+.map-placeholder {
+  background-color: var(--bg-panel);
+  background-image: radial-gradient(var(--border) 1px, transparent 1px);
+  box-shadow: inset 0 0 40px rgba(4, 41, 64, 0.03);
+}
+
+.map-placeholder .subtle {
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--blue-600);
 }
 
 body {
@@ -349,3 +374,78 @@ body {
 
   .layout { grid-template-columns: 1fr; }
 }
+/* =========================================
+   8. ROUTE INSPECTOR WIDGETS (Phục hồi CSS cho Tab 3)
+   ========================================= */
+
+.pill {
+  display: inline-flex; align-items: center; padding: 4px 10px;
+  border-radius: 999px; background: var(--accent-soft);
+  color: var(--accent); font-weight: 600; font-size: 0.75rem;
+}
+
+/* Khu vực danh sách Route */
+.route-list {
+  display: flex; flex-direction: column; gap: 12px;
+  overflow-y: auto; max-height: 70vh; padding-right: 8px;
+}
+.route-card {
+  padding: 16px; border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border);
+  cursor: pointer; transition: var(--transition);
+}
+.route-card:hover { background: rgba(255, 255, 255, 0.06); }
+.route-card.active { border-color: var(--accent); background: var(--accent-soft); }
+
+.route-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.route-title { margin: 0; font-size: 1rem; font-weight: 600; }
+
+.route-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+.route-kpi { background: rgba(0, 0, 0, 0.2); padding: 8px; border-radius: 8px; text-align: center; }
+.route-kpi-label { margin: 0 0 4px; color: var(--text-muted); font-size: 0.7rem; text-transform: uppercase; }
+.route-kpi-value { margin: 0; font-weight: 700; font-size: 0.95rem; color: var(--text-main); }
+.route-path { margin: 0; color: var(--text-muted); font-size: 0.85rem; line-height: 1.5; word-break: break-word; }
+
+/* Khu vực Detail Grid (Bên phải) */
+.detail-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px; }
+.detail-card { background: rgba(255, 255, 255, 0.03); padding: 12px; border-radius: var(--radius); border: 1px solid var(--border); }
+.detail-card-label { margin: 0 0 6px; color: var(--text-muted); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; }
+.detail-card-value { margin: 0; font-size: 1.2rem; font-weight: 700; }
+
+/* Bảng chi tiết trạm dừng (Table) */
+.stop-table {
+  width: 100%; border-collapse: collapse;
+  background: rgba(255, 255, 255, 0.02); border-radius: var(--radius); overflow: hidden;
+}
+.stop-table th, .stop-table td {
+  padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.9rem;
+}
+.stop-table th { color: var(--text-muted); font-weight: 600; background: rgba(0,0,0,0.2); }
+.stop-table tr:last-child td { border-bottom: none; }
+
+.stop-seq { color: var(--accent); font-weight: 700; }
+.stop-meta { color: var(--text-muted); font-size: 0.8rem; margin-top: 4px; }
+.text-good { color: var(--success); font-weight: 600;}
+.text-warn { color: var(--warning); font-weight: 600;}
+
+/* =========================================
+   9. WORKSPACE MENU (Danh sách file)
+   ========================================= */
+.dataset-list { list-style: none; margin: 12px 0 0 0; padding: 0; }
+.dataset-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 14px; border-radius: 8px; background: rgba(4, 41, 64, 0.04);
+  cursor: pointer; border: 1px solid transparent; transition: var(--transition);
+}
+.dataset-item:hover { background: rgba(4, 41, 64, 0.08); }
+.dataset-item.active { border-color: var(--accent); background: var(--accent-soft); }
+
+.dataset-item .label {
+  font-size: 0.85rem; font-weight: 600; color: var(--text-main);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px;
+}
+.btn-remove {
+  background: transparent; border: none; color: var(--text-muted); cursor: pointer;
+  padding: 4px 8px; border-radius: 4px; font-weight: bold; transition: 0.2s;
+}
+.btn-remove:hover { background: rgba(220, 38, 38, 0.1); color: var(--danger); }
