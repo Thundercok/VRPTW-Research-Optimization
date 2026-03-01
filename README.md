@@ -1,54 +1,57 @@
-# VRPTW Web Visualization
 
-Web app visualize kết quả VRPTW (Vehicle Routing Problem with Time Windows) bằng Solomon benchmark.
+# VRPTW Optimization using Hybrid RL-ALNS
 
+This repository focuses on solving the **Vehicle Routing Problem with Time Windows (VRPTW)** through a hybrid approach combining **Reinforcement Learning (RL)** and **Adaptive Large Neighborhood Search (ALNS)**.
 
-## File Structure
+The project aims to leverage RL to dynamically select the most effective heuristics within the ALNS framework to optimize delivery routes, minimize travel distance, and satisfy strict time constraints.
 
-```
-web/
-├── index.html          # Main HTML page
-├── style.css           # Styling
-├── app.js              # Main application logic
-├── solomon-parser.js   # Parser cho Solomon format
-├── data/               # Solomon benchmark instances
-│   └── c101.txt        # Sample instance
-└── README.md           # This file
-```
+---
 
-## Done
+## 🔬 Research Highlights
 
-- Load Solomon benchmark instances
-- Visualize depot và customers trên map
-- Hiển thị routes với màu sắc khác nhau
-- Metrics: total distance, time, vehicles used, customers served
-- Điều chỉnh số vehicles
-- DoneMock inference để test visualization
+* **Methodology**: Integrates a learning agent to adaptively choose 'Destroy' and 'Repair' operators based on the current state of the solution.
+* **Performance**: Evaluated against standard **Solomon Benchmark** instances (C, R, and RC types).
+* **Components**:
+  * **Heuristics Engine**: Implementation of multiple neighborhood search operators.
+  * **RL Agent**: Policy-based/Value-based learning for operator selection.
+  * **Web Visualization**: Interactive dashboard to analyze routing results and vehicle paths.
 
-## Tích hợp với Model
+---
 
-Để tích hợp với model:
+## 📂 Project Overview
 
-1. Tạo API endpoint để gọi model inference
-2. Sửa function `runInference()` trong `app.js`:
-   ```javascript
-   async function runInference() {
-       // Gọi API endpoint
-       const response = await fetch('/api/inference', {
-           method: 'POST',
-           body: JSON.stringify({
-               instance: currentInstance,
-               numVehicles: numVehicles
-           })
-       });
-       const routes = await response.json();
-       visualizeRoutes(routes, currentInstance);
-   }
-   ```
+- `vrptw.ipynb`: The main research notebook containing algorithm implementation, training, and evaluation.
+- `index.html`, `app.js`, `style.css`: The frontend engine for 2D route visualization.
+- `data/`: Contains Solomon benchmark datasets.
+- `solomon-parser.js`: Utility to parse standard benchmark files into JSON for the visualization tool.
+- `past-reports/`: Academic documentation and research logs.
 
-## Tech Stack
+---
 
-- **Frontend**: HTML + CSS + Vanilla JavaScript
-- **Map**: Leaflet.js
-- **Data Format**: Solomon benchmark format
-# VRPTW-Visualization
+## 🚀 Getting Started
+
+### Algorithm Execution
+
+The core logic is implemented in Python. To run the research experiments:
+
+1. Open `vrptw.ipynb` or `notebook5cf2826d49.ipynb` in Jupyter Notebook or Kaggle.
+2. Ensure dependencies like `numpy`, `pandas`, and your RL framework are installed.
+
+### Visualizing Results
+
+To see the optimized routes in action:
+
+1. Open `index.html` in any modern web browser.
+2. The interface allows you to load JSON-formatted solution data and view the spatio-temporal distribution of the vehicles.
+
+---
+
+## 🎓 Author
+
+**Huy (Thundercok)** Student at **Ton Duc Thang University (TDTU)** Major: Computer Science / IT
+
+---
+
+## ⚠️ Maintenance Note
+
+*The repository is currently undergoing structural cleanup to better separate research scripts from the visualization frontend.*
