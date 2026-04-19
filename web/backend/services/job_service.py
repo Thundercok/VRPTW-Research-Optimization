@@ -22,12 +22,15 @@ class JobService:
 
             try:
                 state.status = "processing"
+                job_repo.save(job_id, state)
                 await asyncio.sleep(0.6)
                 state.result = await solve_model(state.payload)
                 state.status = "done"
+                job_repo.save(job_id, state)
             except Exception as exc:  # pragma: no cover
                 state.status = "failed"
                 state.error = str(exc)
+                job_repo.save(job_id, state)
             finally:
                 job_repo.queue.task_done()
 

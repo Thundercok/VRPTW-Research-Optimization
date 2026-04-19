@@ -3,9 +3,9 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-DB_PATH = Path(__file__).resolve().parents[1] / "auth.db"
 REGISTER_OTP_TTL_SEC = 600
 RESET_TOKEN_TTL_SEC = 900
+ACCESS_TOKEN_TTL_SEC = 86400
 
 
 def load_local_env() -> None:
@@ -32,3 +32,24 @@ def frontend_reset_url(token: str) -> str:
     query = urlencode({"screen": "reset", "token": token})
     sep = "&" if "?" in base else "?"
     return f"{base}{sep}{query}"
+
+
+def firebase_service_account_path() -> str | None:
+    value = os.getenv("FIREBASE_SERVICE_ACCOUNT_PATH", "").strip()
+    if not value:
+        return None
+    raw_path = Path(value)
+    if raw_path.is_absolute():
+        return str(raw_path)
+    base_dir = Path(__file__).resolve().parents[2]
+    return str((base_dir / raw_path).resolve())
+
+
+def firebase_service_account_json() -> str | None:
+    value = os.getenv("FIREBASE_SERVICE_ACCOUNT_JSON", "").strip()
+    return value or None
+
+
+def firebase_project_id() -> str | None:
+    value = os.getenv("FIREBASE_PROJECT_ID", "").strip()
+    return value or None

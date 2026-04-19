@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 
 from api.routers import admin, auth, ops
 from core.config import load_local_env
-from core.database import init_db
+from core.firebase import init_firebase
 from services.job_service import job_service
 
 load_local_env()
@@ -19,7 +19,7 @@ load_local_env()
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    init_db()
+    init_firebase()
     worker_task = asyncio.create_task(job_service.worker_loop())
     try:
         yield

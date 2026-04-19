@@ -7,12 +7,10 @@ from uuid import uuid4
 
 from fastapi import HTTPException
 
-from core.config import REGISTER_OTP_TTL_SEC, RESET_TOKEN_TTL_SEC, frontend_reset_url
+from core.config import ACCESS_TOKEN_TTL_SEC, REGISTER_OTP_TTL_SEC, RESET_TOKEN_TTL_SEC, frontend_reset_url
 from core.security import hash_password, hash_token, is_valid_email, is_valid_role
-from database.repositories import otp_repo, users_repo
+from database.repositories import otp_repo, token_repo, users_repo
 from services.mail_service import send_email
-
-_tokens: dict[str, str] = {}
 
 
 def _build_otp_email_html(otp: str) -> str:
@@ -51,7 +49,7 @@ def _build_otp_email_html(otp: str) -> str:
 """.strip()
 
 
-def _build_reset_email_html(reset_link: str) -> str:
+def _build_temp_password_email_html(temp_password: str) -> str:
     return f"""
 <!doctype html>
 <html>
@@ -67,12 +65,14 @@ def _build_reset_email_html(reset_link: str) -> str:
                         </tr>
                         <tr>
                             <td style=\"padding:28px 30px 24px 30px;\">
-                                <h2 style=\"margin:0 0 10px 0;color:#0f2740;\">Password Reset Request</h2>
+                                <h2 style=\"margin:0 0 10px 0;color:#0f2740;\">Temporary Password Issued</h2>
                                 <p style=\"margin:0 0 14px 0;line-height:1.6;\">Hello,</p>
-                                <p style=\"margin:0 0 18px 0;line-height:1.6;\">We received a request to reset your VRPTW Dispatch Portal password. Please use the secure link below:</p>
-                                <p style=\"margin:0 0 18px 0;\"><a href=\"{reset_link}\" style=\"display:inline-block;background:#0f2740;color:#ffffff;text-decoration:none;padding:12px 18px;border-radius:9px;font-weight:600;\">Reset Password</a></p>
-                                <p style=\"margin:0 0 8px 0;line-height:1.6;\">This link expires in <strong>15 minutes</strong>.</p>
-                                <p style=\"margin:0 0 8px 0;line-height:1.6;\">If you did not request a password reset, please ignore this message.</p>
+                                <p style=\"margin:0 0 16px 0;line-height:1.6;\">We received your password reset request. Your temporary password is:</p>
+                                <p style=\"margin:0 0 18px 0;text-align:center;\">
+                                    <span style=\"display:inline-block;letter-spacing:2px;font-size:22px;font-weight:700;color:#0f2740;background:#eef5ff;border:1px solid #c9d9f2;border-radius:10px;padding:12px 18px;\">{temp_password}</span>
+                                </p>
+                                <p style=\"margin:0 0 8px 0;line-height:1.6;\">For security, you must change this temporary password immediately after login.</p>
+                                <p style=\"margin:0 0 8px 0;line-height:1.6;\">If you did not request this, contact support right away.</p>
                                 <p style=\"margin:14px 0 0 0;line-height:1.6;\">Best regards,<br/>VRPTW Dispatch Support Team</p>
                             </td>
                         </tr>
@@ -87,14 +87,16 @@ def _build_reset_email_html(reset_link: str) -> str:
 
 def issue_token(email: str) -> str:
     access = str(uuid4())
-    _tokens[access] = email
+    now = int(time.time())
+    token_repo.create_token(access, email, now, now + ACCESS_TOKEN_TTL_SEC)
     return access
 
 
 def get_user_by_token(token: str) -> dict[str, str]:
-    email = _tokens.get(token)
-    if not email:
+    row = token_repo.find_valid_token(token, int(time.time()))
+    if not row:
         raise HTTPException(status_code=401, detail="Invalid token")
+    email = str(row["email"])
 
     row = users_repo.find_user_by_email(email)
     if not row:
@@ -177,7 +179,7 @@ def register_user(email: str, password: str, otp: str) -> dict[str, str]:
     return {"message": "registered", "role": "operator"}
 
 
-def login_user(email: str, password: str) -> dict[str, str]:
+def login_user(email: str, password: str) -> dict[str, str | bool]:
     email = email.strip().lower()
     if not is_valid_email(email):
         raise HTTPException(status_code=400, detail="Invalid email format")
@@ -187,7 +189,12 @@ def login_user(email: str, password: str) -> dict[str, str]:
         raise HTTPException(status_code=401, detail="Bad credentials")
 
     access_token = issue_token(email)
-    return {"access_token": access_token, "token_type": "bearer", "role": row["role"]}
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "role": row["role"],
+        "must_change_password": bool(row.get("must_change_password", False)),
+    }
 
 
 def request_password_reset(email: str) -> dict[str, str]:
@@ -199,27 +206,26 @@ def request_password_reset(email: str) -> dict[str, str]:
     if not row:
         raise HTTPException(status_code=404, detail="Email not found")
 
-    raw_token = secrets.token_urlsafe(32)
-    token_hash = hash_token(raw_token)
-    now = int(time.time())
-    otp_repo.replace_password_reset_token(
-        email, token_hash, now + RESET_TOKEN_TTL_SEC, now)
+    temp_password = secrets.token_urlsafe(9)
+    users_repo.update_user_password(
+        email,
+        hash_password(temp_password),
+        must_change_password=True,
+    )
 
-    reset_link = frontend_reset_url(raw_token)
     delivery = send_email(
         email,
-        "[VRPTW] Password reset link",
+        "[VRPTW] Temporary password",
         (
             "Dear user,\\n\\n"
-            "Use the following secure link to reset your password:\\n"
-            f"{reset_link}\\n\\n"
-            "This link expires in 15 minutes.\\n"
-            "If you did not request this, you can safely ignore this email.\\n\\n"
+            f"Your temporary password is: {temp_password}\\n"
+            "Please login and change your password immediately.\\n"
+            "If you did not request this, contact support immediately.\\n\\n"
             "Best regards,\\nVRPTW Dispatch Support Team"
         ),
-        _build_reset_email_html(reset_link),
+        _build_temp_password_email_html(temp_password),
     )
-    return {"message": "reset_link_sent", "delivery": delivery}
+    return {"message": "temporary_password_sent", "delivery": delivery}
 
 
 def validate_password_reset_token(token: str) -> dict[str, bool]:
@@ -249,6 +255,26 @@ def reset_password(token: str, new_password: str) -> dict[str, str]:
     otp_repo.mark_password_reset_token_used(token_hash)
 
     return {"message": "password_reset_done"}
+
+
+def change_required_password(user: dict[str, str], new_password: str) -> dict[str, str]:
+    if len(new_password) < 6:
+        raise HTTPException(
+            status_code=400, detail="Password must be at least 6 characters")
+
+    target_email = user["email"].strip().lower()
+    row = users_repo.find_user_by_email(target_email)
+    if not row:
+        raise HTTPException(status_code=404, detail="User not found")
+    if not bool(row.get("must_change_password", False)):
+        raise HTTPException(status_code=400, detail="Password change is not required")
+
+    users_repo.update_user_password(
+        target_email,
+        hash_password(new_password),
+        must_change_password=False,
+    )
+    return {"message": "required_password_changed"}
 
 
 def list_users() -> dict[str, Any]:

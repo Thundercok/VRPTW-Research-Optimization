@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, Query
 
 from api.dependencies import require_user
-from models.schemas import AuthRequest, ForgotPasswordRequest, ForgotPasswordResetRequest, RegisterConfirmRequest, RegisterOTPRequest, RegisterVerifyRequest
+from models.schemas import AuthRequest, ForgotPasswordRequest, ForgotPasswordResetRequest, RegisterConfirmRequest, RegisterOTPRequest, RegisterVerifyRequest, RequiredPasswordChangeRequest
 from services import auth_service
 
 router = APIRouter(tags=["auth"])
@@ -25,7 +27,7 @@ async def register(body: RegisterConfirmRequest) -> dict[str, str]:
 
 
 @router.post("/auth/token")
-async def token(body: AuthRequest) -> dict[str, str]:
+async def token(body: AuthRequest) -> dict[str, Any]:
     return auth_service.login_user(body.email, body.password)
 
 
@@ -42,6 +44,14 @@ async def validate_reset_token(token: str = Query(min_length=10)) -> dict[str, b
 @router.post("/auth/forgot-password/reset")
 async def forgot_password_reset(body: ForgotPasswordResetRequest) -> dict[str, str]:
     return auth_service.reset_password(body.token, body.new_password)
+
+
+@router.post("/auth/password/change-required")
+async def change_required_password(
+    body: RequiredPasswordChangeRequest,
+    user: dict[str, str] = Depends(require_user),
+) -> dict[str, str]:
+    return auth_service.change_required_password(user, body.new_password)
 
 
 @router.get("/auth/me")

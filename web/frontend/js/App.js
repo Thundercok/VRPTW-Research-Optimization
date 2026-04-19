@@ -5,6 +5,8 @@ import { createInitialState } from './createInitialState.js';
 export class App {
   constructor() {
     this.state = createInitialState();
+    this.tableInputDraft = { name: '', address: '', demand: '0', lat: null, lng: null };
+    this.tableInputRefs = {};
 
     this.el = this.bindElements();
     this.maps = null;
@@ -21,14 +23,21 @@ export class App {
     this.registerSuccessCountdownTimer = 0;
     this.registerOtpVerifyDebounceTimer = 0;
     this.isSendingRegisterOtp = false;
+    this.isSendingForgotPasswordLink = false;
+    this.isSubmittingPasswordChange = false;
     this.registerOtpRequestedEmail = ''; // Track which email OTP was sent to
     this.wireAuthEvents();
     this.routeAuthScreenFromURL();
 
     if (this.state.unlocked && this.state.email) {
-      this.enterApp();
-      this.initFirebase(this.state.email);
-      this.toast('Auto Login', 'Previous session restored.', 'ok');
+      if (this.state.mustChangePassword) {
+        this.showAuthView('reset');
+        this.toast('Password Change Required', 'Set a new password before accessing the app.', 'error');
+      } else {
+        this.enterApp();
+        this.initFirebase(this.state.email);
+        this.toast('Auto Login', 'Previous session restored.', 'ok');
+      }
     } else {
       this.leaveApp();
     }
@@ -380,6 +389,24 @@ export class App {
     } catch {
       return raw;
     }
+  }
+
+  formatRunError(errorLike) {
+    const raw = typeof errorLike === 'string' ? errorLike : this.parseApiError(errorLike);
+    const message = String(raw || '').trim();
+    if (!message) return 'Run failed unexpectedly.';
+
+    const lower = message.toLowerCase();
+    if (lower.includes('infeasible configuration') && lower.includes('vehicles')) {
+      return 'Infeasible with current settings: number of vehicles is too low for current demand/capacity. Try increasing Vehicles or Capacity.';
+    }
+    if (lower.includes('exceeds vehicle capacity')) {
+      return 'At least one customer demand exceeds vehicle capacity. Increase Capacity or reduce that customer demand.';
+    }
+    if (lower.includes('negative demand')) {
+      return 'Invalid input: demand cannot be negative.';
+    }
+    return message;
   }
 
   isValidEmail(email) {
@@ -745,10 +772,142 @@ export class App {
       this.setStatus('Loaded Solomon RC sample data.', 'ok');
     });
 
-    this.el.parsePaste.addEventListener('click', () => this.parsePasteData());
+    this.el.parsePaste?.addEventListener('click', () => this.parsePasteData());
     this.el.runModel.addEventListener('click', () => this.submitJob());
     this.el.addAddress.addEventListener('click', () => this.addSelectedAddress());
     this.el.addressInput.addEventListener('input', () => this.handleAddressInput());
+    this.wireTableInlineEditing();
+  }
+
+  wireTableInlineEditing() {
+    if (!this.el.customerRows) return;
+    this.el.customerRows.addEventListener('dblclick', (event) => {
+      const cell = event.target.closest('td[data-editable="true"]');
+      if (!cell) return;
+      this.startCustomerCellEdit(cell);
+    });
+  }
+
+  startCustomerCellEdit(cell) {
+    if (!cell || cell.classList.contains('is-editing')) return;
+
+    const row = cell.closest('tr');
+    const customerId = Number(row?.dataset.customerId);
+    const field = cell.dataset.field;
+    if (!Number.isFinite(customerId) || !field) return;
+
+    const customer = this.state.customers.find((item) => item.id === customerId);
+    if (!customer) return;
+
+    const originalValue = field === 'demand' ? String(customer.demand ?? 0) : String(customer[field] ?? '');
+    const input = document.createElement('input');
+    input.className = 'table-edit-input';
+    input.type = field === 'demand' ? 'number' : 'text';
+    input.value = originalValue;
+    if (field === 'demand') {
+      input.min = '0';
+      input.step = '1';
+    }
+
+    cell.classList.add('is-editing');
+    cell.textContent = '';
+    cell.appendChild(input);
+    input.focus();
+    input.select();
+
+    let done = false;
+    const commit = async () => {
+      if (done) return;
+      done = true;
+      await this.commitCustomerCellEdit({ customerId, field, rawValue: input.value, originalValue });
+    };
+
+    const cancel = () => {
+      if (done) return;
+      done = true;
+      this.renderCustomers();
+    };
+
+    input.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        commit();
+        return;
+      }
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        cancel();
+      }
+    });
+
+    input.addEventListener('blur', () => {
+      commit();
+    });
+  }
+
+  async commitCustomerCellEdit({ customerId, field, rawValue, originalValue }) {
+    const customer = this.state.customers.find((item) => item.id === customerId);
+    if (!customer) {
+      this.renderCustomers();
+      return;
+    }
+
+    const nextValue = String(rawValue ?? '').trim();
+    if (nextValue === originalValue) {
+      this.renderCustomers();
+      return;
+    }
+
+    if (field === 'name') {
+      if (!nextValue) {
+        this.toast('Invalid Name', 'Name cannot be empty.', 'error');
+        this.renderCustomers();
+        return;
+      }
+      customer.name = nextValue;
+      this.renderCustomers();
+      this.renderMarkers();
+      this.setStatus('Customer name updated.', 'ok');
+      return;
+    }
+
+    if (field === 'demand') {
+      const demand = Number(nextValue);
+      if (!Number.isFinite(demand) || demand < 0) {
+        this.toast('Invalid Demand', 'Demand must be a number >= 0.', 'error');
+        this.renderCustomers();
+        return;
+      }
+      customer.demand = Math.round(demand);
+      this.renderCustomers();
+      this.renderMarkers();
+      this.setStatus('Customer demand updated.', 'ok');
+      return;
+    }
+
+    if (field === 'address') {
+      if (!nextValue) {
+        this.toast('Invalid Address', 'Address cannot be empty.', 'error');
+        this.renderCustomers();
+        return;
+      }
+
+      customer.address = nextValue;
+      const geocoded = await this.tryGeocodeFromText(nextValue);
+      if (geocoded) {
+        customer.lat = geocoded.lat;
+        customer.lng = geocoded.lng;
+        this.setStatus('Address updated. Coordinates were refreshed automatically.', 'ok');
+      } else {
+        this.setStatus('Address updated, but geocoding could not refresh coordinates.', 'error');
+        this.toast('Geocode Warning', 'Could not find coordinates for this address.', 'error');
+      }
+      this.renderCustomers();
+      this.renderMarkers();
+      return;
+    }
+
+    this.renderCustomers();
   }
 
   activateTab(tabName, silent = false) {
@@ -849,14 +1008,18 @@ export class App {
       });
       this.toast('Registration Successful', 'Account created successfully.', 'ok');
       this.el.loginEmail.value = email;
+      this.el.registerEmail.value = '';
+      this.el.registerPassword.value = '';
+      this.el.registerOtp.value = '';
       this.state.registerOtpApprovedEmail = '';
       this.registerOtpRequestedEmail = ''; // Clear on successful registration
       this.state.registerOtpVerified = false;
       this.state.registerOtpExpiresAt = 0;
       this.stopRegisterOtpCountdown();
       this.stopRegisterSuccessCountdown();
-      this.updateRegisterOtpCountdownText('Registration successful. Stay on this screen and switch to Login when you are ready.', 'active');
+      this.updateRegisterOtpCountdownText('Click Send OTP to receive a verification code.');
       this.updateRegisterButtonState();
+      this.showAuthView('login');
     } catch (error) {
       const message = this.parseApiError(error);
       if (/otp/i.test(message)) {
@@ -891,9 +1054,21 @@ export class App {
       this.state.token = data.access_token;
       this.state.email = email;
       this.state.role = data.role || 'operator';
+      this.state.mustChangePassword = Boolean(data.must_change_password);
       localStorage.setItem('vrptw_token', this.state.token);
       localStorage.setItem('vrptw_email', email);
       localStorage.setItem('vrptw_role', this.state.role);
+      localStorage.setItem('vrptw_must_change_password', String(this.state.mustChangePassword));
+
+      if (this.state.mustChangePassword) {
+        this.state.resetToken = '';
+        this.el.resetPassword.value = '';
+        this.el.resetPasswordConfirm.value = '';
+        this.showAuthView('reset');
+        this.toast('Password Change Required', 'Use the temporary password once, then set a new password now.', 'error');
+        return;
+      }
+
       this.enterApp();
       await this.initFirebase(email);
       this.updateConnectionPill();
@@ -908,7 +1083,12 @@ export class App {
   }
 
   async requestForgotPasswordOtp() {
+    if (this.isSendingForgotPasswordLink) return;
+
     try {
+      this.isSendingForgotPasswordLink = true;
+      this.el.btnForgotPassword && (this.el.btnForgotPassword.disabled = true);
+
       const email = this.el.forgotEmail.value.trim().toLowerCase();
       this.clearFieldError(this.el.forgotEmail);
       if (!this.isValidEmail(email)) {
@@ -921,22 +1101,31 @@ export class App {
         body: JSON.stringify({ email })
       });
 
-      this.toast('Reset Link Sent', `Delivery method: ${res.delivery}. Check your email for the reset link.`, 'ok');
+      this.el.forgotEmail.value = '';
+      this.el.loginEmail.value = email;
+      this.toast('Temporary Password Sent', `Delivery method: ${res.delivery}. Check your email for the temporary password.`, 'ok');
+      this.showAuthView('login');
     } catch (error) {
       const message = this.parseApiError(error);
       this.setFieldError(this.el.forgotEmail);
       this.toast('Failed to Send Reset Link', message, 'error');
+    } finally {
+      this.isSendingForgotPasswordLink = false;
+      this.el.btnForgotPassword && (this.el.btnForgotPassword.disabled = false);
     }
   }
 
   async resetForgotPassword() {
+    if (this.isSubmittingPasswordChange) return;
+
     try {
-      const token = this.state.resetToken || new URLSearchParams(window.location.search).get('token') || '';
+      this.isSubmittingPasswordChange = true;
+      this.el.btnResetPassword && (this.el.btnResetPassword.disabled = true);
+
       const password = this.el.resetPassword.value.trim();
       const confirm = this.el.resetPasswordConfirm.value.trim();
       this.clearFieldError(this.el.resetPassword);
       this.clearFieldError(this.el.resetPasswordConfirm);
-      if (!token) throw new Error('Missing reset token in URL');
       if (password.length < 6) {
         this.setFieldError(this.el.resetPassword);
         throw new Error('New password must be at least 6 characters');
@@ -946,18 +1135,49 @@ export class App {
         throw new Error('Password confirmation does not match');
       }
 
-      await this.request('/auth/forgot-password/reset', {
-        method: 'POST',
-        body: JSON.stringify({ token, new_password: password })
-      });
+      if (this.state.mustChangePassword) {
+        await this.request('/auth/password/change-required', {
+          method: 'POST',
+          body: JSON.stringify({ new_password: password })
+        });
 
-      this.toast('Password Updated', 'You can now log in with your new password.', 'ok');
-      this.state.resetToken = '';
-      window.history.replaceState({}, '', window.location.pathname);
-      this.showAuthView('login');
+        const loginEmail = this.state.email;
+        this.state.mustChangePassword = false;
+        this.state.resetToken = '';
+        this.state.token = '';
+        this.state.email = '';
+        this.state.role = 'operator';
+        localStorage.removeItem('vrptw_token');
+        localStorage.removeItem('vrptw_email');
+        localStorage.removeItem('vrptw_role');
+        localStorage.removeItem('vrptw_must_change_password');
+        this.el.resetPassword.value = '';
+        this.el.resetPasswordConfirm.value = '';
+        this.el.loginEmail.value = loginEmail;
+        this.toast('Password Updated', 'New password saved. Please login again.', 'ok');
+        this.showAuthView('login');
+      } else {
+        const token = this.state.resetToken || new URLSearchParams(window.location.search).get('token') || '';
+        if (!token) throw new Error('Missing reset token in URL');
+
+        await this.request('/auth/forgot-password/reset', {
+          method: 'POST',
+          body: JSON.stringify({ token, new_password: password })
+        });
+
+        this.toast('Password Updated', 'You can now log in with your new password.', 'ok');
+        this.state.resetToken = '';
+        this.el.resetPassword.value = '';
+        this.el.resetPasswordConfirm.value = '';
+        window.history.replaceState({}, '', window.location.pathname);
+        this.showAuthView('login');
+      }
     } catch (error) {
       const message = this.parseApiError(error);
       this.toast('Failed to Update Password', message, 'error');
+    } finally {
+      this.isSubmittingPasswordChange = false;
+      this.el.btnResetPassword && (this.el.btnResetPassword.disabled = false);
     }
   }
 
@@ -965,9 +1185,11 @@ export class App {
     this.state.token = '';
     this.state.email = '';
     this.state.role = 'operator';
+    this.state.mustChangePassword = false;
     localStorage.removeItem('vrptw_token');
     localStorage.removeItem('vrptw_email');
     localStorage.removeItem('vrptw_role');
+    localStorage.removeItem('vrptw_must_change_password');
     this.updateConnectionPill();
     this.updateSessionInfo();
     this.leaveApp();
@@ -1157,16 +1379,205 @@ export class App {
     }
   }
 
-  addMapPoint(latlng) {
+  async tryReverseGeocode(lat, lng) {
+    try {
+      const result = await this.request(`/reverse-geocode?lat=${encodeURIComponent(lat)}&lng=${encodeURIComponent(lng)}`, { method: 'GET' });
+      const shortAddress = result?.short_address?.trim();
+      const fullAddress = result?.address?.trim();
+      return shortAddress || fullAddress || '';
+    } catch {
+      return '';
+    }
+  }
+
+  async addMapPoint(latlng) {
+    const address = (await this.tryReverseGeocode(latlng.lat, latlng.lng)) || `Lat ${latlng.lat.toFixed(5)}, Lng ${latlng.lng.toFixed(5)}`;
     this.pushCustomer({
       name: `Pin-${this.state.customers.length}`,
-      address: 'Map Pin',
+      address,
       lat: latlng.lat,
       lng: latlng.lng,
-      demand: 10
+      demand: 0
     });
     this.setStatus('Dropped a new delivery pin.', 'ok');
     this.toast('Pin Added', 'Point was added directly on the map.', 'ok');
+  }
+
+  focusTableInputField(field) {
+    const input = this.tableInputRefs[field];
+    if (!input) return;
+    input.focus();
+    input.select?.();
+  }
+
+  formatDraftCoord(value) {
+    return Number.isFinite(value) ? Number(value).toFixed(5) : '-';
+  }
+
+  updateDraftCoordCells() {
+    if (this.tableInputRefs.latCell) this.tableInputRefs.latCell.textContent = this.formatDraftCoord(this.tableInputDraft.lat);
+    if (this.tableInputRefs.lngCell) this.tableInputRefs.lngCell.textContent = this.formatDraftCoord(this.tableInputDraft.lng);
+  }
+
+  async resolveTableInputAddress() {
+    const address = this.tableInputDraft.address.trim();
+    if (!address) {
+      this.tableInputDraft.lat = null;
+      this.tableInputDraft.lng = null;
+      this.updateDraftCoordCells();
+      return false;
+    }
+    const geo = await this.tryGeocodeFromText(address);
+    if (!geo) {
+      this.tableInputDraft.lat = null;
+      this.tableInputDraft.lng = null;
+      this.updateDraftCoordCells();
+      return false;
+    }
+    this.tableInputDraft.lat = geo.lat;
+    this.tableInputDraft.lng = geo.lng;
+    this.updateDraftCoordCells();
+    return true;
+  }
+
+  async handleTableInputEnter(field) {
+    if (field === 'name') {
+      this.focusTableInputField('address');
+      return;
+    }
+    if (field === 'address') {
+      await this.resolveTableInputAddress();
+      this.focusTableInputField('demand');
+      return;
+    }
+    if (field === 'demand') {
+      await this.submitTableInputRow();
+    }
+  }
+
+  moveTableInputFocus(field, direction) {
+    const order = ['name', 'address', 'demand'];
+    const index = order.indexOf(field);
+    if (index < 0) return;
+    const nextIndex = Math.max(0, Math.min(order.length - 1, index + direction));
+    if (nextIndex === index) return;
+    this.focusTableInputField(order[nextIndex]);
+  }
+
+  resetTableInputDraft() {
+    this.tableInputDraft = { name: '', address: '', demand: '0', lat: null, lng: null };
+  }
+
+  async submitTableInputRow() {
+    const name = this.tableInputDraft.name.trim();
+    const address = this.tableInputDraft.address.trim();
+    const demandRaw = String(this.tableInputDraft.demand ?? '').trim();
+
+    if (!name && !address && !demandRaw) {
+      this.focusTableInputField('name');
+      return;
+    }
+
+    const demand = Number(demandRaw || '0');
+    if (!Number.isFinite(demand) || demand < 0) {
+      this.toast('Invalid Demand', 'Demand must be a number >= 0.', 'error');
+      this.focusTableInputField('demand');
+      return;
+    }
+
+    if (!address) {
+      this.toast('Missing Address', 'Please enter an address.', 'error');
+      this.focusTableInputField('address');
+      return;
+    }
+
+    if (!Number.isFinite(this.tableInputDraft.lat) || !Number.isFinite(this.tableInputDraft.lng)) {
+      const found = await this.resolveTableInputAddress();
+      if (!found) {
+        this.toast('Geocode Failed', 'Could not resolve this address to coordinates.', 'error');
+        this.focusTableInputField('address');
+        return;
+      }
+    }
+
+    this.pushCustomer({
+      name: name || `Cust-${this.state.customers.length}`,
+      address,
+      lat: this.tableInputDraft.lat,
+      lng: this.tableInputDraft.lng,
+      demand: Math.round(demand),
+    });
+
+    this.resetTableInputDraft();
+    this.setStatus('Added customer from table input row.', 'ok');
+    window.requestAnimationFrame(() => this.focusTableInputField('name'));
+  }
+
+  renderTableInputRow() {
+    const tr = document.createElement('tr');
+    tr.className = 'table-input-row';
+
+    const idCell = document.createElement('td');
+    idCell.textContent = '+';
+    tr.appendChild(idCell);
+
+    const createInputCell = (field, value, type = 'text') => {
+      const td = document.createElement('td');
+      const input = document.createElement('input');
+      input.className = 'table-inline-input';
+      input.type = type;
+      input.value = value;
+      if (field === 'demand') {
+        input.min = '0';
+        input.step = '1';
+      }
+      input.addEventListener('input', () => {
+        this.tableInputDraft[field] = input.value;
+      });
+      input.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          this.handleTableInputEnter(field);
+          return;
+        }
+        if (event.key === 'ArrowRight') {
+          event.preventDefault();
+          this.moveTableInputFocus(field, 1);
+          return;
+        }
+        if (event.key === 'ArrowLeft') {
+          event.preventDefault();
+          this.moveTableInputFocus(field, -1);
+        }
+      });
+      if (field === 'address') {
+        input.addEventListener('blur', () => {
+          this.resolveTableInputAddress();
+        });
+      }
+      td.appendChild(input);
+      this.tableInputRefs[field] = input;
+      return td;
+    };
+
+    tr.appendChild(createInputCell('name', this.tableInputDraft.name));
+    tr.appendChild(createInputCell('address', this.tableInputDraft.address));
+
+    const latCell = document.createElement('td');
+    latCell.className = 'table-inline-readonly';
+    latCell.textContent = this.formatDraftCoord(this.tableInputDraft.lat);
+    this.tableInputRefs.latCell = latCell;
+    tr.appendChild(latCell);
+
+    const lngCell = document.createElement('td');
+    lngCell.className = 'table-inline-readonly';
+    lngCell.textContent = this.formatDraftCoord(this.tableInputDraft.lng);
+    this.tableInputRefs.lngCell = lngCell;
+    tr.appendChild(lngCell);
+
+    tr.appendChild(createInputCell('demand', this.tableInputDraft.demand, 'number'));
+
+    this.el.customerRows.appendChild(tr);
   }
 
   pushCustomer(item) {
@@ -1177,19 +1588,36 @@ export class App {
   }
 
   renderCustomers() {
+    this.tableInputRefs = {};
     this.el.customerRows.innerHTML = '';
     this.state.customers.forEach((c) => {
       const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${c.id}</td>
-        <td>${c.name}</td>
-        <td>${c.address || '-'}</td>
-        <td>${Number(c.lat).toFixed(5)}</td>
-        <td>${Number(c.lng).toFixed(5)}</td>
-        <td>${c.demand}</td>
-      `;
+      tr.dataset.customerId = String(c.id);
+
+      const values = [
+        { field: 'id', value: String(c.id), editable: false },
+        { field: 'name', value: c.name || '', editable: true },
+        { field: 'address', value: c.address || '-', editable: true },
+        { field: 'lat', value: Number(c.lat).toFixed(5), editable: false },
+        { field: 'lng', value: Number(c.lng).toFixed(5), editable: false },
+        { field: 'demand', value: String(c.demand), editable: true },
+      ];
+
+      values.forEach(({ field, value, editable }) => {
+        const td = document.createElement('td');
+        td.dataset.field = field;
+        if (editable) {
+          td.dataset.editable = 'true';
+          td.classList.add('cell-editable');
+          td.title = 'Double-click to edit';
+        }
+        td.textContent = value;
+        tr.appendChild(td);
+      });
+
       this.el.customerRows.appendChild(tr);
     });
+    this.renderTableInputRow();
     this.showEmptyStates();
   }
 
@@ -1207,7 +1635,8 @@ export class App {
       bounds.push(p);
       const markerIcon = c.isDepot ? depotIcon : customerIcon;
       const popupTitle = c.isDepot ? 'Warehouse / Depot' : 'Customer';
-      const popupContent = `<strong>${popupTitle}</strong><br/>${c.name}<br/>Demand: ${c.demand}`;
+      const popupAddress = c.address ? `<br/>${c.address}` : '';
+      const popupContent = `<strong>${popupTitle}</strong><br/>${c.name}${popupAddress}<br/>Demand: ${c.demand}`;
       L.marker(p, { icon: markerIcon }).bindPopup(popupContent).addTo(ddqnMarkerLayer);
       L.marker(p, { icon: markerIcon }).bindPopup(popupContent).addTo(alnsMarkerLayer);
     });
@@ -1245,6 +1674,7 @@ export class App {
         fleet: { vehicles: this.state.vehicles, capacity: this.state.capacity },
         customers: this.state.customers
       };
+      this.state.lastRunFleet = { ...payload.fleet };
 
       const submit = await this.request('/jobs', {
         method: 'POST',
@@ -1258,18 +1688,32 @@ export class App {
         customers: this.state.customers
       });
 
-      await this.pollJob(submit.job_id);
+      const pollLimitMs = this.estimatePollTimeoutMs(this.state.customers.length);
+      await this.pollJob(submit.job_id, pollLimitMs);
     } catch (error) {
-      this.setStatus(`Submit error: ${error.message}`, 'error');
-      this.toast('Submit Failed', error.message, 'error');
+      const friendly = this.formatRunError(error);
+      this.setStatus(`Submit error: ${friendly}`, 'error');
+      this.toast('Submit Failed', friendly, 'error');
       this.hideLoadingImmediate();
     }
   }
 
-  async pollJob(jobId) {
+  estimatePollTimeoutMs(customerCount) {
+    const count = Math.max(0, Number(customerCount) || 0);
+    const baseline = 180000;
+    const scaled = baseline + count * 3500;
+    return Math.min(900000, Math.max(baseline, scaled));
+  }
+
+  async pollJob(jobId, timeoutMs = 180000) {
     const startedAt = Date.now();
-    while (Date.now() - startedAt < 180000) {
+    while (Date.now() - startedAt < timeoutMs) {
       const data = await this.request(`/jobs/${jobId}`, { method: 'GET' });
+      if (data.status === 'queued') {
+        this.setLoadingProgress(this.loadingAnim.progress, null, 'Job queued, waiting for worker...', 0.18, 'idle');
+      } else if (data.status === 'processing') {
+        this.setLoadingProgress(this.loadingAnim.progress, null, 'Backend is processing optimization...', 0.28, 'alns');
+      }
       if (data.status === 'done') {
         this.state.lastResult = data.result;
         this.paintResult();
@@ -1281,11 +1725,14 @@ export class App {
         return;
       }
       if (data.status === 'failed') {
-        throw new Error(data.error || 'Job failed');
+        throw new Error(this.formatRunError(data.error || 'Job failed'));
       }
       await new Promise((resolve) => setTimeout(resolve, 1400));
     }
-    throw new Error('Job timeout');
+    const seconds = Math.round(timeoutMs / 1000);
+    throw new Error(
+      `Job timeout after ${seconds}s. Backend may still be running; try increasing Vehicles/Capacity or reducing customer count.`
+    );
   }
 
   paintResult() {
@@ -1299,8 +1746,9 @@ export class App {
     this.maps.alnsDiffLayer.clearLayers();
     this.maps.ddqnVehicleLayer.clearLayers();
     this.maps.alnsVehicleLayer.clearLayers();
-    this.renderAlgoRoutes(result.ddqn, this.maps.ddqnRouteLayer, '#0b8a65');
-    this.renderAlgoRoutes(result.alns, this.maps.alnsRouteLayer, '#2563eb');
+    const routeCapacity = Number(this.state.lastRunFleet?.capacity ?? this.state.capacity);
+    this.renderAlgoRoutes(result.ddqn, this.maps.ddqnRouteLayer, '#0b8a65', routeCapacity);
+    this.renderAlgoRoutes(result.alns, this.maps.alnsRouteLayer, '#2563eb', routeCapacity);
     const highlightedCount = this.renderAlnsOnlySegments(result.ddqn, result.alns, this.maps.alnsDiffLayer);
     this.renderVehicleMarkers(result.ddqn, this.maps.ddqnVehicleLayer, '#0b8a65');
     this.renderVehicleMarkers(result.alns, this.maps.alnsVehicleLayer, '#2563eb');
@@ -1405,14 +1853,38 @@ export class App {
     return `${fixed}${unit}`;
   }
 
-  renderAlgoRoutes(algo, layerGroup, color) {
+  buildLoadBadge(load, cap) {
+    if (!Number.isFinite(cap) || cap <= 0) {
+      return { ratio: null, label: 'N/A', tone: 'low' };
+    }
+    const ratio = load / cap;
+    if (ratio > 0.95) return { ratio, label: 'Critical', tone: 'high' };
+    if (ratio >= 0.8) return { ratio, label: 'Near Full', tone: 'medium' };
+    return { ratio, label: 'Safe', tone: 'low' };
+  }
+
+  renderAlgoRoutes(algo, layerGroup, color, capacity) {
     (algo.routes || []).forEach((route) => {
       if (!route.path || route.path.length < 2) return;
+      const load = Number(route.load ?? 0);
+      const cap = Number(capacity);
+      const loadLine = Number.isFinite(cap) && cap > 0 ? `<br/>Load: ${load}/${cap}` : `<br/>Load: ${load}`;
+      const badge = this.buildLoadBadge(load, cap);
+      const ratioText = Number.isFinite(badge.ratio) ? `${(badge.ratio * 100).toFixed(1)}%` : 'N/A';
+      const popupContent = `
+        <div class="route-popup">
+          <strong>Vehicle ${route.vehicle_id}</strong>
+          ${loadLine}
+          <br/>Distance: ${Number(route.distance_km || 0).toFixed(2)} km
+          <br/>Utilization: ${ratioText}
+          <br/><span class="route-load-pill ${badge.tone}">${badge.label}</span>
+        </div>
+      `;
       L.polyline(route.path.map((p) => [p[0], p[1]]), {
         color,
         weight: 4,
         opacity: 0.78
-      }).bindPopup(`Vehicle ${route.vehicle_id}`).addTo(layerGroup);
+      }).bindPopup(popupContent).addTo(layerGroup);
     });
   }
 
@@ -1515,9 +1987,8 @@ export class App {
 
   showEmptyStates() {
     if (this.el.tableEmpty) {
-      const emptyCustomers = this.state.customers.length <= 0;
-      this.el.tableEmpty.classList.toggle('hidden', !emptyCustomers);
-      if (this.el.tableSkeleton) this.el.tableSkeleton.classList.toggle('hidden', !emptyCustomers);
+      this.el.tableEmpty.classList.add('hidden');
+      if (this.el.tableSkeleton) this.el.tableSkeleton.classList.add('hidden');
     }
     const hasRoutes = Boolean(this.state.lastResult?.ddqn?.routes?.length || this.state.lastResult?.alns?.routes?.length);
     if (this.el.mapEmptyDdqn) this.el.mapEmptyDdqn.classList.toggle('hidden', hasRoutes);
@@ -1587,7 +2058,8 @@ export class App {
     const phases = [
       { label: 'Collecting route data...', until: 28, algo: 'idle', base: 0.032, amp: 0.024 },
       { label: 'Running DDQN...', until: 63, algo: 'ddqn', base: 0.044, amp: 0.038 },
-      { label: 'Running ALNS...', until: 92, algo: 'alns', base: 0.039, amp: 0.034 }
+      { label: 'Running ALNS...', until: 97, algo: 'alns', base: 0.039, amp: 0.034 },
+      { label: 'Finalizing best routes...', until: 99, algo: 'alns', base: 0.012, amp: 0.01 }
     ];
 
     const tick = (now) => {

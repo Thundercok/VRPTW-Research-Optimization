@@ -35,6 +35,10 @@ class ForgotPasswordResetRequest(BaseModel):
     new_password: str
 
 
+class RequiredPasswordChangeRequest(BaseModel):
+    new_password: str
+
+
 class RoleUpdateRequest(BaseModel):
     role: str
 

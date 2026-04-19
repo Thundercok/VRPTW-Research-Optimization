@@ -7,6 +7,7 @@ export function createInitialState() {
     email: savedEmail,
     role: localStorage.getItem('vrptw_role') || 'operator',
     resetToken: '',
+    mustChangePassword: localStorage.getItem('vrptw_must_change_password') === 'true',
     registerOtpApprovedEmail: '',
     registerOtpVerified: false,
     registerOtpExpiresAt: 0,

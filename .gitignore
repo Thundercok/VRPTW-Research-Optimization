@@ -1,3 +1,5 @@
 .DS_Store
 secret
 backend/.env
+web/.env
+*firebase-adminsdk*.json

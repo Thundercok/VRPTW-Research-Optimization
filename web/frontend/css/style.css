@@ -412,11 +412,12 @@ p {
   width: 44px;
   height: 24px;
   appearance: none;
-  background: #bfd7ea;
+  background: #edf3f8;
   border-radius: 999px;
-  border: 1px solid #a9c9de;
+  border: 1px solid #c8d8e6;
   position: relative;
   cursor: pointer;
+  transition: background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
 }
 
 .toggle-wrap input::after {
@@ -429,6 +430,12 @@ p {
   border-radius: 50%;
   background: #fff;
   transition: transform 180ms ease;
+  box-shadow: 0 1px 2px rgba(15, 39, 64, 0.18);
+}
+
+.toggle-wrap input:checked {
+  background: #bfd7ea;
+  border-color: #9fc5de;
 }
 
 .toggle-wrap input:checked::after {
@@ -745,6 +752,61 @@ th {
   top: 0;
 }
 
+.cell-editable {
+  cursor: text;
+}
+
+.cell-editable:hover {
+  background: #f3f8fe;
+}
+
+td.is-editing {
+  padding: 6px;
+  background: #eef6ff;
+}
+
+.table-edit-input {
+  width: 100%;
+  border: 1px solid #9fc3e5;
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--ink);
+  background: #ffffff;
+  outline: none;
+}
+
+.table-edit-input:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 2px rgba(59, 138, 197, 0.15);
+}
+
+.table-input-row td {
+  background: #f9fcff;
+}
+
+.table-inline-input {
+  width: 100%;
+  border: 1px solid #c9dced;
+  border-radius: 7px;
+  padding: 6px 8px;
+  font-size: 13px;
+  font-family: inherit;
+  background: #fff;
+  color: var(--ink);
+  outline: none;
+}
+
+.table-inline-input:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 2px rgba(59, 138, 197, 0.12);
+}
+
+.table-inline-readonly {
+  color: var(--ink-soft);
+}
+
 .split-grid {
   grid-area: maps;
   display: grid;
@@ -844,6 +906,39 @@ th {
   height: 26px;
   font-size: 13px;
   animation-duration: 1.55s;
+}
+
+.route-popup {
+  line-height: 1.4;
+}
+
+.route-load-pill {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.route-load-pill.low {
+  color: #0f6f50;
+  background: #e9f8f1;
+  border-color: #b9e7d4;
+}
+
+.route-load-pill.medium {
+  color: #9a5a00;
+  background: #fff5df;
+  border-color: #f3d48f;
+}
+
+.route-load-pill.high {
+  color: #b12622;
+  background: #ffe9e8;
+  border-color: #f2b6b2;
 }
 
 @keyframes markerFloat {
@@ -1078,6 +1173,7 @@ th {
   text-align: center;
   padding: 16px;
   gap: 8px;
+  pointer-events: none;
 }
 
 .map-empty {

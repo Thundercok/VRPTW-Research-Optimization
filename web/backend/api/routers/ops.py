@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, Query
 
 from api.dependencies import require_user
 from models.schemas import JobRequest, MatrixRequest
-from services.geocode_service import geocode_address
+from services.geocode_service import geocode_address, reverse_geocode_address
 from services.job_service import job_service
 from services.matrix_service import calculate_matrix
 
@@ -21,6 +21,11 @@ async def health() -> dict[str, str]:
 @router.get("/geocode")
 async def geocode(q: str = Query(min_length=2), limit: int = Query(default=5, ge=1, le=10)) -> dict[str, Any]:
     return await geocode_address(q, limit)
+
+
+@router.get("/reverse-geocode")
+async def reverse_geocode(lat: float = Query(), lng: float = Query()) -> dict[str, Any]:
+    return await reverse_geocode_address(lat, lng)
 
 
 @router.post("/matrix")
