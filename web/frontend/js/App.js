@@ -7,6 +7,9 @@ export class App {
     this.state = createInitialState();
     this.tableInputDraft = { name: '', address: '', demand: '0', lat: null, lng: null };
     this.tableInputRefs = {};
+    this.tableAddressSuggest = [];
+    this.tableAddressSuggestActive = -1;
+    this.tableAddressSuggestTimer = 0;
 
     this.el = this.bindElements();
     this.maps = null;
@@ -118,6 +121,18 @@ export class App {
       metricVehiclesDelta: document.getElementById('metric-vehicles-delta'),
       metricVehiclesBarDdqn: document.getElementById('metric-vehicles-bar-ddqn'),
       metricVehiclesBarAlns: document.getElementById('metric-vehicles-bar-alns'),
+      metricLoadCard: document.getElementById('metric-load-card'),
+      metricLoadDdqn: document.getElementById('metric-load-ddqn'),
+      metricLoadAlns: document.getElementById('metric-load-alns'),
+      metricLoadDelta: document.getElementById('metric-load-delta'),
+      metricLoadBarDdqn: document.getElementById('metric-load-bar-ddqn'),
+      metricLoadBarAlns: document.getElementById('metric-load-bar-alns'),
+      metricLoadDdqnState: document.getElementById('metric-load-ddqn-state'),
+      metricLoadAlnsState: document.getElementById('metric-load-alns-state'),
+      metricLoadDonutDdqn: document.getElementById('metric-load-donut-ddqn'),
+      metricLoadDonutAlns: document.getElementById('metric-load-donut-alns'),
+      metricLoadDonutDdqnLabel: document.getElementById('metric-load-donut-ddqn-label'),
+      metricLoadDonutAlnsLabel: document.getElementById('metric-load-donut-alns-label'),
       connectionPill: document.getElementById('connection-pill'),
       loading: document.getElementById('loading'),
       loadingCard: document.getElementById('loading-card'),
@@ -774,8 +789,8 @@ export class App {
 
     this.el.parsePaste?.addEventListener('click', () => this.parsePasteData());
     this.el.runModel.addEventListener('click', () => this.submitJob());
-    this.el.addAddress.addEventListener('click', () => this.addSelectedAddress());
-    this.el.addressInput.addEventListener('input', () => this.handleAddressInput());
+    this.el.addAddress?.addEventListener('click', () => this.addSelectedAddress());
+    this.el.addressInput?.addEventListener('input', () => this.handleAddressInput());
     this.wireTableInlineEditing();
   }
 
@@ -1440,6 +1455,74 @@ export class App {
     return true;
   }
 
+  clearTableAddressSuggest() {
+    this.tableAddressSuggest = [];
+    this.tableAddressSuggestActive = -1;
+    this.renderTableAddressSuggest();
+  }
+
+  scheduleTableAddressSuggest(query) {
+    if (this.tableAddressSuggestTimer) {
+      window.clearTimeout(this.tableAddressSuggestTimer);
+      this.tableAddressSuggestTimer = 0;
+    }
+
+    const q = String(query || '').trim();
+    if (q.length < 3) {
+      this.clearTableAddressSuggest();
+      return;
+    }
+
+    this.tableAddressSuggestTimer = window.setTimeout(async () => {
+      this.tableAddressSuggestTimer = 0;
+      try {
+        const data = await this.request(`/geocode?q=${encodeURIComponent(q)}&limit=6`, { method: 'GET' });
+        this.tableAddressSuggest = data.items || [];
+        this.tableAddressSuggestActive = this.tableAddressSuggest.length > 0 ? 0 : -1;
+      } catch {
+        this.tableAddressSuggest = [];
+        this.tableAddressSuggestActive = -1;
+      }
+      this.renderTableAddressSuggest();
+    }, 220);
+  }
+
+  chooseTableAddressSuggestion(item) {
+    if (!item) return;
+    this.tableInputDraft.address = item.address || '';
+    this.tableInputDraft.lat = Number(item.lat);
+    this.tableInputDraft.lng = Number(item.lng);
+    if (this.tableInputRefs.address) {
+      this.tableInputRefs.address.value = this.tableInputDraft.address;
+    }
+    this.updateDraftCoordCells();
+    this.clearTableAddressSuggest();
+  }
+
+  renderTableAddressSuggest() {
+    const list = this.tableInputRefs.addressSuggest;
+    if (!list) return;
+    list.innerHTML = '';
+
+    if (!Array.isArray(this.tableAddressSuggest) || this.tableAddressSuggest.length === 0) {
+      list.classList.add('hidden');
+      return;
+    }
+
+    this.tableAddressSuggest.forEach((item, idx) => {
+      const li = document.createElement('li');
+      li.textContent = item.address || '-';
+      if (idx === this.tableAddressSuggestActive) li.classList.add('active');
+      li.addEventListener('mousedown', (event) => event.preventDefault());
+      li.addEventListener('click', () => {
+        this.chooseTableAddressSuggestion(item);
+        this.focusTableInputField('address');
+      });
+      list.appendChild(li);
+    });
+    list.classList.remove('hidden');
+  }
+
   async handleTableInputEnter(field) {
     if (field === 'name') {
       this.focusTableInputField('address');
@@ -1466,6 +1549,7 @@ export class App {
 
   resetTableInputDraft() {
     this.tableInputDraft = { name: '', address: '', demand: '0', lat: null, lng: null };
+    this.clearTableAddressSuggest();
   }
 
   async submitTableInputRow() {
@@ -1523,6 +1607,7 @@ export class App {
 
     const createInputCell = (field, value, type = 'text') => {
       const td = document.createElement('td');
+      if (field === 'address') td.classList.add('table-address-cell');
       const input = document.createElement('input');
       input.className = 'table-inline-input';
       input.type = type;
@@ -1533,10 +1618,42 @@ export class App {
       }
       input.addEventListener('input', () => {
         this.tableInputDraft[field] = input.value;
+        if (field === 'address') {
+          this.tableInputDraft.lat = null;
+          this.tableInputDraft.lng = null;
+          this.updateDraftCoordCells();
+          this.scheduleTableAddressSuggest(input.value);
+        }
       });
       input.addEventListener('keydown', (event) => {
+        if (field === 'address' && event.key === 'ArrowDown' && this.tableAddressSuggest.length > 0) {
+          event.preventDefault();
+          this.tableAddressSuggestActive = Math.min(this.tableAddressSuggest.length - 1, this.tableAddressSuggestActive + 1);
+          this.renderTableAddressSuggest();
+          return;
+        }
+        if (field === 'address' && event.key === 'ArrowUp' && this.tableAddressSuggest.length > 0) {
+          event.preventDefault();
+          this.tableAddressSuggestActive = Math.max(0, this.tableAddressSuggestActive - 1);
+          this.renderTableAddressSuggest();
+          return;
+        }
+        if (field === 'address' && event.key === 'Tab' && !event.shiftKey) {
+          if (this.tableAddressSuggest.length > 0 && this.tableAddressSuggestActive >= 0) {
+            event.preventDefault();
+            this.chooseTableAddressSuggestion(this.tableAddressSuggest[this.tableAddressSuggestActive]);
+            this.focusTableInputField('demand');
+            return;
+          }
+          this.clearTableAddressSuggest();
+        }
         if (event.key === 'Enter') {
           event.preventDefault();
+          if (field === 'address' && this.tableAddressSuggest.length > 0 && this.tableAddressSuggestActive >= 0) {
+            this.chooseTableAddressSuggestion(this.tableAddressSuggest[this.tableAddressSuggestActive]);
+            this.focusTableInputField('demand');
+            return;
+          }
           this.handleTableInputEnter(field);
           return;
         }
@@ -1552,10 +1669,22 @@ export class App {
       });
       if (field === 'address') {
         input.addEventListener('blur', () => {
-          this.resolveTableInputAddress();
+          window.setTimeout(() => {
+            this.clearTableAddressSuggest();
+            this.resolveTableInputAddress();
+          }, 100);
+        });
+        input.addEventListener('focus', () => {
+          this.renderTableAddressSuggest();
         });
       }
       td.appendChild(input);
+      if (field === 'address') {
+        const suggest = document.createElement('ul');
+        suggest.className = 'table-address-suggest hidden';
+        td.appendChild(suggest);
+        this.tableInputRefs.addressSuggest = suggest;
+      }
       this.tableInputRefs[field] = input;
       return td;
     };
@@ -1799,7 +1928,69 @@ export class App {
       lowerIsBetter: true
     });
 
+    this.updateLoadInsight(result.ddqn, result.alns, routeCapacity);
+
     this.showEmptyStates();
+  }
+
+  classifyLoadState(value) {
+    if (!Number.isFinite(value)) return { key: '', label: 'No data' };
+    if (value > 95) return { key: 'critical', label: 'Critical load' };
+    if (value >= 80) return { key: 'near', label: 'Near full' };
+    return { key: 'safe', label: 'Safe load' };
+  }
+
+  computeAlgoUtilizationPercent(algo, capacity) {
+    const routes = Array.isArray(algo?.routes) ? algo.routes : [];
+    const cap = Number(capacity);
+    if (!Number.isFinite(cap) || cap <= 0 || routes.length === 0) return 0;
+
+    const totalLoad = routes.reduce((sum, route) => sum + Number(route?.load || 0), 0);
+    const totalCap = routes.length * cap;
+    if (totalCap <= 0) return 0;
+    return (totalLoad / totalCap) * 100;
+  }
+
+  updateLoadInsight(ddqnAlgo, alnsAlgo, capacity) {
+    const ddqnPct = this.computeAlgoUtilizationPercent(ddqnAlgo, capacity);
+    const alnsPct = this.computeAlgoUtilizationPercent(alnsAlgo, capacity);
+    const ddqnClamped = Math.max(0, Math.min(100, ddqnPct));
+    const alnsClamped = Math.max(0, Math.min(100, alnsPct));
+
+    if (this.el.metricLoadDdqn) this.el.metricLoadDdqn.textContent = `${ddqnPct.toFixed(1)}%`;
+    if (this.el.metricLoadAlns) this.el.metricLoadAlns.textContent = `${alnsPct.toFixed(1)}%`;
+    if (this.el.metricLoadBarDdqn) this.el.metricLoadBarDdqn.style.width = `${ddqnClamped}%`;
+    if (this.el.metricLoadBarAlns) this.el.metricLoadBarAlns.style.width = `${alnsClamped}%`;
+    if (this.el.metricLoadDonutDdqn) this.el.metricLoadDonutDdqn.style.setProperty('--p', `${ddqnClamped}%`);
+    if (this.el.metricLoadDonutAlns) this.el.metricLoadDonutAlns.style.setProperty('--p', `${alnsClamped}%`);
+    if (this.el.metricLoadDonutDdqnLabel) this.el.metricLoadDonutDdqnLabel.textContent = `${ddqnClamped.toFixed(0)}%`;
+    if (this.el.metricLoadDonutAlnsLabel) this.el.metricLoadDonutAlnsLabel.textContent = `${alnsClamped.toFixed(0)}%`;
+
+    const ddqnState = this.classifyLoadState(ddqnPct);
+    const alnsState = this.classifyLoadState(alnsPct);
+    if (this.el.metricLoadDdqnState) {
+      this.el.metricLoadDdqnState.className = `load-state ${ddqnState.key}`.trim();
+      this.el.metricLoadDdqnState.textContent = ddqnState.label;
+    }
+    if (this.el.metricLoadAlnsState) {
+      this.el.metricLoadAlnsState.className = `load-state ${alnsState.key}`.trim();
+      this.el.metricLoadAlnsState.textContent = alnsState.label;
+    }
+
+    if (this.el.metricLoadDelta) {
+      const diff = Math.abs(ddqnPct - alnsPct);
+      if (diff < 0.05) {
+        this.el.metricLoadDelta.textContent = 'Balanced';
+      } else {
+        const winner = ddqnPct > alnsPct ? 'DDQN' : 'ALNS';
+        this.el.metricLoadDelta.textContent = `${winner} +${diff.toFixed(1)}%`;
+      }
+    }
+
+    if (this.el.metricLoadCard) {
+      if (Math.abs(ddqnPct - alnsPct) < 0.05) this.el.metricLoadCard.dataset.winner = 'tie';
+      else this.el.metricLoadCard.dataset.winner = ddqnPct > alnsPct ? 'ddqn' : 'alns';
+    }
   }
 
   updateCompareMetric({ card, ddqnNode, alnsNode, deltaNode, barDdqn, barAlns, ddqn, alns, unit, decimals, lowerIsBetter }) {

@@ -35,7 +35,13 @@ async def geocode_address(q: str, limit: int) -> dict[str, Any]:
         try:
             nominatim_resp = await client.get(
                 "https://nominatim.openstreetmap.org/search",
-                params={"q": q, "format": "json", "limit": str(limit), "accept-language": "vi,en"},
+                params={
+                    "q": q,
+                    "format": "json",
+                    "limit": str(limit),
+                    "accept-language": "vi,en",
+                    "countrycodes": "vn",
+                },
                 headers=headers,
             )
             nominatim_resp.raise_for_status()
@@ -44,7 +50,7 @@ async def geocode_address(q: str, limit: int) -> dict[str, Any]:
             try:
                 mapsco_resp = await client.get(
                     "https://geocode.maps.co/search",
-                    params={"q": q},
+                    params={"q": f"{q}, Vietnam"},
                     headers=headers,
                 )
                 mapsco_resp.raise_for_status()

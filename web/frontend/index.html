@@ -134,15 +134,6 @@
         </label>
 
         <div class="field">
-          <span>Address</span>
-          <div class="inline-row">
-            <input id="address-input" type="text" placeholder="Enter delivery address..." autocomplete="off" />
-            <button id="add-address" class="btn" type="button">Add</button>
-          </div>
-          <ul id="address-suggest" class="suggest-list"></ul>
-        </div>
-
-        <div class="field">
           <span>Import from Excel / CSV</span>
           <div id="dropzone" class="dropzone">
             <input id="excel-input" type="file" accept=".xlsx,.xls,.csv" hidden />
@@ -234,46 +225,22 @@
           </div>
         </section>
 
-        <section class="split-grid tab-panel" data-panel="maps">
-          <article class="map-card">
-            <h3><span class="mini-icon">◆</span> DDQN</h3>
-            <div id="map-ddqn" class="map"></div>
-            <div id="map-empty-ddqn" class="empty-state map-empty hidden">
-              <div class="empty-icon">🗺</div>
-              <h3>No DDQN route yet</h3>
-              <p>Results will appear after submitting a job.</p>
-            </div>
-          </article>
-          <article class="map-card">
-            <h3><span class="mini-icon">◆</span> ALNS</h3>
-            <div id="map-alns" class="map"></div>
-            <div id="map-empty-alns" class="empty-state map-empty hidden">
-              <div class="empty-icon">🧭</div>
-              <h3>No ALNS route yet</h3>
-              <p>Parallel comparison view will activate when results are available.</p>
-            </div>
-          </article>
-        </section>
-
         <section class="metrics-grid tab-panel" data-panel="results">
-          <article id="metric-runtime-card" class="metric compare-metric" data-winner="tie">
-            <div class="metric-head">
-              <p class="metric-title">Runtime</p>
-              <span id="metric-runtime-delta" class="metric-delta">-</span>
-            </div>
-            <div class="metric-compare">
-              <div class="metric-col ddqn">
+          <article id="metric-runtime-card" class="metric runtime-strip" data-winner="tie">
+            <p class="metric-title">Runtime</p>
+            <div class="runtime-strip-grid">
+              <div class="runtime-chip ddqn">
                 <span class="algo-tag">DDQN</span>
                 <strong id="metric-runtime-ddqn" class="metric-value">-</strong>
               </div>
-              <div class="metric-col alns">
+              <div class="runtime-chip alns">
                 <span class="algo-tag">ALNS</span>
                 <strong id="metric-runtime-alns" class="metric-value">-</strong>
               </div>
-            </div>
-            <div class="metric-bars">
-              <div class="bar-track"><span id="metric-runtime-bar-ddqn" class="bar-fill ddqn" style="width: 0%"></span></div>
-              <div class="bar-track"><span id="metric-runtime-bar-alns" class="bar-fill alns" style="width: 0%"></span></div>
+              <div class="runtime-chip delta">
+                <span class="algo-tag">Delta</span>
+                <strong id="metric-runtime-delta" class="metric-value">-</strong>
+              </div>
             </div>
           </article>
 
@@ -316,6 +283,54 @@
             <div class="metric-bars">
               <div class="bar-track"><span id="metric-vehicles-bar-ddqn" class="bar-fill ddqn" style="width: 0%"></span></div>
               <div class="bar-track"><span id="metric-vehicles-bar-alns" class="bar-fill alns" style="width: 0%"></span></div>
+            </div>
+          </article>
+
+          <article id="metric-load-card" class="metric load-insight-card" data-winner="tie">
+            <div class="metric-head">
+              <p class="metric-title">Fleet Utilization</p>
+              <span id="metric-load-delta" class="metric-delta">-</span>
+            </div>
+            <div class="load-insight-grid">
+              <div class="load-insight-col ddqn">
+                <span class="algo-tag">DDQN</span>
+                <div id="metric-load-donut-ddqn" class="load-donut ddqn" style="--p:0%">
+                  <span id="metric-load-donut-ddqn-label">0%</span>
+                </div>
+                <strong id="metric-load-ddqn" class="metric-value">-</strong>
+                <div class="bar-track"><span id="metric-load-bar-ddqn" class="bar-fill ddqn" style="width: 0%"></span></div>
+                <small id="metric-load-ddqn-state" class="load-state">-</small>
+              </div>
+              <div class="load-insight-col alns">
+                <span class="algo-tag">ALNS</span>
+                <div id="metric-load-donut-alns" class="load-donut alns" style="--p:0%">
+                  <span id="metric-load-donut-alns-label">0%</span>
+                </div>
+                <strong id="metric-load-alns" class="metric-value">-</strong>
+                <div class="bar-track"><span id="metric-load-bar-alns" class="bar-fill alns" style="width: 0%"></span></div>
+                <small id="metric-load-alns-state" class="load-state">-</small>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <section class="split-grid tab-panel" data-panel="maps">
+          <article class="map-card">
+            <h3><span class="mini-icon">◆</span> DDQN</h3>
+            <div id="map-ddqn" class="map"></div>
+            <div id="map-empty-ddqn" class="empty-state map-empty hidden">
+              <div class="empty-icon">🗺</div>
+              <h3>No DDQN route yet</h3>
+              <p>Results will appear after submitting a job.</p>
+            </div>
+          </article>
+          <article class="map-card">
+            <h3><span class="mini-icon">◆</span> ALNS</h3>
+            <div id="map-alns" class="map"></div>
+            <div id="map-empty-alns" class="empty-state map-empty hidden">
+              <div class="empty-icon">🧭</div>
+              <h3>No ALNS route yet</h3>
+              <p>Parallel comparison view will activate when results are available.</p>
             </div>
           </article>
         </section>
