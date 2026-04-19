@@ -3,9 +3,11 @@ from __future__ import annotations
 import asyncio
 import contextlib
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from api.routers import admin, auth, ops
 from core.config import load_local_env
@@ -39,3 +41,8 @@ app.add_middleware(
 app.include_router(auth.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
 app.include_router(ops.router, prefix="/api")
+
+# Serve static files - must be last
+frontend_path = Path(__file__).resolve().parents[1] / "frontend"
+if frontend_path.exists():
+    app.mount("", StaticFiles(directory=str(frontend_path), html=True), name="frontend")

@@ -16,7 +16,7 @@ _tokens: dict[str, str] = {}
 
 
 def _build_otp_email_html(otp: str) -> str:
-        return f"""
+    return f"""
 <!doctype html>
 <html>
     <body style=\"margin:0;padding:0;background:#f3f6fb;font-family:Segoe UI,Arial,sans-serif;color:#1f2a37;\">
@@ -52,7 +52,7 @@ def _build_otp_email_html(otp: str) -> str:
 
 
 def _build_reset_email_html(reset_link: str) -> str:
-        return f"""
+    return f"""
 <!doctype html>
 <html>
     <body style=\"margin:0;padding:0;background:#f3f6fb;font-family:Segoe UI,Arial,sans-serif;color:#1f2a37;\">
@@ -268,3 +268,16 @@ def update_user_role(email: str, role: str) -> dict[str, str]:
     users_repo.update_user_role(target_email, role)
 
     return {"message": "role_updated", "email": target_email, "role": role}
+
+
+def delete_user(email: str) -> dict[str, str]:
+    target_email = email.strip().lower()
+    if not is_valid_email(target_email):
+        raise HTTPException(status_code=400, detail="Invalid email format")
+
+    row = users_repo.find_user_by_email(target_email)
+    if not row:
+        raise HTTPException(status_code=404, detail="User not found")
+    users_repo.delete_user(target_email)
+
+    return {"message": "user_deleted", "email": target_email}

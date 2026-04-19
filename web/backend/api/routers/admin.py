@@ -31,3 +31,12 @@ async def admin_update_role(
 ) -> dict[str, str]:
     _ensure_admin(user)
     return auth_service.update_user_role(email, body.role)
+
+
+@router.delete("/admin/users/{email}")
+async def admin_delete_user(
+    email: str = ApiPath(...),
+    user: dict[str, str] = Depends(require_user),
+) -> dict[str, str]:
+    _ensure_admin(user)
+    return auth_service.delete_user(email)

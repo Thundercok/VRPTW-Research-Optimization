@@ -47,3 +47,10 @@ def update_user_role(email: str, role: str) -> None:
         conn.execute(
             "UPDATE users SET role = ? WHERE email = ?", (role, email))
         conn.commit()
+
+
+def delete_user(email: str) -> None:
+    with open_db() as conn:
+        conn.execute(
+            "DELETE FROM users WHERE email = ?", (email,))
+        conn.commit()

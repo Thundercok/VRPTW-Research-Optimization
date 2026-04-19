@@ -21,6 +21,7 @@ export class App {
     this.registerSuccessCountdownTimer = 0;
     this.registerOtpVerifyDebounceTimer = 0;
     this.isSendingRegisterOtp = false;
+    this.registerOtpRequestedEmail = ''; // Track which email OTP was sent to
     this.wireAuthEvents();
     this.routeAuthScreenFromURL();
 
@@ -169,12 +170,16 @@ export class App {
 
     this.el.registerEmail?.addEventListener('input', () => {
       this.clearFieldError(this.el.registerEmail);
-      this.state.registerOtpApprovedEmail = '';
-      this.state.registerOtpVerified = false;
-      this.state.registerOtpExpiresAt = 0;
-      this.stopRegisterOtpCountdown();
-      this.updateRegisterOtpCountdownText('Click Send OTP to receive a verification code.');
-      this.updateRegisterButtonState();
+      const currentEmail = this.el.registerEmail.value.trim().toLowerCase();
+      // Only reset OTP state if email actually changed from the one OTP was sent to
+      if (currentEmail !== this.registerOtpRequestedEmail) {
+        this.state.registerOtpApprovedEmail = '';
+        this.state.registerOtpVerified = false;
+        this.state.registerOtpExpiresAt = 0;
+        this.stopRegisterOtpCountdown();
+        this.updateRegisterOtpCountdownText('Click Send OTP to receive a verification code.');
+        this.updateRegisterButtonState();
+      }
     });
     this.el.registerPassword?.addEventListener('input', () => this.clearFieldError(this.el.registerPassword));
     this.el.registerOtp?.addEventListener('input', () => {
@@ -226,6 +231,10 @@ export class App {
     this.syncAuthScreenInUrl(view);
     this.stopRegisterSuccessCountdown();
     this.clearAuthInputErrors();
+    // Clear register OTP state when leaving register view
+    if (view !== 'register') {
+      this.registerOtpRequestedEmail = '';
+    }
     if (view === 'register') {
       if (this.state.registerOtpExpiresAt > Date.now()) {
         this.startRegisterOtpCountdown();
@@ -412,6 +421,7 @@ export class App {
       });
 
       this.state.registerOtpApprovedEmail = email;
+      this.registerOtpRequestedEmail = email; // Track this email for OTP state management
       this.state.registerOtpVerified = false;
       this.state.registerOtpExpiresAt = Date.now() + 10 * 60 * 1000;
       this.stopRegisterOtpVerifyDebounce();
@@ -421,8 +431,11 @@ export class App {
       this.toast('OTP Sent Successfully', `Delivery method: ${res.delivery}. Check your email for the OTP code.`, 'ok');
       this.updateRegisterOtpCountdownText('OTP sent. Enter OTP to verify automatically.', 'active');
       this.setStatus('Send OTP success. Please enter the 6-digit OTP to continue.', 'ok');
+      // Pin register view after successful OTP send
+      this.showAuthView('register');
     } catch (error) {
       this.state.registerOtpApprovedEmail = '';
+      this.registerOtpRequestedEmail = ''; // Clear on error
       this.state.registerOtpVerified = false;
       this.state.registerOtpExpiresAt = 0;
       this.stopRegisterOtpVerifyDebounce();
@@ -837,6 +850,7 @@ export class App {
       this.toast('Registration Successful', 'Account created successfully.', 'ok');
       this.el.loginEmail.value = email;
       this.state.registerOtpApprovedEmail = '';
+      this.registerOtpRequestedEmail = ''; // Clear on successful registration
       this.state.registerOtpVerified = false;
       this.state.registerOtpExpiresAt = 0;
       this.stopRegisterOtpCountdown();
