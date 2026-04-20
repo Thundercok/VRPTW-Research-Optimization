@@ -48,6 +48,10 @@ Customer B,12 Nguyen Hue District 1,10.774300,106.703900,8
 Lưu ý:
 - `Depot` nên để `Demand = 0`
 - Nếu không có tọa độ, hệ thống sẽ thử geocode từ `Address`
+## Tai khoan Admin (dùng để quản lý User Account,history login/logout)
+
+- TK : tranlop72@gmail.com
+- MK : 123456
 
 ## Flow hệ thống
 
@@ -90,7 +94,3 @@ Khi dùng `Training Analysis`:
 Khi chỉ chạy dữ liệu mới:
 - Chỉ cần dùng `Customer List` và `Run Model`.
 
-## Tai khoan Admin (dùng để quản lý User Account)
-
-TK : tranlop72@gmail.com
-MK : 123456
