@@ -105,7 +105,6 @@ export class App {
       suggestList: document.getElementById('address-suggest'),
       pasteBox: document.getElementById('paste-box'),
       parsePaste: document.getElementById('parse-paste'),
-      loadSample: document.getElementById('load-sample'),
       addRow: document.getElementById('add-row'),
       deleteSelected: document.getElementById('delete-selected'),
       runModel: document.getElementById('run-model'),
@@ -146,7 +145,6 @@ export class App {
       metricLoadDonutAlnsLabel: document.getElementById('metric-load-donut-alns-label'),
       analysisVersion: document.getElementById('analysis-version'),
       analysisInstance: document.getElementById('analysis-instance'),
-      analysisRefresh: document.getElementById('analysis-refresh'),
       analysisOpenPopup: document.getElementById('analysis-open-popup'),
       analysisLastUpdated: document.getElementById('analysis-last-updated'),
       analysisStatus: document.getElementById('analysis-status'),
@@ -945,13 +943,6 @@ export class App {
       this.el.capacityValue.textContent = String(this.state.capacity);
     });
 
-    this.el.loadSample.addEventListener('click', () => {
-      this.state.mode = 'sample';
-      this.el.modeToggle.checked = false;
-      this.setImportEnabled(false);
-      this.loadSolomonDataset('c101');
-    });
-
     this.el.addRow?.addEventListener('click', () => {
       this.tableInputVisible = true;
       this.renderCustomers();
@@ -970,7 +961,6 @@ export class App {
       this.state.analysisVersion = nextVersion;
       this.loadAnalysisData(nextVersion);
     });
-    this.el.analysisRefresh?.addEventListener('click', () => this.bootstrapAnalysis(true));
     this.el.analysisInstance?.addEventListener('change', () => {
       this.state.analysisInstance = this.el.analysisInstance.value || 'ALL';
       this.renderAnalysis();
