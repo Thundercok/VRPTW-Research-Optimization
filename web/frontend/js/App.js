@@ -2234,6 +2234,12 @@ export class App {
     return candidate;
   }
 
+  isDepotLabel(value) {
+    const normalized = String(value || '').trim().toLowerCase();
+    if (!normalized) return false;
+    return ['depot', 'warehouse', 'hub', 'kho'].some((token) => normalized === token || normalized.includes(token));
+  }
+
   async parseRowsToCustomers(rows) {
     const headerMap = this.detectHeaderMap(rows);
     const dataRows = headerMap ? rows.slice(1) : rows;
@@ -2274,12 +2280,24 @@ export class App {
         lat = geo.lat;
         lng = geo.lng;
       }
+
+      const numericDemand = Number(demandRaw) || 0;
+      const isDepot =
+        this.isDepotLabel(name) ||
+        this.isDepotLabel(address) ||
+        (
+          this.state.customers.length === 0 &&
+          newItems.length === 0 &&
+          numericDemand === 0
+        );
+
       newItems.push({
         name: name || `Cust-${Date.now().toString().slice(-4)}`,
         address,
         lat,
         lng,
-        demand: Number(demandRaw) || 10
+        demand: Number(demandRaw) || 10,
+        isDepot
       });
     }
     return newItems;
@@ -2618,7 +2636,7 @@ export class App {
 
   pushCustomer(item) {
     const id = this.state.customers.length;
-    this.state.customers.push({ ...item, id, isDepot: false });
+    this.state.customers.push({ ...item, id, isDepot: Boolean(item.isDepot) });
     this.selectedCustomerIds.clear();
     this.renderCustomers();
     this.renderMarkers();
