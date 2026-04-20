@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Header, Query
 
 from api.dependencies import require_user
 from models.schemas import AuthRequest, ForgotPasswordRequest, ForgotPasswordResetRequest, RegisterConfirmRequest, RegisterOTPRequest, RegisterVerifyRequest, RequiredPasswordChangeRequest
@@ -29,6 +29,15 @@ async def register(body: RegisterConfirmRequest) -> dict[str, str]:
 @router.post("/auth/token")
 async def token(body: AuthRequest) -> dict[str, Any]:
     return auth_service.login_user(body.email, body.password)
+
+
+@router.post("/auth/logout")
+async def logout(
+    authorization: str | None = Header(default=None),
+    user: dict[str, str] = Depends(require_user),
+) -> dict[str, str]:
+    token = authorization.removeprefix("Bearer ").strip() if authorization else None
+    return auth_service.logout_user(user["email"], token)
 
 
 @router.post("/auth/forgot-password/request")

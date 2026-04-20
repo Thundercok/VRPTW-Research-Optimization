@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Path as ApiPath
+from fastapi import APIRouter, Depends, HTTPException, Path as ApiPath, Query
 
 from api.dependencies import require_user
-from models.schemas import RoleUpdateRequest
+from models.schemas import AdminCreateUserRequest, RoleUpdateRequest
 from services import auth_service
 
 router = APIRouter(tags=["admin"])
@@ -21,6 +21,25 @@ def _ensure_admin(user: dict[str, str]) -> dict[str, str]:
 async def admin_list_users(user: dict[str, str] = Depends(require_user)) -> dict[str, Any]:
     _ensure_admin(user)
     return auth_service.list_users()
+
+
+@router.get("/admin/users/{email}/activity")
+async def admin_user_activity(
+    email: str = ApiPath(...),
+    limit: int = Query(default=10, ge=1, le=50),
+    user: dict[str, str] = Depends(require_user),
+) -> dict[str, Any]:
+    _ensure_admin(user)
+    return auth_service.list_user_activity(email, limit)
+
+
+@router.post("/admin/users")
+async def admin_create_user(
+    body: AdminCreateUserRequest,
+    user: dict[str, str] = Depends(require_user),
+) -> dict[str, str]:
+    _ensure_admin(user)
+    return auth_service.admin_create_user(body.email, body.password, body.role, body.must_change_password)
 
 
 @router.patch("/admin/users/{email}/role")

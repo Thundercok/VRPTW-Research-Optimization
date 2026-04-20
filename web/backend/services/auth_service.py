@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import secrets
 import time
@@ -192,12 +192,20 @@ def login_user(email: str, password: str) -> dict[str, str | bool]:
         )
 
     access_token = issue_token(email)
+    users_repo.record_user_event(email, "login", source="backend-login")
     return {
         "access_token": access_token,
         "token_type": "bearer",
         "role": row["role"],
         "must_change_password": bool(row.get("must_change_password", False)),
     }
+
+
+def logout_user(email: str, token: str | None = None) -> dict[str, str]:
+    if token:
+        token_repo.delete_token(token)
+    users_repo.record_user_event(email, "logout", source="backend-logout")
+    return {"message": "logged_out"}
 
 
 def request_password_reset(email: str) -> dict[str, str]:
@@ -284,6 +292,38 @@ def list_users() -> dict[str, Any]:
     return users_repo.list_users()
 
 
+def list_user_activity(email: str, limit: int = 10) -> dict[str, Any]:
+    target_email = email.strip().lower()
+    if not is_valid_email(target_email):
+        raise HTTPException(status_code=400, detail="Invalid email format")
+    row = users_repo.find_user_by_email(target_email)
+    if not row:
+        raise HTTPException(status_code=404, detail="User not found")
+    return users_repo.list_user_activity(target_email, limit)
+
+
+def admin_create_user(email: str, password: str, role: str, must_change_password: bool = True) -> dict[str, str]:
+    target_email = email.strip().lower()
+    if not is_valid_email(target_email):
+        raise HTTPException(status_code=400, detail="Invalid email format")
+    if len(password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+    if not is_valid_role(role):
+        raise HTTPException(status_code=400, detail="Invalid role")
+    if users_repo.find_user_by_email(target_email):
+        raise HTTPException(status_code=409, detail="User already exists")
+
+    now = int(time.time())
+    users_repo.create_user(
+        target_email,
+        hash_password(password),
+        role,
+        now,
+        must_change_password=must_change_password,
+    )
+    return {"message": "user_created", "email": target_email, "role": role}
+
+
 def update_user_role(email: str, role: str) -> dict[str, str]:
     target_email = email.strip().lower()
     if not is_valid_email(target_email):
@@ -310,3 +350,4 @@ def delete_user(email: str) -> dict[str, str]:
     users_repo.delete_user(target_email)
 
     return {"message": "user_deleted", "email": target_email}
+

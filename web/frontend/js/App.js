@@ -35,8 +35,12 @@ export class App {
     this.isSendingRegisterOtp = false;
     this.isSendingForgotPasswordLink = false;
     this.isSubmittingPasswordChange = false;
+    this.isRegistering = false;
+    this.isLoggingIn = false;
+    this.isLoggingOut = false;
     this.registerOtpRequestedEmail = ''; // Track which email OTP was sent to
     this.wireAuthEvents();
+    this.wireAdminEvents();
     this.wireLoadingControls();
     this.routeAuthScreenFromURL();
 
@@ -44,6 +48,10 @@ export class App {
       if (this.state.mustChangePassword) {
         this.showAuthView('reset');
         this.toast('Password Change Required', 'Set a new password before accessing the app.', 'error');
+      } else if (this.state.role === 'admin') {
+        this.enterAdminDashboard();
+        this.initFirebase(this.state.email);
+        this.toast('Auto Login', 'Admin session restored.', 'ok');
       } else {
         this.enterApp();
         this.initFirebase(this.state.email);
@@ -83,9 +91,21 @@ export class App {
       btnForgotPassword: document.getElementById('btn-forgot-password'),
       btnResetPassword: document.getElementById('btn-reset-password'),
       btnLogout: document.getElementById('btn-logout'),
-      adminPanel: document.getElementById('admin-panel'),
+      adminScreen: document.getElementById('admin-screen'),
+      adminGoMain: document.getElementById('admin-go-main'),
       adminRefresh: document.getElementById('admin-refresh'),
+      adminTotalUsers: document.getElementById('admin-total-users'),
+      adminTotalAdmins: document.getElementById('admin-total-admins'),
+      adminTotalOperators: document.getElementById('admin-total-operators'),
+      adminTotalOnline: document.getElementById('admin-total-online'),
+      adminCreateEmail: document.getElementById('admin-create-email'),
+      adminCreatePassword: document.getElementById('admin-create-password'),
+      adminCreateRole: document.getElementById('admin-create-role'),
+      adminCreateForceChange: document.getElementById('admin-create-force-change'),
+      adminCreateUser: document.getElementById('admin-create-user'),
       adminUserRows: document.getElementById('admin-user-rows'),
+      adminSelectedUser: document.getElementById('admin-selected-user'),
+      adminActivityList: document.getElementById('admin-activity-list'),
       userEmail: document.getElementById('user-email'),
       authScreen: document.getElementById('auth-screen'),
       appShell: document.getElementById('app-shell'),
@@ -257,6 +277,47 @@ export class App {
     this.updateRegisterButtonState();
   }
 
+  wireAdminEvents() {
+    this.el.adminGoMain?.addEventListener('click', (event) => {
+      event.preventDefault();
+      if (this.state.role !== 'admin') return;
+      this.enterApp();
+    });
+
+    this.el.adminRefresh?.addEventListener('click', () => {
+      if (this.state.role !== 'admin') return;
+      this.loadAdminUsers(true);
+    });
+
+    this.el.adminCreateUser?.addEventListener('click', () => this.createAdminUser());
+
+    this.el.adminUserRows?.addEventListener('click', (event) => {
+      const button = event.target.closest('button[data-action]');
+      const row = event.target.closest('tr[data-email]');
+      if (!row) return;
+      const email = row.dataset.email;
+
+      if (button?.dataset.action === 'view') {
+        this.loadAdminActivity(email);
+        return;
+      }
+      if (button?.dataset.action === 'delete') {
+        this.deleteAdminUser(email);
+        return;
+      }
+      if (!button) {
+        this.loadAdminActivity(email);
+      }
+    });
+
+    this.el.adminUserRows?.addEventListener('change', (event) => {
+      const select = event.target.closest('select.admin-role-select');
+      if (!select) return;
+      const email = select.dataset.email;
+      this.saveAdminRole(email, select.value);
+    });
+  }
+
   wireLoadingControls() {
     this.el.loadingMinimize?.addEventListener('click', (event) => {
       event.preventDefault();
@@ -356,6 +417,19 @@ export class App {
     field.classList.remove('input-error');
   }
 
+  async withButtonLock(lockName, button, action) {
+    if (this[lockName]) return false;
+    this[lockName] = true;
+    if (button) button.disabled = true;
+    try {
+      await action();
+      return true;
+    } finally {
+      this[lockName] = false;
+      if (button) button.disabled = false;
+    }
+  }
+
   updateRegisterButtonState() {
     if (!this.el.btnRegister || !this.el.registerEmail) return;
     const currentEmail = this.el.registerEmail.value.trim().toLowerCase();
@@ -363,7 +437,8 @@ export class App {
       this.state.registerOtpApprovedEmail &&
       this.state.registerOtpApprovedEmail === currentEmail &&
       this.state.registerOtpVerified &&
-      this.state.registerOtpExpiresAt > Date.now()
+      this.state.registerOtpExpiresAt > Date.now() &&
+      !this.isRegistering
     );
 
     this.el.btnRegister.hidden = false;
@@ -653,11 +728,12 @@ export class App {
     this.setupTabs();
     this.setupExcelImport();
     this.wireEvents();
-    this.el.adminRefresh?.addEventListener('click', () => this.loadAdminUsers());
   }
 
   enterApp() {
     this.state.unlocked = true;
+    this.state.activeTab = this.state.activeTab || 'overview';
+    this.el.adminScreen?.classList.add('hidden');
     this.el.authScreen?.classList.add('hidden');
     this.el.appShell?.classList.remove('hidden');
 
@@ -684,9 +760,21 @@ export class App {
     this.activateTab(this.state.activeTab, true);
   }
 
+  enterAdminDashboard() {
+    this.state.unlocked = true;
+    this.el.authScreen?.classList.add('hidden');
+    this.el.appShell?.classList.add('hidden');
+    this.el.adminScreen?.classList.remove('hidden');
+    this.setStatus('Admin dashboard ready.', 'ok');
+    this.updateConnectionPill();
+    this.updateSessionInfo();
+    this.loadAdminUsers(true);
+  }
+
   leaveApp() {
     this.state.unlocked = false;
     this.el.appShell?.classList.add('hidden');
+    this.el.adminScreen?.classList.add('hidden');
     this.el.authScreen?.classList.remove('hidden');
     if (this.el.authHint) {
       this.el.authHint.textContent = 'Register once, then log in to receive your token.';
@@ -698,7 +786,6 @@ export class App {
     try {
       const enabled = await firebaseService.init(email);
       if (enabled) {
-        await firebaseService.logEvent('login', { source: 'dashboard' });
         this.toast('Firebase Connected', 'Session data persistence is enabled.', 'ok');
       } else {
         this.toast('Firebase Not Configured', 'Fill in js/firebaseConfig.js to enable data persistence.', 'error');
@@ -1754,130 +1841,144 @@ export class App {
   }
 
   async register() {
-    try {
-      const email = this.el.registerEmail.value.trim().toLowerCase();
-      const password = this.el.registerPassword.value.trim();
-      const otp = this.el.registerOtp.value.trim();
-      this.clearFieldError(this.el.registerEmail);
-      this.clearFieldError(this.el.registerPassword);
-      this.clearFieldError(this.el.registerOtp);
+    if (this.isRegistering) return;
 
-      if (!email || !this.isValidEmail(email)) {
-        this.setFieldError(this.el.registerEmail);
-        throw new Error('Invalid email format');
-      }
-      if (this.state.registerOtpApprovedEmail !== email) {
-        this.setFieldError(this.el.registerEmail);
-        throw new Error('Please send OTP successfully before registering');
-      }
-      if (!password) {
-        this.setFieldError(this.el.registerPassword);
-        throw new Error('Password is required');
-      }
-      if (!this.state.registerOtpVerified) {
-        this.setFieldError(this.el.registerOtp);
-        throw new Error('Please verify OTP before registering');
-      }
-      if (password.length < 6) {
-        this.setFieldError(this.el.registerPassword);
-        throw new Error('Password must be at least 6 characters');
-      }
-      if (!otp) {
-        this.setFieldError(this.el.registerOtp);
-        throw new Error('OTP is required');
-      }
-      if (!/^\d{6}$/.test(otp)) {
-        this.setFieldError(this.el.registerOtp);
-        throw new Error('OTP must be exactly 6 digits');
-      }
+    await this.withButtonLock('isRegistering', this.el.btnRegister, async () => {
+      try {
+        const email = this.el.registerEmail.value.trim().toLowerCase();
+        const password = this.el.registerPassword.value.trim();
+        const otp = this.el.registerOtp.value.trim();
+        this.clearFieldError(this.el.registerEmail);
+        this.clearFieldError(this.el.registerPassword);
+        this.clearFieldError(this.el.registerOtp);
 
-      await this.request('/auth/register', {
-        method: 'POST',
-        body: JSON.stringify({ email, password, otp })
-      });
-      this.toast('Registration Successful', 'Account created successfully.', 'ok');
-      this.el.loginEmail.value = email;
-      this.el.registerEmail.value = '';
-      this.el.registerPassword.value = '';
-      this.el.registerOtp.value = '';
-      this.state.registerOtpApprovedEmail = '';
-      this.registerOtpRequestedEmail = ''; // Clear on successful registration
-      this.state.registerOtpVerified = false;
-      this.state.registerOtpExpiresAt = 0;
-      this.stopRegisterOtpCountdown();
-      this.stopRegisterSuccessCountdown();
-      this.updateRegisterOtpCountdownText('Click Send OTP to receive a verification code.');
-      this.updateRegisterButtonState();
-      this.showAuthView('login');
-    } catch (error) {
-      const message = this.parseApiError(error);
-      if (/otp/i.test(message)) {
-        this.setFieldError(this.el.registerOtp);
-      } else if (/password/i.test(message)) {
-        this.setFieldError(this.el.registerPassword);
-      } else if (/email/i.test(message)) {
-        this.setFieldError(this.el.registerEmail);
+        if (!email || !this.isValidEmail(email)) {
+          this.setFieldError(this.el.registerEmail);
+          throw new Error('Invalid email format');
+        }
+        if (this.state.registerOtpApprovedEmail !== email) {
+          this.setFieldError(this.el.registerEmail);
+          throw new Error('Please send OTP successfully before registering');
+        }
+        if (!password) {
+          this.setFieldError(this.el.registerPassword);
+          throw new Error('Password is required');
+        }
+        if (!this.state.registerOtpVerified) {
+          this.setFieldError(this.el.registerOtp);
+          throw new Error('Please verify OTP before registering');
+        }
+        if (password.length < 6) {
+          this.setFieldError(this.el.registerPassword);
+          throw new Error('Password must be at least 6 characters');
+        }
+        if (!otp) {
+          this.setFieldError(this.el.registerOtp);
+          throw new Error('OTP is required');
+        }
+        if (!/^\d{6}$/.test(otp)) {
+          this.setFieldError(this.el.registerOtp);
+          throw new Error('OTP must be exactly 6 digits');
+        }
+
+        await this.request('/auth/register', {
+          method: 'POST',
+          body: JSON.stringify({ email, password, otp })
+        });
+        this.toast('Registration Successful', 'Account created successfully.', 'ok');
+        this.el.loginEmail.value = email;
+        this.el.registerEmail.value = '';
+        this.el.registerPassword.value = '';
+        this.el.registerOtp.value = '';
+        this.state.registerOtpApprovedEmail = '';
+        this.registerOtpRequestedEmail = ''; // Clear on successful registration
+        this.state.registerOtpVerified = false;
+        this.state.registerOtpExpiresAt = 0;
+        this.stopRegisterOtpCountdown();
+        this.stopRegisterSuccessCountdown();
+        this.updateRegisterOtpCountdownText('Click Send OTP to receive a verification code.');
+        this.updateRegisterButtonState();
+        this.showAuthView('login');
+      } catch (error) {
+        const message = this.parseApiError(error);
+        if (/otp/i.test(message)) {
+          this.setFieldError(this.el.registerOtp);
+        } else if (/password/i.test(message)) {
+          this.setFieldError(this.el.registerPassword);
+        } else if (/email/i.test(message)) {
+          this.setFieldError(this.el.registerEmail);
+        }
+        this.toast('Registration Failed', message, 'error');
+      } finally {
+        this.updateRegisterButtonState();
       }
-      this.toast('Registration Failed', message, 'error');
-    }
+    });
   }
 
   async login() {
-    try {
-      const email = this.el.loginEmail.value.trim().toLowerCase();
-      const password = this.el.loginPassword.value.trim();
-      this.clearFieldError(this.el.loginEmail);
-      this.clearFieldError(this.el.loginPassword);
-      if (!this.isValidEmail(email)) {
-        this.setFieldError(this.el.loginEmail);
-        throw new Error('Invalid email format');
-      }
-      if (!password) {
-        this.setFieldError(this.el.loginPassword);
-        throw new Error('Please enter both email and password');
-      }
-      const data = await this.request('/auth/token', {
-        method: 'POST',
-        body: JSON.stringify({ email, password })
-      });
-      this.state.token = data.access_token;
-      this.state.email = email;
-      this.state.role = data.role || 'operator';
-      this.state.mustChangePassword = Boolean(data.must_change_password);
-      localStorage.setItem('vrptw_token', this.state.token);
-      localStorage.setItem('vrptw_email', email);
-      localStorage.setItem('vrptw_role', this.state.role);
-      localStorage.setItem('vrptw_must_change_password', String(this.state.mustChangePassword));
+    if (this.isLoggingIn) return;
 
-      if (this.state.mustChangePassword) {
-        this.state.resetToken = '';
-        this.el.resetPassword.value = '';
-        this.el.resetPasswordConfirm.value = '';
-        this.showAuthView('reset');
-        this.toast('Password Change Required', 'Use the temporary password once, then set a new password now.', 'error');
-        return;
-      }
+    await this.withButtonLock('isLoggingIn', this.el.btnLogin, async () => {
+      try {
+        const email = this.el.loginEmail.value.trim().toLowerCase();
+        const password = this.el.loginPassword.value.trim();
+        this.clearFieldError(this.el.loginEmail);
+        this.clearFieldError(this.el.loginPassword);
+        if (!this.isValidEmail(email)) {
+          this.setFieldError(this.el.loginEmail);
+          throw new Error('Invalid email format');
+        }
+        if (!password) {
+          this.setFieldError(this.el.loginPassword);
+          throw new Error('Please enter both email and password');
+        }
+        const data = await this.request('/auth/token', {
+          method: 'POST',
+          body: JSON.stringify({ email, password })
+        });
+        this.state.token = data.access_token;
+        this.state.email = email;
+        this.state.role = data.role || 'operator';
+        this.state.mustChangePassword = Boolean(data.must_change_password);
+        localStorage.setItem('vrptw_token', this.state.token);
+        localStorage.setItem('vrptw_email', email);
+        localStorage.setItem('vrptw_role', this.state.role);
+        localStorage.setItem('vrptw_must_change_password', String(this.state.mustChangePassword));
 
-      this.enterApp();
-      await this.initFirebase(email);
-      this.updateConnectionPill();
-      this.toast('Login Successful', 'Token has been saved in your browser.', 'ok');
-    } catch (error) {
-      const message = this.parseApiError(error);
-      if (/email/i.test(message)) {
-        this.setFieldError(this.el.loginEmail);
-        this.toast('Login Failed', 'Please check your email address', 'error');
-      } else if (/password|credential|invalid/i.test(message)) {
-        this.setFieldError(this.el.loginPassword);
-        this.toast('Login Failed', 'Email or password is incorrect. Please try again or reset your password.', 'error');
-      } else {
-        this.toast('Login Failed', message, 'error');
+        if (this.state.mustChangePassword) {
+          this.state.resetToken = '';
+          this.el.resetPassword.value = '';
+          this.el.resetPasswordConfirm.value = '';
+          this.showAuthView('reset');
+          this.toast('Password Change Required', 'Use the temporary password once, then set a new password now.', 'error');
+          return;
+        }
+
+        await this.initFirebase(email);
+        if (this.state.role === 'admin') {
+          this.enterAdminDashboard();
+        } else {
+          this.enterApp();
+        }
+        this.updateConnectionPill();
+        this.toast('Login Successful', 'Token has been saved in your browser.', 'ok');
+      } catch (error) {
+        const message = this.parseApiError(error);
+        if (/email/i.test(message)) {
+          this.setFieldError(this.el.loginEmail);
+          this.toast('Login Failed', 'Please check your email address', 'error');
+        } else if (/password|credential|invalid/i.test(message)) {
+          this.setFieldError(this.el.loginPassword);
+          this.toast('Login Failed', 'Email or password is incorrect. Please try again or reset your password.', 'error');
+        } else {
+          this.toast('Login Failed', message, 'error');
+        }
+        if (this.el.authHint) {
+          this.el.authHint.textContent = '💡 Tip: Use "Forgot Password" if you do not remember your credentials';
+          this.el.authHint.style.display = 'block';
+        }
       }
-      if (this.el.authHint) {
-        this.el.authHint.textContent = '💡 Tip: Use "Forgot Password" if you do not remember your credentials';
-        this.el.authHint.style.display = 'block';
-      }
-    }
+    });
   }
 
   async requestForgotPasswordOtp() {
@@ -1980,75 +2081,212 @@ export class App {
   }
 
   async logout() {
-    this.state.token = '';
-    this.state.email = '';
-    this.state.role = 'operator';
-    this.state.mustChangePassword = false;
-    localStorage.removeItem('vrptw_token');
-    localStorage.removeItem('vrptw_email');
-    localStorage.removeItem('vrptw_role');
-    localStorage.removeItem('vrptw_must_change_password');
-    this.updateConnectionPill();
-    this.updateSessionInfo();
-    this.leaveApp();
-    this.toast('Logged Out', 'Session has ended.', 'ok');
-    try {
-      await firebaseService.logEvent('logout', { source: 'dashboard' });
-    } catch {
-      // Ignore logging failure on logout.
-    }
+    if (this.isLoggingOut) return;
+
+    await this.withButtonLock('isLoggingOut', this.el.btnLogout, async () => {
+      const token = this.state.token;
+      try {
+        if (token) {
+          await this.request('/auth/logout', { method: 'POST' });
+        }
+      } catch {
+        // Ignore backend logout failure and continue local cleanup.
+      }
+      try {
+        await firebaseService.markLogout();
+      } catch {
+        // Ignore Firestore logout marker failure.
+      }
+
+      this.state.token = '';
+      this.state.email = '';
+      this.state.role = 'operator';
+      this.state.mustChangePassword = false;
+      localStorage.removeItem('vrptw_token');
+      localStorage.removeItem('vrptw_email');
+      localStorage.removeItem('vrptw_role');
+      localStorage.removeItem('vrptw_must_change_password');
+      this.updateConnectionPill();
+      this.updateSessionInfo();
+      this.leaveApp();
+      this.toast('Logged Out', 'Session has ended.', 'ok');
+    });
   }
 
   updateAdminPanel() {
     const isAdmin = this.state.role === 'admin';
-    this.el.adminPanel?.classList.toggle('hidden', !isAdmin);
-    if (isAdmin) {
+    if (!isAdmin) {
+      this.el.adminScreen?.classList.add('hidden');
+      return;
+    }
+    if (this.el.adminScreen && !this.el.adminScreen.classList.contains('hidden')) {
       this.loadAdminUsers();
     }
   }
 
-  async loadAdminUsers() {
+  async loadAdminUsers(forceReload = false) {
     if (this.state.role !== 'admin' || !this.el.adminUserRows) return;
     try {
       const data = await this.request('/admin/users', { method: 'GET' });
-      this.el.adminUserRows.innerHTML = '';
-      (data.items || []).forEach((item) => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${item.email}</td>
-          <td>
-            <select class="admin-role-select" data-email="${item.email}">
-              <option value="admin" ${item.role === 'admin' ? 'selected' : ''}>admin</option>
-              <option value="operator" ${item.role === 'operator' ? 'selected' : ''}>operator</option>
-              <option value="viewer" ${item.role === 'viewer' ? 'selected' : ''}>viewer</option>
-            </select>
-          </td>
-          <td>${new Date(item.created_at * 1000).toLocaleString()}</td>
-          <td><button class="btn ghost" data-action="save-role" data-email="${item.email}" type="button">Save</button></td>
-        `;
-        this.el.adminUserRows.appendChild(tr);
-      });
-
-      this.el.adminUserRows.querySelectorAll('[data-action="save-role"]').forEach((button) => {
-        button.addEventListener('click', () => this.saveAdminRole(button.dataset.email));
-      });
+      this.state.adminUsers = data.items || [];
+      this.renderAdminSummary(data.summary || {});
+      this.renderAdminUsers(this.state.adminUsers);
+      const selectedEmail = forceReload ? this.state.adminSelectedEmail || this.state.adminUsers[0]?.email : this.state.adminSelectedEmail;
+      if (selectedEmail) {
+        this.loadAdminActivity(selectedEmail);
+      } else {
+        this.renderAdminActivity([]);
+      }
     } catch (error) {
       this.toast('Failed to Load User List', error.message, 'error');
     }
   }
 
-  async saveAdminRole(email) {
+  renderAdminSummary(summary) {
+    if (this.el.adminTotalUsers) this.el.adminTotalUsers.textContent = String(summary.total_users ?? 0);
+    if (this.el.adminTotalAdmins) this.el.adminTotalAdmins.textContent = String(summary.admins ?? 0);
+    if (this.el.adminTotalOperators) this.el.adminTotalOperators.textContent = String(summary.operators ?? 0);
+    if (this.el.adminTotalOnline) this.el.adminTotalOnline.textContent = String(summary.online ?? 0);
+  }
+
+  renderAdminUsers(items) {
+    this.el.adminUserRows.innerHTML = '';
+    (Array.isArray(items) ? items : []).forEach((item) => {
+      const tr = document.createElement('tr');
+      tr.dataset.email = item.email;
+      if (item.email === this.state.adminSelectedEmail) tr.classList.add('row-selected');
+
+      const statusClass = item.status === 'online' ? 'online' : 'offline';
+      tr.innerHTML = `
+        <td>${this.escapeHtml(item.email)}</td>
+        <td>
+          <select class="admin-role-select" data-email="${this.escapeHtml(item.email)}">
+            <option value="admin" ${item.role === 'admin' ? 'selected' : ''}>admin</option>
+            <option value="operator" ${item.role === 'operator' ? 'selected' : ''}>operator</option>
+            <option value="viewer" ${item.role === 'viewer' ? 'selected' : ''}>viewer</option>
+          </select>
+        </td>
+        <td>${this.formatAdminTime(item.created_at)}</td>
+        <td>${this.formatAdminTime(item.last_login_at)}</td>
+        <td>${this.formatAdminTime(item.last_logout_at)}</td>
+        <td><span class="admin-status ${statusClass}">${item.status || 'offline'}</span></td>
+        <td>
+          <div class="admin-actions">
+            <button class="btn ghost admin-action-btn" data-action="view" type="button" title="View activity">◔</button>
+            <button class="btn ghost admin-action-btn" data-action="delete" type="button" title="Delete user">🗑</button>
+          </div>
+        </td>
+      `;
+      tr.addEventListener('click', (event) => {
+        const interactive = event.target.closest('button, select');
+        if (interactive) return;
+        this.loadAdminActivity(item.email);
+      });
+      this.el.adminUserRows.appendChild(tr);
+    });
+  }
+
+  async loadAdminActivity(email) {
+    if (!email || this.state.role !== 'admin') return;
+    this.state.adminSelectedEmail = email;
+    if (this.el.adminSelectedUser) this.el.adminSelectedUser.textContent = email;
+    try {
+      const data = await this.request(`/admin/users/${encodeURIComponent(email)}/activity?limit=12`, { method: 'GET' });
+      this.renderAdminActivity(data.items || []);
+      this.renderAdminUsers(this.state.adminUsers || []);
+    } catch (error) {
+      this.renderAdminActivity([]);
+      this.toast('Failed to Load Activity', error.message, 'error');
+    }
+  }
+
+  renderAdminActivity(items) {
+    if (!this.el.adminActivityList) return;
+    if (!Array.isArray(items) || items.length === 0) {
+      this.el.adminActivityList.innerHTML = '<div class="admin-activity-item"><strong>No activity yet.</strong><span class="admin-activity-meta">Login/logout events will appear here.</span></div>';
+      return;
+    }
+
+    this.el.adminActivityList.innerHTML = items
+      .map((item) => {
+        const time = this.formatAdminTime(item.created_at);
+        const type = String(item.type || 'event').toLowerCase();
+        const source = item.source || 'auth';
+        return `
+          <article class="admin-activity-item ${type}">
+            <div class="admin-activity-top">
+              <span>${this.escapeHtml(type.toUpperCase())}</span>
+              <span class="admin-activity-time">${time}</span>
+            </div>
+            <div class="admin-activity-meta">Source: ${this.escapeHtml(String(source))}</div>
+          </article>
+        `;
+      })
+      .join('');
+  }
+
+  formatAdminTime(value) {
+    const ts = Number(value || 0);
+    if (!Number.isFinite(ts) || ts <= 0) return '-';
+    return new Date(ts * 1000).toLocaleString();
+  }
+
+  async createAdminUser() {
+    if (this.state.role !== 'admin') return;
+    const email = this.el.adminCreateEmail?.value.trim().toLowerCase();
+    const password = this.el.adminCreatePassword?.value.trim();
+    const role = this.el.adminCreateRole?.value || 'operator';
+    const mustChangePassword = Boolean(this.el.adminCreateForceChange?.checked);
+    if (!email || !password) {
+      this.toast('Missing Fields', 'Email and password are required.', 'error');
+      return;
+    }
+    try {
+      await this.request('/admin/users', {
+        method: 'POST',
+        body: JSON.stringify({ email, password, role, must_change_password: mustChangePassword })
+      });
+      this.toast('User Created', `${email} created successfully.`, 'ok');
+      if (this.el.adminCreateEmail) this.el.adminCreateEmail.value = '';
+      if (this.el.adminCreatePassword) this.el.adminCreatePassword.value = '';
+      if (this.el.adminCreateRole) this.el.adminCreateRole.value = 'operator';
+      if (this.el.adminCreateForceChange) this.el.adminCreateForceChange.checked = true;
+      await this.loadAdminUsers(true);
+    } catch (error) {
+      this.toast('Create User Failed', this.parseApiError(error), 'error');
+    }
+  }
+
+  async saveAdminRole(email, nextRole) {
     if (!email || !this.el.adminUserRows) return;
     const select = this.el.adminUserRows.querySelector(`select[data-email="${email}"]`);
     if (!select) return;
     try {
       await this.request(`/admin/users/${encodeURIComponent(email)}/role`, {
         method: 'PATCH',
-        body: JSON.stringify({ role: select.value })
+        body: JSON.stringify({ role: nextRole || select.value })
       });
-      this.toast('Role Updated', `${email} -> ${select.value}`, 'ok');
+      this.toast('Role Updated', `${email} -> ${nextRole || select.value}`, 'ok');
+      await this.loadAdminUsers(false);
     } catch (error) {
       this.toast('Failed to Update Role', error.message, 'error');
+    }
+  }
+
+  async deleteAdminUser(email) {
+    if (!email || this.state.role !== 'admin') return;
+    if (!window.confirm(`Delete user ${email}?`)) return;
+    try {
+      await this.request(`/admin/users/${encodeURIComponent(email)}`, { method: 'DELETE' });
+      this.toast('User Deleted', `${email} removed from system.`, 'ok');
+      if (this.state.adminSelectedEmail === email) {
+        this.state.adminSelectedEmail = '';
+        if (this.el.adminSelectedUser) this.el.adminSelectedUser.textContent = 'Select a user';
+        this.renderAdminActivity([]);
+      }
+      await this.loadAdminUsers(true);
+    } catch (error) {
+      this.toast('Failed to Delete User', error.message, 'error');
     }
   }
 

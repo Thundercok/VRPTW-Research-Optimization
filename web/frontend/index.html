@@ -100,6 +100,115 @@
     </div>
   </section>
 
+  <section id="admin-screen" class="admin-screen hidden">
+    <div class="admin-shell">
+      <header class="admin-hero">
+        <div>
+          <p class="tag">PROJECT NEXUS</p>
+          <h1>User Administration</h1>
+    
+        </div>
+        <div class="admin-hero-actions">
+          <button id="admin-go-main" class="icon-btn admin-home-btn" type="button" title="Go to main app" aria-label="Go to main app">
+            <span class="btn-icon">🏠</span>
+          </button>
+          <button id="admin-refresh" class="btn ghost" type="button">Refresh</button>
+        </div>
+      </header>
+
+      <section class="admin-summary-grid">
+        <article class="admin-summary-card">
+          <span class="admin-summary-label">Total Users</span>
+          <strong id="admin-total-users">0</strong>
+        </article>
+        <article class="admin-summary-card">
+          <span class="admin-summary-label">Admins</span>
+          <strong id="admin-total-admins">0</strong>
+        </article>
+        <article class="admin-summary-card">
+          <span class="admin-summary-label">Operators</span>
+          <strong id="admin-total-operators">0</strong>
+        </article>
+        <article class="admin-summary-card">
+          <span class="admin-summary-label">Online</span>
+          <strong id="admin-total-online">0</strong>
+        </article>
+      </section>
+
+      <section class="admin-grid">
+        <article class="admin-card admin-create-card">
+          <div class="admin-card-head">
+            <div>
+              <p class="section-kicker">Create Account</p>
+              <h2>New User</h2>
+            </div>
+          </div>
+          <div class="admin-create-form">
+            <label class="field">
+              <span>Email</span>
+              <input id="admin-create-email" type="email" placeholder="new.user@company.com" />
+            </label>
+            <label class="field">
+              <span>Temporary Password</span>
+              <input id="admin-create-password" type="password" placeholder="Enter password" />
+            </label>
+            <label class="field">
+              <span>Role</span>
+              <select id="admin-create-role">
+                <option value="operator">Operator</option>
+                <option value="viewer">Viewer</option>
+                <option value="admin">Admin</option>
+              </select>
+            </label>
+            <label class="admin-check">
+              <input id="admin-create-force-change" type="checkbox" checked />
+              <span>Force password change on first login</span>
+            </label>
+            <button id="admin-create-user" class="btn" type="button">Create User</button>
+          </div>
+        </article>
+
+        <article class="admin-card admin-users-card">
+          <div class="admin-card-head">
+            <div>
+              <p class="section-kicker">Users</p>
+              <h2>Account Management</h2>
+            </div>
+          </div>
+          <div class="table-wrap admin-table-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Email</th>
+                  <th>Role</th>
+                  <th>Created</th>
+                  <th>Last Login</th>
+                  <th>Last Logout</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="admin-user-rows"></tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="admin-card admin-activity-card">
+          <div class="admin-card-head">
+            <div class="admin-activity-head-main">
+              <p class="section-kicker">Activity</p>
+            </div>
+            <div class="admin-activity-selected-wrap">
+              <span id="admin-selected-user" class="pill soft">Select a user</span>
+            </div>
+          </div>
+          <p class="admin-card-note">Click View on a user row to inspect login/logout activity.</p>
+          <div id="admin-activity-list" class="admin-activity-list"></div>
+        </article>
+      </section>
+    </div>
+  </section>
+
   <div id="app-shell" class="app-shell hidden">
     <aside class="sidebar">
       <div class="sidebar-head">
@@ -425,28 +534,6 @@
         </section>
       </section>
 
-      <section id="admin-panel" class="table-card hidden">
-        <div class="row-head">
-          <div>
-            <p class="section-kicker">Admin</p>
-            <h2>User Management</h2>
-          </div>
-          <button id="admin-refresh" class="btn ghost" type="button">Refresh</button>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Email</th>
-                <th>Role</th>
-                <th>Created</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody id="admin-user-rows"></tbody>
-          </table>
-        </div>
-      </section>
     </main>
   </div>
 

@@ -776,6 +776,16 @@ select.input-error {
   border-radius: 10px;
 }
 
+#add-row .btn-icon,
+#delete-selected .btn-icon {
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+  background: transparent;
+  font-size: 26px;
+  line-height: 1;
+}
+
 .table-wrap {
   max-height: 290px;
   overflow: auto;
@@ -1270,6 +1280,312 @@ td.is-editing {
   padding: 8px;
   background: #f8fbfe;
   font-size: 13px;
+}
+
+.admin-screen {
+  min-height: 100vh;
+  padding: 24px;
+  background:
+    radial-gradient(circle at 12% 10%, rgba(45, 143, 216, 0.15), transparent 24%),
+    radial-gradient(circle at 92% 0%, rgba(35, 138, 87, 0.12), transparent 22%),
+    linear-gradient(180deg, #f7fbff 0%, #edf4fb 100%);
+}
+
+.admin-shell {
+  width: min(1440px, 100%);
+  margin: 0 auto;
+  display: grid;
+  gap: 16px;
+}
+
+.admin-hero {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid #d9e5f1;
+  border-radius: 22px;
+  box-shadow: 0 18px 40px rgba(15, 39, 64, 0.08);
+  padding: 20px 22px;
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 16px;
+}
+
+.admin-hero h1 {
+  font-size: 34px;
+  letter-spacing: -0.03em;
+  margin: 4px 0 6px;
+}
+
+.admin-subtitle {
+  color: var(--ink-soft);
+  font-size: 14px;
+  max-width: 760px;
+}
+
+.admin-hero-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.admin-home-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  border: 1px solid #c9dced;
+  background: linear-gradient(180deg, #ffffff, #eef5fb);
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(15, 39, 64, 0.06);
+}
+
+.admin-home-btn:hover {
+  transform: translateY(-1px);
+}
+
+.admin-home-btn .btn-icon {
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+  background: transparent;
+  font-size: 26px;
+  line-height: 1;
+}
+
+.admin-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.admin-summary-card {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #d9e5f1;
+  border-radius: 18px;
+  padding: 14px 16px;
+  box-shadow: 0 12px 28px rgba(15, 39, 64, 0.06);
+  display: grid;
+  gap: 4px;
+}
+
+.admin-summary-label {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  font-weight: 800;
+}
+
+.admin-summary-card strong {
+  font-size: 28px;
+  letter-spacing: -0.03em;
+}
+
+.admin-grid {
+  display: grid;
+  grid-template-columns: minmax(340px, 1.1fr) minmax(0, 1.6fr) minmax(320px, 0.9fr);
+  grid-template-areas:
+    "create users users"
+    "activity activity activity";
+  gap: 16px;
+  align-items: start;
+}
+
+.admin-create-card {
+  grid-area: create;
+}
+
+.admin-users-card {
+  grid-area: users;
+  align-self: stretch;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.admin-users-card .admin-card-head {
+  flex: 0 0 auto;
+}
+
+.admin-users-card .admin-table-wrap {
+  flex: 1 1 auto;
+  min-height: 300px;
+}
+
+.admin-activity-card {
+  grid-area: activity;
+}
+
+.admin-card {
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid #d9e5f1;
+  border-radius: 20px;
+  box-shadow: 0 18px 40px rgba(15, 39, 64, 0.08);
+  padding: 16px;
+  display: grid;
+  gap: 14px;
+}
+
+.admin-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 12px;
+}
+
+.admin-card-note {
+  color: var(--ink-soft);
+  font-size: 13px;
+  margin-top: -6px;
+}
+
+.admin-activity-card .admin-card-head {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.admin-activity-head-main h2 {
+  margin-bottom: 0;
+  line-height: 1.15;
+}
+
+.admin-activity-selected-wrap {
+  display: flex;
+  align-items: center;
+}
+
+.admin-activity-selected-wrap .pill {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-create-form {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-create-form .field span {
+  font-weight: 700;
+}
+
+.admin-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.admin-check input {
+  width: 18px;
+  height: 18px;
+}
+
+.admin-table-wrap {
+  max-height: 560px;
+}
+
+.admin-table th,
+.admin-table td {
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.admin-table tr:hover td {
+  background: #f4f9ff;
+}
+
+.admin-table .row-selected td {
+  background: #eaf4ff;
+}
+
+.admin-role-select {
+  min-width: 120px;
+}
+
+.admin-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-action-btn {
+  min-width: 36px;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 12px;
+}
+
+.admin-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.admin-status.online {
+  color: #0f7f55;
+  background: #e7f8f0;
+}
+
+.admin-status.offline {
+  color: #4f667d;
+  background: #eef3f8;
+}
+
+.admin-activity-list {
+  display: grid;
+  gap: 10px;
+  max-height: 560px;
+  overflow: auto;
+}
+
+.admin-activity-item {
+  border: 1px solid #dbe7f2;
+  border-radius: 14px;
+  background: #f8fbfe;
+  padding: 12px;
+  display: grid;
+  gap: 6px;
+}
+
+.admin-activity-item.login {
+  border-color: #bfe9d8;
+  background: #f0fbf6;
+}
+
+.admin-activity-item.logout {
+  border-color: #f3d3ce;
+  background: #fff6f4;
+}
+
+.admin-activity-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.admin-activity-time {
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+
+.admin-activity-meta {
+  color: var(--ink-soft);
+  font-size: 12px;
 }
 
 .map-marker-wrap {
@@ -2360,6 +2676,27 @@ td.is-editing {
 }
 
 @media (max-width: 1200px) {
+  .admin-grid,
+  .admin-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-grid {
+    grid-template-areas:
+      "create"
+      "users"
+      "activity";
+  }
+
+  .admin-hero {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .admin-activity-selected-wrap .pill {
+    width: 100%;
+  }
+
   .app-shell {
     flex-direction: column;
   }

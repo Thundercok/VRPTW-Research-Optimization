@@ -43,6 +43,13 @@ class RoleUpdateRequest(BaseModel):
     role: str
 
 
+class AdminCreateUserRequest(BaseModel):
+    email: str
+    password: str
+    role: str = "operator"
+    must_change_password: bool = True
+
+
 class Point(BaseModel):
     id: int | None = None
     name: str = ""
