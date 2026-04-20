@@ -186,7 +186,10 @@ def login_user(email: str, password: str) -> dict[str, str | bool]:
 
     row = users_repo.find_user_by_email(email)
     if not row or row["password_hash"] != hash_password(password):
-        raise HTTPException(status_code=401, detail="Bad credentials")
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid email or password. Check your credentials and try again. If you forgot your password, use 'Forgot Password' option."
+        )
 
     access_token = issue_token(email)
     return {

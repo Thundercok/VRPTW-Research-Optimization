@@ -52,6 +52,7 @@
           <label>Password</label>
           <input id="login-password" type="password" placeholder="Enter password" />
           <button id="btn-login" class="btn" type="button">Login</button>
+          <p id="auth-hint" class="hint auth-hint" style="display: none;"></p>
           <div class="auth-links">
             <button id="link-forgot-password" class="link-btn" type="button">Forgot Password?</button>
             <button id="btn-open-register" class="btn ghost" type="button">Create Account</button>
@@ -192,15 +193,24 @@
               <p class="section-kicker">Input Table</p>
               <h2>Customer List</h2>
             </div>
-            <button id="run-model" class="btn danger icon-btn" type="button">
-              <span class="btn-icon">▶</span>
-              <span>Run Model</span>
-            </button>
+            <div class="table-actions">
+              <button id="add-row" class="btn ghost icon-btn icon-only-btn" type="button" title="Add row" aria-label="Add row">
+                <span class="btn-icon">＋</span>
+              </button>
+              <button id="delete-selected" class="btn ghost icon-btn icon-only-btn" type="button" title="Delete selected rows" aria-label="Delete selected rows">
+                <span class="btn-icon">🗑</span>
+              </button>
+              <button id="run-model" class="btn danger icon-btn" type="button">
+                <span class="btn-icon">▶</span>
+                <span>Run Model</span>
+              </button>
+            </div>
           </div>
           <div class="table-wrap">
             <table>
               <thead>
                 <tr>
+                  <th>Pick</th>
                   <th>ID</th>
                   <th>Name</th>
                   <th>Address</th>
@@ -226,6 +236,11 @@
         </section>
 
         <section class="metrics-grid tab-panel" data-panel="results">
+          <div class="analysis-scope-banner live-banner">
+            <span class="analysis-scope-tag">Live Run Output</span>
+            <span class="analysis-scope-text">Results from the current model run on your active dataset.</span>
+          </div>
+
           <article id="metric-runtime-card" class="metric runtime-strip" data-winner="tie">
             <p class="metric-title">Runtime</p>
             <div class="runtime-strip-grid">
@@ -334,6 +349,84 @@
             </div>
           </article>
         </section>
+
+        <section class="analysis-card tab-panel" data-panel="maps">
+          <div class="analysis-scope-banner archive-banner">
+            <span class="analysis-scope-tag">Training Analysis Archive</span>
+            <span class="analysis-scope-text">Historical benchmark and training diagnostics loaded from logs/results-vX.</span>
+          </div>
+
+          <div class="row-head analysis-head">
+            <div>
+              <p class="section-kicker">Model Intelligence</p>
+              <h2>Training Analysis</h2>
+              <p id="analysis-last-updated" class="analysis-sub">Select a version to inspect benchmark behavior.</p>
+            </div>
+            <div class="analysis-actions">
+              <label class="analysis-version-wrap" for="analysis-version">
+                <span>Version</span>
+                <select id="analysis-version"></select>
+              </label>
+              <label class="analysis-version-wrap" for="analysis-instance">
+                <span>Instance</span>
+                <select id="analysis-instance"></select>
+              </label>
+              <button id="analysis-refresh" class="btn ghost" type="button">Refresh</button>
+              <button id="analysis-open-popup" class="btn" type="button">Deep Analysis</button>
+            </div>
+          </div>
+
+          <p id="analysis-status" class="status">Analysis data is loading...</p>
+
+          <div id="analysis-summary-kpis" class="analysis-kpi-grid"></div>
+
+          <div class="analysis-grid">
+            <article class="analysis-block">
+              <h3>Convergence Snapshot</h3>
+              <div id="analysis-convergence-chart" class="analysis-chart">No convergence data yet.</div>
+            </article>
+
+            <article class="analysis-block">
+              <h3>Operator Policy Heatmap</h3>
+              <div id="analysis-policy-grid" class="analysis-heatmap-wrap">No policy matrix available.</div>
+            </article>
+          </div>
+
+          <div class="analysis-grid">
+            <article class="analysis-block">
+              <h3>Instance Leaderboard</h3>
+              <div class="analysis-table-wrap">
+                <table class="analysis-table">
+                  <thead>
+                    <tr>
+                      <th>Instance</th>
+                      <th>Gap Winner</th>
+                      <th>Runtime Winner</th>
+                      <th>Stability</th>
+                    </tr>
+                  </thead>
+                  <tbody id="analysis-leaderboard-body"></tbody>
+                </table>
+              </div>
+            </article>
+
+            <article class="analysis-block">
+              <h3>Transfer Snapshot</h3>
+              <div class="analysis-table-wrap">
+                <table class="analysis-table">
+                  <thead>
+                    <tr>
+                      <th>Instance</th>
+                      <th>Gap %</th>
+                      <th>Vehicles</th>
+                    </tr>
+                  </thead>
+                  <tbody id="analysis-transfer-body"></tbody>
+                </table>
+              </div>
+            </article>
+          </div>
+        </section>
       </section>
 
       <section id="admin-panel" class="table-card hidden">
@@ -363,6 +456,11 @@
 
   <div id="loading" class="loading hidden">
     <div id="loading-card" class="loading-card">
+      <div class="loading-actions" aria-label="Loading controls">
+        <button id="loading-minimize" class="loading-action-btn" type="button" aria-label="Minimize loading screen">−</button>
+        <button id="loading-cancel" class="loading-action-btn danger" type="button" aria-label="Cancel optimization">×</button>
+      </div>
+
       <div class="loading-head">
         <div class="loader-ring"></div>
         <p id="loading-title">AI is optimizing routes...</p>
@@ -392,9 +490,63 @@
         <div class="line"></div>
       </div>
     </div>
+
+    <button id="loading-launcher" class="loading-launcher hidden" type="button" aria-label="Restore loading screen">
+      <span class="loading-launcher-icon" aria-hidden="true">🚚</span>
+      <span class="loading-launcher-text">Routes</span>
+    </button>
   </div>
 
   <div id="toast-root" class="toast-root" aria-live="polite" aria-atomic="true"></div>
+
+  <div id="analysis-modal" class="analysis-modal hidden" role="dialog" aria-modal="true" aria-labelledby="analysis-modal-title">
+    <div class="analysis-modal-card">
+      <div class="analysis-modal-head">
+        <div>
+          <p class="section-kicker">Deep Analysis</p>
+          <h2 id="analysis-modal-title">Version Diagnostics</h2>
+          <p id="analysis-modal-subtitle" class="analysis-sub">Full training diagnostics from selected version.</p>
+        </div>
+        <div class="analysis-actions">
+          <button id="analysis-modal-close" class="btn ghost" type="button">Close</button>
+        </div>
+      </div>
+
+      <div class="analysis-modal-grid">
+        <article class="analysis-block">
+          <h3>Meta</h3>
+          <div id="analysis-modal-meta" class="analysis-meta-list">No metadata available.</div>
+        </article>
+        <article class="analysis-block">
+          <h3>Convergence</h3>
+          <div id="analysis-modal-convergence" class="analysis-chart">No convergence history.</div>
+        </article>
+      </div>
+
+      <div class="analysis-modal-grid">
+        <article class="analysis-block">
+          <h3>Transfer Plot</h3>
+          <div id="analysis-modal-transfer-plot" class="analysis-chart">No transfer data.</div>
+        </article>
+        <article class="analysis-block">
+          <h3>Transfer Table</h3>
+          <div class="analysis-table-wrap">
+            <table class="analysis-table">
+              <thead>
+                <tr>
+                  <th>Instance</th>
+                  <th>TD</th>
+                  <th>Gap %</th>
+                  <th>NV</th>
+                </tr>
+              </thead>
+              <tbody id="analysis-modal-transfer-body"></tbody>
+            </table>
+          </div>
+        </article>
+      </div>
+    </div>
+  </div>
 
   <script type="module" src="js/main.js"></script>
 </body>

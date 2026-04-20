@@ -1,5 +1,3 @@
-import { SAMPLE_SOLONON_RC } from './constants.js';
-
 export function createInitialState() {
   const savedEmail = localStorage.getItem('vrptw_email') || '';
   return {
@@ -14,9 +12,13 @@ export function createInitialState() {
     mode: 'sample',
     vehicles: 4,
     capacity: 120,
-    customers: SAMPLE_SOLONON_RC.map((c, idx) => ({ ...c, id: idx })),
+    customers: [],
     suggest: [],
     selectedSuggest: null,
+    analysisVersion: '',
+    analysisVersions: [],
+    analysisInstance: 'ALL',
+    analysisData: null,
     lastResult: null,
     activeTab: 'overview',
     unlocked: Boolean(localStorage.getItem('vrptw_token'))

@@ -79,3 +79,4 @@ class JobState:
     payload: JobRequest | None = None
     result: dict[str, Any] | None = None
     error: str | None = None
+    debug: dict[str, Any] | None = None

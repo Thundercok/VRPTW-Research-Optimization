@@ -1,11 +1,13 @@
 import { firebaseService } from './firebaseService.js';
-import { API_BASE, SAMPLE_SOLONON_RC } from './constants.js';
+import { API_BASE } from './constants.js';
 import { createInitialState } from './createInitialState.js';
 
 export class App {
   constructor() {
     this.state = createInitialState();
+    this.tableInputVisible = false;
     this.tableInputDraft = { name: '', address: '', demand: '0', lat: null, lng: null };
+    this.selectedCustomerIds = new Set();
     this.tableInputRefs = {};
     this.tableAddressSuggest = [];
     this.tableAddressSuggestActive = -1;
@@ -22,6 +24,11 @@ export class App {
       stageStartedAt: 0,
       lastTickAt: 0
     };
+    this.runSession = {
+      token: 0,
+      cancelled: false,
+      abortController: null
+    };
     this.registerOtpCountdownTimer = 0;
     this.registerSuccessCountdownTimer = 0;
     this.registerOtpVerifyDebounceTimer = 0;
@@ -30,6 +37,7 @@ export class App {
     this.isSubmittingPasswordChange = false;
     this.registerOtpRequestedEmail = ''; // Track which email OTP was sent to
     this.wireAuthEvents();
+    this.wireLoadingControls();
     this.routeAuthScreenFromURL();
 
     if (this.state.unlocked && this.state.email) {
@@ -44,15 +52,16 @@ export class App {
     } else {
       this.leaveApp();
     }
+
   }
 
   bindElements() {
     return {
-      authViews: Array.from(document.querySelectorAll('.auth-view')),
-      viewLogin: document.getElementById('auth-view-login'),
-      viewRegister: document.getElementById('auth-view-register'),
       viewForgot: document.getElementById('auth-view-forgot'),
       viewReset: document.getElementById('auth-view-reset'),
+      viewLogin: document.getElementById('auth-view-login'),
+      viewRegister: document.getElementById('auth-view-register'),
+      authViews: Array.from(document.querySelectorAll('.auth-view')),
       loginEmail: document.getElementById('login-email'),
       loginPassword: document.getElementById('login-password'),
       registerEmail: document.getElementById('register-email'),
@@ -97,6 +106,8 @@ export class App {
       pasteBox: document.getElementById('paste-box'),
       parsePaste: document.getElementById('parse-paste'),
       loadSample: document.getElementById('load-sample'),
+      addRow: document.getElementById('add-row'),
+      deleteSelected: document.getElementById('delete-selected'),
       runModel: document.getElementById('run-model'),
       customerRows: document.getElementById('customer-rows'),
       tableEmpty: document.getElementById('table-empty'),
@@ -133,9 +144,30 @@ export class App {
       metricLoadDonutAlns: document.getElementById('metric-load-donut-alns'),
       metricLoadDonutDdqnLabel: document.getElementById('metric-load-donut-ddqn-label'),
       metricLoadDonutAlnsLabel: document.getElementById('metric-load-donut-alns-label'),
+      analysisVersion: document.getElementById('analysis-version'),
+      analysisInstance: document.getElementById('analysis-instance'),
+      analysisRefresh: document.getElementById('analysis-refresh'),
+      analysisOpenPopup: document.getElementById('analysis-open-popup'),
+      analysisLastUpdated: document.getElementById('analysis-last-updated'),
+      analysisStatus: document.getElementById('analysis-status'),
+      analysisSummaryKpis: document.getElementById('analysis-summary-kpis'),
+      analysisConvergenceChart: document.getElementById('analysis-convergence-chart'),
+      analysisPolicyGrid: document.getElementById('analysis-policy-grid'),
+      analysisLeaderboardBody: document.getElementById('analysis-leaderboard-body'),
+      analysisTransferBody: document.getElementById('analysis-transfer-body'),
+      analysisModal: document.getElementById('analysis-modal'),
+      analysisModalClose: document.getElementById('analysis-modal-close'),
+      analysisModalSubtitle: document.getElementById('analysis-modal-subtitle'),
+      analysisModalMeta: document.getElementById('analysis-modal-meta'),
+      analysisModalConvergence: document.getElementById('analysis-modal-convergence'),
+      analysisModalTransferPlot: document.getElementById('analysis-modal-transfer-plot'),
+      analysisModalTransferBody: document.getElementById('analysis-modal-transfer-body'),
       connectionPill: document.getElementById('connection-pill'),
       loading: document.getElementById('loading'),
       loadingCard: document.getElementById('loading-card'),
+      loadingMinimize: document.getElementById('loading-minimize'),
+      loadingCancel: document.getElementById('loading-cancel'),
+      loadingLauncher: document.getElementById('loading-launcher'),
       loadingTitle: document.getElementById('loading-title'),
       loadingPhase: document.getElementById('loading-phase'),
       loadingPercent: document.getElementById('loading-percent'),
@@ -227,6 +259,21 @@ export class App {
     this.updateRegisterButtonState();
   }
 
+  wireLoadingControls() {
+    this.el.loadingMinimize?.addEventListener('click', (event) => {
+      event.preventDefault();
+      this.minimizeLoading();
+    });
+    this.el.loadingCancel?.addEventListener('click', (event) => {
+      event.preventDefault();
+      this.cancelLoading();
+    });
+    this.el.loadingLauncher?.addEventListener('click', (event) => {
+      event.preventDefault();
+      this.restoreLoading();
+    });
+  }
+
   routeAuthScreenFromURL() {
     const params = new URLSearchParams(window.location.search);
     const screen = params.get('screen') || sessionStorage.getItem('vrptw_auth_screen');
@@ -298,6 +345,7 @@ export class App {
       this.el.resetPassword,
       this.el.resetPasswordConfirm
     ].forEach((field) => this.clearFieldError(field));
+    if (this.el.authHint) this.el.authHint.style.display = 'none';
   }
 
   setFieldError(field) {
@@ -406,6 +454,43 @@ export class App {
     }
   }
 
+  autoAdjustVehiclesForInfeasible(message) {
+    const text = String(message || '').trim();
+    if (!text) return null;
+
+    const lower = text.toLowerCase();
+    const looksInfeasible =
+      (lower.includes('infeasible configuration') && lower.includes('vehicles')) ||
+      (lower.includes('infeasible with current settings') && lower.includes('vehicles'));
+    if (!looksInfeasible) return null;
+
+    let recommended = null;
+    const reqMatch = text.match(/requires\s+(\d+)\s+vehicles?\s+but only\s+(\d+)/i);
+    if (reqMatch) {
+      recommended = Number(reqMatch[1]);
+    } else {
+      const capacity = Math.max(1, Number(this.state.capacity) || 1);
+      const totalDemand = this.state.customers
+        .filter((c) => !c.isDepot)
+        .reduce((sum, c) => sum + Math.max(0, Number(c.demand) || 0), 0);
+      recommended = Math.max(1, Math.ceil(totalDemand / capacity));
+    }
+
+    if (!Number.isFinite(recommended) || recommended <= 0) return null;
+
+    const slider = this.el.vehicles;
+    const sliderMax = Math.max(1, Number(slider?.max) || 30);
+    const current = Math.max(1, Number(this.state.vehicles) || 1);
+    const target = Math.min(sliderMax, Math.max(current, Math.ceil(recommended)));
+    if (target <= current) return { changed: false, target, current, max: sliderMax };
+
+    this.state.vehicles = target;
+    if (slider) slider.value = String(target);
+    if (this.el.vehiclesValue) this.el.vehiclesValue.textContent = String(target);
+
+    return { changed: true, target, current, max: sliderMax };
+  }
+
   formatRunError(errorLike) {
     const raw = typeof errorLike === 'string' ? errorLike : this.parseApiError(errorLike);
     const message = String(raw || '').trim();
@@ -413,7 +498,30 @@ export class App {
 
     const lower = message.toLowerCase();
     if (lower.includes('infeasible configuration') && lower.includes('vehicles')) {
-      return 'Infeasible with current settings: number of vehicles is too low for current demand/capacity. Try increasing Vehicles or Capacity.';
+      const reqMatch = message.match(/requires\s+(\d+)\s+vehicles?\s+but only\s+(\d+)/i);
+      if (reqMatch) {
+        const needed = Number(reqMatch[1]);
+        const current = Number(reqMatch[2]);
+        return `Infeasible: need at least ${needed} vehicles (current: ${current}). Increase Vehicles or Capacity.`;
+      }
+      const capacity = Math.max(1, Number(this.state.capacity) || 1);
+      const totalDemand = this.state.customers
+        .filter((c) => !c.isDepot)
+        .reduce((sum, c) => sum + Math.max(0, Number(c.demand) || 0), 0);
+      const minVehiclesByDemand = Math.max(1, Math.ceil(totalDemand / capacity));
+      const currentVehicles = Math.max(1, Number(this.state.vehicles) || 1);
+      const recommendation = Math.max(minVehiclesByDemand, currentVehicles + 1);
+      return `Infeasible with current settings. Try Vehicles >= ${recommendation} (current: ${currentVehicles}) or increase Capacity.`;
+    }
+    if (lower.includes('infeasible with current settings') && lower.includes('vehicles')) {
+      const capacity = Math.max(1, Number(this.state.capacity) || 1);
+      const totalDemand = this.state.customers
+        .filter((c) => !c.isDepot)
+        .reduce((sum, c) => sum + Math.max(0, Number(c.demand) || 0), 0);
+      const minVehiclesByDemand = Math.max(1, Math.ceil(totalDemand / capacity));
+      const currentVehicles = Math.max(1, Number(this.state.vehicles) || 1);
+      const recommendation = Math.max(minVehiclesByDemand, currentVehicles + 1);
+      return `Infeasible with current settings. Try Vehicles >= ${recommendation} (current: ${currentVehicles}) or increase Capacity.`;
     }
     if (lower.includes('exceeds vehicle capacity')) {
       return 'At least one customer demand exceeds vehicle capacity. Increase Capacity or reduce that customer demand.';
@@ -567,6 +675,11 @@ export class App {
     }
 
     this.setStatus('Ready for operations.', 'ok');
+    this.setImportEnabled(this.state.mode === 'real');
+    if (this.state.mode === 'sample') {
+      this.loadSolomonDataset('c101');
+    }
+    this.bootstrapAnalysis();
     this.updateConnectionPill();
     this.updateSessionInfo();
     this.updateAdminPanel();
@@ -607,18 +720,34 @@ export class App {
 
   setupExcelImport() {
     if (this.el.pickExcel) {
-      this.el.pickExcel.addEventListener('click', () => this.el.excelInput?.click());
+      this.el.pickExcel.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (this.state.mode !== 'real') return;
+        if (this.el.excelInput) this.el.excelInput.value = '';
+        this.el.excelInput?.click();
+      });
     }
 
     if (this.el.excelInput) {
-      this.el.excelInput.addEventListener('change', (event) => this.handleExcelFile(event));
+      this.el.excelInput.addEventListener('change', (event) => {
+        if (this.state.mode !== 'real') {
+          this.el.excelInput.value = '';
+          return;
+        }
+        this.handleExcelFile(event);
+      });
     }
 
     if (this.el.dropzone) {
       this.el.dropzone.addEventListener('click', (event) => {
-        if (event.target === this.el.dropzone) this.el.excelInput?.click();
+        if (this.state.mode !== 'real') return;
+        if (event.target === this.el.pickExcel) return;
+        if (this.el.excelInput) this.el.excelInput.value = '';
+        this.el.excelInput?.click();
       });
       this.el.dropzone.addEventListener('dragover', (event) => {
+        if (this.state.mode !== 'real') return;
         event.preventDefault();
         this.el.dropzone.classList.add('dragover');
       });
@@ -626,12 +755,32 @@ export class App {
         this.el.dropzone.classList.remove('dragover');
       });
       this.el.dropzone.addEventListener('drop', (event) => {
+        if (this.state.mode !== 'real') return;
         event.preventDefault();
         this.el.dropzone.classList.remove('dragover');
         const [file] = event.dataTransfer?.files ?? [];
         if (file) this.handleExcelFile({ target: { files: [file] } });
       });
     }
+  }
+
+  setImportEnabled(enabled) {
+    const canImport = Boolean(enabled);
+    if (this.el.pickExcel) this.el.pickExcel.disabled = !canImport;
+    if (this.el.excelInput) this.el.excelInput.disabled = !canImport;
+    if (this.el.dropzone) {
+      this.el.dropzone.classList.toggle('disabled', !canImport);
+      this.el.dropzone.setAttribute('aria-disabled', canImport ? 'false' : 'true');
+      if (!canImport) this.el.dropzone.classList.remove('dragover');
+    }
+  }
+
+  clearCustomersForRealDataMode() {
+    this.state.customers = [];
+    this.selectedCustomerIds.clear();
+    this.resetResultOutputs();
+    this.renderCustomers();
+    this.renderMarkers();
   }
 
   createMaps() {
@@ -682,11 +831,11 @@ export class App {
   buildDepotIcon() {
     return L.divIcon({
       className: 'map-marker-wrap',
-      iconSize: [30, 40],
-      iconAnchor: [15, 36],
-      popupAnchor: [0, -24],
+      iconSize: [72, 84],
+      iconAnchor: [36, 72],
+      popupAnchor: [0, -42],
       html: `
-        <div class="map-icon-3d depot" style="--icon-main:#dc2626;--icon-dark:#9f1239;--icon-shadow:rgba(159,18,57,0.4)">
+        <div class="map-icon-3d depot" style="--icon-main:#0ea5e9;--icon-dark:#0c4a6e;--icon-shadow:rgba(14,165,233,0.36)">
           <span class="map-icon-glyph">🏭</span>
         </div>`
     });
@@ -700,7 +849,16 @@ export class App {
       popupAnchor: [0, -20],
       html: `
         <div class="map-icon-3d customer" style="--icon-main:#7c3aed;--icon-dark:#5b21b6;--icon-shadow:rgba(124,58,237,0.35)">
-          <span class="map-icon-glyph">👤</span>
+          <svg class="map-icon-avatar" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <ellipse class="avatar-hair-back" cx="12" cy="9" rx="6.4" ry="5.7"></ellipse>
+            <circle class="avatar-bun" cx="13.6" cy="4.7" r="2.25"></circle>
+            <path class="avatar-hair-front" d="M6.2 9.3c0-3.4 2.5-5.9 5.8-5.9 2.8 0 5.2 1.9 5.8 4.6-.8-.4-1.7-.7-2.8-.7-2.5 0-4.7 1.4-5.9 3.5l-2.9-1.5z"></path>
+            <circle class="avatar-face" cx="12" cy="10.3" r="4.3"></circle>
+            <path class="avatar-shirt" d="M5.1 20.1c.2-3.8 2.8-6.4 6.9-6.4s6.7 2.6 6.9 6.4H5.1z"></path>
+            <circle class="avatar-eye" cx="10.4" cy="10" r="0.5"></circle>
+            <circle class="avatar-eye" cx="13.6" cy="10" r="0.5"></circle>
+            <path class="avatar-mouth" d="M10.1 12.3c.5.4 1.1.6 1.9.6s1.4-.2 1.9-.6"></path>
+          </svg>
         </div>`
     });
   }
@@ -708,9 +866,9 @@ export class App {
   buildVehicleIcon(color = '#0b8a65') {
     return L.divIcon({
       className: 'map-marker-wrap',
-      iconSize: [28, 28],
-      iconAnchor: [14, 14],
-      popupAnchor: [0, -10],
+      iconSize: [56, 56],
+      iconAnchor: [28, 28],
+      popupAnchor: [0, -18],
       html: `
         <div class="map-icon-3d vehicle" style="--icon-main:${color};--icon-dark:#0f3d33;--icon-shadow:rgba(15,61,51,0.35)">
           <span class="map-icon-glyph">🚚</span>
@@ -763,9 +921,18 @@ export class App {
   }
 
   wireEvents() {
+    this.setupDirectPasteImport();
+
     this.el.modeToggle.addEventListener('change', () => {
       this.state.mode = this.el.modeToggle.checked ? 'real' : 'sample';
-      this.setStatus(`Switched to ${this.state.mode === 'sample' ? 'Solomon RC' : 'Real Data'} mode.`);
+      if (this.state.mode === 'sample') {
+        this.setImportEnabled(false);
+        this.loadSolomonDataset('c101');
+      } else {
+        this.setImportEnabled(true);
+        this.clearCustomersForRealDataMode();
+        this.setStatus('Switched to Real Data mode. Use Excel/Pin input for your own dataset.', 'ok');
+      }
     });
 
     this.el.vehicles.addEventListener('input', () => {
@@ -781,17 +948,626 @@ export class App {
     this.el.loadSample.addEventListener('click', () => {
       this.state.mode = 'sample';
       this.el.modeToggle.checked = false;
-      this.state.customers = SAMPLE_SOLONON_RC.map((c, idx) => ({ ...c, id: idx }));
-      this.renderCustomers();
-      this.renderMarkers();
-      this.setStatus('Loaded Solomon RC sample data.', 'ok');
+      this.setImportEnabled(false);
+      this.loadSolomonDataset('c101');
     });
+
+    this.el.addRow?.addEventListener('click', () => {
+      this.tableInputVisible = true;
+      this.renderCustomers();
+      window.requestAnimationFrame(() => this.focusTableInputField('name'));
+    });
+
+    this.el.deleteSelected?.addEventListener('click', () => this.deleteSelectedCustomers());
 
     this.el.parsePaste?.addEventListener('click', () => this.parsePasteData());
     this.el.runModel.addEventListener('click', () => this.submitJob());
     this.el.addAddress?.addEventListener('click', () => this.addSelectedAddress());
     this.el.addressInput?.addEventListener('input', () => this.handleAddressInput());
+    this.el.analysisVersion?.addEventListener('change', () => {
+      const nextVersion = this.el.analysisVersion.value;
+      if (!nextVersion) return;
+      this.state.analysisVersion = nextVersion;
+      this.loadAnalysisData(nextVersion);
+    });
+    this.el.analysisRefresh?.addEventListener('click', () => this.bootstrapAnalysis(true));
+    this.el.analysisInstance?.addEventListener('change', () => {
+      this.state.analysisInstance = this.el.analysisInstance.value || 'ALL';
+      this.renderAnalysis();
+    });
+    this.el.analysisOpenPopup?.addEventListener('click', () => this.openAnalysisModal());
+    this.el.analysisModalClose?.addEventListener('click', () => this.closeAnalysisModal());
+    this.el.analysisModal?.addEventListener('click', (event) => {
+      if (event.target === this.el.analysisModal) this.closeAnalysisModal();
+    });
+    window.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') this.closeAnalysisModal();
+    });
     this.wireTableInlineEditing();
+  }
+
+  setupDirectPasteImport() {
+    document.addEventListener('paste', async (event) => {
+      if (!this.state.unlocked || this.state.mode !== 'real') return;
+
+      const target = event.target;
+      if (target instanceof HTMLElement) {
+        const tag = target.tagName.toLowerCase();
+        if (target.isContentEditable || tag === 'input' || tag === 'textarea' || tag === 'select') {
+          return;
+        }
+      }
+
+      const text = event.clipboardData?.getData('text/plain')?.trim() || '';
+      if (!text) return;
+      if (!text.includes('\n') && !text.includes('\t')) return;
+
+      event.preventDefault();
+      await this.importCustomersFromText(text, 'clipboard');
+    });
+  }
+
+  async loadSolomonDataset(name = 'c101') {
+    try {
+      if (!this.state.token) {
+        this.state.customers = [];
+        this.selectedCustomerIds.clear();
+        this.renderCustomers();
+        this.renderMarkers();
+        this.setStatus('Cannot load Solomon dataset without login token.', 'error');
+        return;
+      }
+
+      const data = await this.request(`/solomon?name=${encodeURIComponent(name)}`, { method: 'GET' });
+      const incoming = Array.isArray(data?.customers) ? data.customers : [];
+      if (incoming.length < 2) throw new Error('Solomon dataset is empty or invalid.');
+
+      this.state.customers = incoming.map((c, idx) => ({
+        ...c,
+        id: idx,
+        demand: Number(c.demand) || 0,
+        isDepot: Boolean(c.isDepot)
+      }));
+
+      const maxVehicles = Math.max(1, Number(this.el.vehicles?.max) || 30);
+      const maxCapacity = Math.max(1, Number(this.el.capacity?.max) || 500);
+      const nextVehicles = Math.min(maxVehicles, Math.max(1, Number(data?.fleet?.vehicles) || this.state.vehicles));
+      const nextCapacity = Math.min(maxCapacity, Math.max(1, Number(data?.fleet?.capacity) || this.state.capacity));
+
+      this.state.vehicles = nextVehicles;
+      this.state.capacity = nextCapacity;
+      if (this.el.vehicles) this.el.vehicles.value = String(nextVehicles);
+      if (this.el.vehiclesValue) this.el.vehiclesValue.textContent = String(nextVehicles);
+      if (this.el.capacity) this.el.capacity.value = String(nextCapacity);
+      if (this.el.capacityValue) this.el.capacityValue.textContent = String(nextCapacity);
+
+      this.selectedCustomerIds.clear();
+      this.renderCustomers();
+      this.renderMarkers();
+      this.setStatus(`Loaded Solomon ${String(data?.dataset || name).toUpperCase()} with ${incoming.length - 1} customers.`, 'ok');
+      this.toast('Solomon Loaded', `Dataset ${String(data?.dataset || name).toUpperCase()} is ready.`, 'ok');
+    } catch (error) {
+      this.state.customers = [];
+      this.selectedCustomerIds.clear();
+      this.renderCustomers();
+      this.renderMarkers();
+      this.toast('Solomon Load Failed', this.parseApiError(error), 'error');
+      this.setStatus('Could not load Solomon file from backend.', 'error');
+    }
+  }
+
+  async bootstrapAnalysis(forceReload = false) {
+    if (!this.el.analysisVersion) return;
+    if (!this.state.token) {
+      this.clearAnalysisViews('Login is required to load training analysis.');
+      return;
+    }
+
+    try {
+      this.setAnalysisStatus('Loading available versions...');
+      const response = await this.request('/analysis/versions', { method: 'GET' });
+      const versions = Array.isArray(response?.items) ? response.items : [];
+      this.state.analysisVersions = versions;
+      this.renderAnalysisVersionOptions();
+
+      let selectedVersion = this.state.analysisVersion;
+      const hasSelected = versions.some((item) => item.version === selectedVersion);
+      if (!selectedVersion || !hasSelected || forceReload) {
+        selectedVersion = response?.default || versions[0]?.version || '';
+      }
+
+      if (!selectedVersion) {
+        this.clearAnalysisViews('No nexus_demo.json found in logs results folders.');
+        return;
+      }
+
+      this.state.analysisVersion = selectedVersion;
+      this.el.analysisVersion.value = selectedVersion;
+      await this.loadAnalysisData(selectedVersion);
+    } catch (error) {
+      this.clearAnalysisViews(this.parseApiError(error));
+      this.toast('Analysis Load Failed', this.parseApiError(error), 'error');
+    }
+  }
+
+  renderAnalysisVersionOptions() {
+    if (!this.el.analysisVersion) return;
+    this.el.analysisVersion.innerHTML = '';
+    this.state.analysisVersions.forEach((item) => {
+      const option = document.createElement('option');
+      option.value = item.version;
+      option.textContent = item.version.toUpperCase();
+      this.el.analysisVersion.appendChild(option);
+    });
+  }
+
+  async loadAnalysisData(version) {
+    if (!version) return;
+    try {
+      this.setAnalysisStatus(`Loading analysis for ${String(version).toUpperCase()}...`);
+      const payload = await this.request(`/analysis/nexus?version=${encodeURIComponent(version)}`, { method: 'GET' });
+      this.state.analysisData = payload;
+      this.renderAnalysis();
+      const updated = this.state.analysisVersions.find((item) => item.version === version)?.updated_at;
+      const stamp = updated ? new Date(updated).toLocaleString() : 'Unknown timestamp';
+      if (this.el.analysisLastUpdated) {
+        this.el.analysisLastUpdated.textContent = `Version ${String(version).toUpperCase()} • updated ${stamp}`;
+      }
+      this.setAnalysisStatus('Analysis ready. Open Deep Analysis for full diagnostics.');
+    } catch (error) {
+      this.clearAnalysisViews(this.parseApiError(error));
+      this.toast('Analysis Version Failed', this.parseApiError(error), 'error');
+    }
+  }
+
+  setAnalysisStatus(message) {
+    if (!this.el.analysisStatus) return;
+    this.el.analysisStatus.textContent = message;
+    this.el.analysisStatus.className = 'status ok';
+  }
+
+  clearAnalysisViews(message) {
+    if (this.el.analysisStatus) {
+      this.el.analysisStatus.className = 'status error';
+      this.el.analysisStatus.textContent = message;
+    }
+    if (this.el.analysisSummaryKpis) this.el.analysisSummaryKpis.innerHTML = '';
+    if (this.el.analysisInstance) this.el.analysisInstance.innerHTML = '';
+    if (this.el.analysisConvergenceChart) this.el.analysisConvergenceChart.textContent = 'No convergence data yet.';
+    if (this.el.analysisPolicyGrid) this.el.analysisPolicyGrid.textContent = 'No policy matrix available.';
+    if (this.el.analysisLeaderboardBody) this.el.analysisLeaderboardBody.innerHTML = '';
+    if (this.el.analysisTransferBody) this.el.analysisTransferBody.innerHTML = '';
+    if (this.el.analysisModalMeta) this.el.analysisModalMeta.textContent = 'No metadata available.';
+    if (this.el.analysisModalConvergence) this.el.analysisModalConvergence.textContent = 'No convergence history.';
+    if (this.el.analysisModalTransferPlot) this.el.analysisModalTransferPlot.textContent = 'No transfer data.';
+    if (this.el.analysisModalTransferBody) this.el.analysisModalTransferBody.innerHTML = '';
+  }
+
+  renderAnalysis() {
+    const data = this.state.analysisData;
+    if (!data) {
+      this.clearAnalysisViews('No analysis payload available.');
+      return;
+    }
+
+    const summaryRows = Array.isArray(data.summary) ? data.summary : [];
+    const transferRows = Array.isArray(data.transfer) ? data.transfer : [];
+    const pairMap = this.buildSummaryPairMap(summaryRows);
+    const instances = Array.from(pairMap.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+    const availableInstances = this.buildAvailableInstances(summaryRows, transferRows);
+    const fallbackInstance = 'ALL';
+    if (this.state.analysisInstance !== 'ALL' && !availableInstances.includes(this.state.analysisInstance)) {
+      this.state.analysisInstance = fallbackInstance;
+    }
+    this.renderAnalysisInstanceOptions(availableInstances);
+
+    const selectedInstance = this.state.analysisInstance || 'ALL';
+    const filteredInstances = selectedInstance === 'ALL' ? instances : instances.filter(([name]) => name === selectedInstance);
+    const preferred = selectedInstance === 'ALL'
+      ? pairMap.get(String(data?.meta?.instance || '')) || filteredInstances[0]?.[1] || null
+      : pairMap.get(selectedInstance) || null;
+
+    this.renderAnalysisKpis(filteredInstances, preferred, selectedInstance);
+    this.renderConvergence(this.el.analysisConvergenceChart, data?.alns?.history, data?.rl_alns?.history, selectedInstance, String(data?.meta?.instance || ''));
+    this.renderPolicyHeatmap(data?.op_matrix, data?.destroy_ops, data?.repair_ops);
+    this.renderLeaderboard(filteredInstances);
+    this.renderTransferRows(transferRows, selectedInstance);
+
+    if (!this.el.analysisModal?.classList.contains('hidden')) {
+      this.renderAnalysisModal();
+    }
+  }
+
+  buildAvailableInstances(summaryRows, transferRows) {
+    const set = new Set();
+    (Array.isArray(summaryRows) ? summaryRows : []).forEach((row) => {
+      const value = String(row?.instance || '').trim();
+      if (value) set.add(value);
+    });
+    (Array.isArray(transferRows) ? transferRows : []).forEach((row) => {
+      const value = String(row?.instance || '').trim();
+      if (value) set.add(value);
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }
+
+  renderAnalysisInstanceOptions(instances) {
+    if (!this.el.analysisInstance) return;
+    const current = this.state.analysisInstance || 'ALL';
+    const options = ['ALL', ...instances];
+    this.el.analysisInstance.innerHTML = options
+      .map((value) => `<option value="${value}">${value === 'ALL' ? 'ALL INSTANCES' : value}</option>`)
+      .join('');
+    this.el.analysisInstance.value = options.includes(current) ? current : 'ALL';
+    this.state.analysisInstance = this.el.analysisInstance.value;
+  }
+
+  buildSummaryPairMap(rows) {
+    const map = new Map();
+    rows.forEach((row) => {
+      const instance = String(row?.instance || '').trim();
+      const algo = String(row?.algo || '').trim().toUpperCase();
+      if (!instance || !algo) return;
+      if (!map.has(instance)) map.set(instance, {});
+      const entry = map.get(instance);
+      if (algo === 'ALNS') entry.alns = row;
+      if (algo === 'DDQN-ALNS') entry.ddqn = row;
+    });
+    return map;
+  }
+
+  renderAnalysisKpis(instances, preferredPair, preferredInstance) {
+    if (!this.el.analysisSummaryKpis) return;
+
+    const valid = instances.filter(([, pair]) => pair?.alns && pair?.ddqn);
+    const total = valid.length;
+    const gapWins = valid.filter(([, pair]) => Number(pair.ddqn.gap_pct) < Number(pair.alns.gap_pct)).length;
+    const speedups = valid
+      .map(([, pair]) => {
+        const alnsTime = Number(pair.alns.time_s);
+        const ddqnTime = Number(pair.ddqn.time_s);
+        if (!Number.isFinite(alnsTime) || alnsTime <= 0 || !Number.isFinite(ddqnTime)) return null;
+        return ((alnsTime - ddqnTime) / alnsTime) * 100;
+      })
+      .filter((value) => value !== null);
+    const avgSpeedup = speedups.length ? speedups.reduce((sum, value) => sum + value, 0) / speedups.length : 0;
+    const stabilityWins = valid.filter(([, pair]) => Number(pair.ddqn.td_cv) < Number(pair.alns.td_cv)).length;
+    const preferredGapDelta = preferredPair ? Number(preferredPair.ddqn.gap_pct) - Number(preferredPair.alns.gap_pct) : 0;
+
+    const cards = [
+      {
+        label: `Gap Delta (${preferredInstance || 'N/A'})`,
+        value: `${preferredGapDelta >= 0 ? '+' : ''}${preferredGapDelta.toFixed(2)}%`,
+        note: 'Negative means DDQN is closer to BKS'
+      },
+      {
+        label: 'DDQN Gap Wins',
+        value: `${gapWins}/${total || 0}`,
+        note: 'Instances where DDQN gap < ALNS gap'
+      },
+      {
+        label: 'Average Speedup',
+        value: `${avgSpeedup.toFixed(1)}%`,
+        note: 'Runtime reduction of DDQN vs ALNS'
+      },
+      {
+        label: 'Stability Wins',
+        value: `${stabilityWins}/${total || 0}`,
+        note: 'Instances where DDQN TD_CV is lower'
+      }
+    ];
+
+    this.el.analysisSummaryKpis.innerHTML = cards
+      .map(
+        (card) => `
+          <article class="analysis-kpi">
+            <span class="analysis-kpi-label">${card.label}</span>
+            <strong class="analysis-kpi-value">${card.value}</strong>
+            <span class="analysis-kpi-note">${card.note}</span>
+          </article>
+        `
+      )
+      .join('');
+  }
+
+  renderConvergence(container, alnsHistory, ddqnHistory, selectedInstance = 'ALL', historyInstance = '') {
+    if (!container) return;
+    const a = Array.isArray(alnsHistory) ? alnsHistory.map((value) => Number(value)).filter((value) => Number.isFinite(value)) : [];
+    const b = Array.isArray(ddqnHistory) ? ddqnHistory.map((value) => Number(value)).filter((value) => Number.isFinite(value)) : [];
+    if (a.length < 2 && b.length < 2) {
+      container.textContent = 'No convergence data yet.';
+      return;
+    }
+
+    const allValues = [...a, ...b];
+    const min = Math.min(...allValues);
+    const max = Math.max(...allValues);
+    const span = Math.max(1e-9, max - min);
+    const width = 700;
+    const height = 180;
+    const paddingX = 24;
+    const paddingY = 12;
+
+    const buildPath = (values) => {
+      if (values.length === 0) return '';
+      return values
+        .map((value, index) => {
+          const x = paddingX + (index / Math.max(1, values.length - 1)) * (width - paddingX * 2);
+          const y = height - paddingY - ((value - min) / span) * (height - paddingY * 2);
+          return `${index === 0 ? 'M' : 'L'}${x.toFixed(2)} ${y.toFixed(2)}`;
+        })
+        .join(' ');
+    };
+
+    const pathA = buildPath(a);
+    const pathB = buildPath(b);
+    container.innerHTML = `
+      <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Convergence chart">
+        <rect x="0" y="0" width="${width}" height="${height}" fill="#ffffff"></rect>
+        <line x1="${paddingX}" y1="${height - paddingY}" x2="${width - paddingX}" y2="${height - paddingY}" stroke="#d9e5f1" stroke-width="1" />
+        <line x1="${paddingX}" y1="${paddingY}" x2="${paddingX}" y2="${height - paddingY}" stroke="#d9e5f1" stroke-width="1" />
+        <path d="${pathA}" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" />
+        <path d="${pathB}" fill="none" stroke="#0b8a65" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" />
+      </svg>
+      <div class="analysis-legend">
+        <span><i class="legend-dot" style="background:#2563eb"></i> ALNS</span>
+        <span><i class="legend-dot" style="background:#0b8a65"></i> DDQN-ALNS</span>
+        ${selectedInstance !== 'ALL' && historyInstance && selectedInstance !== historyInstance ? `<span>History available for ${historyInstance}</span>` : ''}
+      </div>
+    `;
+  }
+
+  renderPolicyHeatmap(matrix, destroyOps, repairOps) {
+    if (!this.el.analysisPolicyGrid) return;
+    if (!Array.isArray(matrix) || matrix.length === 0) {
+      this.el.analysisPolicyGrid.textContent = 'No policy matrix available.';
+      return;
+    }
+
+    const rows = matrix.map((row) => (Array.isArray(row) ? row : []));
+    const maxValue = Math.max(1, ...rows.flat().map((value) => Number(value) || 0));
+    const colCount = Math.max(...rows.map((row) => row.length), 0);
+    const columns = Array.from({ length: colCount }, (_, index) => String(repairOps?.[index] || `R${index + 1}`));
+
+    const header = columns.map((name) => `<th>${name}</th>`).join('');
+    const body = rows
+      .map((row, rowIdx) => {
+        const label = String(destroyOps?.[rowIdx] || `D${rowIdx + 1}`);
+        const cells = columns
+          .map((_, colIdx) => {
+            const value = Number(row[colIdx]) || 0;
+            const alpha = Math.max(0.08, value / maxValue);
+            return `<td style="background: rgba(11,138,101,${alpha.toFixed(3)})">${value}</td>`;
+          })
+          .join('');
+        return `<tr><th>${label}</th>${cells}</tr>`;
+      })
+      .join('');
+
+    this.el.analysisPolicyGrid.innerHTML = `
+      <table class="analysis-heatmap">
+        <thead>
+          <tr><th></th>${header}</tr>
+        </thead>
+        <tbody>${body}</tbody>
+      </table>
+    `;
+  }
+
+  renderLeaderboard(instances) {
+    if (!this.el.analysisLeaderboardBody) return;
+    this.el.analysisLeaderboardBody.innerHTML = '';
+
+    instances.forEach(([instance, pair]) => {
+      const alns = pair?.alns;
+      const ddqn = pair?.ddqn;
+      if (!alns || !ddqn) return;
+
+      const gapWinner = Number(ddqn.gap_pct) < Number(alns.gap_pct) ? 'DDQN' : Number(ddqn.gap_pct) > Number(alns.gap_pct) ? 'ALNS' : 'Tie';
+      const speedWinner = Number(ddqn.time_s) < Number(alns.time_s) ? 'DDQN' : Number(ddqn.time_s) > Number(alns.time_s) ? 'ALNS' : 'Tie';
+      const stableWinner = Number(ddqn.td_cv) < Number(alns.td_cv) ? 'DDQN' : Number(ddqn.td_cv) > Number(alns.td_cv) ? 'ALNS' : 'Tie';
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${instance}</td>
+        <td>${this.renderPill(gapWinner)}</td>
+        <td>${this.renderPill(speedWinner)}</td>
+        <td>${this.renderPill(stableWinner)}</td>
+      `;
+      this.el.analysisLeaderboardBody.appendChild(tr);
+    });
+  }
+
+  renderTransferRows(rows, selectedInstance = 'ALL') {
+    if (!this.el.analysisTransferBody) return;
+    this.el.analysisTransferBody.innerHTML = '';
+
+    rows
+      .filter((row) => selectedInstance === 'ALL' || String(row?.instance || '') === selectedInstance)
+      .forEach((row) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${String(row.instance || '-')}</td>
+        <td>${Number(row.gap_pct || 0).toFixed(2)}%</td>
+        <td>${Number(row.nv || 0).toFixed(1)}</td>
+      `;
+      this.el.analysisTransferBody.appendChild(tr);
+      });
+  }
+
+  renderPill(label) {
+    if (label === 'DDQN') return '<span class="analysis-pill good">DDQN</span>';
+    if (label === 'ALNS') return '<span class="analysis-pill bad">ALNS</span>';
+    return '<span class="analysis-pill neutral">Tie</span>';
+  }
+
+  openAnalysisModal() {
+    if (!this.state.analysisData) {
+      this.toast('No Analysis Yet', 'Please load an analysis version first.', 'error');
+      return;
+    }
+    this.renderAnalysisModal();
+    this.el.analysisModal?.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+
+  closeAnalysisModal() {
+    if (this.el.analysisModal?.classList.contains('hidden')) return;
+    this.el.analysisModal.classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+
+  renderAnalysisModal() {
+    const data = this.state.analysisData;
+    if (!data) return;
+
+    const meta = data.meta || {};
+    const source = data._source || {};
+    const selectedInstance = this.state.analysisInstance || 'ALL';
+    if (this.el.analysisModalSubtitle) {
+      const filterLabel = selectedInstance === 'ALL' ? 'ALL INSTANCES' : selectedInstance;
+      this.el.analysisModalSubtitle.textContent = `Version ${String(source.version || this.state.analysisVersion || '').toUpperCase()} • ${String(meta.dataset || 'Unknown dataset')} • Filter ${filterLabel}`;
+    }
+
+    if (this.el.analysisModalMeta) {
+      const entries = [
+        ['Instance', meta.instance],
+        ['Customers', meta.n_customers],
+        ['Capacity', meta.capacity],
+        ['Horizon', meta.horizon],
+        ['Dataset', meta.dataset],
+        ['Version', meta.version || source.version],
+      ];
+      this.el.analysisModalMeta.innerHTML = entries
+        .map(([label, value]) => `<div class="analysis-meta-item"><strong>${label}:</strong> ${this.escapeHtml(String(value ?? '-'))}</div>`)
+        .join('');
+    }
+
+    this.renderConvergence(this.el.analysisModalConvergence, data?.alns?.history, data?.rl_alns?.history, selectedInstance, String(meta?.instance || ''));
+    this.renderTransferPlot(data?.transfer, data?.summary, selectedInstance);
+    this.renderModalTransferTable(data?.transfer, selectedInstance);
+  }
+
+  renderTransferPlot(transferRows, summaryRows, selectedInstance = 'ALL') {
+    if (!this.el.analysisModalTransferPlot) return;
+    const transfer = Array.isArray(transferRows) ? transferRows : [];
+    if (transfer.length === 0) {
+      this.el.analysisModalTransferPlot.textContent = 'No transfer data.';
+      return;
+    }
+
+    const summary = Array.isArray(summaryRows) ? summaryRows : [];
+    const alnsMap = new Map();
+    summary.forEach((row) => {
+      if (String(row?.algo || '').toUpperCase() !== 'ALNS') return;
+      alnsMap.set(String(row.instance || ''), Number(row.gap_pct));
+    });
+
+    const points = transfer
+      .map((row) => {
+        const instance = String(row.instance || '');
+        if (selectedInstance !== 'ALL' && instance !== selectedInstance) return null;
+        const x = alnsMap.get(instance);
+        const y = Number(row.gap_pct);
+        if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+        return { instance, x, y };
+      })
+      .filter((item) => item !== null);
+
+    if (points.length === 0) {
+      this.el.analysisModalTransferPlot.textContent = 'Transfer points are missing baseline ALNS gap values.';
+      return;
+    }
+
+    const minX = Math.min(...points.map((p) => p.x));
+    const maxX = Math.max(...points.map((p) => p.x));
+    const minY = Math.min(...points.map((p) => p.y));
+    const maxY = Math.max(...points.map((p) => p.y));
+    const xSpan = Math.max(1e-9, maxX - minX);
+    const ySpan = Math.max(1e-9, maxY - minY);
+    const width = 700;
+    const height = 220;
+    const pad = 30;
+
+    const circles = points
+      .map((point) => {
+        const cx = pad + ((point.x - minX) / xSpan) * (width - pad * 2);
+        const cy = height - pad - ((point.y - minY) / ySpan) * (height - pad * 2);
+        return `<g><circle cx="${cx.toFixed(2)}" cy="${cy.toFixed(2)}" r="5.5" fill="#ea8a1d"/><text x="${(cx + 7).toFixed(2)}" y="${(cy - 7).toFixed(2)}" font-size="11" fill="#35516a">${point.instance}</text></g>`;
+      })
+      .join('');
+
+    this.el.analysisModalTransferPlot.innerHTML = `
+      <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Transfer scatter">
+        <rect x="0" y="0" width="${width}" height="${height}" fill="#ffffff"></rect>
+        <line x1="${pad}" y1="${height - pad}" x2="${width - pad}" y2="${height - pad}" stroke="#d9e5f1" stroke-width="1"/>
+        <line x1="${pad}" y1="${pad}" x2="${pad}" y2="${height - pad}" stroke="#d9e5f1" stroke-width="1"/>
+        ${circles}
+      </svg>
+      <div class="analysis-legend">
+        <span><i class="legend-dot" style="background:#ea8a1d"></i> X: ALNS Gap% (RC2)</span>
+        <span><i class="legend-dot" style="background:#ea8a1d"></i> Y: DDQN-ALNS★ Gap% (RC2)</span>
+      </div>
+    `;
+  }
+
+  renderModalTransferTable(rows, selectedInstance = 'ALL') {
+    if (!this.el.analysisModalTransferBody) return;
+    this.el.analysisModalTransferBody.innerHTML = '';
+    (Array.isArray(rows) ? rows : [])
+      .filter((row) => selectedInstance === 'ALL' || String(row?.instance || '') === selectedInstance)
+      .forEach((row) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${String(row.instance || '-')}</td>
+        <td>${Number(row.td || 0).toFixed(2)}</td>
+        <td>${Number(row.gap_pct || 0).toFixed(2)}%</td>
+        <td>${Number(row.nv || 0).toFixed(1)}</td>
+      `;
+      this.el.analysisModalTransferBody.appendChild(tr);
+      });
+  }
+
+  escapeHtml(value) {
+    return String(value)
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;');
+  }
+
+  toggleCustomerSelection(customerId) {
+    if (!Number.isFinite(customerId)) return;
+    if (this.selectedCustomerIds.has(customerId)) this.selectedCustomerIds.delete(customerId);
+    else this.selectedCustomerIds.add(customerId);
+    this.renderCustomers();
+  }
+
+  deleteSelectedCustomers() {
+    if (this.selectedCustomerIds.size === 0) {
+      this.toast('No Selection', 'Select one or more rows to delete.', 'error');
+      return;
+    }
+
+    const before = this.state.customers.length;
+    this.state.customers = this.state.customers.filter((item) => {
+      if (item.isDepot) return true;
+      return !this.selectedCustomerIds.has(item.id);
+    });
+    this.state.customers = this.state.customers.map((item, idx) => ({ ...item, id: idx }));
+    this.selectedCustomerIds.clear();
+
+    const removed = before - this.state.customers.length;
+    if (removed <= 0) {
+      this.toast('Delete Skipped', 'Depot row cannot be deleted.', 'error');
+      return;
+    }
+
+    this.renderCustomers();
+    this.renderMarkers();
+    this.setStatus(`Deleted ${removed} selected customer row(s).`, 'ok');
+    this.toast('Rows Deleted', `Removed ${removed} row(s).`, 'ok');
   }
 
   wireTableInlineEditing() {
@@ -966,17 +1742,25 @@ export class App {
   async request(path, options = {}) {
     const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
     if (this.state.token) headers.Authorization = `Bearer ${this.state.token}`;
-    const response = await fetch(`${API_BASE}${path}`, { ...options, headers });
-    if (!response.ok) {
-      const contentType = response.headers.get('content-type') || '';
-      if (contentType.includes('application/json')) {
-        const data = await response.json().catch(() => null);
-        throw new Error(data?.detail || data?.message || `HTTP ${response.status}`);
+    try {
+      const response = await fetch(`${API_BASE}${path}`, { ...options, headers });
+      if (!response.ok) {
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          const data = await response.json().catch(() => null);
+          throw new Error(data?.detail || data?.message || `HTTP ${response.status}`);
+        }
+        const body = await response.text();
+        throw new Error(body || `HTTP ${response.status}`);
       }
-      const body = await response.text();
-      throw new Error(body || `HTTP ${response.status}`);
+      return response.json();
+    } catch (error) {
+      const message = String(error?.message || error || '');
+      if (error instanceof TypeError || /failed to fetch|networkerror|load failed/i.test(message)) {
+        throw new Error(`Cannot reach backend API at ${API_BASE}. Start the backend server on port 8000.`);
+      }
+      throw error;
     }
-    return response.json();
   }
 
   async register() {
@@ -1090,10 +1874,19 @@ export class App {
       this.toast('Login Successful', 'Token has been saved in your browser.', 'ok');
     } catch (error) {
       const message = this.parseApiError(error);
-      if (/email/i.test(message)) this.setFieldError(this.el.loginEmail);
-      if (/password|credential|invalid/i.test(message)) this.setFieldError(this.el.loginPassword);
-      this.toast('Login Failed', message, 'error');
-      if (this.el.authHint) this.el.authHint.textContent = `Login error: ${message}`;
+      if (/email/i.test(message)) {
+        this.setFieldError(this.el.loginEmail);
+        this.toast('Login Failed', 'Please check your email address', 'error');
+      } else if (/password|credential|invalid/i.test(message)) {
+        this.setFieldError(this.el.loginPassword);
+        this.toast('Login Failed', 'Email or password is incorrect. Please try again or reset your password.', 'error');
+      } else {
+        this.toast('Login Failed', message, 'error');
+      }
+      if (this.el.authHint) {
+        this.el.authHint.textContent = '💡 Tip: Use "Forgot Password" if you do not remember your credentials';
+        this.el.authHint.style.display = 'block';
+      }
     }
   }
 
@@ -1322,19 +2115,40 @@ export class App {
   }
 
   async parsePasteData() {
-    const text = this.el.pasteBox.value.trim();
+    const text = this.el.pasteBox?.value?.trim() || '';
     if (!text) {
       this.setStatus('No data available to parse.', 'error');
       return;
     }
 
-    const rows = text.split(/\r?\n/).map((line) => line.split(/\t|,/));
+    await this.importCustomersFromText(text, 'clipboard');
+    if (this.el.pasteBox) this.el.pasteBox.value = '';
+  }
+
+  parseTextRows(text) {
+    const lines = String(text)
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0);
+
+    const useTabDelimiter = lines.some((line) => line.includes('\t'));
+    const delimiter = useTabDelimiter ? /\t/ : /,/;
+    return lines.map((line) => line.split(delimiter).map((cell) => String(cell).trim()));
+  }
+
+  async importCustomersFromText(text, source = 'clipboard') {
+    const rows = this.parseTextRows(text);
     const newItems = await this.parseRowsToCustomers(rows);
 
+    if (!newItems.length) {
+      this.setStatus('No valid customer rows found in pasted data.', 'error');
+      this.toast('Import Failed', 'No valid customer rows found in pasted data.', 'error');
+      return;
+    }
+
     newItems.forEach((item) => this.pushCustomer(item));
-    this.el.pasteBox.value = '';
-    this.setStatus(`Added ${newItems.length} customers from pasted Excel data.`, 'ok');
-    this.toast('Import Successful', `Loaded ${newItems.length} rows from clipboard.`, 'ok');
+    this.setStatus(`Added ${newItems.length} customers from ${source} data.`, 'ok');
+    this.toast('Import Successful', `Loaded ${newItems.length} rows from ${source}.`, 'ok');
   }
 
   async handleExcelFile(event) {
@@ -1347,10 +2161,8 @@ export class App {
       const firstSheet = workbook.SheetNames[0];
       const sheet = workbook.Sheets[firstSheet];
       const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-      const newItems = await this.parseRowsToCustomers(rows);
-      newItems.forEach((item) => this.pushCustomer(item));
-      this.toast('Excel Imported', `${newItems.length} customers have been loaded.`, 'ok');
-      this.setStatus(`Imported ${newItems.length} rows from Excel file.`, 'ok');
+      const text = rows.map((cols) => cols.map((cell) => String(cell ?? '')).join('\t')).join('\n');
+      await this.importCustomersFromText(text, 'excel file');
     } catch (error) {
       this.toast('Import Failed', error.message, 'error');
       this.setStatus(`Unable to read Excel file: ${error.message}`, 'error');
@@ -1359,11 +2171,110 @@ export class App {
     }
   }
 
+  normalizeHeaderKey(value) {
+    return String(value || '')
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]/g, '');
+  }
+
+  findHeaderIndex(cells, aliases) {
+    const normalizedAliases = aliases.map((alias) => this.normalizeHeaderKey(alias));
+    for (let i = 0; i < cells.length; i += 1) {
+      if (normalizedAliases.includes(cells[i])) return i;
+    }
+    return -1;
+  }
+
+  detectHeaderMap(rows) {
+    if (!Array.isArray(rows) || rows.length === 0) return null;
+
+    const headerCells = rows[0].map((cell) => this.normalizeHeaderKey(cell));
+    if (!headerCells.some((cell) => cell.length > 0)) return null;
+
+    const map = {
+      name: this.findHeaderIndex(headerCells, ['name', 'customer name', 'customer', 'client', 'store', 'shop']),
+      address: this.findHeaderIndex(headerCells, ['address', 'addr', 'location', 'customer address', 'full address']),
+      lat: this.findHeaderIndex(headerCells, ['lat', 'latitude', 'y', 'geo lat']),
+      lng: this.findHeaderIndex(headerCells, ['lng', 'lon', 'long', 'longitude', 'x', 'geo lng', 'geo lon']),
+      demand: this.findHeaderIndex(headerCells, ['demand', 'qty', 'quantity', 'load', 'order size', 'weight'])
+    };
+
+    const matchedCount = Object.values(map).filter((index) => index >= 0).length;
+    const hasLocation = (map.lat >= 0 && map.lng >= 0) || map.address >= 0;
+    if (!hasLocation || matchedCount < 2) return null;
+    return map;
+  }
+
+  valueAt(cols, index, fallback = '') {
+    if (!Array.isArray(cols) || index < 0 || index >= cols.length) return fallback;
+    return String(cols[index] ?? '').trim();
+  }
+
+  readRowWithFallback(cols) {
+    const base = cols.map((c) => String(c ?? '').trim());
+
+    // Default format: name, address, lat, lng, demand
+    let candidate = {
+      name: base[0] || '',
+      address: base[1] || '',
+      latRaw: base[2] || '',
+      lngRaw: base[3] || '',
+      demandRaw: base[4] || '10'
+    };
+
+    const latA = Number(candidate.latRaw);
+    const lngA = Number(candidate.lngRaw);
+    if (Number.isFinite(latA) && Number.isFinite(lngA)) return candidate;
+
+    // Alternate format with leading id: id, name, address, lat, lng, demand
+    const candidateWithId = {
+      name: base[1] || '',
+      address: base[2] || '',
+      latRaw: base[3] || '',
+      lngRaw: base[4] || '',
+      demandRaw: base[5] || '10'
+    };
+    const latB = Number(candidateWithId.latRaw);
+    const lngB = Number(candidateWithId.lngRaw);
+    if (Number.isFinite(latB) && Number.isFinite(lngB)) return candidateWithId;
+
+    return candidate;
+  }
+
   async parseRowsToCustomers(rows) {
+    const headerMap = this.detectHeaderMap(rows);
+    const dataRows = headerMap ? rows.slice(1) : rows;
     const newItems = [];
-    for (const cols of rows) {
+    for (const cols of dataRows) {
       if (!Array.isArray(cols) || cols.length === 0) continue;
-      const [name = '', address = '', latRaw = '', lngRaw = '', demandRaw = '10'] = cols.map((c) => String(c).trim());
+
+      const baseCells = cols.map((c) => String(c ?? '').trim());
+      if (!baseCells.some((cell) => cell.length > 0)) continue;
+
+      let name = '';
+      let address = '';
+      let latRaw = '';
+      let lngRaw = '';
+      let demandRaw = '10';
+
+      if (headerMap) {
+        name = this.valueAt(baseCells, headerMap.name, '');
+        address = this.valueAt(baseCells, headerMap.address, '');
+        latRaw = this.valueAt(baseCells, headerMap.lat, '');
+        lngRaw = this.valueAt(baseCells, headerMap.lng, '');
+        demandRaw = this.valueAt(baseCells, headerMap.demand, '10');
+      } else {
+        const row = this.readRowWithFallback(baseCells);
+        name = row.name;
+        address = row.address;
+        latRaw = row.latRaw;
+        lngRaw = row.lngRaw;
+        demandRaw = row.demandRaw;
+      }
+
       let lat = Number(latRaw);
       let lng = Number(lngRaw);
       if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
@@ -1584,15 +2495,17 @@ export class App {
       }
     }
 
-    this.pushCustomer({
+    const item = {
       name: name || `Cust-${this.state.customers.length}`,
       address,
       lat: this.tableInputDraft.lat,
       lng: this.tableInputDraft.lng,
       demand: Math.round(demand),
-    });
+    };
 
+    this.tableInputVisible = true;
     this.resetTableInputDraft();
+    this.pushCustomer(item);
     this.setStatus('Added customer from table input row.', 'ok');
     window.requestAnimationFrame(() => this.focusTableInputField('name'));
   }
@@ -1600,6 +2513,10 @@ export class App {
   renderTableInputRow() {
     const tr = document.createElement('tr');
     tr.className = 'table-input-row';
+
+    const pickCell = document.createElement('td');
+    pickCell.textContent = '';
+    tr.appendChild(pickCell);
 
     const idCell = document.createElement('td');
     idCell.textContent = '+';
@@ -1712,6 +2629,7 @@ export class App {
   pushCustomer(item) {
     const id = this.state.customers.length;
     this.state.customers.push({ ...item, id, isDepot: false });
+    this.selectedCustomerIds.clear();
     this.renderCustomers();
     this.renderMarkers();
   }
@@ -1722,6 +2640,20 @@ export class App {
     this.state.customers.forEach((c) => {
       const tr = document.createElement('tr');
       tr.dataset.customerId = String(c.id);
+      if (this.selectedCustomerIds.has(c.id)) tr.classList.add('table-row-selected');
+
+      tr.addEventListener('click', (event) => {
+        const interactive = event.target.closest('input, button, a, [data-editable="true"]');
+        if (interactive) return;
+        this.toggleCustomerSelection(c.id);
+      });
+
+      const pick = document.createElement('td');
+      pick.className = 'table-pick-cell';
+      const selected = this.selectedCustomerIds.has(c.id);
+      pick.textContent = selected ? '✓' : '○';
+      if (selected) pick.classList.add('is-selected');
+      tr.appendChild(pick);
 
       const values = [
         { field: 'id', value: String(c.id), editable: false },
@@ -1746,7 +2678,7 @@ export class App {
 
       this.el.customerRows.appendChild(tr);
     });
-    this.renderTableInputRow();
+    if (this.tableInputVisible) this.renderTableInputRow();
     this.showEmptyStates();
   }
 
@@ -1789,14 +2721,12 @@ export class App {
       }
 
       this.showLoading(true);
-      this.setStatus('Running geocoding/matrix and submitting job...');
-      this.toast('Processing', 'System is running geocoding and distance matrix.', 'ok');
-
-      const matrixPoints = this.state.customers.map((c) => ({ lat: c.lat, lng: c.lng }));
-      await this.request('/matrix', {
-        method: 'POST',
-        body: JSON.stringify({ points: matrixPoints })
-      });
+      this.runSession.token += 1;
+      this.runSession.cancelled = false;
+      this.runSession.abortController?.abort();
+      this.runSession.abortController = new AbortController();
+      this.setStatus('Submitting optimization job to background queue...');
+      this.toast('Processing', 'Job is being queued and will run in the background.', 'ok');
 
       const payload = {
         mode: this.state.mode,
@@ -1807,7 +2737,8 @@ export class App {
 
       const submit = await this.request('/jobs', {
         method: 'POST',
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
+        signal: this.runSession.abortController.signal
       });
 
       await firebaseService.saveJobStart(submit.job_id, {
@@ -1818,32 +2749,57 @@ export class App {
       });
 
       const pollLimitMs = this.estimatePollTimeoutMs(this.state.customers.length);
-      await this.pollJob(submit.job_id, pollLimitMs);
+      await this.pollJob(submit.job_id, pollLimitMs, this.runSession.token);
     } catch (error) {
-      const friendly = this.formatRunError(error);
+      if (this.runSession.cancelled || error?.name === 'AbortError') {
+        return;
+      }
+      const raw = this.parseApiError(error);
+      const adjusted = this.autoAdjustVehiclesForInfeasible(raw);
+      const friendly = this.formatRunError(raw);
+      if (adjusted?.changed) {
+        const msg =
+          adjusted.target >= adjusted.max
+            ? `Auto-adjusted Vehicles to ${adjusted.target} (slider max). If still infeasible, increase Capacity.`
+            : `Auto-adjusted Vehicles: ${adjusted.current} -> ${adjusted.target}. Click Run Model again.`;
+        this.toast('Vehicles Auto-Adjusted', msg, 'ok');
+      }
       this.setStatus(`Submit error: ${friendly}`, 'error');
       this.toast('Submit Failed', friendly, 'error');
       this.hideLoadingImmediate();
+    } finally {
+      this.runSession.abortController = null;
     }
   }
 
   estimatePollTimeoutMs(customerCount) {
     const count = Math.max(0, Number(customerCount) || 0);
-    const baseline = 180000;
-    const scaled = baseline + count * 3500;
-    return Math.min(900000, Math.max(baseline, scaled));
+    const baseline = 600000;
+    const scaled = baseline + count * 6000;
+    return Math.min(1800000, Math.max(baseline, scaled));
   }
 
-  async pollJob(jobId, timeoutMs = 180000) {
+  async pollJob(jobId, timeoutMs = 180000, sessionToken = 0) {
     const startedAt = Date.now();
     while (Date.now() - startedAt < timeoutMs) {
-      const data = await this.request(`/jobs/${jobId}`, { method: 'GET' });
-      if (data.status === 'queued') {
+      if (this.runSession.cancelled || sessionToken !== this.runSession.token) return;
+      const data = await this.request(`/jobs/${jobId}`, {
+        method: 'GET',
+        signal: this.runSession.abortController?.signal
+      });
+      if (this.runSession.cancelled || sessionToken !== this.runSession.token) return;
+      const phase = data?.debug?.phase || data.status;
+      if (phase === 'queued') {
         this.setLoadingProgress(this.loadingAnim.progress, null, 'Job queued, waiting for worker...', 0.18, 'idle');
-      } else if (data.status === 'processing') {
-        this.setLoadingProgress(this.loadingAnim.progress, null, 'Backend is processing optimization...', 0.28, 'alns');
+      } else if (phase === 'processing') {
+        this.setLoadingProgress(this.loadingAnim.progress, null, 'Worker picked up the job...', 0.22, 'idle');
+      } else if (phase === 'matrix') {
+        this.setLoadingProgress(this.loadingAnim.progress, null, 'Building distance matrix...', 0.3, 'idle');
+      } else if (phase === 'solving') {
+        this.setLoadingProgress(this.loadingAnim.progress, null, 'Backend is solving routes...', 0.4, 'alns');
       }
       if (data.status === 'done') {
+        if (this.runSession.cancelled || sessionToken !== this.runSession.token) return;
         this.state.lastResult = data.result;
         this.paintResult();
         await firebaseService.saveJobResult(jobId, data.result);
@@ -1854,7 +2810,7 @@ export class App {
         return;
       }
       if (data.status === 'failed') {
-        throw new Error(this.formatRunError(data.error || 'Job failed'));
+        throw new Error(data.error || 'Job failed');
       }
       await new Promise((resolve) => setTimeout(resolve, 1400));
     }
@@ -1929,6 +2885,72 @@ export class App {
     });
 
     this.updateLoadInsight(result.ddqn, result.alns, routeCapacity);
+
+    this.showEmptyStates();
+  }
+
+  resetResultOutputs() {
+    this.state.lastResult = null;
+    this.stopVehicleAnimations();
+
+    if (this.maps) {
+      this.maps.ddqnRouteLayer.clearLayers();
+      this.maps.alnsRouteLayer.clearLayers();
+      this.maps.alnsDiffLayer.clearLayers();
+      this.maps.ddqnVehicleLayer.clearLayers();
+      this.maps.alnsVehicleLayer.clearLayers();
+    }
+
+    const setText = (node, value) => {
+      if (node) node.textContent = value;
+    };
+    const setWidth = (node, value) => {
+      if (node) node.style.width = value;
+    };
+
+    setText(this.el.metricRuntimeDdqn, '0.00s');
+    setText(this.el.metricRuntimeAlns, '0.00s');
+    setText(this.el.metricRuntimeDelta, 'Results are tied');
+
+    setText(this.el.metricDistanceDdqn, '0.00km');
+    setText(this.el.metricDistanceAlns, '0.00km');
+    setText(this.el.metricDistanceDelta, 'Results are tied');
+
+    setText(this.el.metricVehiclesDdqn, '0');
+    setText(this.el.metricVehiclesAlns, '0');
+    setText(this.el.metricVehiclesDelta, 'Results are tied');
+
+    setWidth(this.el.metricDistanceBarDdqn, '0%');
+    setWidth(this.el.metricDistanceBarAlns, '0%');
+    setWidth(this.el.metricVehiclesBarDdqn, '0%');
+    setWidth(this.el.metricVehiclesBarAlns, '0%');
+
+    setText(this.el.metricLoadDdqn, '0.0%');
+    setText(this.el.metricLoadAlns, '0.0%');
+    setText(this.el.metricLoadDelta, 'Balanced');
+    setWidth(this.el.metricLoadBarDdqn, '0%');
+    setWidth(this.el.metricLoadBarAlns, '0%');
+    if (this.el.metricLoadDonutDdqn) this.el.metricLoadDonutDdqn.style.setProperty('--p', '0%');
+    if (this.el.metricLoadDonutAlns) this.el.metricLoadDonutAlns.style.setProperty('--p', '0%');
+    setText(this.el.metricLoadDonutDdqnLabel, '0%');
+    setText(this.el.metricLoadDonutAlnsLabel, '0%');
+    if (this.el.metricLoadDdqnState) {
+      this.el.metricLoadDdqnState.className = 'load-state';
+      this.el.metricLoadDdqnState.textContent = 'No data';
+    }
+    if (this.el.metricLoadAlnsState) {
+      this.el.metricLoadAlnsState.className = 'load-state';
+      this.el.metricLoadAlnsState.textContent = 'No data';
+    }
+
+    [
+      this.el.metricRuntimeCard,
+      this.el.metricDistanceCard,
+      this.el.metricVehiclesCard,
+      this.el.metricLoadCard,
+    ].forEach((card) => {
+      if (card) card.dataset.winner = 'tie';
+    });
 
     this.showEmptyStates();
   }
@@ -2205,6 +3227,7 @@ export class App {
   showLoading(show) {
     if (show) {
       this.startLoadingProgress();
+      this.restoreLoading();
       this.el.loading.classList.remove('hidden');
       return;
     }
@@ -2244,12 +3267,15 @@ export class App {
     this.loadingAnim.stage = 0;
     this.loadingAnim.stageStartedAt = performance.now();
     this.loadingAnim.lastTickAt = this.loadingAnim.stageStartedAt;
-    this.setLoadingProgress(0, 'AI is optimizing routes...', 'Collecting route data...', 0.22, 'idle');
+    this.setLoadingProgress(0, 'AI is optimizing routes...', 'Queueing job...', 0.22, 'idle');
+    this.el.loading?.classList.remove('loading--minimized');
+    this.el.loadingLauncher?.classList.add('hidden');
 
     const phases = [
-      { label: 'Collecting route data...', until: 28, algo: 'idle', base: 0.032, amp: 0.024 },
-      { label: 'Running DDQN...', until: 63, algo: 'ddqn', base: 0.044, amp: 0.038 },
-      { label: 'Running ALNS...', until: 97, algo: 'alns', base: 0.039, amp: 0.034 },
+      { label: 'Queueing job...', until: 16, algo: 'idle', base: 0.03, amp: 0.02 },
+      { label: 'Building distance matrix...', until: 34, algo: 'idle', base: 0.03, amp: 0.022 },
+      { label: 'Running DDQN...', until: 66, algo: 'ddqn', base: 0.044, amp: 0.038 },
+      { label: 'Running ALNS...', until: 96, algo: 'alns', base: 0.039, amp: 0.034 },
       { label: 'Finalizing best routes...', until: 99, algo: 'alns', base: 0.012, amp: 0.01 }
     ];
 
@@ -2291,6 +3317,28 @@ export class App {
     this.loadingAnim.rafId = 0;
   }
 
+  minimizeLoading() {
+    if (this.el.loading?.classList.contains('hidden')) return;
+    this.el.loading.classList.add('loading--minimized');
+    this.el.loadingLauncher?.classList.remove('hidden');
+    this.setStatus('Optimization is running in background. Click the floating truck to reopen progress.', 'ok');
+  }
+
+  restoreLoading() {
+    if (this.el.loading?.classList.contains('hidden')) return;
+    this.el.loading.classList.remove('loading--minimized');
+    this.el.loadingLauncher?.classList.add('hidden');
+  }
+
+  cancelLoading() {
+    this.runSession.cancelled = true;
+    this.runSession.abortController?.abort();
+    this.runSession.abortController = null;
+    this.hideLoadingImmediate();
+    this.setStatus('Optimization canceled by user.', 'error');
+    this.toast('Canceled', 'Optimization was canceled.', 'error');
+  }
+
   async completeLoading() {
     const start = this.loadingAnim.progress;
     this.stopLoadingProgress();
@@ -2326,6 +3374,8 @@ export class App {
   hideLoadingImmediate() {
     this.stopLoadingProgress();
     this.setLoadingProgress(0, 'AI is optimizing routes...', 'Collecting route data...', 0, 'idle');
+    this.el.loading?.classList.remove('loading--minimized');
+    this.el.loadingLauncher?.classList.add('hidden');
     this.el.loading.classList.add('hidden');
   }
 }
