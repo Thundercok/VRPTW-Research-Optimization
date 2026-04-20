@@ -17,13 +17,6 @@ import torch.nn.functional as F
 import torch.optim as optim
 from numba import njit
 
-try:
-    from scipy.optimize import Bounds, LinearConstraint, milp
-except Exception:  # pragma: no cover - optional dependency
-    Bounds = None
-    LinearConstraint = None
-    milp = None
-
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -92,16 +85,6 @@ class Config:
     ctrl_eps_decay: float = 0.992
     plateau_start: int = 60
     post_improve_intensify_segments: int = 2
-    nv_increase_penalty: float = 20.0
-    route_pool_limit: int = 480
-    route_pool_max_per_customer: int = 18
-    sp_time_limit: float = 4.0
-    sp_vehicle_penalty_scale: float = 100.0
-    polish_iterations: int = 450
-    polish_patience: int = 120
-    polish_ls_passes: int = 2
-    recombine_after_main_search: bool = True
-    recombine_after_polish: bool = True
 
 
 @dataclass(frozen=True)
@@ -120,7 +103,7 @@ MODES: Tuple[ModeSpec, ...] = (
         destroy_scale=1.0,
         temp_boost=1.0,
         temp_decay_scale=1.0,
-        destroy_bias=(1.0, 1.0, 1.0, 1.0, 1.0, 0.8),
+        destroy_bias=(1.0, 1.0, 1.0, 1.0, 1.0),
         repair_bias=(1.0, 1.0, 1.0, 1.0),
     ),
     ModeSpec(
@@ -128,15 +111,15 @@ MODES: Tuple[ModeSpec, ...] = (
         destroy_scale=0.70,
         temp_boost=0.98,
         temp_decay_scale=0.995,
-        destroy_bias=(0.8, 1.3, 1.2, 0.5, 1.0, 0.7),
+        destroy_bias=(0.8, 1.3, 1.2, 0.5, 1.0),
         repair_bias=(1.3, 1.2, 0.8, 1.0),
     ),
     ModeSpec(
         name="diversify",
-        destroy_scale=1.20,
-        temp_boost=1.08,
+        destroy_scale=1.35,
+        temp_boost=1.20,
         temp_decay_scale=1.002,
-        destroy_bias=(1.3, 0.9, 1.3, 1.1, 1.0, 0.7),
+        destroy_bias=(1.3, 0.9, 1.3, 1.4, 1.0),
         repair_bias=(0.9, 1.0, 1.3, 1.0),
     ),
     ModeSpec(
@@ -144,16 +127,8 @@ MODES: Tuple[ModeSpec, ...] = (
         destroy_scale=1.10,
         temp_boost=1.05,
         temp_decay_scale=1.0,
-        destroy_bias=(0.7, 0.9, 1.1, 0.8, 1.8, 0.4),
+        destroy_bias=(0.7, 0.9, 1.1, 0.8, 1.8),
         repair_bias=(0.8, 1.0, 1.2, 1.8),
-    ),
-    ModeSpec(
-        name="route_reduce",
-        destroy_scale=0.95,
-        temp_boost=1.02,
-        temp_decay_scale=0.998,
-        destroy_bias=(0.6, 1.0, 0.9, 1.7, 0.6, 2.2),
-        repair_bias=(0.8, 1.2, 1.5, 1.0),
     ),
 )
 
@@ -161,7 +136,6 @@ MODE_DEFAULT = 0
 MODE_INTENSIFY = 1
 MODE_DIVERSIFY = 2
 MODE_TW_RESCUE = 3
-MODE_ROUTE_REDUCE = 4
 
 
 class ReplayBuffer:
@@ -423,312 +397,6 @@ class Plan:
         return on_time / max(total, 1)
 
 
-@dataclass(frozen=True)
-class RouteRecord:
-    nodes: Tuple[int, ...]
-    cost: float
-    load: float
-    slack: float
-
-
-def _route_cost_list(route: List[int], inst: Inst) -> float:
-    if not route:
-        return 0.0
-    return float(_route_cost(np.array(route, np.int64), inst.dist))
-
-
-def _route_load(route: List[int], inst: Inst) -> float:
-    return float(sum(inst.demands[node] for node in route))
-
-
-def _route_avg_slack(route: List[int], inst: Inst) -> float:
-    if not route:
-        return 0.0
-    slack_sum = 0.0
-    current_time = 0.0
-    prev = 0
-    for node in route:
-        current_time += inst.dist[prev, node]
-        current_time = max(current_time, inst.ready_times[node])
-        slack_sum += inst.due_times[node] - current_time
-        current_time += inst.service_times[node]
-        prev = node
-    return slack_sum / len(route)
-
-
-def _fleet_fill(plan: Plan) -> float:
-    if not plan.routes:
-        return 0.0
-    loads = [_route_load(route, plan.inst) / max(plan.inst.capacity, 1) for route in plan.routes]
-    return float(np.mean(loads))
-
-
-class RoutePool:
-    def __init__(self, inst: Inst, cfg: Config):
-        self.inst = inst
-        self.cfg = cfg
-        self._routes: Dict[Tuple[int, ...], RouteRecord] = {}
-
-    def _priority(self, rec: RouteRecord) -> Tuple[float, ...]:
-        load_ratio = rec.load / max(self.inst.capacity, 1)
-        cost_per_customer = rec.cost / max(len(rec.nodes), 1)
-        return (-len(rec.nodes), cost_per_customer, -load_ratio, -rec.slack)
-
-    def _trim(self) -> None:
-        limit = self.cfg.route_pool_limit
-        if len(self._routes) <= limit:
-            return
-
-        usage: Dict[int, int] = {}
-        kept: Dict[Tuple[int, ...], RouteRecord] = {}
-        ranked = sorted(self._routes.values(), key=self._priority)
-
-        for rec in ranked:
-            if len(kept) >= limit:
-                break
-            under_cap = all(
-                usage.get(node, 0) < self.cfg.route_pool_max_per_customer for node in rec.nodes
-            )
-            if under_cap or len(kept) < limit // 3:
-                kept[rec.nodes] = rec
-                for node in rec.nodes:
-                    usage[node] = usage.get(node, 0) + 1
-
-        if len(kept) < limit:
-            for rec in ranked:
-                if rec.nodes in kept:
-                    continue
-                kept[rec.nodes] = rec
-                if len(kept) >= limit:
-                    break
-        self._routes = kept
-
-    def add_route(self, route: List[int]) -> None:
-        if not route or not _check_route(route, self.inst):
-            return
-        key = tuple(route)
-        if key in self._routes:
-            return
-
-        self._routes[key] = RouteRecord(
-            nodes=key,
-            cost=_route_cost_list(route, self.inst),
-            load=_route_load(route, self.inst),
-            slack=_route_avg_slack(route, self.inst),
-        )
-        self._trim()
-
-    def add_plan(self, plan: Plan) -> None:
-        for route in plan.routes:
-            self.add_route(route)
-
-    def records(self, incumbent: Optional[Plan] = None) -> List[RouteRecord]:
-        records = dict(self._routes)
-        if incumbent is not None:
-            for route in incumbent.routes:
-                key = tuple(route)
-                records[key] = RouteRecord(
-                    nodes=key,
-                    cost=_route_cost_list(route, self.inst),
-                    load=_route_load(route, self.inst),
-                    slack=_route_avg_slack(route, self.inst),
-                )
-        return sorted(records.values(), key=self._priority)
-
-
-def _sp_vehicle_penalty(inst: Inst, cfg: Config) -> float:
-    return cfg.sp_vehicle_penalty_scale * max(inst.max_dist, 1.0) * max(inst.n, 1)
-
-
-def _milp_recombine(
-    route_records: List[RouteRecord],
-    inst: Inst,
-    cfg: Config,
-    nv_ceiling: Optional[int] = None,
-) -> Optional[Plan]:
-    if milp is None or Bounds is None or LinearConstraint is None or not route_records:
-        return None
-
-    n_routes = len(route_records)
-    cover = np.zeros((inst.n, n_routes), dtype=float)
-    for j, rec in enumerate(route_records):
-        for node in rec.nodes:
-            cover[node - 1, j] = 1.0
-
-    if np.any(cover.sum(axis=1) == 0):
-        return None
-
-    constraints = [LinearConstraint(cover, lb=np.ones(inst.n), ub=np.ones(inst.n))]
-    if nv_ceiling is not None:
-        constraints.append(
-            LinearConstraint(np.ones((1, n_routes)), lb=np.array([0.0]), ub=np.array([nv_ceiling]))
-        )
-
-    costs = np.array(
-        [_sp_vehicle_penalty(inst, cfg) + rec.cost for rec in route_records],
-        dtype=float,
-    )
-    result = milp(
-        c=costs,
-        constraints=constraints,
-        integrality=np.ones(n_routes, dtype=int),
-        bounds=Bounds(np.zeros(n_routes), np.ones(n_routes)),
-        options={"time_limit": float(cfg.sp_time_limit), "disp": False},
-    )
-    if result is None or not getattr(result, "success", False) or result.x is None:
-        return None
-
-    chosen = [list(route_records[j].nodes) for j, value in enumerate(result.x) if value >= 0.5]
-    plan = Plan(chosen, inst, "SP-RECOMBINE")
-    return plan if plan.feasible else None
-
-
-def _greedy_recombine(
-    route_records: List[RouteRecord],
-    incumbent: Plan,
-    nv_ceiling: Optional[int] = None,
-) -> Plan:
-    uncovered = set(range(1, incumbent.inst.n + 1))
-    selected: List[List[int]] = []
-    used: set = set()
-
-    while uncovered:
-        best_rec = None
-        best_score = -float("inf")
-        for rec in route_records:
-            if rec.nodes in used:
-                continue
-            route_set = set(rec.nodes)
-            if route_set & {node for route in selected for node in route}:
-                continue
-            gain = len(route_set & uncovered)
-            if gain == 0:
-                continue
-            score = gain * 10.0 + len(rec.nodes) - rec.cost / max(len(rec.nodes), 1)
-            if score > best_score:
-                best_score = score
-                best_rec = rec
-        if best_rec is None:
-            break
-        selected.append(list(best_rec.nodes))
-        used.add(best_rec.nodes)
-        uncovered.difference_update(best_rec.nodes)
-        if nv_ceiling is not None and len(selected) > nv_ceiling:
-            return incumbent.copy()
-
-    plan = Plan(selected, incumbent.inst, "SP-GREEDY")
-    for node in sorted(uncovered):
-        _insert_customer(plan, node, incumbent.inst)
-    return plan if plan.feasible else incumbent.copy()
-
-
-def recombine_with_route_pool(
-    incumbent: Plan,
-    pool: RoutePool,
-    cfg: Config,
-    nv_ceiling: Optional[int] = None,
-) -> Plan:
-    pool.add_plan(incumbent)
-    route_records = pool.records(incumbent)
-    if not route_records:
-        return incumbent.copy()
-
-    candidate = _milp_recombine(route_records, incumbent.inst, cfg, nv_ceiling=nv_ceiling)
-    if candidate is None:
-        candidate = _greedy_recombine(route_records, incumbent, nv_ceiling=nv_ceiling)
-
-    if nv_ceiling is not None and candidate.nv > nv_ceiling:
-        return incumbent.copy()
-    return candidate if candidate.dominates(incumbent) else incumbent.copy()
-
-
-def _two_opt_best(route: List[int], inst: Inst) -> List[int]:
-    if len(route) < 4:
-        return route[:]
-    best = route[:]
-    best_cost = _route_cost_list(best, inst)
-    for i in range(len(route) - 2):
-        for j in range(i + 2, len(route)):
-            cand = route[:i] + list(reversed(route[i : j + 1])) + route[j + 1 :]
-            if not _check_route(cand, inst):
-                continue
-            cand_cost = _route_cost_list(cand, inst)
-            if cand_cost + 1e-9 < best_cost:
-                best = cand
-                best_cost = cand_cost
-    return best
-
-
-def _best_relocate(plan: Plan, nv_ceiling: Optional[int] = None) -> Optional[Tuple[int, int, int, int]]:
-    inst = plan.inst
-    current_nv = plan.nv
-    best_delta = -1e-9
-    best_move: Optional[Tuple[int, int, int, int]] = None
-
-    for src_idx, src_route in enumerate(plan.routes):
-        src_cost = _route_cost_list(src_route, inst)
-        for node_pos, node in enumerate(src_route):
-            src_new = src_route[:node_pos] + src_route[node_pos + 1 :]
-            if src_new and not _check_route(src_new, inst):
-                continue
-            src_new_cost = _route_cost_list(src_new, inst)
-
-            for dst_idx, dst_route in enumerate(plan.routes):
-                if dst_idx == src_idx:
-                    continue
-                dst_cost = _route_cost_list(dst_route, inst)
-                for insert_pos in range(len(dst_route) + 1):
-                    dst_new = dst_route[:insert_pos] + [node] + dst_route[insert_pos:]
-                    if not _check_route(dst_new, inst):
-                        continue
-
-                    new_nv = current_nv - (1 if not src_new else 0)
-                    if nv_ceiling is not None and new_nv > nv_ceiling:
-                        continue
-
-                    delta = src_new_cost + _route_cost_list(dst_new, inst) - src_cost - dst_cost
-                    if new_nv < current_nv:
-                        delta -= 1000.0
-                    if delta < best_delta:
-                        best_delta = delta
-                        best_move = (src_idx, node_pos, dst_idx, insert_pos)
-    return best_move
-
-
-def _apply_relocate(plan: Plan, move: Tuple[int, int, int, int]) -> Plan:
-    src_idx, node_pos, dst_idx, insert_pos = move
-    routes = [route[:] for route in plan.routes]
-    node = routes[src_idx].pop(node_pos)
-    if src_idx < dst_idx and len(routes[src_idx]) == 0:
-        dst_idx -= 1
-    routes = [route for route in routes if route]
-    routes[dst_idx].insert(insert_pos, node)
-    return Plan(routes, plan.inst, plan.algo)
-
-
-def local_search(plan: Plan, max_passes: int = 1, nv_ceiling: Optional[int] = None) -> Plan:
-    best = plan.copy()
-    inst = plan.inst
-    for _ in range(max_passes):
-        improved = False
-        routes = []
-        for route in best.routes:
-            new_route = _two_opt_best(route, inst)
-            routes.append(new_route)
-            if new_route != route:
-                improved = True
-        best = Plan(routes, inst, best.algo)
-
-        move = _best_relocate(best, nv_ceiling=nv_ceiling)
-        if move is not None:
-            best = _apply_relocate(best, move)
-            improved = True
-
-        if not improved:
-            break
-    return best
-
-
 def _invalidate(plan: Plan) -> Plan:
     plan.invalidate()
     return plan
@@ -913,18 +581,6 @@ def accept(cur: Plan, cand: Plan, temp: float) -> bool:
     return False
 
 
-def accept_with_nv_ceiling(cur: Plan, cand: Plan, temp: float, nv_ceiling: int) -> bool:
-    if not cand.feasible or cand.nv > nv_ceiling:
-        return False
-    if cand.nv < cur.nv:
-        return True
-    if cand.nv == cur.nv:
-        if cand.cost < cur.cost:
-            return True
-        return random.random() < math.exp(-(cand.cost - cur.cost) / max(temp, 1e-6))
-    return False
-
-
 def destroy_size(it: int, n_iters: int, cfg: Config, n_customers: int, scale: float = 1.0) -> int:
     ratio = cfg.destroy_ratio_max - (
         (cfg.destroy_ratio_max - cfg.destroy_ratio_min) * (it / max(n_iters, 1))
@@ -1007,32 +663,6 @@ def op_route(plan: Plan, size: int) -> Tuple[Plan, List[int]]:
     return _invalidate(plan), removed
 
 
-def op_route_eliminate(plan: Plan, size: int) -> Tuple[Plan, List[int]]:
-    if len(plan.routes) <= 1:
-        return op_random(plan, size)
-
-    inst = plan.inst
-    ranked = sorted(
-        enumerate(plan.routes),
-        key=lambda item: (
-            len(item[1]),
-            _route_load(item[1], inst) / max(inst.capacity, 1),
-            _route_cost_list(item[1], inst) / max(len(item[1]), 1),
-        ),
-    )
-
-    removed: List[int] = []
-    removed_ids = set()
-    for idx, route in ranked:
-        removed.extend(route)
-        removed_ids.add(idx)
-        if len(removed) >= max(2, size // 2):
-            break
-
-    plan.routes = [route for idx, route in enumerate(plan.routes) if idx not in removed_ids]
-    return _invalidate(plan), removed
-
-
 def op_tw_urgent(plan: Plan, size: int) -> Tuple[Plan, List[int]]:
     inst = plan.inst
     nodes = [node for route in plan.routes for node in route]
@@ -1102,7 +732,7 @@ def op_tw_greedy(plan: Plan, removed: List[int]) -> Plan:
     return Plan(plan.routes, inst, plan.algo)
 
 
-DESTROY = [op_random, op_worst, op_shaw, op_route, op_tw_urgent, op_route_eliminate]
+DESTROY = [op_random, op_worst, op_shaw, op_route, op_tw_urgent]
 REPAIR = [op_greedy, op_regret_2, op_regret_3, op_tw_greedy]
 N_D = len(DESTROY)
 N_R = len(REPAIR)
@@ -1253,73 +883,17 @@ class PlateauHybridSolver:
         reward = -0.75
 
         if best_after.nv < best_before.nv:
-            reward += 30.0 * (best_before.nv - best_after.nv)
+            reward += 25.0 * (best_before.nv - best_after.nv)
             reward += max((best_before.cost - best_after.cost) / max(best_before.cost, 1), 0.0) * 100
         elif best_after.nv == best_before.nv and best_after.cost < best_before.cost:
-            reward += 4.0 * (best_before.cost - best_after.cost) / max(best_before.cost, 1) * 100
+            reward += 2.5 * (best_before.cost - best_after.cost) / max(best_before.cost, 1) * 100
 
         if cur_after.nv == cur_before.nv and cur_after.cost < cur_before.cost:
-            reward += 0.75 * (cur_before.cost - cur_after.cost) / max(cur_before.cost, 1) * 100
-
-        if cur_after.nv > cur_before.nv:
-            reward -= self.cfg.nv_increase_penalty * (cur_after.nv - cur_before.nv)
-
-        reward += 3.0 * (_fleet_fill(cur_after) - _fleet_fill(cur_before))
+            reward += 0.5 * (cur_before.cost - cur_after.cost) / max(cur_before.cost, 1) * 100
 
         if accepted_moves == 0:
-            reward -= 0.75
+            reward -= 0.5
         return float(reward)
-
-    def _fixed_nv_polish(self, start: Plan, pool: RoutePool) -> Plan:
-        cfg = self.cfg
-        target_nv = start.nv
-        cur = local_search(start, max_passes=cfg.polish_ls_passes, nv_ceiling=target_nv)
-        best = cur.copy()
-        pool.add_plan(best)
-        temp = cfg.temp_control * best.cost / math.log(2)
-        no_imp = 0
-
-        polish_dw = np.array([0.3, 1.4, 1.3, 0.8, 1.2, 0.9], dtype=np.float32)
-        polish_rw = np.array([0.8, 1.2, 1.5, 1.2], dtype=np.float32)
-
-        for it in range(cfg.polish_iterations):
-            di = _roulette(polish_dw)
-            ri = _roulette(polish_rw)
-            size = destroy_size(
-                it,
-                cfg.polish_iterations,
-                cfg,
-                self.inst.n,
-                scale=0.70,
-            )
-
-            dest, removed = DESTROY[di](cur.copy(), size)
-            cand = REPAIR[ri](dest, removed)
-            cand = local_search(cand, max_passes=1, nv_ceiling=target_nv)
-            pool.add_plan(cand)
-
-            cur_before = cur
-            if accept_with_nv_ceiling(cur, cand, temp, target_nv):
-                cur = cand
-                if cand.nv < target_nv:
-                    target_nv = cand.nv
-                if cand.dominates(best):
-                    best = cand.copy()
-                    no_imp = 0
-                elif cand.nv == cur_before.nv and cand.cost + 1e-9 < cur_before.cost:
-                    no_imp = 0
-                else:
-                    no_imp += 1
-            else:
-                no_imp += 1
-
-            temp *= cfg.temp_decay * 0.997
-            if no_imp >= cfg.polish_patience:
-                break
-
-        best = local_search(best, max_passes=cfg.polish_ls_passes, nv_ceiling=best.nv)
-        pool.add_plan(best)
-        return best
 
     def solve(self, seed: Optional[int] = None) -> Tuple[Plan, List[float]]:
         if seed is not None:
@@ -1329,11 +903,9 @@ class PlateauHybridSolver:
 
         cfg = self.cfg
         self.ctrl.reset()
-        pool = RoutePool(self.inst, cfg)
 
         cur = build_greedy(self.inst, "PLATEAU-HYBRID")
         best = cur.copy()
-        pool.add_plan(cur)
         self._init_nv = cur.nv
         temp = cfg.temp_control * cur.cost / math.log(2)
         dw = np.ones(N_D)
@@ -1348,17 +920,10 @@ class PlateauHybridSolver:
             progress = segment_idx / max(n_segments, 1)
             imp_rate = sum(recent_improvements) / len(recent_improvements) if recent_improvements else 0.0
             state_before = self._state(cur, best, no_imp, temp, dw, rw, imp_rate, progress)
-            route_reduce_trigger = (
-                no_imp >= cfg.plateau_start
-                and _fleet_fill(cur) < max(0.52, 0.80 - 0.25 * self.inst.tw_tight_frac)
-            )
 
             if post_improve_lock > 0:
                 action = MODE_INTENSIFY
                 post_improve_lock -= 1
-                controller_active = False
-            elif route_reduce_trigger:
-                action = MODE_ROUTE_REDUCE
                 controller_active = False
             elif no_imp >= cfg.plateau_start:
                 action = self.ctrl.act(state_before)
@@ -1402,11 +967,9 @@ class PlateauHybridSolver:
                 if accept(cur, cand, temp):
                     accepted_moves += 1
                     improved = cand.dominates(cur)
-                    pool.add_plan(cand)
                     if cand.dominates(best):
                         best = cand.copy()
                         best_improved = True
-                        pool.add_plan(best)
                         score = cfg.sigma1
                         no_imp = 0
                     elif improved:
@@ -1462,30 +1025,6 @@ class PlateauHybridSolver:
             if no_imp >= cfg.early_stop_patience:
                 break
 
-        if cfg.recombine_after_main_search:
-            recombined = recombine_with_route_pool(best, pool, cfg, nv_ceiling=best.nv)
-            if recombined.dominates(best):
-                best = recombined
-                pool.add_plan(best)
-                history.append(best.cost)
-
-        polished = self._fixed_nv_polish(best, pool)
-        if polished.dominates(best):
-            best = polished
-            history.append(best.cost)
-        else:
-            best = polished
-
-        if cfg.recombine_after_polish:
-            recombined = recombine_with_route_pool(best, pool, cfg, nv_ceiling=best.nv)
-            if recombined.dominates(best):
-                best = local_search(
-                    recombined,
-                    max_passes=cfg.polish_ls_passes,
-                    nv_ceiling=recombined.nv,
-                )
-                history.append(best.cost)
-
         best.algo = "PLATEAU-HYBRID"
         return best, history
 
@@ -1494,7 +1033,7 @@ def run_instance(inst: Inst, algo: str, cfg: Config, seed: int) -> Dict:
     start = time.time()
     if algo == "ALNS":
         plan, history = ALNSSolver(inst, cfg).solve(seed=seed)
-    elif algo in {"PLATEAU-HYBRID", "PLATEAU-HYBRID-VNEXT", "HYBRID-VNEXT"}:
+    elif algo == "PLATEAU-HYBRID":
         plan, history = PlateauHybridSolver(inst, cfg).solve(seed=seed)
     else:
         raise ValueError(f"Unsupported algorithm: {algo}")
