@@ -816,6 +816,31 @@ th {
   background: #f3f8fe;
 }
 
+.customer-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.customer-name-label {
+  min-width: 0;
+}
+
+.depot-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid #8fd4be;
+  background: #e8f8f2;
+  color: #0f6a4d;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
 .table-pick-cell {
   width: 44px;
   text-align: center;

@@ -2281,7 +2281,8 @@ export class App {
         lng = geo.lng;
       }
 
-      const numericDemand = Number(demandRaw) || 0;
+      const parsedDemand = Number(demandRaw);
+      const numericDemand = Number.isFinite(parsedDemand) ? parsedDemand : 0;
       const isDepot =
         this.isDepotLabel(name) ||
         this.isDepotLabel(address) ||
@@ -2296,7 +2297,7 @@ export class App {
         address,
         lat,
         lng,
-        demand: Number(demandRaw) || 10,
+        demand: isDepot ? 0 : (Number.isFinite(parsedDemand) ? parsedDemand : 10),
         isDepot
       });
     }
@@ -2680,7 +2681,22 @@ export class App {
           td.classList.add('cell-editable');
           td.title = 'Double-click to edit';
         }
-        td.textContent = value;
+
+        if (field === 'name' && c.isDepot) {
+          td.classList.add('customer-name-cell');
+          const label = document.createElement('span');
+          label.className = 'customer-name-label';
+          label.textContent = value || 'Depot';
+
+          const badge = document.createElement('span');
+          badge.className = 'depot-badge';
+          badge.textContent = 'DEPOT';
+
+          td.appendChild(label);
+          td.appendChild(badge);
+        } else {
+          td.textContent = value;
+        }
         tr.appendChild(td);
       });
 
