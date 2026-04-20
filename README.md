@@ -2,7 +2,7 @@
 
 VRPTW Research Optimization là hệ thống tối ưu tuyến xe gồm `FastAPI backend` và `frontend` tĩnh được serve chung một cổng. Mục tiêu là nhập dữ liệu khách hàng, tính ma trận khoảng cách, chạy DDQN/ALNS, và xem kết quả trên bảng + bản đồ.
 
-## Chạy ứng dụng
+## Chạy ứng dụng(CMD)
 
 ```powershell
 cd C:\D\Github\VRPTW-Research-Optimization
