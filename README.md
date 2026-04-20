@@ -63,17 +63,6 @@ Trạng thái job chạy theo: `queued -> processing -> matrix -> solving -> don
 - Demand âm: bị chặn.
 - Vượt tải trọng: backend trả lỗi kiểu `Infeasible` hoặc `exceeds vehicle capacity`; UI sẽ báo rõ để tăng `Vehicles` hoặc `Capacity`.
 
-Ví dụ khi chạy model:
-
-```javascript
-try {
-  const result = await this.request('/jobs', { method: 'POST', body: JSON.stringify(payload) });
-  await this.pollJob(result.job_id);
-} catch (error) {
-  this.toast('Run Failed', this.parseApiError(error), 'error');
-}
-```
-
 ## Test nhanh
 
 1. Mở `Real Data`.
