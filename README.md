@@ -89,3 +89,8 @@ Khi dùng `Training Analysis`:
 
 Khi chỉ chạy dữ liệu mới:
 - Chỉ cần dùng `Customer List` và `Run Model`.
+
+## Tai khoan Admin (dùng để quản lý User Account)
+
+TK : tranlop72@gmail.com
+MK : 123456
