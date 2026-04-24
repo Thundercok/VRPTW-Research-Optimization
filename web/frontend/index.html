@@ -181,14 +181,19 @@
               <span>Benchmark</span>
               <strong>DDQN vs ALNS</strong>
             </article>
+            <article class="hero-stat">
+              <span>Constraints</span>
+              <strong>Capacity + Time Windows</strong>
+            </article>
           </div>
         </header>
 
         <section class="table-card tab-panel active" data-panel="overview">
           <div class="row-head">
             <div>
-              <p class="section-kicker">Input Table</p>
+              <p class="section-kicker">VRPTW Inference Demo</p>
               <h2>Customer List</h2>
+              <p class="panel-note">Each row has a time window (<strong>Ready / Due</strong>) and <strong>Service</strong> duration. Units are consistent with distance (~1 km ≈ 1 time unit).</p>
             </div>
             <div class="table-actions">
               <button id="add-row" class="btn ghost icon-btn icon-only-btn" type="button" title="Add row" aria-label="Add row">
@@ -214,6 +219,9 @@
                   <th>Lat</th>
                   <th>Lng</th>
                   <th>Demand</th>
+                  <th title="Earliest arrival time">Ready</th>
+                  <th title="Latest arrival time">Due</th>
+                  <th title="Service duration at this stop">Service</th>
                 </tr>
               </thead>
               <tbody id="customer-rows"></tbody>

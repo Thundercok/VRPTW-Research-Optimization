@@ -51,6 +51,9 @@ class Point(BaseModel):
     lng: float
     demand: int = 0
     isDepot: bool = False
+    ready: float = 0.0
+    due: float = 10_000.0
+    service: float = 10.0
 
 
 class FleetConfig(BaseModel):

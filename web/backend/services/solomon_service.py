@@ -1,12 +1,18 @@
 from __future__ import annotations
 
+import os
 import re
 from pathlib import Path
 from typing import Any
 
 
 def _data_dir() -> Path:
-    return Path(__file__).resolve().parents[3] / "legacy" / "data"
+    env = os.environ.get("VRPTW_DATA_DIR")
+    if env:
+        p = Path(env)
+        if p.exists():
+            return p
+    return Path(__file__).resolve().parents[3] / "data" / "solomon"
 
 
 def _to_lat_lng(x: float, y: float) -> tuple[float, float]:
@@ -16,9 +22,9 @@ def _to_lat_lng(x: float, y: float) -> tuple[float, float]:
     return round(lat, 6), round(lng, 6)
 
 
-def load_solomon_dataset(name: str = "c101") -> dict[str, Any]:
-    dataset = (name or "c101").strip().lower()
-    if not re.fullmatch(r"[a-z]\d{3}", dataset):
+def load_solomon_dataset(name: str = "rc101") -> dict[str, Any]:
+    dataset = (name or "rc101").strip().lower()
+    if not re.fullmatch(r"[a-z]+\d{3}", dataset):
         raise ValueError("Dataset name must look like c101, r101, rc101")
 
     file_path = _data_dir() / f"{dataset}.txt"
@@ -54,6 +60,9 @@ def load_solomon_dataset(name: str = "c101") -> dict[str, Any]:
         x = float(m.group(2))
         y = float(m.group(3))
         demand = int(float(m.group(4)))
+        ready = float(m.group(5))
+        due = float(m.group(6))
+        service = float(m.group(7))
         lat, lng = _to_lat_lng(x, y)
 
         customers.append(
@@ -64,6 +73,9 @@ def load_solomon_dataset(name: str = "c101") -> dict[str, Any]:
                 "lat": lat,
                 "lng": lng,
                 "demand": demand,
+                "ready": ready,
+                "due": due,
+                "service": service,
                 "isDepot": cust_id == 0,
             }
         )

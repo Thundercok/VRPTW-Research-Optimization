@@ -1,151 +1,112 @@
+"""Web solver: delegate to DDQN-ALNS (`PlateauHybridSolver`) and ALNS from the
+research code. CPU-bound work runs in a thread to not block the asyncio loop.
+
+Config is tuned for web responsiveness: ~500 iterations cap so a typical
+20-customer request finishes within ~10-20s on CPU. For benchmarks use
+`vrptw_clean.run_instance` directly.
+"""
 from __future__ import annotations
 
-import math
-import random
+import asyncio
+import os
+import sys
+import time
+from pathlib import Path
 from typing import Any
 
-from models.schemas import JobRequest, Point
-from services.distance_service import distance_km
+import torch
+
+from models.schemas import JobRequest
+from services.research_adapter import build_inst, plan_to_payload
+
+_ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(_ROOT))
+
+from vrptw_clean import ALNSSolver, Config, PlateauHybridSolver  # noqa: E402
+
+WEB_CONFIG = Config(
+    alns_iterations=500,
+    hybrid_iterations=500,
+    early_stop_patience=200,
+    polish_iterations=100,
+    polish_patience=60,
+    n_runs=1,
+)
+
+_DEFAULT_TRANSFER_PATH = _ROOT / "logs" / "results-v9.5" / "rl_alns_transfer.safetensors"
 
 
-def normalize_mode(mode: str) -> str:
-    value = (mode or "sample").strip().lower()
-    if value in {"real", "real-data", "real_data", "production"}:
-        return "real"
-    return "sample"
+def _load_transfer_weights(solver: PlateauHybridSolver) -> bool:
+    path_env = os.environ.get("VRPTW_TRANSFER_WEIGHTS")
+    path = Path(path_env) if path_env else _DEFAULT_TRANSFER_PATH
+    if not path.exists():
+        return False
+    try:
+        from safetensors.torch import load_file
+
+        state = load_file(str(path))
+        solver.ctrl.q.load_state_dict(state, strict=False)
+        solver.ctrl.q_t.load_state_dict(state, strict=False)
+        return True
+    except Exception:
+        return False
 
 
-def order_customers(points: list[Point], strategy: str, mode: str) -> list[Point]:
-    customers = list(points[1:])
-    depot = points[0]
+def _run_ddqn_alns(payload: JobRequest) -> dict[str, Any]:
+    inst = build_inst(payload.customers, capacity=payload.fleet.capacity, name="DDQN-ALNS")
+    solver = PlateauHybridSolver(inst, WEB_CONFIG)
+    _load_transfer_weights(solver)
+    solver.ctrl.eps = WEB_CONFIG.ctrl_eps_end
+    start = time.time()
+    plan, _ = solver.solve(seed=WEB_CONFIG.seed)
+    elapsed = time.time() - start
 
-    if strategy == "ddqn":
-        if mode == "sample":
-            return sorted(customers, key=lambda p: math.atan2(p.lat - depot.lat, p.lng - depot.lng))
-        return sorted(customers, key=lambda p: distance_km((depot.lat, depot.lng), (p.lat, p.lng)))
-
-    if mode == "sample":
-        return sorted(customers, key=lambda p: (-p.demand, p.id or 0))
-    return sorted(customers, key=lambda p: (-p.demand, p.lng, p.lat))
-
-
-def build_routes(points: list[Point], vehicles: int, capacity: int, strategy: str, mode: str) -> list[list[Point]]:
-    if len(points) <= 1:
-        return []
-
-    if vehicles <= 0:
-        raise ValueError("Vehicles must be at least 1")
-    if capacity <= 0:
-        raise ValueError("Capacity must be at least 1")
-
-    ordered = order_customers(points, strategy=strategy, mode=mode)
-    for customer in ordered:
-        if customer.demand < 0:
-            raise ValueError(f"Customer {customer.id} has negative demand")
-        if customer.demand > capacity:
-            raise ValueError(
-                f"Customer demand {customer.demand} exceeds vehicle capacity {capacity} (customer id={customer.id})"
-            )
-
-    if strategy == "ddqn":
-        routes: list[list[Point]] = []
-        current: list[Point] = []
-        current_load = 0
-
-        for customer in ordered:
-            next_load = current_load + customer.demand
-            if current and next_load > capacity:
-                routes.append(current)
-                current = []
-                current_load = 0
-
-            current.append(customer)
-            current_load += customer.demand
-
-        if current:
-            routes.append(current)
-    else:
-        routes = []
-        loads: list[int] = []
-        for customer in ordered:
-            best_idx = -1
-            best_leftover = capacity + 1
-            for idx, route_load in enumerate(loads):
-                if route_load + customer.demand > capacity:
-                    continue
-                leftover = capacity - (route_load + customer.demand)
-                if leftover < best_leftover:
-                    best_leftover = leftover
-                    best_idx = idx
-
-            if best_idx >= 0:
-                routes[best_idx].append(customer)
-                loads[best_idx] += customer.demand
-                continue
-
-            routes.append([customer])
-            loads.append(customer.demand)
-
-    if len(routes) > vehicles:
+    if plan.nv > payload.fleet.vehicles:
         raise ValueError(
-            f"Infeasible configuration: requires {len(routes)} vehicles but only {vehicles} provided"
+            f"Infeasible configuration: requires {plan.nv} vehicles but only {payload.fleet.vehicles} provided"
         )
 
-    return routes
+    return plan_to_payload(plan, payload.customers, elapsed)
 
 
-def summarize(points: list[Point], routes: list[list[Point]], runtime: float) -> dict[str, Any]:
-    depot = points[0]
-    total = 0.0
-    out_routes: list[dict[str, Any]] = []
+def _run_alns(payload: JobRequest) -> dict[str, Any]:
+    inst = build_inst(payload.customers, capacity=payload.fleet.capacity, name="ALNS")
+    solver = ALNSSolver(inst, WEB_CONFIG)
+    start = time.time()
+    plan, _ = solver.solve(seed=WEB_CONFIG.seed)
+    elapsed = time.time() - start
 
-    for i, route_points in enumerate(routes, start=1):
-        chain = [depot, *route_points, depot]
-        path = [[p.lat, p.lng] for p in chain]
-        route_load = sum(p.demand for p in route_points)
-        dist = 0.0
-        for j in range(len(chain) - 1):
-            dist += distance_km((chain[j].lat, chain[j].lng),
-                                (chain[j + 1].lat, chain[j + 1].lng))
-        total += dist
-        out_routes.append(
-            {
-                "vehicle_id": i,
-                "distance_km": dist,
-                "load": route_load,
-                "path": path,
-                "stops": [p.id for p in route_points],
-            }
+    if plan.nv > payload.fleet.vehicles:
+        raise ValueError(
+            f"Infeasible configuration: requires {plan.nv} vehicles but only {payload.fleet.vehicles} provided"
         )
 
-    return {
-        "runtime_sec": runtime,
-        "total_distance_km": total,
-        "vehicles_used": len(out_routes),
-        "routes": out_routes,
-    }
+    return plan_to_payload(plan, payload.customers, elapsed)
 
 
-async def solve_model(payload: JobRequest) -> dict[str, Any]:
+def _validate(payload: JobRequest) -> None:
     points = payload.customers
     if len(points) < 2:
         raise ValueError("Need depot and at least one customer")
+    if payload.fleet.vehicles <= 0:
+        raise ValueError("Vehicles must be at least 1")
+    if payload.fleet.capacity <= 0:
+        raise ValueError("Capacity must be at least 1")
+    for c in points[1:]:
+        if c.demand < 0:
+            raise ValueError(f"Customer {c.id} has negative demand")
+        if c.demand > payload.fleet.capacity:
+            raise ValueError(
+                f"Customer demand {c.demand} exceeds vehicle capacity {payload.fleet.capacity} (customer id={c.id})"
+            )
 
-    vehicles = payload.fleet.vehicles
-    capacity = payload.fleet.capacity
-    mode = normalize_mode(payload.mode)
 
-    ddqn_routes = build_routes(points, vehicles, capacity, "ddqn", mode)
-    alns_routes = build_routes(points, vehicles, capacity, "alns", mode)
+async def solve_model(payload: JobRequest) -> dict[str, Any]:
+    _validate(payload)
+    torch.set_num_threads(max(1, (os.cpu_count() or 4) // 2))
 
-    if mode == "real":
-        ddqn_runtime = random.uniform(1.0, 2.8)
-        alns_runtime = random.uniform(2.1, 3.8)
-    else:
-        ddqn_runtime = random.uniform(0.7, 2.3)
-        alns_runtime = random.uniform(1.8, 3.4)
-
-    return {
-        "ddqn": summarize(points, ddqn_routes, ddqn_runtime),
-        "alns": summarize(points, alns_routes, alns_runtime),
-    }
+    loop = asyncio.get_running_loop()
+    ddqn_task = loop.run_in_executor(None, _run_ddqn_alns, payload)
+    alns_task = loop.run_in_executor(None, _run_alns, payload)
+    ddqn_result, alns_result = await asyncio.gather(ddqn_task, alns_task)
+    return {"ddqn": ddqn_result, "alns": alns_result}

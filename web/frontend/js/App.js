@@ -6,7 +6,16 @@ export class App {
   constructor() {
     this.state = createInitialState();
     this.tableInputVisible = false;
-    this.tableInputDraft = { name: '', address: '', demand: '0', lat: null, lng: null };
+    this.tableInputDraft = {
+      name: '',
+      address: '',
+      demand: '0',
+      lat: null,
+      lng: null,
+      ready: '0',
+      due: '1000',
+      service: '10',
+    };
     this.selectedCustomerIds = new Set();
     this.tableInputRefs = {};
     this.tableAddressSuggest = [];
@@ -675,7 +684,7 @@ export class App {
     this.setStatus('Ready for operations.', 'ok');
     this.setImportEnabled(this.state.mode === 'real');
     if (this.state.mode === 'sample') {
-      this.loadSolomonDataset('c101');
+      this.loadSolomonDataset('rc101');
     }
     this.bootstrapAnalysis();
     this.updateConnectionPill();
@@ -925,7 +934,7 @@ export class App {
       this.state.mode = this.el.modeToggle.checked ? 'real' : 'sample';
       if (this.state.mode === 'sample') {
         this.setImportEnabled(false);
-        this.loadSolomonDataset('c101');
+        this.loadSolomonDataset('rc101');
       } else {
         this.setImportEnabled(true);
         this.clearCustomersForRealDataMode();
@@ -997,7 +1006,7 @@ export class App {
     });
   }
 
-  async loadSolomonDataset(name = 'c101') {
+  async loadSolomonDataset(name = 'rc101') {
     try {
       if (!this.state.token) {
         this.state.customers = [];
@@ -1016,6 +1025,9 @@ export class App {
         ...c,
         id: idx,
         demand: Number(c.demand) || 0,
+        ready: Number.isFinite(Number(c.ready)) ? Number(c.ready) : 0,
+        due: Number.isFinite(Number(c.due)) ? Number(c.due) : 1000,
+        service: Number.isFinite(Number(c.service)) ? Number(c.service) : 10,
         isDepot: Boolean(c.isDepot)
       }));
 
@@ -1580,14 +1592,16 @@ export class App {
     const customer = this.state.customers.find((item) => item.id === customerId);
     if (!customer) return;
 
-    const originalValue = field === 'demand' ? String(customer.demand ?? 0) : String(customer[field] ?? '');
+    const numericFields = ['demand', 'ready', 'due', 'service'];
+    const isNumeric = numericFields.includes(field);
+    const originalValue = isNumeric ? String(customer[field] ?? 0) : String(customer[field] ?? '');
     const input = document.createElement('input');
     input.className = 'table-edit-input';
-    input.type = field === 'demand' ? 'number' : 'text';
+    input.type = isNumeric ? 'number' : 'text';
     input.value = originalValue;
-    if (field === 'demand') {
+    if (isNumeric) {
       input.min = '0';
-      input.step = '1';
+      input.step = field === 'demand' ? '1' : 'any';
     }
 
     cell.classList.add('is-editing');
@@ -1685,6 +1699,35 @@ export class App {
       }
       this.renderCustomers();
       this.renderMarkers();
+      return;
+    }
+
+    if (field === 'ready' || field === 'due' || field === 'service') {
+      const n = Number(nextValue);
+      if (!Number.isFinite(n) || n < 0) {
+        this.toast('Invalid Value', `${field} must be a non-negative number.`, 'error');
+        this.renderCustomers();
+        return;
+      }
+      if (field === 'ready') {
+        const due = Number(customer.due);
+        if (Number.isFinite(due) && n >= due) {
+          this.toast('Invalid Time Window', 'Ready must be < Due.', 'error');
+          this.renderCustomers();
+          return;
+        }
+      }
+      if (field === 'due') {
+        const ready = Number(customer.ready);
+        if (Number.isFinite(ready) && n <= ready) {
+          this.toast('Invalid Time Window', 'Due must be > Ready.', 'error');
+          this.renderCustomers();
+          return;
+        }
+      }
+      customer[field] = n;
+      this.renderCustomers();
+      this.setStatus(`Customer ${field} updated.`, 'ok');
       return;
     }
 
@@ -2096,7 +2139,10 @@ export class App {
       address: selected.address,
       lat: selected.lat,
       lng: selected.lng,
-      demand: 10
+      demand: 10,
+      ready: 0,
+      due: 1000,
+      service: 10
     });
     this.el.addressInput.value = '';
     this.state.selectedSuggest = null;
@@ -2189,7 +2235,10 @@ export class App {
       address: this.findHeaderIndex(headerCells, ['address', 'addr', 'location', 'customer address', 'full address']),
       lat: this.findHeaderIndex(headerCells, ['lat', 'latitude', 'y', 'geo lat']),
       lng: this.findHeaderIndex(headerCells, ['lng', 'lon', 'long', 'longitude', 'x', 'geo lng', 'geo lon']),
-      demand: this.findHeaderIndex(headerCells, ['demand', 'qty', 'quantity', 'load', 'order size', 'weight'])
+      demand: this.findHeaderIndex(headerCells, ['demand', 'qty', 'quantity', 'load', 'order size', 'weight']),
+      ready: this.findHeaderIndex(headerCells, ['ready', 'readytime', 'open', 'tw start', 'twstart', 'earliest', 'start']),
+      due: this.findHeaderIndex(headerCells, ['due', 'duedate', 'duetime', 'close', 'tw end', 'twend', 'latest', 'end', 'deadline']),
+      service: this.findHeaderIndex(headerCells, ['service', 'servicetime', 'svc', 'dwell', 'stoptime'])
     };
 
     const matchedCount = Object.values(map).filter((index) => index >= 0).length;
@@ -2206,26 +2255,32 @@ export class App {
   readRowWithFallback(cols) {
     const base = cols.map((c) => String(c ?? '').trim());
 
-    // Default format: name, address, lat, lng, demand
+    // Default format: name, address, lat, lng, demand, ready?, due?, service?
     let candidate = {
       name: base[0] || '',
       address: base[1] || '',
       latRaw: base[2] || '',
       lngRaw: base[3] || '',
-      demandRaw: base[4] || '10'
+      demandRaw: base[4] || '10',
+      readyRaw: base[5] || '',
+      dueRaw: base[6] || '',
+      serviceRaw: base[7] || ''
     };
 
     const latA = Number(candidate.latRaw);
     const lngA = Number(candidate.lngRaw);
     if (Number.isFinite(latA) && Number.isFinite(lngA)) return candidate;
 
-    // Alternate format with leading id: id, name, address, lat, lng, demand
+    // Alternate format with leading id: id, name, address, lat, lng, demand, ready?, due?, service?
     const candidateWithId = {
       name: base[1] || '',
       address: base[2] || '',
       latRaw: base[3] || '',
       lngRaw: base[4] || '',
-      demandRaw: base[5] || '10'
+      demandRaw: base[5] || '10',
+      readyRaw: base[6] || '',
+      dueRaw: base[7] || '',
+      serviceRaw: base[8] || ''
     };
     const latB = Number(candidateWithId.latRaw);
     const lngB = Number(candidateWithId.lngRaw);
@@ -2255,6 +2310,9 @@ export class App {
       let latRaw = '';
       let lngRaw = '';
       let demandRaw = '10';
+      let readyRaw = '';
+      let dueRaw = '';
+      let serviceRaw = '';
 
       if (headerMap) {
         name = this.valueAt(baseCells, headerMap.name, '');
@@ -2262,6 +2320,9 @@ export class App {
         latRaw = this.valueAt(baseCells, headerMap.lat, '');
         lngRaw = this.valueAt(baseCells, headerMap.lng, '');
         demandRaw = this.valueAt(baseCells, headerMap.demand, '10');
+        readyRaw = this.valueAt(baseCells, headerMap.ready, '');
+        dueRaw = this.valueAt(baseCells, headerMap.due, '');
+        serviceRaw = this.valueAt(baseCells, headerMap.service, '');
       } else {
         const row = this.readRowWithFallback(baseCells);
         name = row.name;
@@ -2269,6 +2330,9 @@ export class App {
         latRaw = row.latRaw;
         lngRaw = row.lngRaw;
         demandRaw = row.demandRaw;
+        readyRaw = row.readyRaw;
+        dueRaw = row.dueRaw;
+        serviceRaw = row.serviceRaw;
       }
 
       let lat = Number(latRaw);
@@ -2292,12 +2356,24 @@ export class App {
           numericDemand === 0
         );
 
+      const readyNum = Number(readyRaw);
+      const dueNum = Number(dueRaw);
+      const serviceNum = Number(serviceRaw);
+      const ready = Number.isFinite(readyNum) && readyNum >= 0 ? readyNum : 0;
+      let due = Number.isFinite(dueNum) && dueNum > 0 ? dueNum : 1000;
+      if (due <= ready) due = ready + 1;
+      const serviceDefault = isDepot ? 0 : 10;
+      const service = Number.isFinite(serviceNum) && serviceNum >= 0 ? serviceNum : serviceDefault;
+
       newItems.push({
         name: name || `Cust-${Date.now().toString().slice(-4)}`,
         address,
         lat,
         lng,
         demand: isDepot ? 0 : (Number.isFinite(parsedDemand) ? parsedDemand : 10),
+        ready,
+        due,
+        service,
         isDepot
       });
     }
@@ -2327,12 +2403,17 @@ export class App {
 
   async addMapPoint(latlng) {
     const address = (await this.tryReverseGeocode(latlng.lat, latlng.lng)) || `Lat ${latlng.lat.toFixed(5)}, Lng ${latlng.lng.toFixed(5)}`;
+    const isFirst = this.state.customers.length === 0;
     this.pushCustomer({
-      name: `Pin-${this.state.customers.length}`,
+      name: isFirst ? 'Depot' : `Pin-${this.state.customers.length}`,
       address,
       lat: latlng.lat,
       lng: latlng.lng,
-      demand: 0
+      demand: 0,
+      ready: 0,
+      due: 1000,
+      service: isFirst ? 0 : 10,
+      isDepot: isFirst
     });
     this.setStatus('Dropped a new delivery pin.', 'ok');
     this.toast('Pin Added', 'Point was added directly on the map.', 'ok');
@@ -2444,22 +2525,24 @@ export class App {
   }
 
   async handleTableInputEnter(field) {
-    if (field === 'name') {
-      this.focusTableInputField('address');
-      return;
-    }
+    const order = ['name', 'address', 'demand', 'ready', 'due', 'service'];
     if (field === 'address') {
       await this.resolveTableInputAddress();
       this.focusTableInputField('demand');
       return;
     }
-    if (field === 'demand') {
+    if (field === 'service') {
       await this.submitTableInputRow();
+      return;
+    }
+    const idx = order.indexOf(field);
+    if (idx >= 0 && idx + 1 < order.length) {
+      this.focusTableInputField(order[idx + 1]);
     }
   }
 
   moveTableInputFocus(field, direction) {
-    const order = ['name', 'address', 'demand'];
+    const order = ['name', 'address', 'demand', 'ready', 'due', 'service'];
     const index = order.indexOf(field);
     if (index < 0) return;
     const nextIndex = Math.max(0, Math.min(order.length - 1, index + direction));
@@ -2468,7 +2551,16 @@ export class App {
   }
 
   resetTableInputDraft() {
-    this.tableInputDraft = { name: '', address: '', demand: '0', lat: null, lng: null };
+    this.tableInputDraft = {
+      name: '',
+      address: '',
+      demand: '0',
+      lat: null,
+      lng: null,
+      ready: '0',
+      due: '1000',
+      service: '10',
+    };
     this.clearTableAddressSuggest();
   }
 
@@ -2476,6 +2568,9 @@ export class App {
     const name = this.tableInputDraft.name.trim();
     const address = this.tableInputDraft.address.trim();
     const demandRaw = String(this.tableInputDraft.demand ?? '').trim();
+    const readyRaw = String(this.tableInputDraft.ready ?? '').trim();
+    const dueRaw = String(this.tableInputDraft.due ?? '').trim();
+    const serviceRaw = String(this.tableInputDraft.service ?? '').trim();
 
     if (!name && !address && !demandRaw) {
       this.focusTableInputField('name');
@@ -2486,6 +2581,27 @@ export class App {
     if (!Number.isFinite(demand) || demand < 0) {
       this.toast('Invalid Demand', 'Demand must be a number >= 0.', 'error');
       this.focusTableInputField('demand');
+      return;
+    }
+
+    const ready = Number(readyRaw || '0');
+    if (!Number.isFinite(ready) || ready < 0) {
+      this.toast('Invalid Ready', 'Ready time must be a number >= 0.', 'error');
+      this.focusTableInputField('ready');
+      return;
+    }
+
+    const due = Number(dueRaw || '1000');
+    if (!Number.isFinite(due) || due <= ready) {
+      this.toast('Invalid Due', 'Due time must be a number > Ready.', 'error');
+      this.focusTableInputField('due');
+      return;
+    }
+
+    const service = Number(serviceRaw || '0');
+    if (!Number.isFinite(service) || service < 0) {
+      this.toast('Invalid Service', 'Service time must be a number >= 0.', 'error');
+      this.focusTableInputField('service');
       return;
     }
 
@@ -2510,6 +2626,9 @@ export class App {
       lat: this.tableInputDraft.lat,
       lng: this.tableInputDraft.lng,
       demand: Math.round(demand),
+      ready,
+      due,
+      service,
     };
 
     this.tableInputVisible = true;
@@ -2541,6 +2660,10 @@ export class App {
       if (field === 'demand') {
         input.min = '0';
         input.step = '1';
+      }
+      if (field === 'ready' || field === 'due' || field === 'service') {
+        input.min = '0';
+        input.step = 'any';
       }
       input.addEventListener('input', () => {
         this.tableInputDraft[field] = input.value;
@@ -2631,13 +2754,21 @@ export class App {
     tr.appendChild(lngCell);
 
     tr.appendChild(createInputCell('demand', this.tableInputDraft.demand, 'number'));
+    tr.appendChild(createInputCell('ready', this.tableInputDraft.ready, 'number'));
+    tr.appendChild(createInputCell('due', this.tableInputDraft.due, 'number'));
+    tr.appendChild(createInputCell('service', this.tableInputDraft.service, 'number'));
 
     this.el.customerRows.appendChild(tr);
   }
 
   pushCustomer(item) {
     const id = this.state.customers.length;
-    this.state.customers.push({ ...item, id, isDepot: Boolean(item.isDepot) });
+    const isDepot = Boolean(item.isDepot);
+    const ready = Number.isFinite(Number(item.ready)) ? Number(item.ready) : 0;
+    let due = Number.isFinite(Number(item.due)) ? Number(item.due) : 1000;
+    if (due <= ready) due = ready + 1;
+    const service = Number.isFinite(Number(item.service)) ? Number(item.service) : (isDepot ? 0 : 10);
+    this.state.customers.push({ ...item, id, isDepot, ready, due, service });
     this.selectedCustomerIds.clear();
     this.renderCustomers();
     this.renderMarkers();
@@ -2664,6 +2795,11 @@ export class App {
       if (selected) pick.classList.add('is-selected');
       tr.appendChild(pick);
 
+      const fmtTime = (v, fallback) => {
+        const n = Number(v);
+        if (!Number.isFinite(n)) return String(fallback);
+        return Number.isInteger(n) ? String(n) : n.toFixed(1);
+      };
       const values = [
         { field: 'id', value: String(c.id), editable: false },
         { field: 'name', value: c.name || '', editable: true },
@@ -2671,6 +2807,9 @@ export class App {
         { field: 'lat', value: Number(c.lat).toFixed(5), editable: false },
         { field: 'lng', value: Number(c.lng).toFixed(5), editable: false },
         { field: 'demand', value: String(c.demand), editable: true },
+        { field: 'ready', value: fmtTime(c.ready, 0), editable: true },
+        { field: 'due', value: fmtTime(c.due, 1000), editable: true },
+        { field: 'service', value: fmtTime(c.service, c.isDepot ? 0 : 10), editable: true },
       ];
 
       values.forEach(({ field, value, editable }) => {
@@ -2721,7 +2860,10 @@ export class App {
       const markerIcon = c.isDepot ? depotIcon : customerIcon;
       const popupTitle = c.isDepot ? 'Warehouse / Depot' : 'Customer';
       const popupAddress = c.address ? `<br/>${c.address}` : '';
-      const popupContent = `<strong>${popupTitle}</strong><br/>${c.name}${popupAddress}<br/>Demand: ${c.demand}`;
+      const twInfo = (c.ready != null || c.due != null)
+        ? `<br/>TW: [${Number(c.ready ?? 0).toFixed(0)}, ${Number(c.due ?? 0).toFixed(0)}] svc=${Number(c.service ?? 0).toFixed(0)}`
+        : '';
+      const popupContent = `<strong>${popupTitle}</strong><br/>${c.name}${popupAddress}<br/>Demand: ${c.demand}${twInfo}`;
       L.marker(p, { icon: markerIcon }).bindPopup(popupContent).addTo(ddqnMarkerLayer);
       L.marker(p, { icon: markerIcon }).bindPopup(popupContent).addTo(alnsMarkerLayer);
     });

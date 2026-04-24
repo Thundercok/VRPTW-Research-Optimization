@@ -7,6 +7,7 @@ import random
 import time
 from collections import deque
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Deque, Dict, Iterable, List, Optional, Tuple
 
 import numpy as np
@@ -49,15 +50,25 @@ BKS: Dict[str, Dict[str, float]] = {
 
 
 def default_data_path() -> str:
+    env = os.environ.get("VRPTW_DATA_DIR")
+    if env:
+        return env
     if os.path.exists("/kaggle/working"):
         return "/kaggle/input/datasets/senju14/vrptw-benchmark-datasets/data/Solomon"
-    return "/content/vrptw-benchmark/data/Solomon"
+    if os.path.exists("/content"):
+        return "/content/vrptw-benchmark/data/Solomon"
+    return str(Path(__file__).resolve().parent / "data" / "solomon")
 
 
 def default_output_dir() -> str:
+    env = os.environ.get("VRPTW_OUTPUT_DIR")
+    if env:
+        return env
     if os.path.exists("/kaggle/working"):
         return "/kaggle/working"
-    return "/content"
+    if os.path.exists("/content"):
+        return "/content"
+    return str(Path(__file__).resolve().parent / "logs" / "local")
 
 
 @dataclass
