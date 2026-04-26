@@ -1,91 +1,100 @@
 # VRPTW Research Optimization
+> A VRPTW (Vehicle Routing Problem with Time Windows) research and demo system that compares ALNS vs DDQN-ALNS in a web app.
 
-VRPTW Research Optimization là hệ thống tối ưu tuyến xe gồm `FastAPI backend` và `frontend` tĩnh được serve chung một cổng. Mục tiêu là nhập dữ liệu khách hàng, tính ma trận khoảng cách, chạy DDQN/ALNS, và xem kết quả trên bảng + bản đồ.
+![Demo](docs/readme-assets/demo.gif)
 
-## Chạy ứng dụng
+## About The Project
+- **Problem solved:** Helps evaluate and demonstrate VRPTW route optimization with realistic constraints (capacity + time windows).
+- **Core features:** Interactive web demo, CSV/Excel import, map-based route visualization, ALNS vs DDQN-ALNS comparison, benchmark analysis artifacts.
+- **Tech stack:**  
+  ![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
+  ![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white)
+  ![NumPy](https://img.shields.io/badge/NumPy-013243?style=for-the-badge&logo=numpy&logoColor=white)
+  ![Numba](https://img.shields.io/badge/Numba-00A3E0?style=for-the-badge&logo=numba&logoColor=white)
+  ![Leaflet](https://img.shields.io/badge/Leaflet-199900?style=for-the-badge&logo=leaflet&logoColor=white)
+  ![Firebase Admin](https://img.shields.io/badge/Firebase%20Admin-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)
 
-```powershell
-cd C:\D\Github\VRPTW-Research-Optimization
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
-& .\.venv\Scripts\Activate.ps1
-cd web\backend
-uvicorn main:app --reload --host 127.0.0.1 --port 8000
+## Project Structure
+```text
+src/
+  backend/        # FastAPI API, auth, job orchestration, solver integration
+  frontend/       # Static web UI (served by FastAPI)
+docs/
+  report-draft1.tex
+  vrptw_clean.py  # Research solver source of truth
+logs/
+  benchmark_clean.csv
+  benchmark_transfer.csv
+  hybrid-rl-alns-for-vrptw.log
+  nexus_demo.json
+  image/
+model/
+  rl_alns_transfer.safetensors
 ```
 
-Mở web tại: `http://127.0.0.1:8000/`
+## Getting Started
 
-## Cách dùng nhanh
+### Prerequisites
+- Python `>=3.11,<3.13` (the project is pinned to 3.12 - PyTorch + Numba do not yet support 3.14).
+- (Recommended) [`uv`](https://docs.astral.sh/uv/) for fast, reproducible installs.
 
-1. Đăng nhập.
-2. Chọn mode:
-- `Sample`: tự nạp dữ liệu mẫu Solomon.
-- `Real Data`: nhập dữ liệu thật.
-3. Nhập dữ liệu theo 1 trong 3 cách:
-- `Choose File` với `.csv/.xlsx/.xls`
-- Kéo thả file vào vùng Import
-- Copy từ Excel rồi `Ctrl+V` trực tiếp vào web
-4. Hoặc bấm trực tiếp lên bản đồ để thêm điểm mới, rồi chỉnh `Name`, `Address`, `Demand` trong bảng.
-5. Kiểm tra bảng `Customer List` và nhấn `Run Model`.
+### Quick start (newbie clone)
 
-## Input cần có
+```bash
+# 1) Clone
+git clone https://github.com/Thundercok/VRPTW-Research-Optimization.git
+cd VRPTW-Research-Optimization
 
-Hệ thống tự map cột theo header. Nên có các cột sau:
+# 2) Copy env template (demo mode works without any keys)
+cp .env.example .env       # Windows PowerShell: copy .env.example .env
 
-- `Customer Name` hoặc `Name`
-- `Address`
-- `Latitude` / `Longitude` hoặc `Lat` / `Lng` / `Lon`
-- `Demand` hoặc `Qty` / `Quantity`
+# 3a) Option A - uv (recommended)
+uv venv .venv --python 3.12
+uv pip install -r requirements.txt
 
-Ví dụ CSV:
+# 3b) Option B - plain venv + pip
+python -m venv venv
+# Windows:    venv\Scripts\activate
+# Linux/mac:  source venv/bin/activate
+pip install -r requirements.txt
 
-```csv
-Customer Name,Address,Latitude,Longitude,Demand
-Depot,1 Ben Nghe,10.776889,106.700806,0
-Customer A,45 Le Loi District 1,10.773900,106.700100,12
-Customer B,12 Nguyen Hue District 1,10.774300,106.703900,8
+# 4) (Optional) Fetch Solomon benchmark data so the "Sample" button works
+python scripts/fetch_solomon.py    # downloads RC1+RC2 into data/solomon/
+
+# 5) Run the project (single entry point)
+python main.py
 ```
 
-Lưu ý:
-- `Depot` nên để `Demand = 0`
-- Nếu không có tọa độ, hệ thống sẽ thử geocode từ `Address`
+Open `http://127.0.0.1:8000/` in a browser. The startup log should print
+`Firebase Admin disabled - VRPTW demo solver still works at /` when no
+credentials are provided. That is expected: the VRPTW demo, Solomon loader,
+solver comparison, and analysis endpoints all run in **demo mode** without
+Firebase.
 
-## Flow hệ thống
+### Optional: enable auth + Firestore persistence
+1. Create a Firebase project and download a service-account JSON.
+2. Drop it under `secrets/firebase-adminsdk.json` (the folder is gitignored).
+3. Uncomment `FIREBASE_SERVICE_ACCOUNT_PATH` in `.env` and restart `python main.py`.
 
-`Login -> nhập dữ liệu -> auto nhận depot/customer -> gọi API khoảng cách -> queue job -> solve DDQN/ALNS -> hiển thị kết quả`
+## Usage
+1. (Optional) Log in - skipped automatically when running in demo mode.
+2. Choose mode:
+   - `Sample`: loads a Solomon instance (default `rc101`).
+   - `Real Data`: upload/import your own customers (CSV/Excel) or click map points.
+3. Ensure one depot (`demand = 0`) and at least one customer with capacity + time windows.
+4. Click **Run Model** to compare DDQN-ALNS vs ALNS side-by-side.
 
-Trạng thái job: `queued -> processing -> matrix -> solving -> done`.
+Health check: `GET http://127.0.0.1:8000/api/health` returns `{ "status": "ok", "firebase_enabled": true|false }`.
 
-## Lỗi/ràng buộc chính
+## Data Formats
+- **Input CSV example:** `logs/customers_import_test.csv`
+- **Benchmark summary:** `logs/benchmark_clean.csv`
+- **Transfer benchmark:** `logs/benchmark_transfer.csv`
+- **Run log:** `logs/hybrid-rl-alns-for-vrptw.log`
+- **Dashboard payload:** `logs/nexus_demo.json`
 
-- Thiếu email/mật khẩu: báo lỗi ngay trên form.
-- File sai định dạng: báo `Import Failed`.
-- Thiếu depot hoặc customer: không cho chạy.
-- Demand âm: bị chặn.
-- Vượt tải trọng: backend trả lỗi kiểu `Infeasible` hoặc `exceeds vehicle capacity`; UI sẽ báo rõ để tăng `Vehicles` hoặc `Capacity`.
-
-## Test nhanh
-
-1. Mở `Real Data`.
-2. Import file: `logs/results-v9.5/customers_import_test.csv`.
-3. Xem `DEPOT` và các customer hiện trên bảng/bản đồ.
-4. Nhấn `Run Model` và kiểm tra kết quả ở tab Results.
-
-## Training Analysis dùng để làm gì
-
-Phần `Training Analysis` dùng để xem lại dữ liệu benchmark/lịch sử mô hình trong `logs/results-vX`.
-
-- `Version`: chọn bộ log/kết quả muốn xem.
-- `Instance`: lọc theo bài toán cụ thể.
-- `Deep Analysis`: mở màn hình phân tích chi tiết hơn, gồm biểu đồ hội tụ, heatmap operator, leaderboard và so sánh kết quả.
-
-Tóm lại:
-- Đây là phần để **xem lại và phân tích kết quả có sẵn**.
-- Không phải phần để nhập dữ liệu chạy model mới.
-
-Khi dùng `Training Analysis`:
-- Muốn so sánh DDQN và ALNS trên một instance.
-- Muốn xem version nào tốt hơn.
-- Muốn kiểm tra xu hướng hội tụ hoặc policy operator.
-
-Khi chỉ chạy dữ liệu mới:
-- Chỉ cần dùng `Customer List` và `Run Model`.
+## Contributing
+1. Fork the repository.
+2. Create a feature branch.
+3. Add tests or smoke checks for your change.
+4. Open a Pull Request with a clear summary and test steps.

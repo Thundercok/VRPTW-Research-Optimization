@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0f2740" />
+  <meta name="description" content="VRPTW Research Optimization - DDQN-ALNS hybrid solver for the Vehicle Routing Problem with Time Windows. Open-source research project with a live web demo." />
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>VRPTW Research Optimization - DDQN-ALNS Hybrid Solver</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/landing.css?v=20260426" />
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="topbar" id="top">
+    <div class="container topbar-inner">
+      <a class="brand" href="#top">
+        <span class="brand-mark">
+          <svg viewBox="0 0 32 32" aria-hidden="true">
+            <circle cx="16" cy="16" r="14" fill="currentColor" opacity="0.12"/>
+            <path d="M8 18 L14 11 L20 16 L24 9" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="14" cy="11" r="2" fill="currentColor"/>
+            <circle cx="20" cy="16" r="2" fill="currentColor"/>
+            <circle cx="24" cy="9" r="2" fill="currentColor"/>
+          </svg>
+        </span>
+        <span class="brand-text">
+          <strong>VRPTW</strong>
+          <em data-i18n="brand.sub">Research Optimization</em>
+        </span>
+      </a>
+
+      <nav class="topnav" aria-label="Primary">
+        <a href="#about" data-i18n="nav.about">About</a>
+        <a href="#features" data-i18n="nav.features">Features</a>
+        <a href="#algorithm" data-i18n="nav.algorithm">Algorithm</a>
+        <a href="#results" data-i18n="nav.results">Results</a>
+        <a href="#tech" data-i18n="nav.tech">Tech Stack</a>
+        <a href="#getstarted" data-i18n="nav.getstarted">Get Started</a>
+      </nav>
+
+      <div class="top-actions">
+        <button class="icon-btn" id="lang-toggle" type="button" aria-label="Toggle language">
+          <span id="lang-label">EN</span>
+        </button>
+        <button class="icon-btn" id="theme-toggle" type="button" aria-label="Toggle theme">
+          <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4" fill="currentColor"/><g stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.5" y1="4.5" x2="6.6" y2="6.6"/><line x1="17.4" y1="17.4" x2="19.5" y2="19.5"/><line x1="4.5" y1="19.5" x2="6.6" y2="17.4"/><line x1="17.4" y1="6.6" x2="19.5" y2="4.5"/></g></svg>
+          <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 13.5A9 9 0 1 1 10.5 3a7 7 0 0 0 10.5 10.5z" fill="currentColor"/></svg>
+        </button>
+        <a class="btn primary cta-demo" href="app.html" data-i18n="cta.demo">Open Demo</a>
+      </div>
+
+      <button class="mobile-menu-btn" id="mobile-menu-btn" type="button" aria-label="Open menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+    <div class="mobile-menu" id="mobile-menu" hidden>
+      <a href="#about" data-i18n="nav.about">About</a>
+      <a href="#features" data-i18n="nav.features">Features</a>
+      <a href="#algorithm" data-i18n="nav.algorithm">Algorithm</a>
+      <a href="#results" data-i18n="nav.results">Results</a>
+      <a href="#tech" data-i18n="nav.tech">Tech Stack</a>
+      <a href="#getstarted" data-i18n="nav.getstarted">Get Started</a>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero">
+      <div class="container hero-grid">
+        <div class="hero-text">
+          <span class="hero-badge" data-i18n="hero.badge">Open-source research</span>
+          <h1>
+            <span data-i18n="hero.title.line1">A Plateau-Aware</span>
+            <span class="grad" data-i18n="hero.title.line2">Deep RL Controller</span>
+            <span data-i18n="hero.title.line3">for VRPTW</span>
+          </h1>
+          <p class="hero-lead" data-i18n="hero.lead">
+            DDQN-ALNS hybrid solver that learns when to escape local optima. Compare it side-by-side with classic ALNS on Solomon RC1/RC2 benchmarks - directly in your browser.
+          </p>
+          <div class="hero-actions">
+            <a class="btn primary lg" href="app.html" data-i18n="hero.cta.try">Try Live Demo</a>
+            <a class="btn outline lg" href="https://github.com/Thundercok/VRPTW-Research-Optimization" target="_blank" rel="noopener" data-i18n="hero.cta.github">View on GitHub</a>
+          </div>
+          <ul class="hero-stats">
+            <li>
+              <strong data-i18n="hero.stat1.value">2.6%</strong>
+              <span data-i18n="hero.stat1.label">Avg. gap vs. best-known</span>
+            </li>
+            <li>
+              <strong data-i18n="hero.stat2.value">~10s</strong>
+              <span data-i18n="hero.stat2.label">Median runtime per instance</span>
+            </li>
+            <li>
+              <strong data-i18n="hero.stat3.value">RC1 -> RC2</strong>
+              <span data-i18n="hero.stat3.label">Zero-shot transfer</span>
+            </li>
+          </ul>
+        </div>
+
+        <div class="hero-visual" aria-hidden="true">
+          <div class="hero-card">
+            <div class="hero-card-head">
+              <span class="dot red"></span>
+              <span class="dot yellow"></span>
+              <span class="dot green"></span>
+              <span class="hero-card-title">vrptw_clean.py</span>
+            </div>
+            <pre class="hero-code"><code><span class="kw">class</span> <span class="cls">PlateauHybridSolver</span>:
+    <span class="cmt"># DDQN policy picks the destroy operator</span>
+    <span class="kw">def</span> <span class="fn">step</span>(<span class="arg">self</span>, plan: Plan) -&gt; Plan:
+        action = self.q.<span class="fn">act</span>(self.<span class="fn">state</span>(plan))
+        ruined = <span class="fn">destroy</span>(plan, action)
+        <span class="kw">return</span> <span class="fn">repair</span>(ruined)</code></pre>
+          </div>
+          <div class="hero-orbit">
+            <div class="orbit-node nA">DDQN</div>
+            <div class="orbit-node nB">ALNS</div>
+            <div class="orbit-node nC">VRPTW</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section about" id="about">
+      <div class="container">
+        <p class="eyebrow" data-i18n="about.eyebrow">About the project</p>
+        <h2 data-i18n="about.title">Why this project exists</h2>
+        <p class="lead" data-i18n="about.lead">
+          Vehicle routing with time windows is hard: the search space is combinatorial, real fleets must respect customer service intervals, and pure heuristics often plateau. We combine reinforcement learning with adaptive large neighborhood search to learn smarter restarts - then ship it as a transparent web demo so anyone can poke at it.
+        </p>
+        <div class="about-cards">
+          <article class="about-card">
+            <div class="about-card-icon">A</div>
+            <h3 data-i18n="about.card1.title">Reproducible research</h3>
+            <p data-i18n="about.card1.body">Single Python file (vrptw_clean.py) holds the entire solver. Pre-trained weights ship in the repo; benchmark CSVs are committed for full traceability.</p>
+          </article>
+          <article class="about-card">
+            <div class="about-card-icon">B</div>
+            <h3 data-i18n="about.card2.title">Real solver in the demo</h3>
+            <p data-i18n="about.card2.body">The web app runs the same PlateauHybridSolver and ALNS baseline - no mock. Side-by-side routes, runtimes, and load-balancing metrics.</p>
+          </article>
+          <article class="about-card">
+            <div class="about-card-icon">C</div>
+            <h3 data-i18n="about.card3.title">Operator-friendly UX</h3>
+            <p data-i18n="about.card3.body">Import customers from CSV/Excel, drop pins on a Leaflet map, edit time windows inline, run the model, export results.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section features" id="features">
+      <div class="container">
+        <p class="eyebrow" data-i18n="features.eyebrow">Features</p>
+        <h2 data-i18n="features.title">What you can do today</h2>
+        <div class="feature-grid">
+          <div class="feature">
+            <div class="feature-icon">F1</div>
+            <h3 data-i18n="features.f1.title">DDQN-ALNS hybrid</h3>
+            <p data-i18n="features.f1.body">A Double DQN agent learns which destroy operator to fire when the search plateaus, while ALNS handles the repair step.</p>
+          </div>
+          <div class="feature">
+            <div class="feature-icon">F2</div>
+            <h3 data-i18n="features.f2.title">Solomon benchmarks</h3>
+            <p data-i18n="features.f2.body">RC1 and RC2 instances load with one click. Capacity, fleet size, and time windows auto-populate.</p>
+          </div>
+          <div class="feature">
+            <div class="feature-icon">F3</div>
+            <h3 data-i18n="features.f3.title">Real-data import</h3>
+            <p data-i18n="features.f3.body">Upload CSV/XLSX with lat, lng, demand, ready, due, service. Or geocode addresses and pin on the map.</p>
+          </div>
+          <div class="feature">
+            <div class="feature-icon">F4</div>
+            <h3 data-i18n="features.f4.title">Side-by-side compare</h3>
+            <p data-i18n="features.f4.body">DDQN-ALNS vs. plain ALNS run in parallel. Watch route maps, runtime, total distance, and load balance.</p>
+          </div>
+          <div class="feature">
+            <div class="feature-icon">F5</div>
+            <h3 data-i18n="features.f5.title">Zero-shot transfer</h3>
+            <p data-i18n="features.f5.body">Train on RC1, evaluate on RC2 without retraining. The plateau-aware reward generalizes across instance families.</p>
+          </div>
+          <div class="feature">
+            <div class="feature-icon">F6</div>
+            <h3 data-i18n="features.f6.title">Guest mode demo</h3>
+            <p data-i18n="features.f6.body">No Firebase keys? No problem. The backend boots in demo mode and the front-end exposes a one-click guest login.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section algorithm" id="algorithm">
+      <div class="container algorithm-grid">
+        <div>
+          <p class="eyebrow" data-i18n="algorithm.eyebrow">Algorithm</p>
+          <h2 data-i18n="algorithm.title">Plateau-aware reinforcement learning</h2>
+          <p data-i18n="algorithm.body1">
+            The controller observes the search trajectory: best-so-far, current-cost, and a plateau counter. When stagnation is detected, the DDQN policy chooses an aggressive destroy operator; otherwise it sticks with safer moves. Repair is delegated to a Numba-accelerated ALNS routine.
+          </p>
+          <p data-i18n="algorithm.body2">
+            Reward is shaped to reward both immediate cost reduction and long-term escape behaviour, which is what the paper calls "plateau-aware" credit assignment.
+          </p>
+          <ul class="algorithm-list">
+            <li><strong data-i18n="algorithm.list1.k">Action space:</strong> <span data-i18n="algorithm.list1.v">5 destroy operators (random, worst, related, route, cluster)</span></li>
+            <li><strong data-i18n="algorithm.list2.k">State:</strong> <span data-i18n="algorithm.list2.v">normalized gap, plateau counter, capacity utilisation, time-window slack</span></li>
+            <li><strong data-i18n="algorithm.list3.k">Network:</strong> <span data-i18n="algorithm.list3.v">2-layer MLP, target net synced every 200 steps</span></li>
+            <li><strong data-i18n="algorithm.list4.k">Repair:</strong> <span data-i18n="algorithm.list4.v">regret-2 insertion with TW feasibility check</span></li>
+          </ul>
+        </div>
+        <div class="algorithm-diagram" aria-hidden="true">
+          <div class="diagram-node n1">State</div>
+          <div class="diagram-arrow a1"></div>
+          <div class="diagram-node n2">DDQN policy</div>
+          <div class="diagram-arrow a2"></div>
+          <div class="diagram-node n3">Destroy</div>
+          <div class="diagram-arrow a3"></div>
+          <div class="diagram-node n4">Repair (ALNS)</div>
+          <div class="diagram-arrow a4 loop"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section results" id="results">
+      <div class="container">
+        <p class="eyebrow" data-i18n="results.eyebrow">Results</p>
+        <h2 data-i18n="results.title">Benchmark snapshot</h2>
+        <div class="results-grid">
+          <div class="result-card">
+            <span class="result-value">2.6%</span>
+            <span class="result-label" data-i18n="results.r1">Avg. total-distance gap on RC1</span>
+          </div>
+          <div class="result-card">
+            <span class="result-value">3.4%</span>
+            <span class="result-label" data-i18n="results.r2">Zero-shot gap on RC2</span>
+          </div>
+          <div class="result-card">
+            <span class="result-value">~10s</span>
+            <span class="result-label" data-i18n="results.r3">Median runtime per 100-customer instance</span>
+          </div>
+          <div class="result-card">
+            <span class="result-value">-22%</span>
+            <span class="result-label" data-i18n="results.r4">Runtime vs. naive ALNS at equal quality</span>
+          </div>
+        </div>
+        <p class="results-note" data-i18n="results.note">
+          See logs/benchmark_clean.csv and logs/benchmark_transfer.csv in the repository for the raw numbers.
+        </p>
+      </div>
+    </section>
+
+    <section class="section tech" id="tech">
+      <div class="container">
+        <p class="eyebrow" data-i18n="tech.eyebrow">Tech stack</p>
+        <h2 data-i18n="tech.title">Built with proven open-source tools</h2>
+        <div class="badges">
+          <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white" />
+          <img alt="PyTorch" src="https://img.shields.io/badge/PyTorch-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white" />
+          <img alt="NumPy" src="https://img.shields.io/badge/NumPy-013243?style=for-the-badge&logo=numpy&logoColor=white" />
+          <img alt="Numba" src="https://img.shields.io/badge/Numba-00A3E0?style=for-the-badge&logo=numba&logoColor=white" />
+          <img alt="Leaflet" src="https://img.shields.io/badge/Leaflet-199900?style=for-the-badge&logo=leaflet&logoColor=white" />
+          <img alt="Firebase Admin" src="https://img.shields.io/badge/Firebase%20Admin-FFCA28?style=for-the-badge&logo=firebase&logoColor=black" />
+          <img alt="uv" src="https://img.shields.io/badge/uv-DE5FE9?style=for-the-badge&logo=python&logoColor=white" />
+          <img alt="Python 3.12" src="https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white" />
+        </div>
+      </div>
+    </section>
+
+    <section class="section getstarted" id="getstarted">
+      <div class="container">
+        <p class="eyebrow" data-i18n="getstarted.eyebrow">Get started</p>
+        <h2 data-i18n="getstarted.title">Run it locally in under 2 minutes</h2>
+        <div class="getstarted-grid">
+          <ol class="steps">
+            <li>
+              <span class="step-num">1</span>
+              <div>
+                <h4 data-i18n="getstarted.s1.title">Clone & enter</h4>
+                <p data-i18n="getstarted.s1.body">Pull the repo, then move into the project root.</p>
+              </div>
+            </li>
+            <li>
+              <span class="step-num">2</span>
+              <div>
+                <h4 data-i18n="getstarted.s2.title">Install with uv or pip</h4>
+                <p data-i18n="getstarted.s2.body">uv venv with Python 3.12, then install requirements.</p>
+              </div>
+            </li>
+            <li>
+              <span class="step-num">3</span>
+              <div>
+                <h4 data-i18n="getstarted.s3.title">Optional - fetch Solomon</h4>
+                <p data-i18n="getstarted.s3.body">Run scripts/fetch_solomon.py to download RC1+RC2 benchmark instances.</p>
+              </div>
+            </li>
+            <li>
+              <span class="step-num">4</span>
+              <div>
+                <h4 data-i18n="getstarted.s4.title">Launch</h4>
+                <p data-i18n="getstarted.s4.body">python main.py boots FastAPI on 127.0.0.1:8000. The demo loads in your browser.</p>
+              </div>
+            </li>
+          </ol>
+          <div class="terminal">
+            <div class="terminal-head">
+              <span class="dot red"></span>
+              <span class="dot yellow"></span>
+              <span class="dot green"></span>
+              <span class="terminal-title">~/VRPTW-Research-Optimization</span>
+            </div>
+            <pre class="terminal-body"><code><span class="prompt">$</span> git clone https://github.com/Thundercok/VRPTW-Research-Optimization.git
+<span class="prompt">$</span> cd VRPTW-Research-Optimization
+<span class="prompt">$</span> copy .env.example .env
+
+<span class="cmt"># with uv (recommended)</span>
+<span class="prompt">$</span> uv venv .venv --python 3.12
+<span class="prompt">$</span> uv pip install -r requirements.txt
+
+<span class="cmt"># or with plain venv</span>
+<span class="prompt">$</span> python -m venv venv
+<span class="prompt">$</span> venv\Scripts\activate
+<span class="prompt">$</span> pip install -r requirements.txt
+
+<span class="cmt"># optional: download Solomon RC1+RC2</span>
+<span class="prompt">$</span> python scripts/fetch_solomon.py
+
+<span class="cmt"># launch the web demo</span>
+<span class="prompt">$</span> python main.py
+<span class="ok">  Uvicorn running on http://127.0.0.1:8000</span></code></pre>
+          </div>
+        </div>
+        <div class="cta-final">
+          <a class="btn primary lg" href="app.html" data-i18n="hero.cta.try">Try Live Demo</a>
+          <a class="btn outline lg" href="https://github.com/Thundercok/VRPTW-Research-Optimization" target="_blank" rel="noopener" data-i18n="hero.cta.github">View on GitHub</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container footer-grid">
+      <div>
+        <div class="brand">
+          <span class="brand-mark">
+            <svg viewBox="0 0 32 32" aria-hidden="true">
+              <circle cx="16" cy="16" r="14" fill="currentColor" opacity="0.18"/>
+              <path d="M8 18 L14 11 L20 16 L24 9" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <span class="brand-text">
+            <strong>VRPTW</strong>
+            <em data-i18n="brand.sub">Research Optimization</em>
+          </span>
+        </div>
+        <p class="footer-blurb" data-i18n="footer.blurb">DDQN-ALNS hybrid solver for the Vehicle Routing Problem with Time Windows. Open-source research project.</p>
+      </div>
+
+      <div class="footer-col">
+        <h5 data-i18n="footer.col.product">Product</h5>
+        <a href="app.html" data-i18n="cta.demo">Open Demo</a>
+        <a href="#features" data-i18n="nav.features">Features</a>
+        <a href="#getstarted" data-i18n="nav.getstarted">Get Started</a>
+      </div>
+
+      <div class="footer-col">
+        <h5 data-i18n="footer.col.research">Research</h5>
+        <a href="https://github.com/Thundercok/VRPTW-Research-Optimization" target="_blank" rel="noopener">GitHub Repository</a>
+        <a href="https://github.com/Thundercok/VRPTW-Research-Optimization/blob/main/docs/report-draft1.tex" target="_blank" rel="noopener" data-i18n="footer.paper">Paper draft</a>
+        <a href="https://github.com/Thundercok/VRPTW-Research-Optimization/tree/main/logs" target="_blank" rel="noopener" data-i18n="footer.benchmarks">Benchmarks</a>
+      </div>
+
+      <div class="footer-col">
+        <h5 data-i18n="footer.col.contact">Contact</h5>
+        <a href="https://github.com/Thundercok" target="_blank" rel="noopener">@Thundercok</a>
+        <a href="mailto:zantlyTM@gmail.com">zantlyTM@gmail.com</a>
+      </div>
+    </div>
+    <div class="container footer-bottom">
+      <span data-i18n="footer.copyright">© 2026 VRPTW Research Optimization. Released under the MIT License.</span>
+    </div>
+  </footer>
+
+  <script src="js/landing.js?v=20260426"></script>
+</body>
+</html>

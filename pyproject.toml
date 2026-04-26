@@ -1,43 +1,7 @@
 [project]
 name = "vrptw-research-optimization"
 version = "0.1.0"
-description = "VRPTW DDQN-ALNS hybrid solver with FastAPI demo"
-requires-python = ">=3.11,<3.13"
-dependencies = [
-  # Research core (DDQN-ALNS)
-  "numpy>=1.26,<2.3",
-  "pandas>=2.2",
-  "scipy>=1.13",
-  "numba>=0.60",
-  "torch>=2.4",
-  "safetensors>=0.4",
-  "matplotlib>=3.8",
-  # Web backend
-  "fastapi>=0.116",
-  "uvicorn[standard]>=0.35",
-  "httpx>=0.28",
-  "pydantic>=2.11",
-  "firebase-admin>=7.0",
-  "python-dotenv>=1.0",
-]
-
-[dependency-groups]
-dev = [
-  "ruff>=0.6",
-  "pytest>=8.0",
-]
-
-[tool.uv]
-package = false
-
-[tool.uv.sources]
-torch = [{ index = "pytorch-cpu" }]
-
-[[tool.uv.index]]
-name = "pytorch-cpu"
-url = "https://download.pytorch.org/whl/cpu"
-explicit = true
-
-[tool.ruff]
-line-length = 110
-target-version = "py312"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = []

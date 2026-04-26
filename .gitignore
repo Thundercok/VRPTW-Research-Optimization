@@ -45,6 +45,7 @@ env/
 # ---------------------------------------------------------------
 .idea/
 .vscode/
+*.iml
 *.swp
 *.swo
 
@@ -55,6 +56,9 @@ env/
 data/
 # Local run outputs from vrptw_clean.py
 logs/local/
+# Temporary notebook exports
+__results__.html
+__notebook__.ipynb
 
 # ---------------------------------------------------------------
 # Notes (not published)
