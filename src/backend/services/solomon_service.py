@@ -22,19 +22,82 @@ def _to_lat_lng(x: float, y: float) -> tuple[float, float]:
     return round(lat, 6), round(lng, 6)
 
 
-def load_solomon_dataset(name: str = "rc101") -> dict[str, Any]:
-    dataset = (name or "rc101").strip().lower()
-    if not re.fullmatch(r"[a-z]+\d{3}", dataset):
-        raise ValueError("Dataset name must look like c101, r101, rc101")
+# --- Built-in synthetic instance ---------------------------------------------------
+# A 12-customer mini benchmark centred on Ho Chi Minh City. Ships in-process so the
+# demo always has something to load, even before users run scripts/fetch_solomon.py.
+# Demand/time-window scale mirrors a small Solomon RC1 instance so the solver does
+# not need to be retuned. Distance and time use the same unit (~1 km <-> 1 unit).
+_DEMO_FLEET = {"vehicles": 4, "capacity": 80}
+_DEMO_NAMES = [
+    "Saigon Central Depot", "Ben Thanh Market", "Notre-Dame Cathedral",
+    "Tan Dinh Market", "Independence Palace", "Pham Ngu Lao Hostel",
+    "Cho Lon Wholesale", "Phu My Hung Office", "An Phu Logistics Park",
+    "Thao Dien Studios", "Phu Nhuan Pharmacy", "Tan Binh Cargo", "Go Vap Warehouse",
+]
+_DEMO_RAW: list[tuple[float, float, int, int, int, int]] = [
+    # (lat, lng, demand, ready, due, service)
+    (10.7769, 106.7009, 0, 0, 240, 0),     # Depot 0
+    (10.7723, 106.6985, 8, 0, 90, 10),
+    (10.7798, 106.6991, 6, 30, 120, 10),
+    (10.7886, 106.6904, 9, 20, 110, 10),
+    (10.7765, 106.6951, 7, 40, 140, 10),
+    (10.7670, 106.6932, 5, 0, 80, 10),
+    (10.7530, 106.6510, 12, 60, 180, 15),
+    (10.7281, 106.7191, 10, 70, 200, 12),
+    (10.7995, 106.7375, 11, 50, 170, 12),
+    (10.8014, 106.7308, 7, 30, 150, 10),
+    (10.7969, 106.6800, 6, 20, 130, 10),
+    (10.7976, 106.6500, 9, 40, 160, 12),
+    (10.8400, 106.6650, 8, 60, 220, 12),
+]
 
-    file_path = _data_dir() / f"{dataset}.txt"
+
+def _builtin_demo() -> dict[str, Any]:
+    customers: list[dict[str, Any]] = []
+    for idx, (lat, lng, demand, ready, due, service) in enumerate(_DEMO_RAW):
+        customers.append(
+            {
+                "id": idx,
+                "name": _DEMO_NAMES[idx] if idx < len(_DEMO_NAMES) else f"DEMO-{idx}",
+                "address": _DEMO_NAMES[idx] if idx < len(_DEMO_NAMES) else f"Demo customer {idx}",
+                "lat": lat,
+                "lng": lng,
+                "demand": demand,
+                "ready": float(ready),
+                "due": float(due),
+                "service": float(service),
+                "isDepot": idx == 0,
+            }
+        )
+    return {
+        "dataset": "demo",
+        "fleet": dict(_DEMO_FLEET),
+        "customers": customers,
+        "_builtin": True,
+    }
+
+
+def _is_builtin(name: str) -> bool:
+    return name.strip().lower() in {"demo", "builtin", "sample"}
+
+
+def load_solomon_dataset(name: str = "demo") -> dict[str, Any]:
+    raw_name = (name or "demo").strip().lower()
+
+    if _is_builtin(raw_name):
+        return _builtin_demo()
+
+    if not re.fullmatch(r"[a-z]+\d{3}", raw_name):
+        raise ValueError("Dataset name must look like c101, r101, rc101, or 'demo'")
+
+    file_path = _data_dir() / f"{raw_name}.txt"
     if not file_path.exists():
-        raise FileNotFoundError(f"Solomon file not found: {dataset}.txt")
+        raise FileNotFoundError(f"Solomon file not found: {raw_name}.txt")
 
     lines = file_path.read_text(encoding="utf-8").splitlines()
     header_idx = next((i for i, line in enumerate(lines) if "CUST NO." in line and "XCOORD." in line), -1)
     if header_idx < 0:
-        raise ValueError(f"Invalid Solomon file format: {dataset}.txt")
+        raise ValueError(f"Invalid Solomon file format: {raw_name}.txt")
 
     vehicle_match = None
     for line in lines[:header_idx]:
@@ -51,7 +114,7 @@ def load_solomon_dataset(name: str = "rc101") -> dict[str, Any]:
     )
 
     customers: list[dict[str, Any]] = []
-    for raw in lines[header_idx + 1 :]:
+    for raw in lines[header_idx + 1:]:
         m = row_re.match(raw)
         if not m:
             continue
@@ -68,8 +131,8 @@ def load_solomon_dataset(name: str = "rc101") -> dict[str, Any]:
         customers.append(
             {
                 "id": cust_id,
-                "name": "Depot" if cust_id == 0 else f"{dataset.upper()}-{cust_id}",
-                "address": f"Solomon {dataset.upper()} point {cust_id}",
+                "name": "Depot" if cust_id == 0 else f"{raw_name.upper()}-{cust_id}",
+                "address": f"Solomon {raw_name.upper()} point {cust_id}",
                 "lat": lat,
                 "lng": lng,
                 "demand": demand,
@@ -81,11 +144,11 @@ def load_solomon_dataset(name: str = "rc101") -> dict[str, Any]:
         )
 
     if len(customers) < 2:
-        raise ValueError(f"No valid customer rows found in {dataset}.txt")
+        raise ValueError(f"No valid customer rows found in {raw_name}.txt")
 
     customers.sort(key=lambda item: int(item["id"]))
     return {
-        "dataset": dataset,
+        "dataset": raw_name,
         "fleet": {"vehicles": vehicles, "capacity": capacity},
         "customers": customers,
     }

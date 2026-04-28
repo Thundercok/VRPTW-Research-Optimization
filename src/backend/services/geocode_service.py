@@ -4,7 +4,6 @@ from typing import Any
 
 import httpx
 
-
 REVERSE_GEOCODE_CACHE: dict[tuple[float, float], dict[str, Any]] = {}
 
 

@@ -5,11 +5,10 @@ import time
 from typing import Any
 from uuid import uuid4
 
-from fastapi import HTTPException
-
-from core.config import ACCESS_TOKEN_TTL_SEC, REGISTER_OTP_TTL_SEC, RESET_TOKEN_TTL_SEC, frontend_reset_url
-from core.security import hash_password, hash_token, is_valid_email, is_valid_role
+from core.config import ACCESS_TOKEN_TTL_SEC, REGISTER_OTP_TTL_SEC
+from core.security import hash_password, hash_token, is_valid_email, is_valid_role, needs_upgrade, verify_password
 from database.repositories import otp_repo, token_repo, users_repo
+from fastapi import HTTPException
 from services.mail_service import send_email
 
 
@@ -185,11 +184,19 @@ def login_user(email: str, password: str) -> dict[str, str | bool]:
         raise HTTPException(status_code=400, detail="Invalid email format")
 
     row = users_repo.find_user_by_email(email)
-    if not row or row["password_hash"] != hash_password(password):
+    stored_hash = str(row.get("password_hash", "")) if row else ""
+    if not row or not verify_password(password, stored_hash):
         raise HTTPException(
             status_code=401,
             detail="Invalid email or password. Check your credentials and try again. If you forgot your password, use 'Forgot Password' option."
         )
+
+    if needs_upgrade(stored_hash):
+        try:
+            users_repo.update_user_password(email, hash_password(password))
+        except Exception:
+            # Non-fatal: login still succeeds, we will retry on next login.
+            pass
 
     access_token = issue_token(email)
     return {

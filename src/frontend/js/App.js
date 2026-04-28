@@ -45,7 +45,7 @@ export class App {
     this.isSendingForgotPasswordLink = false;
     this.isSubmittingPasswordChange = false;
     this.registerOtpRequestedEmail = ''; // Track which email OTP was sent to
-    this.backendMode = { firebase_enabled: null };
+    this.backendMode = { firebase_enabled: null, demo_mode: null, torch: null };
     this.wireAuthEvents();
     this.wireLoadingControls();
     this.routeAuthScreenFromURL();
@@ -185,10 +185,14 @@ export class App {
       loadingCancel: document.getElementById('loading-cancel'),
       loadingLauncher: document.getElementById('loading-launcher'),
       loadingTitle: document.getElementById('loading-title'),
+      loadingSubtitle: document.getElementById('loading-subtitle'),
       loadingPhase: document.getElementById('loading-phase'),
       loadingPercent: document.getElementById('loading-percent'),
       loadingTrackFill: document.getElementById('loading-track-fill'),
       loadingTruck: document.getElementById('loading-truck'),
+      loadingElapsed: document.getElementById('loading-elapsed'),
+      loadingBackend: document.getElementById('loading-backend'),
+      loadingDevice: document.getElementById('loading-device'),
       toastRoot: document.getElementById('toast-root'),
       status: document.getElementById('status')
     };
@@ -697,7 +701,7 @@ export class App {
     this.setStatus('Ready for operations.', 'ok');
     this.setImportEnabled(this.state.mode === 'real');
     if (this.state.mode === 'sample') {
-      this.loadSolomonDataset('rc101');
+      this.loadSolomonDataset('demo');
     }
     this.bootstrapAnalysis();
     this.updateConnectionPill();
@@ -947,7 +951,7 @@ export class App {
       this.state.mode = this.el.modeToggle.checked ? 'real' : 'sample';
       if (this.state.mode === 'sample') {
         this.setImportEnabled(false);
-        this.loadSolomonDataset('rc101');
+        this.loadSolomonDataset('demo');
       } else {
         this.setImportEnabled(true);
         this.clearCustomersForRealDataMode();
@@ -1019,7 +1023,7 @@ export class App {
     });
   }
 
-  async loadSolomonDataset(name = 'rc101') {
+  async loadSolomonDataset(name = 'demo') {
     try {
       if (!this.state.token) {
         this.state.customers = [];
@@ -1210,9 +1214,14 @@ export class App {
     if (!this.el.analysisInstance) return;
     const current = this.state.analysisInstance || 'ALL';
     const options = ['ALL', ...instances];
-    this.el.analysisInstance.innerHTML = options
-      .map((value) => `<option value="${value}">${value === 'ALL' ? 'ALL INSTANCES' : value}</option>`)
-      .join('');
+    this.el.analysisInstance.replaceChildren(
+      ...options.map((value) => {
+        const option = document.createElement('option');
+        option.value = String(value);
+        option.textContent = value === 'ALL' ? 'ALL INSTANCES' : String(value);
+        return option;
+      })
+    );
     this.el.analysisInstance.value = options.includes(current) ? current : 'ALL';
     this.state.analysisInstance = this.el.analysisInstance.value;
   }
@@ -1316,6 +1325,7 @@ export class App {
 
     const pathA = buildPath(a);
     const pathB = buildPath(b);
+    const showHistoryHint = selectedInstance !== 'ALL' && historyInstance && selectedInstance !== historyInstance;
     container.innerHTML = `
       <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Convergence chart">
         <rect x="0" y="0" width="${width}" height="${height}" fill="#ffffff"></rect>
@@ -1327,7 +1337,7 @@ export class App {
       <div class="analysis-legend">
         <span><i class="legend-dot" style="background:#2563eb"></i> ALNS</span>
         <span><i class="legend-dot" style="background:#0b8a65"></i> DDQN-ALNS</span>
-        ${selectedInstance !== 'ALL' && historyInstance && selectedInstance !== historyInstance ? `<span>History available for ${historyInstance}</span>` : ''}
+        ${showHistoryHint ? `<span>History available for ${this.escapeHtml(String(historyInstance))}</span>` : ''}
       </div>
     `;
   }
@@ -1344,7 +1354,7 @@ export class App {
     const colCount = Math.max(...rows.map((row) => row.length), 0);
     const columns = Array.from({ length: colCount }, (_, index) => String(repairOps?.[index] || `R${index + 1}`));
 
-    const header = columns.map((name) => `<th>${name}</th>`).join('');
+    const header = columns.map((name) => `<th>${this.escapeHtml(name)}</th>`).join('');
     const body = rows
       .map((row, rowIdx) => {
         const label = String(destroyOps?.[rowIdx] || `D${rowIdx + 1}`);
@@ -1355,7 +1365,7 @@ export class App {
             return `<td style="background: rgba(11,138,101,${alpha.toFixed(3)})">${value}</td>`;
           })
           .join('');
-        return `<tr><th>${label}</th>${cells}</tr>`;
+        return `<tr><th>${this.escapeHtml(label)}</th>${cells}</tr>`;
       })
       .join('');
 
@@ -1384,7 +1394,7 @@ export class App {
 
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td>${instance}</td>
+        <td>${this.escapeHtml(String(instance))}</td>
         <td>${this.renderPill(gapWinner)}</td>
         <td>${this.renderPill(speedWinner)}</td>
         <td>${this.renderPill(stableWinner)}</td>
@@ -1402,7 +1412,7 @@ export class App {
       .forEach((row) => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td>${String(row.instance || '-')}</td>
+        <td>${this.escapeHtml(String(row.instance || '-'))}</td>
         <td>${Number(row.gap_pct || 0).toFixed(2)}%</td>
         <td>${Number(row.nv || 0).toFixed(1)}</td>
       `;
@@ -1508,7 +1518,8 @@ export class App {
       .map((point) => {
         const cx = pad + ((point.x - minX) / xSpan) * (width - pad * 2);
         const cy = height - pad - ((point.y - minY) / ySpan) * (height - pad * 2);
-        return `<g><circle cx="${cx.toFixed(2)}" cy="${cy.toFixed(2)}" r="5.5" fill="#ea8a1d"/><text x="${(cx + 7).toFixed(2)}" y="${(cy - 7).toFixed(2)}" font-size="11" fill="#35516a">${point.instance}</text></g>`;
+        const safeLabel = this.escapeHtml(String(point.instance));
+        return `<g><circle cx="${cx.toFixed(2)}" cy="${cy.toFixed(2)}" r="5.5" fill="#ea8a1d"/><text x="${(cx + 7).toFixed(2)}" y="${(cy - 7).toFixed(2)}" font-size="11" fill="#35516a">${safeLabel}</text></g>`;
       })
       .join('');
 
@@ -1534,7 +1545,7 @@ export class App {
       .forEach((row) => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td>${String(row.instance || '-')}</td>
+        <td>${this.escapeHtml(String(row.instance || '-'))}</td>
         <td>${Number(row.td || 0).toFixed(2)}</td>
         <td>${Number(row.gap_pct || 0).toFixed(2)}%</td>
         <td>${Number(row.nv || 0).toFixed(1)}</td>
@@ -1883,27 +1894,58 @@ export class App {
       const response = await fetch(`${API_BASE}/health`, { method: 'GET' });
       if (!response.ok) return;
       const data = await response.json().catch(() => ({}));
-      const firebaseEnabled = data && typeof data === 'object' && 'firebase_enabled' in data
-        ? Boolean(data.firebase_enabled)
-        : true;
+      const safe = data && typeof data === 'object' ? data : {};
+      const firebaseEnabled = 'firebase_enabled' in safe ? Boolean(safe.firebase_enabled) : true;
+      const demoMode = 'demo_mode' in safe
+        ? Boolean(safe.demo_mode)
+        : !firebaseEnabled;
       this.backendMode.firebase_enabled = firebaseEnabled;
+      this.backendMode.demo_mode = demoMode;
+      this.backendMode.torch = safe && typeof safe.torch === 'object' ? safe.torch : null;
       this.applyBackendMode();
+      this.applyDeviceBadge();
     } catch (error) {
       this.backendMode.firebase_enabled = null;
+      this.backendMode.demo_mode = null;
+      this.backendMode.torch = null;
       this.applyBackendMode();
+      this.applyDeviceBadge();
+    }
+  }
+
+  applyDeviceBadge() {
+    const node = this.el.loadingDevice;
+    if (!node) return;
+    const torch = this.backendMode.torch;
+    if (!torch || typeof torch !== 'object') {
+      node.textContent = 'unknown';
+      node.dataset.device = 'cpu';
+      return;
+    }
+    if (torch.cuda_available) {
+      const name = torch.device_name ? String(torch.device_name).replace(/^NVIDIA\s+/i, '') : 'GPU';
+      node.textContent = `GPU - ${name}`;
+      node.dataset.device = 'gpu';
+    } else {
+      node.textContent = 'CPU';
+      node.dataset.device = 'cpu';
     }
   }
 
   applyBackendMode() {
     if (!this.el.guestBlock) return;
+    const demo = this.backendMode.demo_mode;
     const fb = this.backendMode.firebase_enabled;
-    const showGuest = fb === false || fb === null;
+    // Show guest button when backend is in demo mode, or when we cannot probe
+    const showGuest = demo === true || demo === null;
     this.el.guestBlock.classList.toggle('hidden', !showGuest);
     if (this.el.guestHint) {
-      if (fb === false) {
+      if (demo === true) {
         this.el.guestHint.textContent = 'Demo mode active - skip auth and try the VRPTW solver right away.';
-      } else if (fb === null) {
+      } else if (demo === null) {
         this.el.guestHint.textContent = 'Backend reachability unknown - guest mode kept available as fallback.';
+      } else if (fb === true) {
+        this.el.guestHint.textContent = 'Production auth is enabled. Guest access is disabled by the operator.';
       } else {
         this.el.guestHint.textContent = '';
       }
@@ -2115,21 +2157,46 @@ export class App {
     if (this.state.role !== 'admin' || !this.el.adminUserRows) return;
     try {
       const data = await this.request('/admin/users', { method: 'GET' });
-      this.el.adminUserRows.innerHTML = '';
+      this.el.adminUserRows.replaceChildren();
       (data.items || []).forEach((item) => {
+        const email = String(item.email || '');
+        const role = ['admin', 'operator', 'viewer'].includes(item.role) ? item.role : 'operator';
+        const createdAt = new Date(Number(item.created_at) * 1000).toLocaleString();
+
         const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${item.email}</td>
-          <td>
-            <select class="admin-role-select" data-email="${item.email}">
-              <option value="admin" ${item.role === 'admin' ? 'selected' : ''}>admin</option>
-              <option value="operator" ${item.role === 'operator' ? 'selected' : ''}>operator</option>
-              <option value="viewer" ${item.role === 'viewer' ? 'selected' : ''}>viewer</option>
-            </select>
-          </td>
-          <td>${new Date(item.created_at * 1000).toLocaleString()}</td>
-          <td><button class="btn ghost" data-action="save-role" data-email="${item.email}" type="button">Save</button></td>
-        `;
+
+        const emailCell = document.createElement('td');
+        emailCell.textContent = email;
+        tr.appendChild(emailCell);
+
+        const roleCell = document.createElement('td');
+        const select = document.createElement('select');
+        select.className = 'admin-role-select';
+        select.dataset.email = email;
+        ['admin', 'operator', 'viewer'].forEach((value) => {
+          const option = document.createElement('option');
+          option.value = value;
+          option.textContent = value;
+          if (role === value) option.selected = true;
+          select.appendChild(option);
+        });
+        roleCell.appendChild(select);
+        tr.appendChild(roleCell);
+
+        const createdCell = document.createElement('td');
+        createdCell.textContent = createdAt;
+        tr.appendChild(createdCell);
+
+        const actionCell = document.createElement('td');
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'btn ghost';
+        button.dataset.action = 'save-role';
+        button.dataset.email = email;
+        button.textContent = 'Save';
+        actionCell.appendChild(button);
+        tr.appendChild(actionCell);
+
         this.el.adminUserRows.appendChild(tr);
       });
 
@@ -2143,7 +2210,9 @@ export class App {
 
   async saveAdminRole(email) {
     if (!email || !this.el.adminUserRows) return;
-    const select = this.el.adminUserRows.querySelector(`select[data-email="${email}"]`);
+    const select = Array.from(
+      this.el.adminUserRows.querySelectorAll('select.admin-role-select')
+    ).find((node) => node.dataset.email === email);
     if (!select) return;
     try {
       await this.request(`/admin/users/${encodeURIComponent(email)}/role`, {
@@ -2968,6 +3037,15 @@ export class App {
         signal: this.runSession.abortController.signal
       });
 
+      if (typeof window.vrptwTrack === 'function') {
+        window.vrptwTrack('job_submit', {
+          mode: this.state.mode,
+          customers: this.state.customers.length,
+          vehicles: this.state.vehicles,
+          capacity: this.state.capacity,
+        });
+      }
+
       await firebaseService.saveJobStart(submit.job_id, {
         mode: this.state.mode,
         fleet: payload.fleet,
@@ -3018,12 +3096,20 @@ export class App {
       const phase = data?.debug?.phase || data.status;
       if (phase === 'queued') {
         this.setLoadingProgress(this.loadingAnim.progress, null, 'Job queued, waiting for worker...', 0.18, 'idle');
+        this.setLoadingSubtitle('Backend has accepted the job. Waiting for the worker to pick it up.');
+        this.setLoadingBackend('queued', 'warn');
       } else if (phase === 'processing') {
         this.setLoadingProgress(this.loadingAnim.progress, null, 'Worker picked up the job...', 0.22, 'idle');
+        this.setLoadingSubtitle('Worker thread reserved. Preparing solver inputs...');
+        this.setLoadingBackend('processing', 'ok');
       } else if (phase === 'matrix') {
         this.setLoadingProgress(this.loadingAnim.progress, null, 'Building distance matrix...', 0.3, 'idle');
+        this.setLoadingSubtitle('Computing pairwise distances and travel times for the customers.');
+        this.setLoadingBackend('building matrix', 'ok');
       } else if (phase === 'solving') {
         this.setLoadingProgress(this.loadingAnim.progress, null, 'Backend is solving routes...', 0.4, 'alns');
+        this.setLoadingSubtitle('Running DDQN-ALNS hybrid + ALNS baseline in parallel threads.');
+        this.setLoadingBackend('solving', 'ok');
       }
       if (data.status === 'done') {
         if (this.runSession.cancelled || sessionToken !== this.runSession.token) return;
@@ -3447,8 +3533,8 @@ export class App {
     const node = document.createElement('div');
     node.className = `toast ${tone}`.trim();
     node.innerHTML = `
-      <div class="toast-title">${title}</div>
-      <div class="toast-message">${message}</div>
+      <div class="toast-title">${this.escapeHtml(String(title ?? ''))}</div>
+      <div class="toast-message">${this.escapeHtml(String(message ?? ''))}</div>
     `;
     this.el.toastRoot.appendChild(node);
     window.setTimeout(() => {
@@ -3501,7 +3587,12 @@ export class App {
     this.loadingAnim.stage = 0;
     this.loadingAnim.stageStartedAt = performance.now();
     this.loadingAnim.lastTickAt = this.loadingAnim.stageStartedAt;
+    this.loadingAnim.runStartedAt = Date.now();
     this.setLoadingProgress(0, 'AI is optimizing routes...', 'Queueing job...', 0.22, 'idle');
+    this.setLoadingSubtitle('Sending request to the backend solver...');
+    this.applyDeviceBadge();
+    this.setLoadingBackend('queued', 'warn');
+    this.startElapsedTicker();
     this.el.loading?.classList.remove('loading--minimized');
     this.el.loadingLauncher?.classList.add('hidden');
 
@@ -3549,6 +3640,40 @@ export class App {
     this.loadingAnim.active = false;
     if (this.loadingAnim.rafId) cancelAnimationFrame(this.loadingAnim.rafId);
     this.loadingAnim.rafId = 0;
+    this.stopElapsedTicker();
+  }
+
+  setLoadingSubtitle(text) {
+    if (this.el.loadingSubtitle && typeof text === 'string') {
+      this.el.loadingSubtitle.textContent = text;
+    }
+  }
+
+  setLoadingBackend(label, state = 'ok') {
+    if (!this.el.loadingBackend) return;
+    this.el.loadingBackend.textContent = label;
+    this.el.loadingBackend.dataset.state = state;
+  }
+
+  startElapsedTicker() {
+    this.stopElapsedTicker();
+    if (!this.el.loadingElapsed) return;
+    const start = this.loadingAnim.runStartedAt || Date.now();
+    const render = () => {
+      const sec = Math.max(0, (Date.now() - start) / 1000);
+      this.el.loadingElapsed.textContent = sec < 60
+        ? `${sec.toFixed(1)}s`
+        : `${Math.floor(sec / 60)}m ${Math.floor(sec % 60)}s`;
+    };
+    render();
+    this.loadingAnim.elapsedTimer = window.setInterval(render, 200);
+  }
+
+  stopElapsedTicker() {
+    if (this.loadingAnim.elapsedTimer) {
+      window.clearInterval(this.loadingAnim.elapsedTimer);
+      this.loadingAnim.elapsedTimer = 0;
+    }
   }
 
   minimizeLoading() {

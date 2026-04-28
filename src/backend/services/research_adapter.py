@@ -18,9 +18,8 @@ _ROOT = Path(__file__).resolve().parents[3]
 for candidate in (_ROOT, _ROOT / "docs"):
     if candidate.exists():
         sys.path.insert(0, str(candidate))
+from models.schemas import Point  # noqa: E402
 from vrptw_clean import Inst, Plan  # noqa: E402
-
-from models.schemas import Point
 
 DEG_TO_KM = 111.0
 
@@ -69,7 +68,7 @@ def plan_to_payload(
         path = [[points[i].lat, points[i].lng] for i in chain_idx]
         stops = [int(points[i].id) if points[i].id is not None else int(i) for i in route]
         dist_km = 0.0
-        for a, b in zip(chain_idx[:-1], chain_idx[1:]):
+        for a, b in zip(chain_idx[:-1], chain_idx[1:], strict=True):
             dist_km += _haversine(points[a].lat, points[a].lng, points[b].lat, points[b].lng)
         load = sum(int(points[i].demand) for i in route)
         total_km += dist_km

@@ -6,7 +6,6 @@ from typing import Any
 from uuid import uuid4
 
 from fastapi import HTTPException
-
 from models.schemas import JobRequest, JobState
 from runtime_repositories.job_repo import job_repo
 from services.matrix_service import calculate_matrix

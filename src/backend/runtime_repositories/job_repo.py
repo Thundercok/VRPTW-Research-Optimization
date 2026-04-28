@@ -4,8 +4,7 @@ import asyncio
 import time
 
 from core.firebase import get_db, is_firebase_enabled
-from models.schemas import JobRequest
-from models.schemas import JobState
+from models.schemas import JobRequest, JobState
 
 
 class JobRepository:

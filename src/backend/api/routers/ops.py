@@ -1,19 +1,21 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-
 from api.dependencies import require_user
+from core.config import demo_auth_bypass_enabled
 from core.firebase import is_firebase_enabled
+from core.rate_limit import GEOCODE_LIMIT, JOBS_LIMIT, limiter
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from models.schemas import JobRequest, MatrixRequest
 from services.geocode_service import geocode_address, reverse_geocode_address
 from services.job_service import job_service
 from services.matrix_service import calculate_matrix
 from services.solomon_service import load_solomon_dataset
+from services.solver_service import device_summary, transfer_weights_summary
 
 router = APIRouter(tags=["ops"])
 
@@ -45,26 +47,37 @@ def _version_key(version: str) -> tuple[int, ...]:
 
 @router.get("/health")
 async def health() -> dict[str, object]:
+    fb = is_firebase_enabled()
+    bypass = demo_auth_bypass_enabled()
     return {
         "status": "ok",
-        "firebase_enabled": is_firebase_enabled(),
-        "demo_mode": not is_firebase_enabled(),
+        "firebase_enabled": fb,
+        "demo_auth_bypass": bypass,
+        "demo_mode": (not fb) and bypass,
+        "torch": device_summary(),
+        "model": transfer_weights_summary(),
     }
 
 
 @router.get("/geocode")
-async def geocode(q: str = Query(min_length=2), limit: int = Query(default=5, ge=1, le=10)) -> dict[str, Any]:
+@limiter.limit(GEOCODE_LIMIT)
+async def geocode(
+    request: Request,
+    q: str = Query(min_length=2),
+    limit: int = Query(default=5, ge=1, le=10),
+) -> dict[str, Any]:
     return await geocode_address(q, limit)
 
 
 @router.get("/reverse-geocode")
-async def reverse_geocode(lat: float = Query(), lng: float = Query()) -> dict[str, Any]:
+@limiter.limit(GEOCODE_LIMIT)
+async def reverse_geocode(request: Request, lat: float = Query(), lng: float = Query()) -> dict[str, Any]:
     return await reverse_geocode_address(lat, lng)
 
 
 @router.get("/solomon")
 async def solomon_dataset(
-    name: str = Query(default="rc101", min_length=2, max_length=10),
+    name: str = Query(default="demo", min_length=2, max_length=10),
     _: dict[str, str] = Depends(require_user),
 ) -> dict[str, Any]:
     try:
@@ -74,8 +87,9 @@ async def solomon_dataset(
             status_code=404,
             detail=(
                 f"{exc} Solomon benchmark files are not bundled with this repo. "
-                "Run `python scripts/fetch_solomon.py` to download them, or use the "
-                "Real Data import option to upload your own customers."
+                "Run `python scripts/fetch_solomon.py` to download them, use 'demo' "
+                "for the built-in mini sample, or upload your own customers via "
+                "Real Data import."
             ),
         ) from exc
     except ValueError as exc:
@@ -100,7 +114,7 @@ async def analysis_versions(_: dict[str, str] = Depends(require_user)) -> dict[s
                 version = meta_version
         except Exception:
             pass
-        modified = datetime.fromtimestamp(flat_nexus.stat().st_mtime, tz=timezone.utc).isoformat()
+        modified = datetime.fromtimestamp(flat_nexus.stat().st_mtime, tz=UTC).isoformat()
         items.append(
             {
                 "version": version.lower(),
@@ -121,7 +135,7 @@ async def analysis_versions(_: dict[str, str] = Depends(require_user)) -> dict[s
         if not nexus_path.exists():
             continue
 
-        modified = datetime.fromtimestamp(nexus_path.stat().st_mtime, tz=timezone.utc).isoformat()
+        modified = datetime.fromtimestamp(nexus_path.stat().st_mtime, tz=UTC).isoformat()
         items.append(
             {
                 "version": version,
@@ -172,7 +186,12 @@ async def matrix(body: MatrixRequest, _: dict[str, str] = Depends(require_user))
 
 
 @router.post("/jobs")
-async def submit_job(body: JobRequest, _: dict[str, str] = Depends(require_user)) -> dict[str, str]:
+@limiter.limit(JOBS_LIMIT)
+async def submit_job(
+    request: Request,
+    body: JobRequest,
+    _: dict[str, str] = Depends(require_user),
+) -> dict[str, str]:
     return await job_service.submit(body)
 
 

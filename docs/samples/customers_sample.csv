@@ -1,0 +1,14 @@
+name,address,lat,lng,demand,ready,due,service
+Saigon Central Depot,1 Cong Truong Lam Son HCMC,10.7769,106.7009,0,0,240,0
+Ben Thanh Market,Le Loi Ben Thanh HCMC,10.7723,106.6985,8,0,90,10
+Notre-Dame Cathedral,Han Thuyen HCMC,10.7798,106.6991,6,30,120,10
+Tan Dinh Market,Hai Ba Trung HCMC,10.7886,106.6904,9,20,110,10
+Independence Palace,Nam Ky Khoi Nghia HCMC,10.7765,106.6951,7,40,140,10
+Pham Ngu Lao Hostel,De Tham HCMC,10.7670,106.6932,5,0,80,10
+Cho Lon Wholesale,Hai Thuong Lan Ong HCMC,10.7530,106.6510,12,60,180,15
+Phu My Hung Office,Nguyen Van Linh HCMC,10.7281,106.7191,10,70,200,12
+An Phu Logistics Park,Mai Chi Tho HCMC,10.7995,106.7375,11,50,170,12
+Thao Dien Studios,Xa Lo Ha Noi HCMC,10.8014,106.7308,7,30,150,10
+Phu Nhuan Pharmacy,Phan Dinh Phung HCMC,10.7969,106.6800,6,20,130,10
+Tan Binh Cargo,Cong Hoa HCMC,10.7976,106.6500,9,40,160,12
+Go Vap Warehouse,Quang Trung HCMC,10.8400,106.6650,8,60,220,12

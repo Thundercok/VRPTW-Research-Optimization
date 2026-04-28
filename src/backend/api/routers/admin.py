@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Path as ApiPath
-
 from api.dependencies import require_user
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi import Path as ApiPath
 from models.schemas import RoleUpdateRequest
 from services import auth_service
 

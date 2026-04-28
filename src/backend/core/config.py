@@ -53,3 +53,30 @@ def firebase_service_account_json() -> str | None:
 def firebase_project_id() -> str | None:
     value = os.getenv("FIREBASE_PROJECT_ID", "").strip()
     return value or None
+
+
+def env_flag(name: str, default: bool = False) -> bool:
+    """Parse a boolean environment variable. Truthy: 1/true/yes/on (case-insensitive)."""
+    raw = os.getenv(name, "").strip().lower()
+    if not raw:
+        return default
+    return raw in {"1", "true", "yes", "on"}
+
+
+def demo_auth_bypass_enabled() -> bool:
+    """Return True when unauthenticated requests should be served as anonymous demo users.
+
+    Default is True so that local "newbie clone" runs work without Firebase. Set
+    ``DEMO_AUTH_BYPASS=false`` in production to enforce real auth.
+    """
+    return env_flag("DEMO_AUTH_BYPASS", default=True)
+
+
+def cors_allow_origins() -> list[str]:
+    """Comma-separated list of allowed origins. Defaults to ``*`` for local dev."""
+    raw = os.getenv("CORS_ALLOW_ORIGINS", "*").strip()
+    if not raw:
+        return ["*"]
+    if raw == "*":
+        return ["*"]
+    return [item.strip() for item in raw.split(",") if item.strip()]

@@ -14,10 +14,13 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-  <link rel="stylesheet" href="css/style.css?v=20260426" />
+  <link rel="stylesheet" href="css/style.css?v=20260428b" />
 </head>
 <body>
   <a class="back-to-landing" href="index.html" title="Back to landing page">&larr; Home</a>
+  <button id="help-button" class="help-fab" type="button" aria-label="Open quick help" title="Quick help (Shift+?)">
+    <span aria-hidden="true">?</span>
+  </button>
   <section id="auth-screen" class="auth-screen">
     <div class="auth-card">
       <p class="tag">PROJECT NEXUS</p>
@@ -477,6 +480,7 @@
       <div class="loading-head">
         <div class="loader-ring"></div>
         <p id="loading-title">AI is optimizing routes...</p>
+        <p id="loading-subtitle" class="loading-subtitle">Sending request to the backend solver...</p>
       </div>
 
       <div class="dispatch-progress" aria-hidden="true">
@@ -497,6 +501,21 @@
         </div>
       </div>
 
+      <div class="loading-stats">
+        <div class="loading-stat">
+          <span class="loading-stat-label">Elapsed</span>
+          <strong id="loading-elapsed" class="loading-stat-value">0.0s</strong>
+        </div>
+        <div class="loading-stat">
+          <span class="loading-stat-label">Backend</span>
+          <strong id="loading-backend" class="loading-stat-value">connecting...</strong>
+        </div>
+        <div class="loading-stat">
+          <span class="loading-stat-label">Compute</span>
+          <strong id="loading-device" class="loading-stat-value">CPU</strong>
+        </div>
+      </div>
+
       <div class="loading-lines" aria-hidden="true">
         <div class="line"></div>
         <div class="line"></div>
@@ -511,6 +530,67 @@
   </div>
 
   <div id="toast-root" class="toast-root" aria-live="polite" aria-atomic="true"></div>
+
+  <div id="help-modal" class="help-modal hidden" role="dialog" aria-modal="true" aria-labelledby="help-modal-title">
+    <div class="help-modal-card" role="document">
+      <header class="help-modal-head">
+        <div>
+          <p class="section-kicker">Quick start</p>
+          <h2 id="help-modal-title">How to drive the VRPTW demo</h2>
+          <p class="help-modal-sub">Five steps from sample data to a side-by-side DDQN vs. ALNS comparison.</p>
+        </div>
+        <button id="help-modal-close" class="btn ghost" type="button" aria-label="Close help">Close</button>
+      </header>
+
+      <ol class="help-steps">
+        <li>
+          <span class="help-step-num">1</span>
+          <div>
+            <h3>Pick a data mode</h3>
+            <p>Toggle <strong>Solomon RC</strong> (built-in <code>demo</code> instance, 12 customers around HCMC) or <strong>Real Data</strong> to upload your own.</p>
+          </div>
+        </li>
+        <li>
+          <span class="help-step-num">2</span>
+          <div>
+            <h3>Edit the table inline</h3>
+            <p>Double-click any cell to update <code>name</code>, <code>lat/lng</code>, <code>demand</code>, or the time window (<strong>ready / due / service</strong>). Add rows with <kbd>+</kbd> or import from <code>.csv</code>/<code>.xlsx</code>.</p>
+          </div>
+        </li>
+        <li>
+          <span class="help-step-num">3</span>
+          <div>
+            <h3>Tune the fleet</h3>
+            <p>Use the sliders for <strong>vehicles</strong> and <strong>capacity</strong>. The first row (<code>id 0</code>) is the depot and is non-editable.</p>
+          </div>
+        </li>
+        <li>
+          <span class="help-step-num">4</span>
+          <div>
+            <h3>Run Model</h3>
+            <p>Click <strong>Run Model</strong>. The backend solves twice: <em>DDQN-ALNS</em> and the <em>ALNS</em> baseline. Progress streams to the loading panel - you can minimize it.</p>
+          </div>
+        </li>
+        <li>
+          <span class="help-step-num">5</span>
+          <div>
+            <h3>Read the comparison</h3>
+            <p>Switch to the <strong>Maps</strong> tab for routes side-by-side, or the <strong>Results</strong> tab for runtime, total distance, vehicles used, and fleet utilisation deltas.</p>
+          </div>
+        </li>
+      </ol>
+
+      <div class="help-tips">
+        <h3>Tips</h3>
+        <ul>
+          <li><strong>Click the map</strong> to drop a customer pin (Real Data mode only).</li>
+          <li><strong>Paste a TSV/CSV</strong> anywhere on the page to import in Real Data mode.</li>
+          <li><strong>Demo / Guest mode</strong>: when Firebase is not configured, your data lives in memory only.</li>
+          <li><strong>Shortcut</strong>: press <kbd>Shift</kbd> + <kbd>?</kbd> to reopen this guide.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
 
   <div id="analysis-modal" class="analysis-modal hidden" role="dialog" aria-modal="true" aria-labelledby="analysis-modal-title">
     <div class="analysis-modal-card">
@@ -561,6 +641,7 @@
     </div>
   </div>
 
-  <script type="module" src="js/main.js?v=20260426"></script>
+  <script src="js/observability.js?v=20260428b"></script>
+  <script type="module" src="js/main.js?v=20260428b"></script>
 </body>
 </html>

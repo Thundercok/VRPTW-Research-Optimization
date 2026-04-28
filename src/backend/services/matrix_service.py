@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Any
 
 import httpx
-
 from models.schemas import MatrixPoint
 from services.distance_service import distance_km
 

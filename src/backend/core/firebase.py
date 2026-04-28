@@ -5,10 +5,9 @@ import logging
 from pathlib import Path
 
 import firebase_admin
+from core.config import firebase_project_id, firebase_service_account_json, firebase_service_account_path
 from fastapi import HTTPException
 from firebase_admin import credentials, firestore
-
-from core.config import firebase_project_id, firebase_service_account_json, firebase_service_account_path
 
 logger = logging.getLogger(__name__)
 
