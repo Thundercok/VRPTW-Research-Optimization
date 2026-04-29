@@ -249,6 +249,31 @@ body {
   z-index: 1000;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
+.lang-fab {
+  position: fixed;
+  bottom: 86px;
+  right: 22px;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(135deg, #173a62, #0f2740);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 14px 32px rgba(15, 39, 64, 0.35);
+  z-index: 1000;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.lang-fab:hover {
+  transform: translateY(-2px) scale(1.04);
+  box-shadow: 0 18px 38px rgba(15, 39, 64, 0.45);
+}
+.lang-fab:focus-visible {
+  outline: 3px solid #ffd166;
+  outline-offset: 3px;
+}
 .help-fab:hover {
   transform: translateY(-2px) scale(1.04);
   box-shadow: 0 18px 38px rgba(31, 95, 166, 0.55);
@@ -576,16 +601,20 @@ p {
 
 .tabbar-indicator {
   position: absolute;
-  left: 16px;
-  top: 16px;
-  height: 44px;
-  width: calc(100% - 32px);
+  left: 0;
+  top: 0;
+  height: 0;
+  width: 0;
   border-radius: 12px;
   background: #eaf4fd;
   border: 1px solid #bcdcf5;
   transition: transform 220ms ease;
   z-index: 1;
   pointer-events: none;
+}
+
+.feedback-inbox-table {
+  margin-top: 18px;
 }
 
 .icon-wrap,
@@ -636,6 +665,36 @@ p {
 .field {
   display: grid;
   gap: 8px;
+}
+
+.dataset-picker-field {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px;
+  background: var(--panel-soft);
+}
+
+.dataset-picker-field > span {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.dataset-picker-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.dataset-select {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  padding: 8px 10px;
+}
+
+.dataset-picker-field.hidden {
+  display: none;
 }
 
 .switch-row {
@@ -1334,6 +1393,10 @@ td.is-editing {
   gap: 12px;
 }
 
+.analysis-wide-block {
+  margin-top: 12px;
+}
+
 .analysis-block {
   border: 1px solid #dbe7f2;
   border-radius: 12px;
@@ -1422,6 +1485,126 @@ td.is-editing {
   border-bottom: 1px solid #e3ebf3;
   padding: 8px;
   font-size: 12px;
+}
+
+.feedback-card {
+  width: min(980px, 100%);
+}
+
+.feedback-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 28px;
+  align-items: start;
+}
+
+.feedback-copy {
+  display: grid;
+  gap: 14px;
+}
+
+.feedback-copy h1 {
+  font-size: clamp(34px, 4vw, 48px);
+  line-height: 1.02;
+  letter-spacing: -0.04em;
+  margin: 0;
+}
+
+.feedback-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  border-radius: 999px;
+  padding: 6px 12px;
+  border: 1px solid #cfe0f1;
+  background: #edf6ff;
+  color: #1f5fa6;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.feedback-lead {
+  color: var(--ink-soft);
+  font-size: 15px;
+  line-height: 1.7;
+  margin: 0;
+}
+
+.feedback-points {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 8px;
+  color: var(--ink-soft);
+}
+
+.feedback-form {
+  display: grid;
+  gap: 14px;
+}
+
+.feedback-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.feedback-field {
+  display: grid;
+  gap: 7px;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.feedback-field input,
+.feedback-field textarea,
+.feedback-field select {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid #d5e1ec;
+  background: #fbfdff;
+  color: var(--ink);
+  padding: 12px 14px;
+  font: inherit;
+  font-weight: 500;
+  outline: none;
+}
+
+.feedback-field textarea {
+  resize: vertical;
+  min-height: 180px;
+}
+
+.feedback-field input:focus,
+.feedback-field textarea:focus,
+.feedback-field select:focus {
+  border-color: #7cb9e6;
+  box-shadow: 0 0 0 3px rgba(45, 143, 216, 0.12);
+}
+
+.feedback-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.feedback-status {
+  min-height: 22px;
+}
+
+@media (max-width: 880px) {
+  .feedback-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .feedback-row {
+    grid-template-columns: 1fr;
+  }
 }
 
 .analysis-pill {

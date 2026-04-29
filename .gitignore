@@ -52,6 +52,8 @@ env/
 # ---------------------------------------------------------------
 # Project artifacts
 # ---------------------------------------------------------------
+# Temporary build artifacts
+tmp/
 # Solomon benchmark data (fetch via scripts/fetch_solomon.py)
 data/
 # Local run outputs from vrptw_clean.py

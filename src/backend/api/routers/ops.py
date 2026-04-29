@@ -14,7 +14,7 @@ from models.schemas import JobRequest, MatrixRequest
 from services.geocode_service import geocode_address, reverse_geocode_address
 from services.job_service import job_service
 from services.matrix_service import calculate_matrix
-from services.solomon_service import load_solomon_dataset
+from services.solomon_service import list_solomon_datasets, load_solomon_dataset
 from services.solver_service import device_summary, transfer_weights_summary
 
 router = APIRouter(tags=["ops"])
@@ -73,6 +73,13 @@ async def geocode(
 @limiter.limit(GEOCODE_LIMIT)
 async def reverse_geocode(request: Request, lat: float = Query(), lng: float = Query()) -> dict[str, Any]:
     return await reverse_geocode_address(lat, lng)
+
+
+@router.get("/solomon/list")
+async def solomon_list(
+    _: dict[str, str] = Depends(require_user),
+) -> dict[str, Any]:
+    return {"datasets": list_solomon_datasets()}
 
 
 @router.get("/solomon")
@@ -178,6 +185,14 @@ async def analysis_nexus(
         "file": file_path.name,
     }
     return payload
+
+
+@router.get("/analysis/activity")
+async def analysis_activity(
+    hours: int = Query(default=24, ge=1, le=168),
+    _: dict[str, str] = Depends(require_user),
+) -> dict[str, Any]:
+    return job_service.get_activity(hours)
 
 
 @router.post("/matrix")

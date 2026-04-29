@@ -6,13 +6,28 @@ from pathlib import Path
 from typing import Any
 
 
-def _data_dir() -> Path:
+def _data_dirs() -> list[Path]:
+    """Return candidate directories to search for Solomon .txt files, in priority order."""
+    dirs: list[Path] = []
     env = os.environ.get("VRPTW_DATA_DIR")
     if env:
         p = Path(env)
         if p.exists():
-            return p
-    return Path(__file__).resolve().parents[3] / "data" / "solomon"
+            dirs.append(p)
+    project_root = Path(__file__).resolve().parents[3]
+    dirs.append(project_root / "data" / "solomon")
+    dirs.append(project_root / "data")
+    return dirs
+
+
+def _find_solomon_file(name: str) -> Path | None:
+    """Find a Solomon .txt file by name across all candidate directories."""
+    filename = f"{name}.txt"
+    for d in _data_dirs():
+        candidate = d / filename
+        if candidate.exists():
+            return candidate
+    return None
 
 
 def _to_lat_lng(x: float, y: float) -> tuple[float, float]:
@@ -90,8 +105,8 @@ def load_solomon_dataset(name: str = "demo") -> dict[str, Any]:
     if not re.fullmatch(r"[a-z]+\d{3}", raw_name):
         raise ValueError("Dataset name must look like c101, r101, rc101, or 'demo'")
 
-    file_path = _data_dir() / f"{raw_name}.txt"
-    if not file_path.exists():
+    file_path = _find_solomon_file(raw_name)
+    if file_path is None:
         raise FileNotFoundError(f"Solomon file not found: {raw_name}.txt")
 
     lines = file_path.read_text(encoding="utf-8").splitlines()
@@ -152,3 +167,31 @@ def load_solomon_dataset(name: str = "demo") -> dict[str, Any]:
         "fleet": {"vehicles": vehicles, "capacity": capacity},
         "customers": customers,
     }
+
+
+def list_solomon_datasets() -> list[dict[str, Any]]:
+    """Discover all available Solomon .txt files across candidate directories."""
+    seen: set[str] = set()
+    items: list[dict[str, Any]] = []
+
+    # Always include the built-in demo
+    items.append({"name": "demo", "label": "Demo (12 customers, HCMC)", "builtin": True})
+    seen.add("demo")
+
+    pattern = re.compile(r"^([a-z]+\d{3})\.txt$")
+    for d in _data_dirs():
+        if not d.exists():
+            continue
+        for f in sorted(d.iterdir()):
+            if not f.is_file():
+                continue
+            m = pattern.match(f.name.lower())
+            if not m:
+                continue
+            name = m.group(1)
+            if name in seen:
+                continue
+            seen.add(name)
+            items.append({"name": name, "label": name.upper(), "builtin": False})
+
+    return items

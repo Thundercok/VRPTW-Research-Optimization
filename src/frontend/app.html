@@ -14,10 +14,11 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-  <link rel="stylesheet" href="css/style.css?v=20260428b" />
+  <link rel="stylesheet" href="css/style.css?v=20260429a" />
 </head>
 <body>
   <a class="back-to-landing" href="index.html" title="Back to landing page">&larr; Home</a>
+  <button id="lang-toggle" class="lang-fab" type="button" aria-label="Switch language" title="Switch language">VN</button>
   <button id="help-button" class="help-fab" type="button" aria-label="Open quick help" title="Quick help (Shift+?)">
     <span aria-hidden="true">?</span>
   </button>
@@ -25,7 +26,7 @@
     <div class="auth-card">
       <p class="tag">PROJECT NEXUS</p>
       <div class="auth-headline">
-        <h1>VRPTW Dispatch Portal</h1>
+        <h1 id="auth-title">VRPTW Dispatch Portal</h1>
         <div class="auth-icons" aria-hidden="true">
           <span class="auth-icon">🚚</span>
           <span class="auth-icon">📍</span>
@@ -117,24 +118,34 @@
       <div class="sidebar-head">
         <p class="tag">PROJECT NEXUS</p>
         <h1>VRPTW</h1>
-        <p class="sidebar-subtitle">Ops Control</p>
+        <p id="sidebar-subtitle" class="sidebar-subtitle">Ops Control</p>
       </div>
 
       <div class="left-panel">
         <div class="panel-head">
-          <h2>Configuration</h2>
+          <h2 id="config-title">Configuration</h2>
           <span id="connection-pill" class="pill soft">Offline</span>
         </div>
-        <p class="panel-note">Fleet, data, import.</p>
+        <p id="config-note" class="panel-note">Fleet, data, import.</p>
 
         <label class="switch-row" for="mode-toggle">
-          <span>Data Mode</span>
+          <span id="mode-toggle-label">Data Mode</span>
           <div class="toggle-wrap">
             <span>Solomon RC</span>
             <input id="mode-toggle" type="checkbox" />
             <span>Real Data</span>
           </div>
         </label>
+
+        <div id="dataset-picker" class="field dataset-picker-field">
+          <span id="dataset-picker-label">Solomon Instance</span>
+          <div class="dataset-picker-row">
+            <select id="dataset-select" class="dataset-select">
+              <option value="demo" selected>Demo (12 customers, HCMC)</option>
+            </select>
+            <button id="load-dataset" class="btn ghost" type="button">Load</button>
+          </div>
+        </div>
 
         <label class="field">
           <span>Vehicles: <strong id="vehicles-value">4</strong></span>
@@ -143,16 +154,16 @@
 
         <label class="field">
           <span>Capacity: <strong id="capacity-value">120</strong></span>
-          <input id="capacity-slider" type="range" min="10" max="500" step="10" value="120" />
+          <input id="capacity-slider" type="range" min="10" max="1000" step="10" value="120" />
         </label>
 
         <div class="field">
-          <span>Import from Excel / CSV</span>
+          <span id="import-label">Import from Excel / CSV</span>
           <div id="dropzone" class="dropzone">
             <input id="excel-input" type="file" accept=".xlsx,.xls,.csv" hidden />
             <div class="dropzone-copy">
-              <strong>Drag and drop a file here</strong>
-              <p>.xlsx, .xls, .csv or paste data directly.</p>
+              <strong id="dropzone-title">Drag and drop a file here</strong>
+              <p id="dropzone-copy">.xlsx, .xls, .csv or paste data directly.</p>
             </div>
             <button id="pick-excel" class="btn ghost" type="button">Choose File</button>
           </div>
@@ -164,20 +175,28 @@
 
       <div class="sidebar-foot">
         <div class="session-box">
-          <p class="section-kicker">Session</p>
+          <p id="session-kicker" class="section-kicker">Session</p>
           <p id="user-email" class="session-email">-</p>
           <button id="btn-logout" class="btn ghost" type="button">Logout</button>
+          <a id="feedback-link" class="btn ghost" href="feedback.html">Feedback</a>
+          <a id="feedback-admin-link" class="btn ghost hidden" href="feedback_admin.html">Feedback Inbox</a>
         </div>
       </div>
     </aside>
 
     <main class="workspace">
+      <nav class="tabbar" role="tablist" aria-label="Dashboard tabs">
+        <button class="tab-btn active" data-tab="overview" role="tab" aria-selected="true">Overview</button>
+        <button class="tab-btn" data-tab="maps" role="tab" aria-selected="false">Split Map</button>
+        <button class="tab-btn" data-tab="results" role="tab" aria-selected="false">Results</button>
+        <span class="tabbar-indicator" aria-hidden="true"></span>
+      </nav>
       <section class="main-panel">
         <header class="hero tab-panel active" data-panel="overview">
           <div class="hero-copy">
-            <p class="tag">Executive Control Panel</p>
-            <h2>Real-time AI-powered delivery dispatch.</h2>
-            <p>Focus on core data and operational decisions.</p>
+            <p id="hero-kicker" class="tag">Executive Control Panel</p>
+            <h2 id="hero-title">Real-time AI-powered delivery dispatch.</h2>
+            <p id="hero-copy">Focus on core data and operational decisions.</p>
           </div>
 
           <div class="hero-stats">
@@ -203,9 +222,9 @@
         <section class="table-card tab-panel active" data-panel="overview">
           <div class="row-head">
             <div>
-              <p class="section-kicker">VRPTW Inference Demo</p>
-              <h2>Customer List</h2>
-              <p class="panel-note">Each row has a time window (<strong>Ready / Due</strong>) and <strong>Service</strong> duration. Units are consistent with distance (~1 km ≈ 1 time unit).</p>
+              <p id="demo-kicker" class="section-kicker">VRPTW Inference Demo</p>
+              <h2 id="customer-title">Customer List</h2>
+              <p id="customer-note" class="panel-note">Each row has a time window (<strong>Ready / Due</strong>) and <strong>Service</strong> duration. Units are consistent with distance (~1 km ≈ 1 time unit).</p>
             </div>
             <div class="table-actions">
               <button id="add-row" class="btn ghost icon-btn icon-only-btn" type="button" title="Add row" aria-label="Add row">
@@ -367,6 +386,29 @@
           </article>
         </section>
 
+        <section class="gantt-card tab-panel" data-panel="results">
+          <div class="row-head">
+            <div>
+              <p class="section-kicker">Trip Timeline</p>
+              <h2 id="gantt-title">Route Schedule (Gantt)</h2>
+              <p id="gantt-note" class="panel-note">Each bar shows a vehicle's journey: departure → stops → return. Hover for details.</p>
+            </div>
+            <div class="gantt-actions">
+              <select id="gantt-algo-select" class="dataset-select">
+                <option value="ddqn" selected>DDQN</option>
+                <option value="alns">ALNS</option>
+              </select>
+            </div>
+          </div>
+          <div id="gantt-chart" class="gantt-chart">
+            <div id="gantt-empty" class="empty-state">
+              <div class="empty-icon">📊</div>
+              <h3>No schedule data yet</h3>
+              <p>Run the model to see the trip Gantt chart here.</p>
+            </div>
+          </div>
+        </section>
+
         <section class="analysis-card tab-panel" data-panel="maps">
           <div class="analysis-scope-banner archive-banner">
             <span class="analysis-scope-tag">Training Analysis Archive</span>
@@ -408,6 +450,11 @@
             </article>
           </div>
 
+          <article class="analysis-block analysis-wide-block">
+            <h3>Hourly Activity</h3>
+            <div id="analysis-activity-chart" class="analysis-chart">No activity data yet.</div>
+          </article>
+
           <div class="analysis-grid">
             <article class="analysis-block">
               <h3>Instance Leaderboard</h3>
@@ -448,8 +495,8 @@
       <section id="admin-panel" class="table-card hidden">
         <div class="row-head">
           <div>
-            <p class="section-kicker">Admin</p>
-            <h2>User Management</h2>
+            <p id="admin-kicker" class="section-kicker">Admin</p>
+            <h2 id="admin-title">User Management</h2>
           </div>
           <button id="admin-refresh" class="btn ghost" type="button">Refresh</button>
         </div>
@@ -464,6 +511,27 @@
               </tr>
             </thead>
             <tbody id="admin-user-rows"></tbody>
+          </table>
+        </div>
+
+        <div class="row-head" style="margin-top: 20px;">
+          <div>
+            <p id="admin-feedback-kicker" class="section-kicker">Feedback Inbox</p>
+            <h2 id="admin-feedback-title">Anonymous Feedback</h2>
+          </div>
+          <button id="admin-feedback-refresh" class="btn ghost" type="button">Refresh</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>When</th>
+                <th>Category</th>
+                <th>Message</th>
+                <th>Rating</th>
+              </tr>
+            </thead>
+            <tbody id="admin-feedback-rows"></tbody>
           </table>
         </div>
       </section>
@@ -641,7 +709,7 @@
     </div>
   </div>
 
-  <script src="js/observability.js?v=20260428b"></script>
-  <script type="module" src="js/main.js?v=20260428b"></script>
+  <script src="js/observability.js?v=20260429a"></script>
+  <script type="module" src="js/main.js?v=20260429a"></script>
 </body>
 </html>

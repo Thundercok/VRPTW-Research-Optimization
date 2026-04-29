@@ -76,6 +76,29 @@ class JobRequest(BaseModel):
     customers: list[Point]
 
 
+class FeedbackSubmitRequest(BaseModel):
+    page: str = "feedback"
+    language: str = Field(default="en", max_length=8)
+    category: str = Field(default="general", max_length=40)
+    message: str = Field(min_length=3, max_length=2000)
+    contact: str = Field(default="", max_length=120)
+    rating: int | None = Field(default=None, ge=1, le=5)
+
+
+class FeedbackEntry(BaseModel):
+    id: str
+    created_at: int
+    page: str
+    language: str
+    category: str
+    message: str
+    contact: str = ""
+    rating: int | None = None
+    source: str = "anonymous"
+    user_agent: str = ""
+    status: str = "new"
+
+
 @dataclass
 class JobState:
     status: str

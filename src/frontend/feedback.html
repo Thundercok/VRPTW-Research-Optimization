@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0f2740" />
+  <title>Anonymous Feedback - VRPTW</title>
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css?v=20260429b" />
+</head>
+<body>
+  <a class="back-to-landing" href="app.html" title="Back to demo">&larr; Demo</a>
+  <button id="lang-toggle" class="lang-fab" type="button" aria-label="Switch language" title="Switch language">VN</button>
+
+  <main class="feedback-screen auth-screen">
+    <section class="auth-card feedback-card">
+      <div class="feedback-grid">
+        <div class="feedback-copy">
+          <p class="tag">PROJECT NEXUS</p>
+          <p class="feedback-badge" id="feedback-badge">Anonymous channel</p>
+          <h1 id="feedback-title">Share anonymous feedback</h1>
+          <p id="feedback-lead" class="feedback-lead">
+            Send a private suggestion, bug report, or product idea. Admins can review entries later and use them to shape the roadmap.
+          </p>
+          <ul class="feedback-points">
+            <li id="feedback-point-1">No login required.</li>
+            <li id="feedback-point-2">Messages are stored anonymously.</li>
+            <li id="feedback-point-3">Admins can review feedback in the demo app.</li>
+          </ul>
+        </div>
+
+        <form id="feedback-form" class="feedback-form">
+          <label class="feedback-field" for="feedback-category">
+            <span id="feedback-category-label">Category</span>
+            <select id="feedback-category">
+              <option value="general">General</option>
+              <option value="bug">Bug</option>
+              <option value="idea">Idea</option>
+              <option value="data">Data / Demo</option>
+              <option value="performance">Performance</option>
+            </select>
+          </label>
+
+          <label class="feedback-field" for="feedback-message">
+            <span id="feedback-message-label">Message</span>
+            <textarea id="feedback-message" rows="7" placeholder="Tell us what to improve..." required></textarea>
+          </label>
+
+          <div class="feedback-row">
+            <label class="feedback-field" for="feedback-rating">
+              <span id="feedback-rating-label">Rating</span>
+              <select id="feedback-rating">
+                <option value="">Optional</option>
+                <option value="5">5 - Excellent</option>
+                <option value="4">4 - Good</option>
+                <option value="3">3 - Okay</option>
+                <option value="2">2 - Needs work</option>
+                <option value="1">1 - Poor</option>
+              </select>
+            </label>
+
+            <label class="feedback-field" for="feedback-contact">
+              <span id="feedback-contact-label">Contact (optional)</span>
+              <input id="feedback-contact" type="text" maxlength="120" placeholder="Leave an email or name if you want follow-up" />
+            </label>
+          </div>
+
+          <div class="feedback-actions">
+            <button id="feedback-submit" class="btn primary" type="submit">Send Feedback</button>
+            <a class="btn ghost" href="index.html" id="feedback-home-link">Home</a>
+          </div>
+
+          <p id="feedback-status" class="status">Ready to receive your feedback.</p>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="js/feedback.js?v=20260429b"></script>
+</body>
+</html>

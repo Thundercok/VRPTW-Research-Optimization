@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0f2740" />
+  <title>Feedback Inbox - VRPTW</title>
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css?v=20260429b" />
+</head>
+<body>
+  <a class="back-to-landing" href="app.html" title="Back to demo">&larr; Demo</a>
+  <button id="lang-toggle" class="lang-fab" type="button" aria-label="Switch language" title="Switch language">VN</button>
+
+  <main class="feedback-screen auth-screen">
+    <section class="auth-card feedback-card">
+      <div class="feedback-copy">
+        <p class="tag" id="feedback-admin-tag">ADMIN</p>
+        <p class="feedback-badge" id="feedback-admin-badge">Feedback Inbox</p>
+        <h1 id="feedback-admin-title">Anonymous Feedback</h1>
+        <p id="feedback-admin-lead" class="feedback-lead">
+          Review anonymous feedback submitted from the demo form and refresh as needed.
+        </p>
+      </div>
+
+      <div class="feedback-actions">
+        <button id="feedback-admin-refresh" class="btn ghost" type="button">Refresh</button>
+        <span id="feedback-admin-count" class="status">0 entries</span>
+      </div>
+
+      <div class="table-wrap feedback-inbox-table">
+        <table>
+          <thead>
+            <tr>
+              <th id="feedback-col-when">When</th>
+              <th id="feedback-col-category">Category</th>
+              <th id="feedback-col-message">Message</th>
+              <th id="feedback-col-rating">Rating</th>
+              <th id="feedback-col-contact">Contact</th>
+            </tr>
+          </thead>
+          <tbody id="feedback-admin-rows"></tbody>
+        </table>
+      </div>
+
+      <p id="feedback-admin-status" class="status">Ready.</p>
+    </section>
+  </main>
+
+  <script type="module" src="js/feedback_admin.js?v=20260429b"></script>
+</body>
+</html>

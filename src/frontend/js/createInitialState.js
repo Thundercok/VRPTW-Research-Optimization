@@ -1,6 +1,7 @@
 export function createInitialState() {
   const savedEmail = localStorage.getItem('vrptw_email') || '';
   return {
+    lang: localStorage.getItem('vrptw_demo_lang') === 'vn' ? 'vn' : 'en',
     token: localStorage.getItem('vrptw_token') || '',
     email: savedEmail,
     role: localStorage.getItem('vrptw_role') || 'operator',
@@ -19,6 +20,8 @@ export function createInitialState() {
     analysisVersions: [],
     analysisInstance: 'ALL',
     analysisData: null,
+    analysisActivity: null,
+    adminFeedback: [],
     lastResult: null,
     activeTab: 'overview',
     unlocked: Boolean(localStorage.getItem('vrptw_token'))

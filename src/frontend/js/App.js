@@ -1,10 +1,151 @@
 import { firebaseService } from './firebaseService.js';
 import { API_BASE } from './constants.js';
 import { createInitialState } from './createInitialState.js';
+import { getDemoLang, setDemoLang, toggleDemoLang } from './demoLang.js';
+
+const APP_COPY = {
+  en: {
+    langButton: 'VN',
+    backToDemo: 'Demo',
+    authTitle: 'VRPTW Dispatch Portal',
+    loginButton: 'Login',
+    forgotPassword: 'Forgot Password?',
+    openRegister: 'Create Account',
+    guestLogin: 'Continue as Guest',
+    guestHint: 'Demo mode active - skip auth and try the VRPTW solver right away.',
+    requestOtp: 'Send OTP',
+    registerButton: 'Register',
+    backToLogin: 'Come Back',
+    forgotButton: 'Send Reset Link',
+    resetButton: 'Update Password',
+    logoutButton: 'Logout',
+    feedbackLink: 'Feedback',
+    sidebarSubtitle: 'Ops Control',
+    configTitle: 'Configuration',
+    configNote: 'Fleet, data, import.',
+    modeLabel: 'Data Mode',
+    datasetLabel: 'Solomon Instance',
+    importLabel: 'Import from Excel / CSV',
+    dropzoneTitle: 'Drag and drop a file here',
+    dropzoneCopy: '.xlsx, .xls, .csv or paste data directly.',
+    sessionLabel: 'Session',
+    heroKicker: 'Executive Control Panel',
+    heroTitle: 'Real-time AI-powered delivery dispatch.',
+    heroCopy: 'Focus on core data and operational decisions.',
+    demoKicker: 'VRPTW Inference Demo',
+    customerTitle: 'Customer List',
+    customerNote: 'Each row has a time window (Ready / Due) and Service duration. Units are consistent with distance (~1 km ≈ 1 time unit).',
+    tabs: ['Overview', 'Split Map', 'Results'],
+    helpTitle: 'How to drive the VRPTW demo',
+    helpSubtitle: 'Five steps from sample data to a side-by-side DDQN vs. ALNS comparison.',
+    helpClose: 'Close',
+    helpSteps: [
+      ['Pick a data mode', 'Toggle Solomon RC (built-in demo instance, 12 customers around HCMC) or Real Data to upload your own.'],
+      ['Edit the table inline', 'Double-click any cell to update name, lat/lng, demand, or the time window (ready / due / service). Add rows with + or import from .csv/.xlsx.'],
+      ['Tune the fleet', 'Use the sliders for vehicles and capacity. The first row (id 0) is the depot and is non-editable.'],
+      ['Run Model', 'Click Run Model. The backend solves twice: DDQN-ALNS and the ALNS baseline. Progress streams to the loading panel - you can minimize it.'],
+      ['Read the comparison', 'Switch to the Maps tab for routes side-by-side, or the Results tab for runtime, total distance, vehicles used, and fleet utilisation deltas.'],
+    ],
+    helpTips: [
+      'Click the map to drop a customer pin (Real Data mode only).',
+      'Paste a TSV/CSV anywhere on the page to import in Real Data mode.',
+      'Demo / Guest mode: when Firebase is not configured, your data lives in memory only.',
+      'Shortcut: press Shift + ? to reopen this guide.',
+    ],
+    analysisHeadings: ['Convergence Snapshot', 'Operator Policy Heatmap', 'Hourly Activity', 'Instance Leaderboard', 'Transfer Snapshot'],
+    analysisStatus: 'Analysis data is loading...',
+    analysisLoadStatus: 'Loading analysis for',
+    analysisReady: 'Analysis ready. Open Deep Analysis for full diagnostics.',
+    analysisNoData: 'No activity data yet.',
+    adminTitle: 'User Management',
+    adminKicker: 'Admin',
+    adminFeedbackKicker: 'Feedback Inbox',
+    adminFeedbackTitle: 'Anonymous Feedback',
+    adminRefresh: 'Refresh',
+    adminFeedbackRefresh: 'Refresh',
+    adminFeedbackLink: 'Feedback Inbox',
+    loadingTitle: 'AI is optimizing routes...',
+    loadingSubtitle: 'Sending request to the backend solver...',
+    loadingPhase: 'Collecting route data...',
+    loadingElapsed: 'Elapsed',
+    loadingBackend: 'Backend',
+    loadingCompute: 'Compute',
+    loadingLauncher: 'Routes',
+  },
+  vn: {
+    langButton: 'EN',
+    backToDemo: 'Demo',
+    authTitle: 'Cổng điều phối VRPTW',
+    loginButton: 'Đăng nhập',
+    forgotPassword: 'Quên mật khẩu?',
+    openRegister: 'Tạo tài khoản',
+    guestLogin: 'Vào với tư cách khách',
+    guestHint: 'Đang ở chế độ demo - bỏ qua đăng nhập và thử solver VRPTW ngay.',
+    requestOtp: 'Gửi OTP',
+    registerButton: 'Đăng ký',
+    backToLogin: 'Quay lại',
+    forgotButton: 'Gửi link đặt lại',
+    resetButton: 'Cập nhật mật khẩu',
+    logoutButton: 'Đăng xuất',
+    feedbackLink: 'Phản hồi',
+    sidebarSubtitle: 'Điều khiển vận hành',
+    configTitle: 'Cấu hình',
+    configNote: 'Đội xe, dữ liệu, nhập liệu.',
+    modeLabel: 'Chế độ dữ liệu',
+    datasetLabel: 'Mẫu Solomon',
+    importLabel: 'Nhập từ Excel / CSV',
+    dropzoneTitle: 'Kéo thả file vào đây',
+    dropzoneCopy: '.xlsx, .xls, .csv hoặc dán dữ liệu trực tiếp.',
+    sessionLabel: 'Phiên làm việc',
+    heroKicker: 'Bảng điều khiển điều hành',
+    heroTitle: 'Điều phối giao hàng AI theo thời gian thực.',
+    heroCopy: 'Tập trung vào dữ liệu lõi và quyết định vận hành.',
+    demoKicker: 'Demo suy luận VRPTW',
+    customerTitle: 'Danh sách khách hàng',
+    customerNote: 'Mỗi dòng có khung giờ (Ready / Due) và thời lượng Service. Đơn vị đồng nhất với khoảng cách (~1 km ≈ 1 đơn vị thời gian).',
+    tabs: ['Tổng quan', 'Bản đồ tách đôi', 'Kết quả'],
+    helpTitle: 'Cách dùng demo VRPTW',
+    helpSubtitle: '5 bước từ dữ liệu mẫu tới so sánh DDQN và ALNS.',
+    helpClose: 'Đóng',
+    helpSteps: [
+      ['Chọn chế độ dữ liệu', 'Chuyển giữa Solomon RC (demo có sẵn, 12 khách ở HCMC) hoặc Real Data để tải dữ liệu riêng.'],
+      ['Sửa bảng trực tiếp', 'Nháy đúp bất kỳ ô nào để sửa name, lat/lng, demand hoặc khung giờ (ready / due / service). Có thể thêm dòng bằng + hoặc import .csv/.xlsx.'],
+      ['Tinh chỉnh đội xe', 'Dùng thanh trượt cho vehicles và capacity. Dòng đầu tiên (id 0) là depot và không được sửa.'],
+      ['Chạy mô hình', 'Bấm Run Model. Backend chạy hai lần: DDQN-ALNS và ALNS baseline. Tiến trình hiển thị ở khung loading - có thể thu nhỏ.'],
+      ['Đọc phần so sánh', 'Chuyển sang tab Maps để xem tuyến song song, hoặc tab Results để xem runtime, tổng quãng đường, số xe và chênh lệch tải.'],
+    ],
+    helpTips: [
+      'Bấm vào bản đồ để thả pin khách hàng (chỉ ở chế độ Real Data).',
+      'Dán TSV/CSV ở bất kỳ đâu trên trang để import khi đang ở Real Data.',
+      'Demo / Guest mode: khi chưa cấu hình Firebase, dữ liệu chỉ nằm trong bộ nhớ.',
+      'Phím tắt: bấm Shift + ? để mở lại hướng dẫn này.',
+    ],
+    analysisHeadings: ['Ảnh chụp hội tụ', 'Heatmap chính sách operator', 'Hoạt động theo giờ', 'Bảng xếp hạng instance', 'Tổng quan transfer'],
+    analysisStatus: 'Đang tải dữ liệu phân tích...',
+    analysisLoadStatus: 'Đang tải phân tích cho',
+    analysisReady: 'Phân tích sẵn sàng. Mở Deep Analysis để xem đầy đủ.',
+    analysisNoData: 'Chưa có dữ liệu hoạt động theo giờ.',
+    adminTitle: 'Quản lý người dùng',
+    adminKicker: 'Quản trị',
+    adminFeedbackKicker: 'Hộp thư phản hồi',
+    adminFeedbackTitle: 'Feedback ẩn danh',
+    adminRefresh: 'Làm mới',
+    adminFeedbackRefresh: 'Làm mới',
+    adminFeedbackLink: 'Hộp thư phản hồi',
+    loadingTitle: 'AI đang tối ưu tuyến...',
+    loadingSubtitle: 'Đang gửi yêu cầu tới backend solver...',
+    loadingPhase: 'Đang thu thập dữ liệu tuyến...',
+    loadingElapsed: 'Đã chạy',
+    loadingBackend: 'Backend',
+    loadingCompute: 'Tính toán',
+    loadingLauncher: 'Tuyến',
+  },
+};
 
 export class App {
   constructor() {
     this.state = createInitialState();
+    this.lang = getDemoLang();
     this.tableInputVisible = false;
     this.tableInputDraft = {
       name: '',
@@ -46,8 +187,11 @@ export class App {
     this.isSubmittingPasswordChange = false;
     this.registerOtpRequestedEmail = ''; // Track which email OTP was sent to
     this.backendMode = { firebase_enabled: null, demo_mode: null, torch: null };
+    this.state.lang = this.lang;
+    this.applyLanguage(this.lang);
     this.wireAuthEvents();
     this.wireLoadingControls();
+    this.wireLanguageControls();
     this.routeAuthScreenFromURL();
 
     this.probeBackendMode();
@@ -101,9 +245,16 @@ export class App {
       btnForgotPassword: document.getElementById('btn-forgot-password'),
       btnResetPassword: document.getElementById('btn-reset-password'),
       btnLogout: document.getElementById('btn-logout'),
+      helpButton: document.getElementById('help-button'),
+      backToLanding: document.querySelector('.back-to-landing'),
+      feedbackLink: document.getElementById('feedback-link'),
+      feedbackAdminLink: document.getElementById('feedback-admin-link'),
+      langToggle: document.getElementById('lang-toggle'),
       adminPanel: document.getElementById('admin-panel'),
       adminRefresh: document.getElementById('admin-refresh'),
+      adminFeedbackRefresh: document.getElementById('admin-feedback-refresh'),
       adminUserRows: document.getElementById('admin-user-rows'),
+      adminFeedbackRows: document.getElementById('admin-feedback-rows'),
       userEmail: document.getElementById('user-email'),
       authScreen: document.getElementById('auth-screen'),
       appShell: document.getElementById('app-shell'),
@@ -114,6 +265,9 @@ export class App {
       excelInput: document.getElementById('excel-input'),
       dropzone: document.getElementById('dropzone'),
       modeToggle: document.getElementById('mode-toggle'),
+      datasetPicker: document.getElementById('dataset-picker'),
+      datasetSelect: document.getElementById('dataset-select'),
+      loadDataset: document.getElementById('load-dataset'),
       vehicles: document.getElementById('vehicles-slider'),
       vehiclesValue: document.getElementById('vehicles-value'),
       capacity: document.getElementById('capacity-slider'),
@@ -168,6 +322,7 @@ export class App {
       analysisStatus: document.getElementById('analysis-status'),
       analysisSummaryKpis: document.getElementById('analysis-summary-kpis'),
       analysisConvergenceChart: document.getElementById('analysis-convergence-chart'),
+      analysisActivityChart: document.getElementById('analysis-activity-chart'),
       analysisPolicyGrid: document.getElementById('analysis-policy-grid'),
       analysisLeaderboardBody: document.getElementById('analysis-leaderboard-body'),
       analysisTransferBody: document.getElementById('analysis-transfer-body'),
@@ -184,6 +339,7 @@ export class App {
       loadingMinimize: document.getElementById('loading-minimize'),
       loadingCancel: document.getElementById('loading-cancel'),
       loadingLauncher: document.getElementById('loading-launcher'),
+      loadingLauncherText: document.querySelector('.loading-launcher-text'),
       loadingTitle: document.getElementById('loading-title'),
       loadingSubtitle: document.getElementById('loading-subtitle'),
       loadingPhase: document.getElementById('loading-phase'),
@@ -298,6 +454,127 @@ export class App {
     });
   }
 
+  wireLanguageControls() {
+    this.el.langToggle?.addEventListener('click', () => {
+      this.applyLanguage(toggleDemoLang());
+    });
+  }
+
+  applyLanguage(lang) {
+    const next = lang === 'vn' ? 'vn' : 'en';
+    this.lang = next;
+    this.state.lang = next;
+    setDemoLang(next);
+
+    const copy = APP_COPY[next];
+    document.documentElement.lang = next === 'vn' ? 'vi' : 'en';
+
+    const setText = (node, value) => {
+      if (node) node.textContent = value;
+    };
+
+    setText(this.el.langToggle, copy.langButton);
+    setText(document.getElementById('auth-title'), copy.authTitle);
+    setText(this.el.btnLogin, copy.loginButton);
+    setText(this.el.linkForgotPassword, copy.forgotPassword);
+    setText(this.el.btnOpenRegister, copy.openRegister);
+    setText(this.el.btnGuestLogin, copy.guestLogin);
+    setText(this.el.guestHint, copy.guestHint);
+    setText(this.el.btnRequestOtp, copy.requestOtp);
+    setText(this.el.btnRegister, copy.registerButton);
+    setText(this.el.btnBackLoginFromRegister, copy.backToLogin);
+    setText(this.el.btnBackLoginFromForgot, copy.backToLogin);
+    setText(this.el.btnBackLoginFromReset, copy.backToLogin);
+    setText(this.el.btnForgotPassword, copy.forgotButton);
+    setText(this.el.btnResetPassword, copy.resetButton);
+    setText(this.el.btnLogout, copy.logoutButton);
+    setText(this.el.feedbackLink, copy.feedbackLink);
+    setText(this.el.feedbackAdminLink, copy.adminFeedbackLink);
+    setText(document.getElementById('sidebar-subtitle'), copy.sidebarSubtitle);
+    setText(document.getElementById('config-title'), copy.configTitle);
+    setText(document.getElementById('config-note'), copy.configNote);
+    setText(document.getElementById('mode-toggle-label'), copy.modeLabel);
+    setText(document.getElementById('dataset-picker-label'), copy.datasetLabel);
+    setText(document.getElementById('import-label'), copy.importLabel);
+    setText(document.getElementById('dropzone-title'), copy.dropzoneTitle);
+    setText(document.getElementById('dropzone-copy'), copy.dropzoneCopy);
+    setText(document.getElementById('session-kicker'), copy.sessionLabel);
+    setText(document.getElementById('hero-kicker'), copy.heroKicker);
+    setText(document.getElementById('hero-title'), copy.heroTitle);
+    setText(document.getElementById('hero-copy'), copy.heroCopy);
+    setText(document.getElementById('demo-kicker'), copy.demoKicker);
+    setText(document.getElementById('customer-title'), copy.customerTitle);
+    setText(document.getElementById('customer-note'), copy.customerNote);
+    setText(this.el.adminRefresh, copy.adminRefresh);
+    setText(this.el.adminFeedbackRefresh, copy.adminFeedbackRefresh);
+    setText(document.getElementById('admin-title'), copy.adminTitle);
+    setText(document.getElementById('admin-kicker'), copy.adminKicker);
+    setText(document.getElementById('admin-feedback-kicker'), copy.adminFeedbackKicker);
+    setText(document.getElementById('admin-feedback-title'), copy.adminFeedbackTitle);
+
+    if (this.el.tabButtons.length >= 3) {
+      this.el.tabButtons[0].textContent = copy.tabs[0];
+      this.el.tabButtons[1].textContent = copy.tabs[1];
+      this.el.tabButtons[2].textContent = copy.tabs[2];
+    }
+
+    const analysisTitles = document.querySelectorAll('.analysis-block h3');
+    analysisTitles.forEach((node, index) => {
+      if (copy.analysisHeadings[index]) node.textContent = copy.analysisHeadings[index];
+    });
+
+    const loadingLabels = document.querySelectorAll('.loading-stat-label');
+    if (loadingLabels[0]) loadingLabels[0].textContent = copy.loadingElapsed;
+    if (loadingLabels[1]) loadingLabels[1].textContent = copy.loadingBackend;
+    if (loadingLabels[2]) loadingLabels[2].textContent = copy.loadingCompute;
+    setText(this.el.loadingTitle, copy.loadingTitle);
+    setText(this.el.loadingSubtitle, copy.loadingSubtitle);
+    setText(this.el.loadingPhase, copy.loadingPhase);
+    setText(this.el.loadingLauncherText, copy.loadingLauncher);
+
+    setText(document.getElementById('help-modal-title'), copy.helpTitle);
+    setText(document.querySelector('.help-modal-sub'), copy.helpSubtitle);
+    setText(document.getElementById('help-modal-close'), copy.helpClose);
+
+    const helpSteps = document.querySelectorAll('.help-steps li');
+    helpSteps.forEach((item, index) => {
+      const title = item.querySelector('h3');
+      const body = item.querySelector('p');
+      const step = copy.helpSteps[index];
+      if (!step) return;
+      if (title) title.textContent = step[0];
+      if (body) body.textContent = step[1];
+    });
+
+    const tips = document.querySelectorAll('.help-tips li');
+    tips.forEach((item, index) => {
+      if (copy.helpTips[index]) item.textContent = copy.helpTips[index];
+    });
+
+    if (this.el.helpButton) {
+      this.el.helpButton.title = next === 'vn' ? 'Hướng dẫn nhanh (Shift+?)' : 'Quick help (Shift+?)';
+      this.el.helpButton.setAttribute('aria-label', next === 'vn' ? 'Mở hướng dẫn nhanh' : 'Open quick help');
+    }
+
+    if (this.el.langToggle) {
+      this.el.langToggle.title = next === 'vn' ? 'Chuyển sang tiếng Anh' : 'Switch to Vietnamese';
+      this.el.langToggle.setAttribute('aria-label', next === 'vn' ? 'Chuyển sang tiếng Anh' : 'Switch language');
+    }
+
+    if (this.el.backToLanding) {
+      this.el.backToLanding.title = next === 'vn' ? 'Quay lại trang chủ' : 'Back to landing page';
+    }
+
+    if (this.el.status && this.el.status.textContent === 'Ready.') {
+      this.el.status.textContent = next === 'vn' ? 'Sẵn sàng.' : 'Ready.';
+    }
+
+    this.renderActivityChart(this.el.analysisActivityChart, this.state.analysisActivity);
+    if (this.state.adminFeedback) {
+      this.renderAdminFeedback(this.state.adminFeedback);
+    }
+  }
+
   routeAuthScreenFromURL() {
     const params = new URLSearchParams(window.location.search);
     const screen = params.get('screen') || sessionStorage.getItem('vrptw_auth_screen');
@@ -335,7 +612,9 @@ export class App {
         this.startRegisterOtpCountdown();
       } else {
         this.stopRegisterOtpCountdown();
-        this.updateRegisterOtpCountdownText('Click Send OTP to receive a verification code.');
+        this.updateRegisterOtpCountdownText(this.lang === 'vn'
+          ? 'Bấm Gửi OTP để nhận mã xác thực.'
+          : 'Click Send OTP to receive a verification code.');
       }
       this.updateRegisterButtonState();
     } else {
@@ -680,6 +959,7 @@ export class App {
     this.setupExcelImport();
     this.wireEvents();
     this.el.adminRefresh?.addEventListener('click', () => this.loadAdminUsers());
+    this.el.adminFeedbackRefresh?.addEventListener('click', () => this.loadAdminFeedback());
   }
 
   enterApp() {
@@ -700,8 +980,9 @@ export class App {
 
     this.setStatus('Ready for operations.', 'ok');
     this.setImportEnabled(this.state.mode === 'real');
+    this.updateDatasetPickerVisibility();
     if (this.state.mode === 'sample') {
-      this.loadSolomonDataset('demo');
+      this.loadAvailableDatasets().then(() => this.loadSolomonDataset('demo'));
     }
     this.bootstrapAnalysis();
     this.updateConnectionPill();
@@ -715,7 +996,9 @@ export class App {
     this.el.appShell?.classList.add('hidden');
     this.el.authScreen?.classList.remove('hidden');
     if (this.el.authHint) {
-      this.el.authHint.textContent = 'Register once, then log in to receive your token.';
+      this.el.authHint.textContent = this.lang === 'vn'
+        ? 'Đăng ký một lần rồi đăng nhập để nhận token.'
+        : 'Register once, then log in to receive your token.';
     }
     this.showAuthView('login');
   }
@@ -808,8 +1091,8 @@ export class App {
   }
 
   createMaps() {
-    const ddqnMap = L.map('map-ddqn').setView([10.73193, 106.69934], 13);
-    const alnsMap = L.map('map-alns').setView([10.73193, 106.69934], 13);
+    const ddqnMap = L.map('map-ddqn').setView([10.73193, 106.69934], 14);
+    const alnsMap = L.map('map-alns').setView([10.73193, 106.69934], 14);
 
     const layer = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
     [ddqnMap, alnsMap].forEach((m) => {
@@ -949,14 +1232,28 @@ export class App {
 
     this.el.modeToggle.addEventListener('change', () => {
       this.state.mode = this.el.modeToggle.checked ? 'real' : 'sample';
+      this.updateDatasetPickerVisibility();
       if (this.state.mode === 'sample') {
         this.setImportEnabled(false);
-        this.loadSolomonDataset('demo');
+        this.loadAvailableDatasets().then(() => {
+          const selected = this.el.datasetSelect?.value || 'demo';
+          this.loadSolomonDataset(selected);
+        });
       } else {
         this.setImportEnabled(true);
         this.clearCustomersForRealDataMode();
         this.setStatus('Switched to Real Data mode. Use Excel/Pin input for your own dataset.', 'ok');
       }
+    });
+
+    this.el.loadDataset?.addEventListener('click', () => {
+      const name = this.el.datasetSelect?.value || 'demo';
+      this.loadSolomonDataset(name);
+    });
+
+    this.el.datasetSelect?.addEventListener('change', () => {
+      const name = this.el.datasetSelect.value || 'demo';
+      this.loadSolomonDataset(name);
     });
 
     this.el.vehicles.addEventListener('input', () => {
@@ -1023,17 +1320,41 @@ export class App {
     });
   }
 
+  async loadAvailableDatasets() {
+    if (!this.el.datasetSelect) return;
+    try {
+      const data = await this.request('/solomon/list', { method: 'GET' });
+      const datasets = Array.isArray(data?.datasets) ? data.datasets : [];
+      if (datasets.length === 0) return;
+
+      const currentValue = this.el.datasetSelect.value || 'demo';
+      this.el.datasetSelect.replaceChildren(
+        ...datasets.map((ds) => {
+          const option = document.createElement('option');
+          option.value = ds.name;
+          option.textContent = ds.label || ds.name.toUpperCase();
+          return option;
+        })
+      );
+      const hasCurrentValue = datasets.some((ds) => ds.name === currentValue);
+      this.el.datasetSelect.value = hasCurrentValue ? currentValue : 'demo';
+    } catch (error) {
+      this.setStatus('Could not load Solomon list. Keeping demo dataset only.', 'error');
+      this.toast('Solomon List Failed', this.parseApiError(error), 'error');
+    }
+  }
+
+  updateDatasetPickerVisibility() {
+    if (!this.el.datasetPicker) return;
+    if (this.state.mode === 'sample') {
+      this.el.datasetPicker.classList.remove('hidden');
+    } else {
+      this.el.datasetPicker.classList.add('hidden');
+    }
+  }
+
   async loadSolomonDataset(name = 'demo') {
     try {
-      if (!this.state.token) {
-        this.state.customers = [];
-        this.selectedCustomerIds.clear();
-        this.renderCustomers();
-        this.renderMarkers();
-        this.setStatus('Cannot load Solomon dataset without login token.', 'error');
-        return;
-      }
-
       const data = await this.request(`/solomon?name=${encodeURIComponent(name)}`, { method: 'GET' });
       const incoming = Array.isArray(data?.customers) ? data.customers : [];
       if (incoming.length < 2) throw new Error('Solomon dataset is empty or invalid.');
@@ -1048,10 +1369,29 @@ export class App {
         isDepot: Boolean(c.isDepot)
       }));
 
+      // Sync the dataset dropdown if available
+      if (this.el.datasetSelect) {
+        const options = Array.from(this.el.datasetSelect.options);
+        if (options.some((opt) => opt.value === name)) {
+          this.el.datasetSelect.value = name;
+        }
+      }
+
+      // Dynamically adjust slider max to accommodate fleet config from the dataset
+      const fleetVehicles = Math.max(1, Number(data?.fleet?.vehicles) || this.state.vehicles);
+      const fleetCapacity = Math.max(1, Number(data?.fleet?.capacity) || this.state.capacity);
+
+      if (this.el.vehicles && fleetVehicles > Number(this.el.vehicles.max)) {
+        this.el.vehicles.max = String(Math.ceil(fleetVehicles * 1.5));
+      }
+      if (this.el.capacity && fleetCapacity > Number(this.el.capacity.max)) {
+        this.el.capacity.max = String(Math.ceil(fleetCapacity * 1.2));
+      }
+
       const maxVehicles = Math.max(1, Number(this.el.vehicles?.max) || 30);
-      const maxCapacity = Math.max(1, Number(this.el.capacity?.max) || 500);
-      const nextVehicles = Math.min(maxVehicles, Math.max(1, Number(data?.fleet?.vehicles) || this.state.vehicles));
-      const nextCapacity = Math.min(maxCapacity, Math.max(1, Number(data?.fleet?.capacity) || this.state.capacity));
+      const maxCapacity = Math.max(1, Number(this.el.capacity?.max) || 1000);
+      const nextVehicles = Math.min(maxVehicles, Math.max(1, fleetVehicles));
+      const nextCapacity = Math.min(maxCapacity, Math.max(1, fleetCapacity));
 
       this.state.vehicles = nextVehicles;
       this.state.capacity = nextCapacity;
@@ -1063,27 +1403,31 @@ export class App {
       this.selectedCustomerIds.clear();
       this.renderCustomers();
       this.renderMarkers();
-      this.setStatus(`Loaded Solomon ${String(data?.dataset || name).toUpperCase()} with ${incoming.length - 1} customers.`, 'ok');
-      this.toast('Solomon Loaded', `Dataset ${String(data?.dataset || name).toUpperCase()} is ready.`, 'ok');
+      const label = String(data?.dataset || name).toUpperCase();
+      this.setStatus(`Loaded Solomon ${label} with ${incoming.length - 1} customers.`, 'ok');
+      this.toast('Solomon Loaded', `Dataset ${label} is ready.`, 'ok');
     } catch (error) {
       this.state.customers = [];
       this.selectedCustomerIds.clear();
       this.renderCustomers();
       this.renderMarkers();
-      this.toast('Solomon Load Failed', this.parseApiError(error), 'error');
-      this.setStatus('Could not load Solomon file from backend.', 'error');
+      const message = this.parseApiError(error);
+      this.toast('Solomon Load Failed', message, 'error');
+      this.setStatus(message, 'error');
     }
   }
 
   async bootstrapAnalysis(forceReload = false) {
     if (!this.el.analysisVersion) return;
     if (!this.state.token) {
-      this.clearAnalysisViews('Login is required to load training analysis.');
+      this.clearAnalysisViews(this.lang === 'vn'
+        ? 'Cần đăng nhập để tải phần phân tích huấn luyện.'
+        : 'Login is required to load training analysis.');
       return;
     }
 
     try {
-      this.setAnalysisStatus('Loading available versions...');
+      this.setAnalysisStatus(this.lang === 'vn' ? 'Đang tải các phiên bản...' : 'Loading available versions...');
       const response = await this.request('/analysis/versions', { method: 'GET' });
       const versions = Array.isArray(response?.items) ? response.items : [];
       this.state.analysisVersions = versions;
@@ -1096,13 +1440,16 @@ export class App {
       }
 
       if (!selectedVersion) {
-        this.clearAnalysisViews('No nexus_demo.json found in logs results folders.');
+        this.clearAnalysisViews(this.lang === 'vn'
+          ? 'Không tìm thấy nexus_demo.json trong logs/results.'
+          : 'No nexus_demo.json found in logs results folders.');
         return;
       }
 
       this.state.analysisVersion = selectedVersion;
       this.el.analysisVersion.value = selectedVersion;
       await this.loadAnalysisData(selectedVersion);
+      await this.loadAnalysisActivity();
     } catch (error) {
       this.clearAnalysisViews(this.parseApiError(error));
       this.toast('Analysis Load Failed', this.parseApiError(error), 'error');
@@ -1123,7 +1470,8 @@ export class App {
   async loadAnalysisData(version) {
     if (!version) return;
     try {
-      this.setAnalysisStatus(`Loading analysis for ${String(version).toUpperCase()}...`);
+      const loadingLabel = this.lang === 'vn' ? 'Đang tải phân tích cho' : 'Loading analysis for';
+      this.setAnalysisStatus(`${loadingLabel} ${String(version).toUpperCase()}...`);
       const payload = await this.request(`/analysis/nexus?version=${encodeURIComponent(version)}`, { method: 'GET' });
       this.state.analysisData = payload;
       this.renderAnalysis();
@@ -1132,10 +1480,25 @@ export class App {
       if (this.el.analysisLastUpdated) {
         this.el.analysisLastUpdated.textContent = `Version ${String(version).toUpperCase()} • updated ${stamp}`;
       }
-      this.setAnalysisStatus('Analysis ready. Open Deep Analysis for full diagnostics.');
+      this.setAnalysisStatus(this.lang === 'vn'
+        ? 'Phân tích sẵn sàng. Mở Deep Analysis để xem đầy đủ.'
+        : 'Analysis ready. Open Deep Analysis for full diagnostics.');
     } catch (error) {
       this.clearAnalysisViews(this.parseApiError(error));
       this.toast('Analysis Version Failed', this.parseApiError(error), 'error');
+    }
+  }
+
+  async loadAnalysisActivity() {
+    try {
+      const payload = await this.request('/analysis/activity?hours=24', { method: 'GET' });
+      this.state.analysisActivity = payload;
+      this.renderActivityChart(this.el.analysisActivityChart, payload);
+    } catch (error) {
+      this.state.analysisActivity = null;
+      if (this.el.analysisActivityChart) {
+        this.el.analysisActivityChart.textContent = this.parseApiError(error);
+      }
     }
   }
 
@@ -1152,13 +1515,14 @@ export class App {
     }
     if (this.el.analysisSummaryKpis) this.el.analysisSummaryKpis.innerHTML = '';
     if (this.el.analysisInstance) this.el.analysisInstance.innerHTML = '';
-    if (this.el.analysisConvergenceChart) this.el.analysisConvergenceChart.textContent = 'No convergence data yet.';
-    if (this.el.analysisPolicyGrid) this.el.analysisPolicyGrid.textContent = 'No policy matrix available.';
+    if (this.el.analysisConvergenceChart) this.el.analysisConvergenceChart.textContent = this.lang === 'vn' ? 'Chưa có dữ liệu hội tụ.' : 'No convergence data yet.';
+    if (this.el.analysisActivityChart) this.el.analysisActivityChart.textContent = this.state.analysisNoData || (this.lang === 'vn' ? 'Chưa có dữ liệu gantt job.' : 'No job timeline data yet.');
+    if (this.el.analysisPolicyGrid) this.el.analysisPolicyGrid.textContent = this.lang === 'vn' ? 'Chưa có policy matrix.' : 'No policy matrix available.';
     if (this.el.analysisLeaderboardBody) this.el.analysisLeaderboardBody.innerHTML = '';
     if (this.el.analysisTransferBody) this.el.analysisTransferBody.innerHTML = '';
-    if (this.el.analysisModalMeta) this.el.analysisModalMeta.textContent = 'No metadata available.';
-    if (this.el.analysisModalConvergence) this.el.analysisModalConvergence.textContent = 'No convergence history.';
-    if (this.el.analysisModalTransferPlot) this.el.analysisModalTransferPlot.textContent = 'No transfer data.';
+    if (this.el.analysisModalMeta) this.el.analysisModalMeta.textContent = this.lang === 'vn' ? 'Chưa có metadata.' : 'No metadata available.';
+    if (this.el.analysisModalConvergence) this.el.analysisModalConvergence.textContent = this.lang === 'vn' ? 'Chưa có lịch sử hội tụ.' : 'No convergence history.';
+    if (this.el.analysisModalTransferPlot) this.el.analysisModalTransferPlot.textContent = this.lang === 'vn' ? 'Chưa có dữ liệu transfer.' : 'No transfer data.';
     if (this.el.analysisModalTransferBody) this.el.analysisModalTransferBody.innerHTML = '';
   }
 
@@ -1338,6 +1702,66 @@ export class App {
         <span><i class="legend-dot" style="background:#2563eb"></i> ALNS</span>
         <span><i class="legend-dot" style="background:#0b8a65"></i> DDQN-ALNS</span>
         ${showHistoryHint ? `<span>History available for ${this.escapeHtml(String(historyInstance))}</span>` : ''}
+      </div>
+    `;
+  }
+
+  renderActivityChart(container, data) {
+    if (!container) return;
+    const labels = Array.isArray(data?.labels) ? data.labels : [];
+    const submitted = Array.isArray(data?.submitted) ? data.submitted.map((value) => Number(value) || 0) : [];
+    const completed = Array.isArray(data?.completed) ? data.completed.map((value) => Number(value) || 0) : [];
+    const failed = Array.isArray(data?.failed) ? data.failed.map((value) => Number(value) || 0) : [];
+
+    if (!labels.length || (!submitted.length && !completed.length && !failed.length)) {
+      container.textContent = this.state.analysisNoData || (this.lang === 'vn' ? 'Chưa có dữ liệu hoạt động theo giờ.' : 'No activity data yet.');
+      return;
+    }
+
+    const maxCount = Math.max(1, ...submitted, ...completed, ...failed);
+    const width = 740;
+    const height = 240;
+    const paddingX = 28;
+    const paddingY = 24;
+    const bandWidth = (width - paddingX * 2) / Math.max(labels.length, 1);
+    const barWidth = Math.min(14, bandWidth / 4);
+
+    const bars = labels.map((label, index) => {
+      const baseX = paddingX + index * bandWidth + bandWidth / 2;
+      const submittedHeight = ((submitted[index] || 0) / maxCount) * (height - paddingY * 2 - 24);
+      const completedHeight = ((completed[index] || 0) / maxCount) * (height - paddingY * 2 - 24);
+      const failedHeight = ((failed[index] || 0) / maxCount) * (height - paddingY * 2 - 24);
+      const yBase = height - paddingY - 18;
+      return `
+        <g>
+          <rect x="${(baseX - barWidth * 1.8).toFixed(2)}" y="${(yBase - submittedHeight).toFixed(2)}" width="${barWidth.toFixed(2)}" height="${Math.max(submittedHeight, 1).toFixed(2)}" rx="3" fill="#2563eb" />
+          <rect x="${baseX.toFixed(2)}" y="${(yBase - completedHeight).toFixed(2)}" width="${barWidth.toFixed(2)}" height="${Math.max(completedHeight, 1).toFixed(2)}" rx="3" fill="#0b8a65" />
+          <rect x="${(baseX + barWidth * 1.8).toFixed(2)}" y="${(yBase - failedHeight).toFixed(2)}" width="${barWidth.toFixed(2)}" height="${Math.max(failedHeight, 1).toFixed(2)}" rx="3" fill="#c0392b" />
+          <text x="${baseX.toFixed(2)}" y="${(height - 8).toFixed(2)}" text-anchor="middle" font-size="10" fill="#54708a">${this.escapeHtml(String(label))}</text>
+        </g>
+      `;
+    }).join('');
+
+    const totalSubmitted = submitted.reduce((sum, value) => sum + value, 0);
+    const totalCompleted = completed.reduce((sum, value) => sum + value, 0);
+    const totalFailed = failed.reduce((sum, value) => sum + value, 0);
+    const rangeLabel = `${String(data?.hours || labels.length)}h ${this.lang === 'vn' ? 'gần nhất' : 'latest'}`;
+    const seriesText = this.lang === 'vn'
+      ? { submitted: 'Đã gửi', completed: 'Hoàn thành', failed: 'Lỗi' }
+      : { submitted: 'Submitted', completed: 'Completed', failed: 'Failed' };
+
+    container.innerHTML = `
+      <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Hourly activity chart">
+        <rect x="0" y="0" width="${width}" height="${height}" fill="#ffffff"></rect>
+        <line x1="${paddingX}" y1="${height - paddingY - 18}" x2="${width - paddingX}" y2="${height - paddingY - 18}" stroke="#d9e5f1" stroke-width="1" />
+        <line x1="${paddingX}" y1="${paddingY}" x2="${paddingX}" y2="${height - paddingY - 18}" stroke="#d9e5f1" stroke-width="1" />
+        ${bars}
+      </svg>
+      <div class="analysis-legend">
+        <span><i class="legend-dot" style="background:#2563eb"></i> ${seriesText.submitted} ${totalSubmitted}</span>
+        <span><i class="legend-dot" style="background:#0b8a65"></i> ${seriesText.completed} ${totalCompleted}</span>
+        <span><i class="legend-dot" style="background:#c0392b"></i> ${seriesText.failed} ${totalFailed}</span>
+        <span>${rangeLabel}</span>
       </div>
     `;
   }
@@ -1788,8 +2212,11 @@ export class App {
     const parentRect = activeButton.parentElement?.getBoundingClientRect();
     const rect = activeButton.getBoundingClientRect();
     if (!parentRect) return;
+    const offsetX = rect.left - parentRect.left;
+    const offsetY = rect.top - parentRect.top;
     this.el.tabbarIndicator.style.width = `${rect.width}px`;
-    this.el.tabbarIndicator.style.transform = `translateX(${rect.left - parentRect.left}px)`;
+    this.el.tabbarIndicator.style.height = `${rect.height}px`;
+    this.el.tabbarIndicator.style.transform = `translate3d(${offsetX}px, ${offsetY}px, 0)`;
   }
 
   tabLabel(tabName) {
@@ -2148,8 +2575,10 @@ export class App {
   updateAdminPanel() {
     const isAdmin = this.state.role === 'admin';
     this.el.adminPanel?.classList.toggle('hidden', !isAdmin);
+    this.el.feedbackAdminLink?.classList.toggle('hidden', !isAdmin);
     if (isAdmin) {
       this.loadAdminUsers();
+      this.loadAdminFeedback();
     }
   }
 
@@ -2206,6 +2635,35 @@ export class App {
     } catch (error) {
       this.toast('Failed to Load User List', error.message, 'error');
     }
+  }
+
+  async loadAdminFeedback() {
+    if (this.state.role !== 'admin' || !this.el.adminFeedbackRows) return;
+    try {
+      const data = await this.request('/admin/feedback', { method: 'GET' });
+      const items = Array.isArray(data?.items) ? data.items : [];
+      this.state.adminFeedback = items;
+      this.renderAdminFeedback(items);
+    } catch (error) {
+      this.toast('Failed to Load Feedback', this.parseApiError(error), 'error');
+    }
+  }
+
+  renderAdminFeedback(items) {
+    if (!this.el.adminFeedbackRows) return;
+    this.el.adminFeedbackRows.replaceChildren();
+    (Array.isArray(items) ? items : []).forEach((item) => {
+      const tr = document.createElement('tr');
+      const when = item?.created_at ? new Date(Number(item.created_at) * 1000).toLocaleString() : '-';
+      const rating = item?.rating ? String(item.rating) : '-';
+      tr.innerHTML = `
+        <td>${this.escapeHtml(String(when))}</td>
+        <td>${this.escapeHtml(String(item?.category || '-'))}</td>
+        <td>${this.escapeHtml(String(item?.message || '-'))}</td>
+        <td>${this.escapeHtml(String(rating))}</td>
+      `;
+      this.el.adminFeedbackRows.appendChild(tr);
+    });
   }
 
   async saveAdminRole(email) {
@@ -3389,8 +3847,19 @@ export class App {
     return { ratio, label: 'Safe', tone: 'low' };
   }
 
+  colorForRoute(routeIndex, route, fallback) {
+    const palette = [
+      '#2563eb', '#0b8a65', '#c0392b', '#8c5cf6', '#d97706',
+      '#0ea5a4', '#b91c1c', '#16a34a', '#7c3aed', '#ea580c',
+      '#0891b2', '#be185d', '#4f46e5', '#15803d', '#ca8a04', '#1d4ed8'
+    ];
+    if (routeIndex < palette.length) return palette[routeIndex];
+    const hue = (routeIndex * 137.508) % 360;
+    return `hsl(${hue},72%,44%)`;
+  }
+
   renderAlgoRoutes(algo, layerGroup, color, capacity) {
-    (algo.routes || []).forEach((route) => {
+    (algo.routes || []).forEach((route, routeIndex) => {
       if (!route.path || route.path.length < 2) return;
       const load = Number(route.load ?? 0);
       const cap = Number(capacity);
@@ -3406,10 +3875,11 @@ export class App {
           <br/><span class="route-load-pill ${badge.tone}">${badge.label}</span>
         </div>
       `;
+      const routeColor = this.colorForRoute(routeIndex, route, color);
       L.polyline(route.path.map((p) => [p[0], p[1]]), {
-        color,
+        color: routeColor,
         weight: 4,
-        opacity: 0.78
+        opacity: 0.9
       }).bindPopup(popupContent).addTo(layerGroup);
     });
   }
@@ -3449,122 +3919,19 @@ export class App {
     return highlightedSegments;
   }
 
-  drawDiffSegment(path, layerGroup, routeIndex) {
-    L.polyline(path, {
-      color: '#ff5a5f',
-      weight: 10,
-      opacity: 0.22,
-      lineCap: 'round'
-    }).addTo(layerGroup);
+  setLoadingProgress(value, title = null, subtitle = null, normalizedSpeed = 0, algo = 'idle') {
+    const clamped = Math.max(0, Math.min(100, Number(value) || 0));
+    this.loadingAnim.progress = clamped;
 
-    L.polyline(path, {
-      color: '#d7191c',
-      weight: 5,
-      opacity: 0.92,
-      dashArray: '8 5',
-      lineCap: 'round'
-    }).bindPopup(`ALNS-only segment • Route ${routeIndex + 1}`).addTo(layerGroup);
-  }
-
-  collectSegmentSet(algo) {
-    const set = new Set();
-    (algo.routes || []).forEach((route) => {
-      if (!route.path || route.path.length < 2) return;
-      for (let i = 0; i < route.path.length - 1; i++) {
-        set.add(this.segmentKey(route.path[i], route.path[i + 1]));
-      }
-    });
-    return set;
-  }
-
-  segmentKey(a, b) {
-    const ka = `${Number(a[0]).toFixed(5)},${Number(a[1]).toFixed(5)}`;
-    const kb = `${Number(b[0]).toFixed(5)},${Number(b[1]).toFixed(5)}`;
-    return ka < kb ? `${ka}|${kb}` : `${kb}|${ka}`;
-  }
-
-  renderVehicleMarkers(algo, layerGroup, color) {
-    (algo.routes || []).forEach((route) => {
-      if (!route.path || route.path.length < 2) return;
-      const start = route.path[0];
-      const marker = L.marker([start[0], start[1]], { icon: this.buildVehicleIcon(color) });
-      marker.bindPopup(`Vehicle #${route.vehicle_id}`);
-      marker.addTo(layerGroup);
-      this.startVehicleAnimation(marker, route.path);
-    });
-  }
-
-  setStatus(message, tone = '') {
-    this.el.status.className = `status ${tone}`.trim();
-    this.el.status.textContent = message;
-  }
-
-  updateConnectionPill() {
-    if (!this.el.connectionPill) return;
-    const connected = Boolean(this.state.token);
-    const isGuest = this.state.role === 'guest';
-    if (!connected) {
-      this.el.connectionPill.textContent = 'Offline';
-      this.el.connectionPill.className = 'pill soft';
-      return;
+    if (title && this.el.loadingTitle) {
+      this.el.loadingTitle.textContent = title;
     }
-    this.el.connectionPill.textContent = isGuest ? 'Demo (guest)' : 'Connected';
-    this.el.connectionPill.className = isGuest ? 'pill soft warn' : 'pill soft ok';
-  }
-
-  updateSessionInfo() {
-    if (!this.el.userEmail) return;
-    const label = this.state.email || '-';
-    this.el.userEmail.textContent = this.state.role === 'guest' && this.state.email ? `${label} (demo)` : label;
-  }
-
-  showEmptyStates() {
-    if (this.el.tableEmpty) {
-      this.el.tableEmpty.classList.add('hidden');
-      if (this.el.tableSkeleton) this.el.tableSkeleton.classList.add('hidden');
+    if (this.el.loadingPhase && typeof subtitle === 'string') {
+      this.el.loadingPhase.textContent = subtitle;
     }
-    const hasRoutes = Boolean(this.state.lastResult?.ddqn?.routes?.length || this.state.lastResult?.alns?.routes?.length);
-    if (this.el.mapEmptyDdqn) this.el.mapEmptyDdqn.classList.toggle('hidden', hasRoutes);
-    if (this.el.mapEmptyAlns) this.el.mapEmptyAlns.classList.toggle('hidden', hasRoutes);
-  }
-
-  toast(title, message, tone = '') {
-    if (!this.el.toastRoot) return;
-    const node = document.createElement('div');
-    node.className = `toast ${tone}`.trim();
-    node.innerHTML = `
-      <div class="toast-title">${this.escapeHtml(String(title ?? ''))}</div>
-      <div class="toast-message">${this.escapeHtml(String(message ?? ''))}</div>
-    `;
-    this.el.toastRoot.appendChild(node);
-    window.setTimeout(() => {
-      node.style.opacity = '0';
-      node.style.transform = 'translateY(8px) scale(0.98)';
-      window.setTimeout(() => node.remove(), 220);
-    }, 2800);
-  }
-
-  showLoading(show) {
-    if (show) {
-      this.startLoadingProgress();
-      this.restoreLoading();
-      this.el.loading.classList.remove('hidden');
-      return;
-    }
-    this.hideLoadingImmediate();
-  }
-
-  setLoadingProgress(progress, title, phase, speed = 0, algo = 'idle') {
-    const value = Math.max(0, Math.min(100, progress));
-    const progressText = `${Math.round(value)}%`;
-    const normalizedSpeed = Math.max(0, Math.min(1, speed));
-
-    if (this.el.loadingTitle && title) this.el.loadingTitle.textContent = title;
-    if (this.el.loadingPhase && phase) this.el.loadingPhase.textContent = phase;
-    if (this.el.loadingPercent) this.el.loadingPercent.textContent = progressText;
 
     if (this.el.loadingCard) {
-      this.el.loadingCard.style.setProperty('--truck-speed', normalizedSpeed.toFixed(3));
+      this.el.loadingCard.style.setProperty('--truck-speed', Number(normalizedSpeed || 0).toFixed(3));
       this.el.loadingCard.dataset.algo = algo;
       this.el.loadingCard.classList.remove('is-slow', 'is-medium', 'is-fast');
       if (normalizedSpeed > 0.67) this.el.loadingCard.classList.add('is-fast');
@@ -3573,10 +3940,10 @@ export class App {
     }
 
     if (this.el.loadingTrackFill) {
-      this.el.loadingTrackFill.style.setProperty('--loading-progress', `${value}%`);
+      this.el.loadingTrackFill.style.setProperty('--loading-progress', `${clamped}%`);
     }
     if (this.el.loadingTruck) {
-      this.el.loadingTruck.style.setProperty('--loading-progress', `${value}%`);
+      this.el.loadingTruck.style.setProperty('--loading-progress', `${clamped}%`);
     }
   }
 

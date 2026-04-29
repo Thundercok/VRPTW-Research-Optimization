@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import datetime
 import time
 from typing import Any
 from uuid import uuid4
@@ -157,6 +158,94 @@ class JobService:
             "has_result": state.result is not None,
             "result_summary": self._build_result_summary(state.result),
             "debug": state.debug or {},
+        }
+
+    def get_activity(self, hours: int = 24) -> dict[str, Any]:
+        window = max(1, min(int(hours), 168))
+        now = int(self._now())
+        start = now - window * 3600
+        buckets: list[dict[str, Any]] = []
+
+        for idx in range(window):
+            slot_start = start + idx * 3600
+            buckets.append(
+                {
+                    "slot_start": slot_start,
+                    "slot_end": slot_start + 3600,
+                    "label": datetime.fromtimestamp(slot_start).strftime("%H:00"),
+                    "submitted": 0,
+                    "completed": 0,
+                    "failed": 0,
+                    "queue_wait_sum": 0.0,
+                    "queue_wait_count": 0,
+                    "solver_sum": 0.0,
+                    "solver_count": 0,
+                }
+            )
+
+        recent_jobs: list[dict[str, Any]] = []
+        for job_id, state in job_repo.jobs.items():
+            debug = state.debug if isinstance(state.debug, dict) else {}
+            created_at = int(debug.get("created_at", 0) or 0)
+            if created_at < start or created_at > now + 3600:
+                continue
+
+            slot_idx = min(window - 1, max(0, (created_at - start) // 3600))
+            bucket = buckets[slot_idx]
+            bucket["submitted"] += 1
+
+            queue_wait = debug.get("queue_wait_sec")
+            if isinstance(queue_wait, (int, float)):
+                bucket["queue_wait_sum"] += float(queue_wait)
+                bucket["queue_wait_count"] += 1
+
+            solver_duration = debug.get("solver_duration_sec")
+            if isinstance(solver_duration, (int, float)):
+                bucket["solver_sum"] += float(solver_duration)
+                bucket["solver_count"] += 1
+
+            if state.status == "done":
+                bucket["completed"] += 1
+            elif state.status == "failed":
+                bucket["failed"] += 1
+
+            recent_jobs.append(
+                {
+                    "job_id": job_id,
+                    "status": state.status,
+                    "created_at": created_at,
+                    "completed_at": int(debug.get("completed_at", 0) or 0),
+                    "queue_wait_sec": queue_wait if isinstance(queue_wait, (int, float)) else None,
+                    "solver_duration_sec": solver_duration if isinstance(solver_duration, (int, float)) else None,
+                }
+            )
+
+        for bucket in buckets:
+            bucket["avg_queue_wait_sec"] = round(
+                bucket["queue_wait_sum"] / bucket["queue_wait_count"], 2
+            ) if bucket["queue_wait_count"] else 0.0
+            bucket["avg_solver_sec"] = round(
+                bucket["solver_sum"] / bucket["solver_count"], 2
+            ) if bucket["solver_count"] else 0.0
+            del bucket["queue_wait_sum"]
+            del bucket["queue_wait_count"]
+            del bucket["solver_sum"]
+            del bucket["solver_count"]
+
+        recent_jobs.sort(key=lambda item: item["created_at"], reverse=True)
+        recent_jobs = recent_jobs[:12]
+
+        return {
+            "hours": window,
+            "start_at": start,
+            "end_at": now,
+            "labels": [bucket["label"] for bucket in buckets],
+            "submitted": [bucket["submitted"] for bucket in buckets],
+            "completed": [bucket["completed"] for bucket in buckets],
+            "failed": [bucket["failed"] for bucket in buckets],
+            "avg_queue_wait_sec": [bucket["avg_queue_wait_sec"] for bucket in buckets],
+            "avg_solver_sec": [bucket["avg_solver_sec"] for bucket in buckets],
+            "recent": recent_jobs,
         }
 
 

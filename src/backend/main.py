@@ -7,7 +7,7 @@ import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from api.routers import admin, auth, ops
+from api.routers import admin, auth, feedback, ops
 from api.routers import config as config_router
 from core.config import cors_allow_origins, demo_auth_bypass_enabled, load_local_env
 from core.firebase import init_firebase, is_firebase_enabled
@@ -162,6 +162,7 @@ app.add_middleware(
 
 app.include_router(auth.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
+app.include_router(feedback.router, prefix="/api")
 app.include_router(ops.router, prefix="/api")
 app.include_router(config_router.router, prefix="/api")
 

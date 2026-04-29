@@ -1,4 +1,30 @@
-export const API_BASE = 'http://127.0.0.1:8000/api';
+/**
+ * Backend API base (must end with `/api`).
+ *
+ * Local dev: defaults to http://127.0.0.1:8000/api
+ *
+ * Netlify / GitHub Pages: set either
+ *   <meta name="vrptw-api-origin" content="https://your-fastapi-host.example.com" />
+ * or before any module loads:
+ *   window.__VRPTW_API_ORIGIN__ = 'https://your-fastapi-host.example.com';
+ * (no trailing slash on origin)
+ */
+function resolveApiBase() {
+  if (typeof window !== 'undefined' && window.__VRPTW_API_ORIGIN__) {
+    const o = String(window.__VRPTW_API_ORIGIN__).replace(/\/$/, '');
+    if (o) return `${o}/api`;
+  }
+  if (typeof document !== 'undefined') {
+    const meta = document.querySelector('meta[name="vrptw-api-origin"]');
+    if (meta?.content?.trim()) {
+      const o = meta.content.trim().replace(/\/$/, '');
+      return `${o}/api`;
+    }
+  }
+  return 'http://127.0.0.1:8000/api';
+}
+
+export const API_BASE = resolveApiBase();
 
 export const SAMPLE_SOLONON_RC = [
   { name: 'Depot', address: 'TDTU', lat: 10.73193, lng: 106.69934, demand: 0, isDepot: true },
