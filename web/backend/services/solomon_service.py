@@ -6,7 +6,7 @@ from typing import Any
 
 
 def _data_dir() -> Path:
-    return Path(__file__).resolve().parents[3] / "legacy" / "data"
+    return Path(__file__).resolve().parents[3]  / "data" / "Solomon"
 
 
 def _to_lat_lng(x: float, y: float) -> tuple[float, float]:

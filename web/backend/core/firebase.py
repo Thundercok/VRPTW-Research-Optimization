@@ -23,20 +23,16 @@ def init_firebase() -> firestore.Client:
 def get_db() -> firestore.Client:
     return init_firebase()
 
-
 def _build_firebase_app() -> firebase_admin.App:
-    options: dict[str, str] = {}
-    project_id = firebase_project_id()
-    if project_id:
-        options["projectId"] = project_id
-
+    # We stripped out the options dict to prevent the old project ID from overriding your new JSON key.
+    
     account_json = firebase_service_account_json()
     if account_json:
         info = json.loads(account_json)
-        return firebase_admin.initialize_app(credentials.Certificate(info), options=options or None)
+        return firebase_admin.initialize_app(credentials.Certificate(info))
 
     account_path = firebase_service_account_path()
     if account_path:
-        return firebase_admin.initialize_app(credentials.Certificate(account_path), options=options or None)
+        return firebase_admin.initialize_app(credentials.Certificate(account_path))
 
-    return firebase_admin.initialize_app(options=options or None)
+    return firebase_admin.initialize_app()
