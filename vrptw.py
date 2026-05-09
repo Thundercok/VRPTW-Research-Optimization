@@ -1,5 +1,4 @@
 """
-VRPTW RL v15
 ============
 Hardware target: i7-14700KF (28 cores), vast.ai
 
@@ -73,11 +72,50 @@ except Exception:
     ORTOOLS_OK = False
 
 DEVICE = torch.device("cpu")
-
 # ---------------------------------------------------------------------------
-# BKS table
+# BKS table (Solomon 100-customer instances)
 # ---------------------------------------------------------------------------
 BKS: Dict[str, Dict[str, float]] = {
+    "C101": {"nv": 10, "td": 828.94},
+    "C102": {"nv": 10, "td": 828.94},
+    "C103": {"nv": 10, "td": 828.06},
+    "C104": {"nv": 10, "td": 824.78},
+    "C105": {"nv": 10, "td": 828.94},
+    "C106": {"nv": 10, "td": 828.94},
+    "C107": {"nv": 10, "td": 828.94},
+    "C108": {"nv": 10, "td": 828.94},
+    "C109": {"nv": 10, "td": 828.94},
+    "C201": {"nv": 3, "td": 591.56},
+    "C202": {"nv": 3, "td": 591.56},
+    "C203": {"nv": 3, "td": 591.17},
+    "C204": {"nv": 3, "td": 590.6},
+    "C205": {"nv": 3, "td": 588.88},
+    "C206": {"nv": 3, "td": 588.49},
+    "C207": {"nv": 3, "td": 588.29},
+    "C208": {"nv": 3, "td": 588.32},
+    "R101": {"nv": 19, "td": 1650.8},
+    "R102": {"nv": 17, "td": 1486.12},
+    "R103": {"nv": 13, "td": 1292.68},
+    "R104": {"nv": 9, "td": 1007.31},
+    "R105": {"nv": 14, "td": 1377.11},
+    "R106": {"nv": 12, "td": 1252.03},
+    "R107": {"nv": 10, "td": 1104.66},
+    "R108": {"nv": 9, "td": 960.88},
+    "R109": {"nv": 11, "td": 1194.73},
+    "R110": {"nv": 10, "td": 1118.84},
+    "R111": {"nv": 10, "td": 1096.72},
+    "R112": {"nv": 9, "td": 982.14},
+    "R201": {"nv": 4, "td": 1252.37},
+    "R202": {"nv": 3, "td": 1191.7},
+    "R203": {"nv": 3, "td": 939.5},
+    "R204": {"nv": 2, "td": 825.52},
+    "R205": {"nv": 3, "td": 994.43},
+    "R206": {"nv": 3, "td": 906.14},
+    "R207": {"nv": 2, "td": 890.61},
+    "R208": {"nv": 2, "td": 726.82},
+    "R209": {"nv": 3, "td": 909.16},
+    "R210": {"nv": 3, "td": 939.37},
+    "R211": {"nv": 2, "td": 885.71},
     "RC101": {"nv": 14, "td": 1696.94},
     "RC102": {"nv": 12, "td": 1554.75},
     "RC103": {"nv": 11, "td": 1261.67},
@@ -86,14 +124,14 @@ BKS: Dict[str, Dict[str, float]] = {
     "RC106": {"nv": 11, "td": 1424.73},
     "RC107": {"nv": 11, "td": 1230.48},
     "RC108": {"nv": 10, "td": 1139.82},
-    "RC201": {"nv": 4,  "td": 1406.94},
-    "RC202": {"nv": 3,  "td": 1365.64},
-    "RC203": {"nv": 3,  "td": 1049.62},
-    "RC204": {"nv": 3,  "td": 798.46},
-    "RC205": {"nv": 4,  "td": 1297.65},
-    "RC206": {"nv": 3,  "td": 1146.32},
-    "RC207": {"nv": 3,  "td": 1061.14},
-    "RC208": {"nv": 3,  "td": 828.14},
+    "RC201": {"nv": 4, "td": 1406.94},
+    "RC202": {"nv": 3, "td": 1365.65},
+    "RC203": {"nv": 3, "td": 1049.62},
+    "RC204": {"nv": 3, "td": 798.46},
+    "RC205": {"nv": 4, "td": 1297.65},
+    "RC206": {"nv": 3, "td": 1146.32},
+    "RC207": {"nv": 3, "td": 1061.14},
+    "RC208": {"nv": 3, "td": 828.14},
 }
 
 ALGO_ORTOOLS               = "OR-Tools"
@@ -193,7 +231,7 @@ class Config:
     weight_decay:        float = 0.10
     segment_size:        int   = 100
     max_wall_hours:      float = 9.5
-    n_runs:              int   = 3
+    n_runs:              int   = 5
     seed:                int   = 42
 
     # ── plateau controller ─────────────────────────────────────────────────
@@ -461,19 +499,36 @@ class SyntheticVRPTWGenerator:
 # ---------------------------------------------------------------------------
 def load_datasets(base_path: str) -> Dict[str, List[Inst]]:
     datasets: Dict[str, List[Inst]] = {}
-    for group in ("rc1", "rc2"):
-        files = sorted(glob.glob(os.path.join(base_path, f"{group}*.txt")))
-        insts: List[Inst] = []
-        for path in files:
-            with open(path, encoding="utf-8") as fh:
-                lines = fh.readlines()
-            name     = lines[0].strip()
-            capacity = float(lines[4].strip().split()[1])
-            rows     = [list(map(float, ln.split())) for ln in lines[9:] if ln.strip()]
-            insts.append(Inst({"name": name, "capacity": capacity, "data": np.array(rows)}))
-        datasets[group] = insts
-    return datasets
+    files = sorted(glob.glob(os.path.join(base_path, "*.txt")))
+    
+    for path in files:
+        filename = os.path.basename(path).lower()
+        group = "unknown"
+        
+        if filename.startswith(("c1", "c2", "r1", "r2", "rc1", "rc2")):
+            if "_" in filename:
+                # Homberger format: e.g., rc2_10_1.txt -> rc2_1000
+                parts = filename.split("_")
+                group = f"{parts[0]}_{parts[1]}00" 
+            else:
+                # Solomon format: rc101.txt -> rc1 | c101.txt -> c1
+                group = filename[:3] if filename.startswith("rc") else filename[:2]
 
+        if group == "unknown": continue
+
+        with open(path, encoding="utf-8") as fh:
+            lines = fh.readlines()
+        
+        name     = lines[0].strip()
+        capacity = float(lines[4].strip().split()[1])
+        rows     = [list(map(float, ln.split())) for ln in lines[9:] if ln.strip()]
+        inst     = Inst({"name": name, "capacity": capacity, "data": np.array(rows)})
+        
+        if group not in datasets:
+            datasets[group] = []
+        datasets[group].append(inst)
+        
+    return datasets
 
 # ---------------------------------------------------------------------------
 # Numba primitives
@@ -1721,7 +1776,129 @@ class EliteArchive:
             lines.append(f"  {name}: nv={p.nv} cost={p.cost:.1f} gap={gap_str}")
         return "\n".join(lines)
 
+# ---------------------------------------------------------------------------
+# LS Budget, UCB, & Welford Reward Normalizer (v17)
+# ---------------------------------------------------------------------------
+class WelfordRewardNormalizer:
+    """
+    Online mean/variance tracking for reward normalization using Welford's algorithm.
+    Stabilizes PER TD-errors across wild scale variations in Domain Randomization.
+    """
+    def __init__(self, clip_sigma: float = 8.0, warmup: int = 128, eps: float = 1e-8):
+        self.clip   = clip_sigma
+        self.warmup = warmup
+        self.eps    = eps
+        self._n     = 0
+        self._mean  = 0.0
+        self._M2    = 0.0
 
+    def observe(self, r: float) -> None:
+        self._n    += 1
+        delta       = r - self._mean
+        self._mean += delta / self._n
+        self._M2   += delta * (r - self._mean)
+
+    @property
+    def std(self) -> float:
+        if self._n < 2: return 1.0
+        return math.sqrt(max(self._M2 / (self._n - 1), self.eps ** 2))
+
+    def normalize(self, r: float) -> float:
+        self.observe(r)
+        if self._n < self.warmup: return r
+        z = (r - self._mean) / (self.std + self.eps)
+        return float(np.clip(z, -self.clip, self.clip))
+
+    def state_dict(self) -> dict:
+        return {"n": self._n, "mean": self._mean, "M2": self._M2}
+
+    def load_state_dict(self, d: dict) -> None:
+        self._n    = int(d["n"])
+        self._mean = float(d["mean"])
+        self._M2   = float(d["M2"])
+# ---------------------------------------------------------------------------
+# LS Budget & UCB Controllers (v16)
+# ---------------------------------------------------------------------------
+class LSBudgetController:
+    def __init__(self, ls_time_frac: float = 0.30, ema_alpha: float = 0.15):
+        self.ls_time_frac  = ls_time_frac
+        self.ema_alpha     = ema_alpha
+        self._budget_total = float("inf")
+        self._budget_used  = 0.0
+        self._yield_ema    = 0.05
+        self._n_calls      = 0
+
+    def initialize(self, cfg: Config) -> None:
+        est_total_s = cfg.hybrid_iterations * 0.025
+        self._budget_total = est_total_s * self.ls_time_frac
+        self._budget_used  = 0.0
+        self._yield_ema    = 0.05
+
+    def should_trigger(self, action: int, accepted: bool, is_new_best: bool, modes: Tuple[ModeSpec, ...]) -> bool:
+        if self._budget_used >= self._budget_total: return False
+        if is_new_best: return True
+        if modes[action].ls_passes == 0: return False
+        if not accepted: return False
+        
+        # If yield is positive, trigger normally
+        if self._yield_ema > 0.0:
+            return True
+            
+        # --- THE DEADLOCK FIX ---
+        # 10% chance to "probe" the local search even if yield is negative
+        import random
+        if random.random() < 0.10:
+            return True
+            
+        return False
+
+    def record(self, time_s: float, cost_before: float, cost_after: float) -> None:
+        improvement_pct = max(0.0, (cost_before - cost_after) / max(cost_before, 1.0) * 100.0)
+        time_cost = time_s / max(self._budget_total * 0.02, 1e-9)
+        self._yield_ema = self.ema_alpha * (improvement_pct - time_cost) + (1.0 - self.ema_alpha) * self._yield_ema
+        self._budget_used += time_s
+        self._n_calls += 1
+
+
+class UCBActionAugmenter:
+    def __init__(self, n_actions: int = 40, c_ucb: float = 1.0, gamma: float = 0.993, alpha_blend: float = 0.35):
+        self.n = n_actions
+        self.c = c_ucb
+        self.gamma = gamma
+        self.alpha = alpha_blend
+        self._cnt = np.ones(n_actions, dtype=np.float64) * 0.5
+        self._mu  = np.zeros(n_actions, dtype=np.float64)
+        self._m2  = np.ones(n_actions, dtype=np.float64) * 0.5
+        self._N   = float(n_actions) * 0.5
+
+    def reset(self) -> None:
+        self._cnt[:] = 0.5
+        self._mu[:] = 0.0
+        self._m2[:] = 0.5
+        self._N = float(self.n) * 0.5
+
+    def update(self, action: int, reward: float) -> None:
+        self._cnt *= self.gamma
+        self._mu  *= self.gamma
+        self._m2  *= self.gamma
+        self._N    = self._cnt.sum()
+        
+        self._cnt[action] += 1.0
+        delta = reward - self._mu[action]
+        self._mu[action] += delta / self._cnt[action]
+        delta2 = reward - self._mu[action]
+        self._m2[action] += delta * delta2
+
+    def augment_qvalues(self, q: np.ndarray) -> np.ndarray:
+        variance = self._m2 / np.maximum(self._cnt - 1.0, 1.0)
+        std = np.sqrt(np.maximum(variance, 0.0))
+        log_N = math.log(max(self._N, math.e))
+        conf = self.c * std * np.sqrt(log_N / np.maximum(self._cnt, 1e-9))
+        scores = self._mu + conf
+        
+        centered = scores - scores.mean()
+        scale = max(scores.std(), 1e-6)
+        return q + self.alpha * (centered / scale)
 # ---------------------------------------------------------------------------
 # DDQN controllers  (now using PrioritizedReplayBuffer)
 # ---------------------------------------------------------------------------
@@ -1769,8 +1946,10 @@ class PlateauController:
         self.opt.zero_grad(); loss.backward()
         nn.utils.clip_grad_norm_(self.q.parameters(), 1.0)
         self.opt.step()
-        if self.step % self.cfg.ctrl_target_freq == 0:
-            self.q_t.load_state_dict(self.q.state_dict())
+        tau = 0.005
+        for target_param, local_param in zip(self.q_t.parameters(), self.q.parameters()):
+            target_param.data.copy_(tau * local_param.data + (1.0 - tau) * target_param.data)
+
         self.eps = max(self.cfg.ctrl_eps_end, self.eps * self.cfg.ctrl_eps_decay)
 
 
@@ -1798,7 +1977,7 @@ class OperatorController:
         probs /= max(probs.sum(), 1e-9)
         return int(np.random.choice(N_ACTIONS, p=probs))
 
-    def act(self, state, dw, rw, bandit, frozen=False) -> Tuple[int, int, int]:
+    def act(self, state, dw, rw, bandit, frozen=False, ucb_aug=None) -> Tuple[int, int, int]:
         prior = self._prior(dw, rw)
         if not frozen and len(self.buf) < self.cfg.op_warmup:
             di, ri = bandit.select(prior=prior, prior_strength=self.cfg.bandit_prior_strength)
@@ -1809,8 +1988,13 @@ class OperatorController:
         else:
             with torch.no_grad():
                 q = self.q(torch.tensor(state).unsqueeze(0).to(DEVICE))[0].cpu().numpy()
-            q      = (q + self.cfg.op_prior_strength * np.log(prior.reshape(-1) + 1e-8)
-                        + self.cfg.op_bandit_strength * bandit.mean().reshape(-1))
+            q = (q + self.cfg.op_prior_strength * np.log(prior.reshape(-1) + 1e-8)
+                   + self.cfg.op_bandit_strength * bandit.mean().reshape(-1))
+            
+            # Inject non-stationary UCB penalty/bonus
+            if ucb_aug is not None:
+                q = ucb_aug.augment_qvalues(q)
+                
             action = int(q.argmax())
             di, ri = divmod(action, N_R)
         return int(action), int(di), int(ri)
@@ -1839,8 +2023,9 @@ class OperatorController:
         self.opt.zero_grad(); loss.backward()
         nn.utils.clip_grad_norm_(self.q.parameters(), 1.0)
         self.opt.step()
-        if self.step % self.cfg.op_target_freq == 0:
-            self.q_t.load_state_dict(self.q.state_dict())
+        tau = 0.005
+        for target_param, local_param in zip(self.q_t.parameters(), self.q.parameters()):
+            target_param.data.copy_(tau * local_param.data + (1.0 - tau) * target_param.data)
         self.eps = max(self.cfg.op_eps_end, self.eps * self.cfg.op_eps_decay)
 
 
@@ -2040,7 +2225,6 @@ def _load_weights(stem: str) -> Optional[Dict]:
             return loader(p)
     return None
 
-
 # ---------------------------------------------------------------------------
 # HybridDDQN solver
 # ---------------------------------------------------------------------------
@@ -2054,6 +2238,9 @@ class HybridDDQNSolver:
         self.ctrl       = PlateauController(cfg)
         self.op_ctrl    = OperatorController(cfg)
         self.lac        = LearnedAcceptanceCriterion(cfg)
+        self.ls_budget  = LSBudgetController(ls_time_frac=0.30)
+        self.ucb_aug    = UCBActionAugmenter(n_actions=N_ACTIONS)
+        self.reward_norm = WelfordRewardNormalizer(clip_sigma=8.0, warmup=128)
         self.mode_bandits: List[ThompsonBandit] = [ThompsonBandit(N_D, N_R) for _ in MODES]
         self.op_counts: Dict[Tuple[int, int], int] = {}
         self._segment_recombine_used = False
@@ -2062,10 +2249,18 @@ class HybridDDQNSolver:
     def clone_weights(self) -> Dict:
         weights: Dict[str, torch.Tensor] = {}
         for prefix, sd in (("plateau",  self.ctrl.q.state_dict()),
-                            ("operator", self.op_ctrl.q.state_dict())):
+                           ("operator", self.op_ctrl.q.state_dict())):
             for k, v in sd.items():
                 weights[f"{prefix}.{k}"] = v.clone().cpu()
         weights.update(self.lac.state_dict())
+        
+        weights["ucb.mu"]  = torch.tensor(self.ucb_aug._mu,  dtype=torch.float32)
+        weights["ucb.cnt"] = torch.tensor(self.ucb_aug._cnt, dtype=torch.float32)
+        weights["ucb.m2"]  = torch.tensor(self.ucb_aug._m2,  dtype=torch.float32)
+        
+        for k, v in self.reward_norm.state_dict().items():
+            weights[f"reward_norm.{k}"] = torch.tensor(float(v))
+            
         return weights
 
     def load_weights(self, weights: Dict) -> None:
@@ -2096,16 +2291,29 @@ class HybridDDQNSolver:
         lac_weights = {k: v for k, v in weights.items() if k.startswith("lac.")}
         if lac_weights:
             self.lac.load_state_dict(lac_weights)
+            
+        if "ucb.mu" in weights:
+            self.ucb_aug._mu  = weights["ucb.mu"].numpy().astype(np.float64)
+            self.ucb_aug._cnt = weights["ucb.cnt"].numpy().astype(np.float64)
+            self.ucb_aug._m2  = weights["ucb.m2"].numpy().astype(np.float64)
+            self.ucb_aug._N   = float(self.ucb_aug._cnt.sum())
+            
+        norm_d = {k.split(".", 1)[1]: float(weights[k]) 
+                  for k in weights if k.startswith("reward_norm.")}
+        if norm_d:
+            self.reward_norm.load_state_dict(norm_d)
 
-    def _potential(self, plan: Plan) -> float:
-        bks = BKS.get(plan.inst.name)
-        if not bks:
-            return 0.0
-        gap_pct = float(np.clip(
-            (plan.cost - bks["td"]) / max(bks["td"], 1.0) * 100.0, -25.0, 25.0
-        ))
-        return float(-self.cfg.potential_nv_scale * max(plan.nv - bks["nv"], 0)
-                     - self.cfg.potential_cost_scale * gap_pct)
+    def _fleet_pressure(self, plan: Plan, best_nv: float) -> float:
+        nv_excess = (plan.nv - best_nv) / max(self._init_nv, 1.0)
+        return float(1.0 / (1.0 + math.exp(-8.0 * nv_excess)))
+
+    def _adaptive_potential(self, plan: Plan, best_nv: float, best_td: float) -> float:
+        lam = self._fleet_pressure(plan, best_nv)
+        nv_penalty_norm = max(plan.nv - best_nv, 0.0) / max(self._init_nv, 1.0)
+        td_gap = float(np.clip((plan.cost - best_td) / max(best_td, 1.0) * 100.0, -25.0, 25.0))
+        
+        return float(-lam * self.cfg.potential_nv_scale * nv_penalty_norm 
+                     -(1 - lam) * self.cfg.potential_cost_scale * td_gap)
 
     def _state(self, cur, best, no_imp, temp, imp_rate, progress, pool) -> np.ndarray:
         rb, lb = _plan_spread(cur, self.inst)
@@ -2139,44 +2347,50 @@ class HybridDDQNSolver:
             recent_imp,
         ], dtype=np.float32)
 
-    def _segment_reward(self, best_before, best_after, cur_before, cur_after,
-                        accepted_moves, action) -> float:
+    def _segment_reward(self, best_before, best_after, cur_before, cur_after, accepted_moves, action) -> float:
+        lam = self._fleet_pressure(cur_after, best_before.nv)
         base = -0.20 - 0.04 * MODES[action].ls_passes
-        if MODES[action].use_recombine:
-            base -= 0.06
-        best_nv_gain   = best_before.nv - best_after.nv
-        cur_nv_gain    = cur_before.nv  - cur_after.nv
+        if MODES[action].use_recombine: base -= 0.06
+            
+        _denom = max(self._init_nv, 1.0)
+        best_nv_gain = (best_before.nv - best_after.nv) / _denom
+        cur_nv_gain  = (cur_before.nv  - cur_after.nv)  / _denom
+        
         best_cost_gain = max((best_before.cost - best_after.cost) / max(best_before.cost, 1) * 100, 0.0)
         cur_cost_gain  = max((cur_before.cost  - cur_after.cost)  / max(cur_before.cost,  1) * 100, 0.0)
-        if best_nv_gain > 0:
-            base += 8.0 * best_nv_gain + 1.2 * best_cost_gain
-        elif cur_nv_gain > 0:
-            base += 5.0 * cur_nv_gain  + 0.6 * cur_cost_gain
-        else:
-            base += 0.35 * best_cost_gain + 0.15 * cur_cost_gain
-        if accepted_moves <= max(1, self.cfg.segment_size // 10):
-            base -= 0.15
-        shaped = self.cfg.ctrl_gamma * self._potential(cur_after) - self._potential(cur_before)
+
+        nv_component = lam * (8.0 * best_nv_gain * _denom + 1.2 * best_cost_gain + 5.0 * cur_nv_gain * _denom + 0.6 * cur_cost_gain)
+        td_component = (1.0 - lam) * (3.0 * best_nv_gain * _denom + 3.5 * best_cost_gain + 2.0 * cur_nv_gain * _denom + 1.8 * cur_cost_gain)
+        
+        base += nv_component + td_component
+        if accepted_moves <= max(1, self.cfg.segment_size // 10): base -= 0.15
+            
+        shaped = (self.cfg.ctrl_gamma * self._adaptive_potential(cur_after, best_before.nv, best_before.cost)
+                                      - self._adaptive_potential(cur_before, best_before.nv, best_before.cost))
         return float(self.cfg.segment_reward_scale * base + shaped)
 
     def _iteration_reward(self, cur_before, best_before, cur_after, best_after, accepted) -> float:
+        lam = self._fleet_pressure(cur_after, best_before.nv)
         if not accepted:
             base = -0.08
         else:
             base = 0.05
-            best_nv_gain   = best_before.nv - best_after.nv
-            cur_nv_gain    = cur_before.nv  - cur_after.nv
+            _denom = max(self._init_nv, 1.0)
+            best_nv_gain = (best_before.nv - best_after.nv) / _denom
+            cur_nv_gain  = (cur_before.nv  - cur_after.nv)  / _denom
+            
             best_cost_gain = max((best_before.cost - best_after.cost) / max(best_before.cost, 1) * 100, 0.0)
             cur_cost_gain  = max((cur_before.cost  - cur_after.cost)  / max(cur_before.cost,  1) * 100, 0.0)
-            if best_nv_gain > 0:
-                base += 3.0 * best_nv_gain + 0.4 * best_cost_gain
-            elif cur_nv_gain > 0:
-                base += 2.0 * cur_nv_gain  + 0.2 * cur_cost_gain
-            else:
-                base += 0.12 * best_cost_gain + 0.05 * cur_cost_gain
+
+            nv_component = lam * (3.0 * best_nv_gain * _denom + 0.40 * best_cost_gain + 2.0 * cur_nv_gain * _denom + 0.20 * cur_cost_gain)
+            td_component = (1.0 - lam) * (0.50 * best_nv_gain * _denom + 1.80 * best_cost_gain + 0.30 * cur_nv_gain * _denom + 0.90 * cur_cost_gain)
+            
+            base += nv_component + td_component
             if cur_after.nv > cur_before.nv:
-                base -= 0.5 * (cur_after.nv - cur_before.nv)
-        shaped = self.cfg.op_gamma * self._potential(cur_after) - self._potential(cur_before)
+                base -= 0.5 * ((cur_after.nv - cur_before.nv) / _denom) * _denom
+
+        shaped = (self.cfg.op_gamma * self._adaptive_potential(cur_after, best_before.nv, best_before.cost)
+                                    - self._adaptive_potential(cur_before, best_before.nv, best_before.cost))
         return float(self.cfg.iteration_reward_scale * base + shaped)
 
     def _route_reduce_trigger(self, cur: Plan, no_imp: int) -> bool:
@@ -2188,27 +2402,15 @@ class HybridDDQNSolver:
             return self.ctrl.act(state_before), (not frozen)
         return MODE_DEFAULT, False
 
-    def _refine_candidate(self, cand, action, pool, cur, best, no_imp, iter_idx) -> Plan:
-        del cur
-        mode    = MODES[action]
+    def _refine_candidate(self, cand, action, pool, best, no_imp) -> Plan:
+        mode = MODES[action]
         refined = cand
-        # ── LS gate: 20-iteration cadence + only on feasible non-NV-inflating cands ──
-        _do_ls  = (mode.ls_passes > 0
-                   and iter_idx % 20 == 0
-                   and refined.feasible
-                   and refined.nv <= best.nv)
-        if _do_ls:
-            nv_cap  = (best.nv
-                       if action in (MODE_INTENSIFY, MODE_TW_RESCUE,
-                                     MODE_POOL_RECOMBINE, MODE_ROUTE_REDUCE)
-                       else None)
-            refined = local_search(refined, max_passes=mode.ls_passes, nv_ceiling=nv_cap)
         if (mode.use_recombine and not self._segment_recombine_used
                 and no_imp >= max(self.cfg.ctrl_start, self.cfg.plateau_start // 2)
                 and len(pool._routes) >= self.cfg.rl_recombine_min_routes):
             self._segment_recombine_used = True
-            nv_cap    = min(best.nv, refined.nv)
-            recombined= recombine_with_route_pool(refined, pool, self.cfg, nv_ceiling=nv_cap)
+            nv_cap = min(best.nv, refined.nv)
+            recombined = recombine_with_route_pool(refined, pool, self.cfg, nv_ceiling=nv_cap)
             if recombined.dominates(refined):
                 refined = local_search(recombined, max_passes=1, nv_ceiling=recombined.nv)
         return refined
@@ -2217,7 +2419,6 @@ class HybridDDQNSolver:
                          inherited_bandit: Optional[ThompsonBandit] = None) -> Plan:
         cfg       = self.cfg
         target_nv = start.nv
-        # Inherit operator statistics from main search instead of cold-starting
         polish_bandit = inherited_bandit.clone() if inherited_bandit is not None \
                         else ThompsonBandit(N_D, N_R)
         cur  = local_search(start, max_passes=cfg.polish_ls_passes, nv_ceiling=target_nv)
@@ -2256,11 +2457,19 @@ class HybridDDQNSolver:
         return best
 
     def solve(self, seed: Optional[int] = None, frozen: bool = False,
-              init: Optional[Plan] = None) -> Tuple[Plan, List[float]]:
+              init: Optional[Plan] = None, shared_norm: Optional[WelfordRewardNormalizer] = None) -> Tuple[Plan, List[float]]:
         if seed is not None:
             random.seed(seed); np.random.seed(seed); torch.manual_seed(seed)
         cfg = self.cfg
         self.ctrl.reset(); self.op_ctrl.reset()
+        self.ls_budget.initialize(cfg)
+        self.ucb_aug.reset()
+        
+        norm = shared_norm if shared_norm is not None else self.reward_norm
+        if shared_norm is None:
+            self.reward_norm = WelfordRewardNormalizer(clip_sigma=8.0, warmup=128)
+            norm = self.reward_norm
+            
         if getattr(self, "use_op_rl", True):
             self.lac = LearnedAcceptanceCriterion(cfg)
         self.mode_bandits = [ThompsonBandit(N_D, N_R) for _ in MODES]
@@ -2305,7 +2514,8 @@ class HybridDDQNSolver:
                 op_state = self._op_state(cur, best, action, it, temp, no_imp, pool, imp_rate)
                 if getattr(self, "use_op_rl", True):
                     op_action, di, ri = self.op_ctrl.act(
-                        op_state, biased_dw, biased_rw, mode_bandit, frozen=frozen)
+                        op_state, biased_dw, biased_rw, mode_bandit, frozen=frozen, 
+                        ucb_aug=self.ucb_aug if not frozen else None)
                 else:
                     di, ri    = mode_bandit.select(
                         prior=self.op_ctrl._prior(biased_dw, biased_rw),
@@ -2318,7 +2528,8 @@ class HybridDDQNSolver:
                 best_before = best.copy()
                 dest, removed = DESTROY[di](cur.copy(), size)
                 cand = REPAIR[ri](dest, removed)
-                cand = self._refine_candidate(cand, action, pool, cur, best, no_imp, it)
+                
+                cand = self._refine_candidate(cand, action, pool, best, no_imp)
 
                 allow_nv_increase = (action == MODE_DIVERSIFY)
                 if not cand.feasible:
@@ -2342,16 +2553,25 @@ class HybridDDQNSolver:
                         )
                         accepted, _ = self.lac.decide(lac_feats, best.cost)
                     else:
-                        accepted = random.random() < math.exp(
-                            -(cand.cost - cur.cost) / max(temp, 1e-6))
+                        accepted = random.random() < math.exp(-(cand.cost - cur.cost) / max(temp, 1e-6))
 
                 if cfg.lac_enabled and getattr(self, "use_op_rl", True) and not frozen:
                     self.lac.observe(best.cost)
 
                 score    = 0
                 improved = False
+                
                 if accepted:
                     accepted_moves += 1
+                    
+                    is_new_best = cand.dominates(best)
+                    if not frozen and self.ls_budget.should_trigger(action, True, is_new_best, MODES):
+                        _t_ls = time.time()
+                        _cost_pre = cand.cost
+                        nv_cap = best.nv if action in (MODE_INTENSIFY, MODE_TW_RESCUE, MODE_POOL_RECOMBINE, MODE_ROUTE_REDUCE) else None
+                        cand = local_search(cand, max_passes=MODES[action].ls_passes, nv_ceiling=nv_cap)
+                        self.ls_budget.record(time.time() - _t_ls, _cost_pre, cand.cost)
+
                     improved = cand.dominates(cur)
                     pool.add_plan(cand)
                     if cand.nv <= best.nv and cand.dominates(best):
@@ -2371,25 +2591,26 @@ class HybridDDQNSolver:
                 seg_scores[di, ri] += score
                 seg_counts[di, ri] += 1
                 mode_bandit.update(di, ri, score, cfg.sigma1)
+                
                 cur_after  = cur.copy()
                 best_after = best.copy()
                 next_imp   = sum(recent_improvements) / max(len(recent_improvements), 1)
-                next_state = self._op_state(
-                    cur_after, best_after, action, it + 1, temp, no_imp, pool, next_imp)
+                next_state = self._op_state(cur_after, best_after, action, it + 1, temp, no_imp, pool, next_imp)
                 done = 1.0 if no_imp >= cfg.early_stop_patience else 0.0
+                
                 if not frozen and getattr(self, "use_op_rl", True):
-                    self.op_ctrl.observe(
-                        op_state, op_action,
-                        self._iteration_reward(cur_before, best_before,
-                                               cur_after, best_after, accepted),
-                        next_state, done,
-                    )
+                    iter_rew_raw = self._iteration_reward(cur_before, best_before, cur_after, best_after, accepted)
+                    iter_rew_norm = norm.normalize(iter_rew_raw)
+                    self.ucb_aug.update(op_action, iter_rew_raw)
+                    
+                    self.op_ctrl.observe(op_state, op_action, iter_rew_norm, next_state, done)
                     if (it + 1) % 4 == 0:
                         self.op_ctrl.train_step()
-                temp *= cfg.temp_decay * mode.temp_decay_scale
-                history.append(best.cost)
-                if no_imp >= cfg.early_stop_patience:
-                    break
+                        
+            temp *= cfg.temp_decay * mode.temp_decay_scale
+            history.append(best.cost)
+            if no_imp >= cfg.early_stop_patience:
+                break
 
             for mb in self.mode_bandits:
                 mb.decay(cfg.bandit_decay)
@@ -2426,20 +2647,16 @@ class HybridDDQNSolver:
                 pool.add_plan(best)
                 history.append(best.cost)
 
-        # Pass dominant mode bandit to polish (inherits learned operator stats)
         dominant_mode = int(np.argmax([b.alpha.sum() for b in self.mode_bandits]))
-        best = self._fixed_nv_polish(best, pool,
-                                     inherited_bandit=self.mode_bandits[dominant_mode])
+        best = self._fixed_nv_polish(best, pool, inherited_bandit=self.mode_bandits[dominant_mode])
         history.append(best.cost)
 
         if cfg.recombine_after_polish:
             recombined = recombine_with_route_pool(best, pool, cfg, nv_ceiling=best.nv)
             if recombined.dominates(best):
-                best = local_search(recombined, max_passes=cfg.polish_ls_passes,
-                                    nv_ceiling=recombined.nv)
+                best = local_search(recombined, max_passes=cfg.polish_ls_passes, nv_ceiling=recombined.nv)
                 history.append(best.cost)
 
-        # Post-search NV reduction pass (especially effective on RC2)
         bks = BKS.get(self.inst.name)
         if bks is not None and best.nv > bks["nv"]:
             eliminated = _iterative_route_elimination(best, self.inst)
@@ -2449,7 +2666,6 @@ class HybridDDQNSolver:
 
         best.algo = self.algo_name
         return best, history
-
 
 # ---------------------------------------------------------------------------
 # Hybrid-Fixed
@@ -2707,9 +2923,13 @@ def run_benchmark(
                 for i in range(n_runs_eff)
             ]
             _n_workers = 1 if algo_label == ALGO_ORTOOLS else n_workers
-            with ProcessPoolExecutor(max_workers=_n_workers) as ex:
+            
+            # --- THE SPAWN FIX ---
+            import multiprocessing as mp
+            ctx = mp.get_context('spawn')
+            with ProcessPoolExecutor(max_workers=_n_workers, mp_context=ctx) as ex:
                 run_results = list(ex.map(_benchmark_worker, worker_args))
-
+                
             for i, (res, plan) in enumerate(run_results):
                 if plan is not None:
                     archive.update(plan)
@@ -2842,17 +3062,15 @@ def train_transfer_model(instances: List[Inst], cfg: Config,
 
 
 def train_domain_randomization(cfg: Config, seed: int = 42) -> Dict:
-    """
-    3-phase curriculum:
-      Phase 1 (0-40%):   Easy   — 20-40 nodes
-      Phase 2 (40-80%):  Target — 40-80 nodes
-      Phase 3 (80-100%): Chaos  — 20-100 nodes
-    """
     total_epochs  = int(cfg.domain_randomization_epochs)
     batch_size    = int(cfg.domain_randomization_batch)
     distributions = ("C", "R", "RC")
     rng     = random.Random(seed)
     weights: Optional[Dict] = None
+    
+    # --- SHARED NORMALIZER ACROSS CURRICULUM ---
+    shared_norm = WelfordRewardNormalizer(clip_sigma=8.0, warmup=256)
+    
     print(f"Domain-randomization curriculum: {total_epochs} epochs × {batch_size} instances/epoch")
 
     for epoch in range(total_epochs):
@@ -2871,7 +3089,10 @@ def train_domain_randomization(cfg: Config, seed: int = 42) -> Dict:
             solver = HybridDDQNSolver(inst, cfg)
             if weights is not None:
                 solver.load_weights(weights)
-            plan, _ = solver.solve(seed=seed + epoch * 1_000 + idx)
+                
+            # --- PASS THE SHARED NORMALIZER ---
+            plan, _ = solver.solve(seed=seed + epoch * 1_000 + idx, shared_norm=shared_norm)
+            
             weights  = solver.clone_weights()
             print(f"    [{idx+1:>2}/{batch_size}] {inst.name}: "
                   f"n={inst.n}  nv={plan.nv}  cost={plan.cost:.1f}  feasible={plan.feasible}")
@@ -2921,11 +3142,15 @@ def smoke_test(inst: Inst, seed: int = 42) -> Dict[str, Tuple[float, float]]:
         plan, _= solver_cls(inst, short_cfg).solve(seed=seed)
         elapsed= time.time() - t0
         td_gap, nv_gap = plan.gap()
+        
+        # --- THE FIX: Graceful None fallback for missing BKS data ---
+        gap_str = f"BKS TD {td_gap:+.1f}% NV {nv_gap:+d}" if td_gap is not None else "BKS TD -- NV --"
+        
         print(f"{algo_name:<24} nv={plan.nv:>3} cost={plan.cost:>8.1f} "
-              f"BKS TD {td_gap:+.1f}% NV {nv_gap:+d} ({elapsed:.1f}s)")
+              f"{gap_str} ({elapsed:.1f}s)")
+              
         results[algo_name] = (float(td_gap) if td_gap is not None else 0.0, elapsed)
     return results
-
 
 # ---------------------------------------------------------------------------
 # __all__
@@ -2947,7 +3172,6 @@ __all__ = [
     "_iterative_route_elimination", "_save_weights", "_load_weights",
 ]
 
-
 # ---------------------------------------------------------------------------
 # __main__
 # ---------------------------------------------------------------------------
@@ -2963,66 +3187,54 @@ if __name__ == "__main__":
 
     print("\nLoading datasets...")
     datasets = load_datasets(CFG.data_path)
-    RC1      = datasets.get("rc1", [])
-    RC2      = datasets.get("rc2", [])
-    if not RC1:
-        print(f"No RC1 data at {CFG.data_path} — check your path.")
+    
+    # Load all 6 Solomon categories
+    C1  = datasets.get("c1", [])
+    C2  = datasets.get("c2", [])
+    R1  = datasets.get("r1", [])
+    R2  = datasets.get("r2", [])
+    RC1 = datasets.get("rc1", [])
+    RC2 = datasets.get("rc2", [])
+    
+    # Combine into FULLCOMBO (56 instances)
+    FULLCOMBO = C1 + C2 + R1 + R2 + RC1 + RC2
+    
+    if not FULLCOMBO:
+        print(f"No data found at {CFG.data_path} — check your path.")
         raise SystemExit(1)
-    print(f"RC1: {len(RC1)} instances  |  RC2: {len(RC2)} instances")
-    if len(RC2) < 8:
-        print(f"  ⚠️  RC2 has only {len(RC2)}/8 instances — upload missing files before running.")
+        
+    print(f"Loaded: C1({len(C1)}) C2({len(C2)}) R1({len(R1)}) R2({len(R2)}) RC1({len(RC1)}) RC2({len(RC2)})")
+    print(f"Total FULLCOMBO Instances: {len(FULLCOMBO)}")
 
-    # ── Smoke test — per-algo timing for accurate wall estimate ────────────
+    # ── Smoke Test ────────────────────────────────────────────────────────
     print("\n" + "=" * 64)
-    print(f"--- Smoke Test on {RC1[0].name} ---")
-    smoke_results = smoke_test(RC1[0], seed=CFG.seed)
-
-    # Scale factors: ALNS uses alns_iterations; hybrids use hybrid_iterations
-    scale_map = {
-        ALGO_ALNS_BASE:    CFG.alns_iterations    / 300,
-        ALGO_HYBRID_FIXED: CFG.hybrid_iterations  / 400,
-        ALGO_HYBRID_RULE:  CFG.hybrid_iterations  / 400,
-        ALGO_HYBRID_DDQN:  CFG.hybrid_iterations  / 400,
-    }
-    n_workers_est = min(CFG.n_runs, max(1, os.cpu_count() // 2))
-    n_inst        = len(RC1 + RC2)
-    est_h = sum(
-        n_inst * smoke_results[a][1] * scale_map[a] * CFG.n_runs / n_workers_est
-        for a in smoke_results
-    ) / 3600
-    print(f"\nEstimated Phase 1 wall: ~{est_h:.1f}h  "
-          f"({n_workers_est} workers × {CFG.n_runs} runs × {n_inst} instances)")
-    if est_h > CFG.max_wall_hours * 0.85:
-        print(f"  ⚠️  Over 85% of budget before Phase 2 — consider reducing hybrid_iterations "
-              f"or n_runs.  Current: hybrid_iterations={CFG.hybrid_iterations}, "
-              f"n_runs={CFG.n_runs}")
+    print(f"--- Smoke Test on {FULLCOMBO[0].name} ---")
+    smoke_results = smoke_test(FULLCOMBO[0], seed=CFG.seed)
 
     # ── Phase 1: Main Benchmark ────────────────────────────────────────────
     print("\n" + "=" * 64)
-    print("--- Phase 1: Main Benchmark ---")
+    print("--- Phase 1: Main Benchmark (FULL COMBO) ---")
     archive_main = EliteArchive(k=CFG.elite_archive_k)
     algos_main   = []
-    if ORTOOLS_OK:
-        algos_main.append(ALGO_ORTOOLS)
+    if ORTOOLS_OK: algos_main.append(ALGO_ORTOOLS)
     algos_main += [ALGO_ALNS_BASE, ALGO_HYBRID_FIXED, ALGO_HYBRID_RULE, ALGO_HYBRID_DDQN]
 
     df_main = run_benchmark(
-        instances=RC1 + RC2,
+        instances=FULLCOMBO,
         algorithms=algos_main,
         cfg=CFG,
-        result_path=     os.path.join(CFG.output_dir, "benchmark_main_v15.csv"),
-        checkpoint_path= os.path.join(CFG.output_dir, "ckpt_main_v15.csv"),
+        result_path=     os.path.join(CFG.output_dir, "benchmark_main_v17.csv"),
+        checkpoint_path= os.path.join(CFG.output_dir, "ckpt_main_v17.csv"),
         archive=archive_main,
     )
     print_summary_table(df_main)
 
     # ── Phase 2: Domain-Randomized Zero-Shot Transfer ──────────────────────
     print("\n" + "=" * 64)
-    print("--- Phase 2: Domain-Randomized Zero-Shot Transfer ---")
+    print("--- Phase 2: Domain-Randomized Zero-Shot Transfer (FULL COMBO) ---")
     archive_dr = EliteArchive(k=CFG.elite_archive_k)
 
-    # Try to reuse cached DR weights — saves ~30-60min on re-runs
-    _dr_stem   = os.path.join(CFG.output_dir, "rl_alns_dr_v15")
+    _dr_stem   = os.path.join(CFG.output_dir, "rl_alns_dr_v17")
     dr_weights = _load_weights(_dr_stem)
     if dr_weights is None:
         dr_weights = train_domain_randomization(CFG, seed=CFG.seed)
@@ -3030,11 +3242,11 @@ if __name__ == "__main__":
         print("DR weights reloaded from disk — skipping retraining.")
 
     df_dr = run_benchmark(
-        instances=RC1 + RC2,
+        instances=FULLCOMBO,
         algorithms=[ALGO_HYBRID_DDQN_TRANSFER_DR],
         cfg=CFG,
-        result_path=     os.path.join(CFG.output_dir, "benchmark_dr_v15.csv"),
-        checkpoint_path= os.path.join(CFG.output_dir, "ckpt_dr_v15.csv"),
+        result_path=     os.path.join(CFG.output_dir, "benchmark_dr_v17.csv"),
+        checkpoint_path= os.path.join(CFG.output_dir, "ckpt_dr_v17.csv"),
         transfer_weights=dr_weights,
         archive=archive_dr,
     )
@@ -3049,5 +3261,4 @@ if __name__ == "__main__":
     print(archive_main.summary())
     print("\n--- Elite Archive: Phase 2 DR ---")
     print(archive_dr.summary())
-
     print("\n✅  All benchmarks complete.")
