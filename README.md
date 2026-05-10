@@ -12,16 +12,6 @@
   ![Leaflet](https://img.shields.io/badge/Leaflet-199900?style=for-the-badge&logo=leaflet&logoColor=white)
   ![Firebase Admin](https://img.shields.io/badge/Firebase%20Admin-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)
 
-<<<<<<< HEAD
-## Chạy ứng dụng(CMD)
-
-```powershell
-cd C:\D\Github\VRPTW-Research-Optimization
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
-& .\.venv\Scripts\Activate.ps1
-cd web\backend
-uvicorn main:app --reload --host 127.0.0.1 --port 8000
-=======
 ## Project Structure
 ```text
 src/
@@ -38,7 +28,6 @@ logs/
   image/
 model/
   rl_alns_transfer.safetensors
->>>>>>> origin/develop
 ```
 
 ## Getting Started
@@ -62,7 +51,6 @@ cd VRPTW-Research-Optimization
 cp .env.example .env       # Windows PowerShell: copy .env.example .env
 ```
 
-<<<<<<< HEAD
 Lưu ý:
 - `Depot` nên để `Demand = 0`
 - Nếu không có tọa độ, hệ thống sẽ thử geocode từ `Address`
@@ -70,9 +58,8 @@ Lưu ý:
 
 - TK : tranlop72@gmail.com
 - MK : 123456
-=======
+
 **Option A - uv (recommended, ~30 s install):**
->>>>>>> origin/develop
 
 ```bash
 uv venv .venv --python 3.12
@@ -139,11 +126,8 @@ Useful endpoints:
 - `GET /api/config` - public observability config the SPA loads on boot.
 - `GET /api/solomon?name=demo` - built-in mini benchmark (no files required).
 
-<<<<<<< HEAD
 Khi chỉ chạy dữ liệu mới:
 - Chỉ cần dùng `Customer List` và `Run Model`.
-
-=======
 ### Sample input file
 A ready-to-import customer file lives at:
 - `docs/samples/customers_sample.csv` (open in any text editor)
@@ -210,4 +194,3 @@ the API to the public internet.
 2. Create a feature branch.
 3. Add tests or smoke checks for your change.
 4. Open a Pull Request with a clear summary and test steps.
->>>>>>> origin/develop
