@@ -10,7 +10,7 @@ from core.rate_limit import (
     AUTH_TOKEN_LIMIT,
     limiter,
 )
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, Header, Query, Request
 from models.schemas import (
     AuthRequest,
     ForgotPasswordRequest,
@@ -47,6 +47,15 @@ async def register(request: Request, body: RegisterConfirmRequest) -> dict[str, 
 @limiter.limit(AUTH_TOKEN_LIMIT)
 async def token(request: Request, body: AuthRequest) -> dict[str, Any]:
     return auth_service.login_user(body.email, body.password)
+
+
+@router.post("/auth/logout")
+async def logout(
+    authorization: str | None = Header(default=None),
+    user: dict[str, str] = Depends(require_user),
+) -> dict[str, str]:
+    token = authorization.removeprefix("Bearer ").strip() if authorization else None
+    return auth_service.logout_user(user["email"], token)
 
 
 @router.post("/auth/forgot-password/request")

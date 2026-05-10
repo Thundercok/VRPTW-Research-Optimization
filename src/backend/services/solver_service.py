@@ -248,7 +248,7 @@ def _validate(payload: JobRequest) -> None:
             )
 
 
-async def solve_model(payload: JobRequest) -> dict[str, Any]:
+async def solve_model(payload: JobRequest, matrix: list[list[float]] | None = None) -> dict[str, Any]:
     _validate(payload)
     _log_device_once()
     torch.set_num_threads(max(1, (os.cpu_count() or 4) // 2))

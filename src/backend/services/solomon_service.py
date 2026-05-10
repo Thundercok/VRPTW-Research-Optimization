@@ -67,9 +67,49 @@ _DEMO_RAW: list[tuple[float, float, int, int, int, int]] = [
 ]
 
 
-def _builtin_demo() -> dict[str, Any]:
+_C1_DEMO_RAW: list[tuple[float, float, int, int, int, int]] = [
+    # Clustered demo
+    (10.7769, 106.7009, 0, 0, 240, 0),
+    (10.7723, 106.6985, 8, 0, 90, 10),
+    (10.7798, 106.6991, 6, 30, 120, 10),
+    (10.7765, 106.6951, 7, 40, 140, 10),
+    (10.7670, 106.6932, 5, 0, 80, 10),
+    (10.7995, 106.7375, 11, 50, 170, 12),
+    (10.8014, 106.7308, 7, 30, 150, 10),
+    (10.8050, 106.7350, 10, 60, 180, 10),
+    (10.7950, 106.7310, 8, 70, 190, 10),
+    (10.8400, 106.6650, 8, 60, 220, 12),
+    (10.8420, 106.6610, 9, 80, 230, 12),
+    (10.8380, 106.6680, 6, 50, 200, 12),
+    (10.8450, 106.6600, 7, 90, 240, 12),
+]
+
+
+_R1_DEMO_RAW: list[tuple[float, float, int, int, int, int]] = [
+    # Random demo
+    (10.7769, 106.7009, 0, 0, 240, 0),
+    (10.7530, 106.6510, 12, 60, 180, 15),
+    (10.7886, 106.6904, 9, 20, 110, 10),
+    (10.7281, 106.7191, 10, 70, 200, 12),
+    (10.7969, 106.6800, 6, 20, 130, 10),
+    (10.7976, 106.6500, 9, 40, 160, 12),
+    (10.8100, 106.7000, 8, 10, 100, 10),
+    (10.7400, 106.7500, 5, 80, 150, 10),
+    (10.7600, 106.6800, 7, 30, 120, 10),
+    (10.8200, 106.6300, 11, 50, 170, 15),
+    (10.7100, 106.6400, 6, 90, 190, 10),
+    (10.8300, 106.7200, 10, 40, 140, 12),
+    (10.7700, 106.7400, 8, 60, 160, 12),
+]
+def _builtin_variant(name: str) -> dict[str, Any]:
+    raw_data = _DEMO_RAW
+    if name == "c1_demo":
+        raw_data = _C1_DEMO_RAW
+    elif name == "r1_demo":
+        raw_data = _R1_DEMO_RAW
+
     customers: list[dict[str, Any]] = []
-    for idx, (lat, lng, demand, ready, due, service) in enumerate(_DEMO_RAW):
+    for idx, (lat, lng, demand, ready, due, service) in enumerate(raw_data):
         customers.append(
             {
                 "id": idx,
@@ -85,7 +125,7 @@ def _builtin_demo() -> dict[str, Any]:
             }
         )
     return {
-        "dataset": "demo",
+        "dataset": name if name in {"c1_demo", "r1_demo"} else "demo",
         "fleet": dict(_DEMO_FLEET),
         "customers": customers,
         "_builtin": True,
@@ -93,14 +133,14 @@ def _builtin_demo() -> dict[str, Any]:
 
 
 def _is_builtin(name: str) -> bool:
-    return name.strip().lower() in {"demo", "builtin", "sample"}
+    return name.strip().lower() in {"demo", "builtin", "sample", "c1_demo", "r1_demo"}
 
 
 def load_solomon_dataset(name: str = "demo") -> dict[str, Any]:
     raw_name = (name or "demo").strip().lower()
 
     if _is_builtin(raw_name):
-        return _builtin_demo()
+        return _builtin_variant(raw_name)
 
     if not re.fullmatch(r"[a-z]+\d{3}", raw_name):
         raise ValueError("Dataset name must look like c101, r101, rc101, or 'demo'")
@@ -175,8 +215,10 @@ def list_solomon_datasets() -> list[dict[str, Any]]:
     items: list[dict[str, Any]] = []
 
     # Always include the built-in demo
-    items.append({"name": "demo", "label": "Demo (12 customers, HCMC)", "builtin": True})
-    seen.add("demo")
+    items.append({"name": "demo", "label": "Demo RC (12 customers, HCMC)", "builtin": True})
+    items.append({"name": "c1_demo", "label": "Demo C1 (12 customers, HCMC)", "builtin": True})
+    items.append({"name": "r1_demo", "label": "Demo R1 (12 customers, HCMC)", "builtin": True})
+    seen.update(["demo", "c1_demo", "r1_demo"])
 
     pattern = re.compile(r"^([a-z]+\d{3})\.txt$")
     for d in _data_dirs():

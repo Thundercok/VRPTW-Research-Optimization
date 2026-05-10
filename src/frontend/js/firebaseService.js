@@ -42,7 +42,23 @@ class FirebaseService {
   }
 
   makeUserKey(email) {
-    return btoa(unescape(encodeURIComponent(email))).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+    return String(email || '').trim().toLowerCase();
+  }
+
+  async markLogout() {
+    if (!this.enabled || !this.db || !this.userKey) return;
+    try {
+      await setDoc(
+        doc(this.db, "users", this.userKey),
+        {
+          lastLogoutAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        },
+        { merge: true }
+      );
+    } catch (error) {
+      console.warn("firebase markLogout skipped:", error?.message || error);
+    }
   }
 
   async logEvent(type, meta = {}) {

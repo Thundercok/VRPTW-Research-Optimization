@@ -9,19 +9,27 @@ from services.auth_service import get_user_by_token
 async def require_user(authorization: str | None = Header(default=None)) -> dict[str, str]:
     """Resolve the current user, with optional demo bypass for local runs.
 
-    - If Firebase is configured, real bearer-token auth is required (no bypass).
+    - If ``DEMO_AUTH_BYPASS`` is true and the bearer token is the synthetic
+      ``demo-guest`` value, the request is served as an anonymous guest.
+      This works regardless of whether Firebase is configured, so the live
+      demo can coexist with real auth.
+    - If Firebase is configured, real bearer-token auth is required.
     - If Firebase is NOT configured AND ``DEMO_AUTH_BYPASS`` is true (default),
-      requests are served as a synthetic ``anonymous@demo.local`` operator.
+      requests without any token are served as a synthetic operator.
     - If Firebase is NOT configured AND ``DEMO_AUTH_BYPASS=false``, the API
       returns 503 so production deploys never accidentally expose endpoints.
     """
-    if not is_firebase_enabled():
-        if demo_auth_bypass_enabled():
+    # Fast path: synthetic guest token from the frontend "Continue as Guest" flow.
+    if demo_auth_bypass_enabled():
+        token = (authorization or "").removeprefix("Bearer ").strip()
+        if token == "demo-guest" or (not is_firebase_enabled() and not token):
             return {
-                "email": "anonymous@demo.local",
+                "email": "guest@demo.local",
                 "role": "operator",
                 "mode": "demo",
             }
+
+    if not is_firebase_enabled():
         raise HTTPException(
             status_code=503,
             detail="Authentication backend not configured. Set up Firebase or enable DEMO_AUTH_BYPASS.",
