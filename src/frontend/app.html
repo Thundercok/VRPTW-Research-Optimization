@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0f2740" />
+  <title>VRPTW AI Dispatch</title>
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <link rel="stylesheet" href="css/style.css?v=20260429a" />
+</head>
+<body>
+  <a class="back-to-landing" href="index.html" title="Back to landing page">&larr; Home</a>
+  <button id="lang-toggle" class="lang-fab" type="button" aria-label="Switch language" title="Switch language">VN</button>
+  <button id="help-button" class="help-fab" type="button" aria-label="Open quick help" title="Quick help (Shift+?)">
+    <span aria-hidden="true">?</span>
+  </button>
+  <section id="auth-screen" class="auth-screen">
+    <div class="auth-card">
+      <p class="tag">PROJECT NEXUS</p>
+      <div class="auth-headline">
+        <h1 id="auth-title">VRPTW Dispatch Portal</h1>
+        <div class="auth-icons" aria-hidden="true">
+          <span class="auth-icon">🚚</span>
+          <span class="auth-icon">📍</span>
+          <span class="auth-icon">🗺️</span>
+        </div>
+      </div>
+      <div class="auth-visual" aria-hidden="true">
+        <svg viewBox="0 0 420 120" role="img" focusable="false">
+          <defs>
+            <linearGradient id="routeGrad" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#7cb9e6" />
+              <stop offset="100%" stop-color="#2d8fd8" />
+            </linearGradient>
+          </defs>
+          <path class="route-path" d="M20 85 C100 20, 180 110, 260 50 S370 60, 400 30" fill="none" stroke="url(#routeGrad)" stroke-width="5" stroke-linecap="round" stroke-dasharray="7 9"/>
+          <circle class="route-node route-node-1" cx="20" cy="85" r="7" fill="#2d8fd8"/>
+          <circle class="route-node route-node-2" cx="260" cy="50" r="7" fill="#2d8fd8"/>
+          <circle class="route-node route-node-3" cx="400" cy="30" r="7" fill="#2d8fd8"/>
+          <g class="route-truck" transform="translate(150 70)">
+            <rect x="0" y="10" width="72" height="24" rx="7" fill="#2476b4"/>
+            <rect x="48" y="2" width="20" height="16" rx="4" fill="#2d8fd8"/>
+            <circle cx="16" cy="36" r="6" fill="#0f2740"/>
+            <circle cx="52" cy="36" r="6" fill="#0f2740"/>
+          </g>
+        </svg>
+      </div>
+      <div class="auth-views">
+        <div id="auth-view-login" class="auth-form auth-view active">
+          <label>Email</label>
+          <input id="login-email" type="email" placeholder="you@company.com" />
+          <label>Password</label>
+          <input id="login-password" type="password" placeholder="Enter password" />
+          <button id="btn-login" class="btn" type="button">Login</button>
+          <p id="auth-hint" class="hint auth-hint" style="display: none;"></p>
+          <div class="auth-links">
+            <button id="link-forgot-password" class="link-btn" type="button">Forgot Password?</button>
+            <button id="btn-open-register" class="btn ghost" type="button">Create Account</button>
+          </div>
+          <div id="guest-block" class="auth-guest hidden">
+            <div class="auth-divider"><span>or</span></div>
+            <button id="btn-guest-login" class="btn ghost guest-btn" type="button">Continue as Guest</button>
+            <p id="guest-hint" class="hint auth-hint">Demo mode active - skip auth and try the VRPTW solver right away.</p>
+          </div>
+        </div>
+
+        <div id="auth-view-register" class="auth-form auth-view hidden">
+          <label>Email</label>
+          <input id="register-email" type="email" placeholder="you@company.com" />
+          <label>Password</label>
+          <input id="register-password" type="password" placeholder="Enter password" />
+          <label>OTP</label>
+          <div class="otp-row">
+            <input id="register-otp" class="otp-input" type="text" inputmode="numeric" placeholder="Enter 6-digit OTP" maxlength="6" />
+            <button id="btn-request-otp" class="btn ghost otp-send-btn" type="button">Send OTP</button>
+          </div>
+          <p id="register-otp-countdown" class="otp-countdown">Click Send OTP to receive a verification code.</p>
+          <div class="inline-row auth-actions">
+            <button id="btn-register" class="btn hidden" type="button" disabled>Register</button>
+            <button id="btn-back-login-from-register" class="btn ghost" type="button">Come Back</button>
+          </div>
+        </div>
+
+        <div id="auth-view-forgot" class="auth-form auth-view hidden">
+          <label>Email</label>
+          <input id="forgot-email" type="email" placeholder="you@company.com" />
+          <p class="hint">The system will send a temporary password to your email. You must change it after login.</p>
+          <div class="inline-row auth-actions">
+            <button id="btn-forgot-password" class="btn" type="button">Send Reset Link</button>
+            <button id="btn-back-login-from-forgot" class="btn ghost" type="button">Come Back</button>
+          </div>
+        </div>
+
+        <div id="auth-view-reset" class="auth-form auth-view hidden">
+          <label>New Password</label>
+          <input id="reset-password" type="password" placeholder="Enter new password" />
+          <label>Confirm New Password</label>
+          <input id="reset-password-confirm" type="password" placeholder="Re-enter new password" />
+          <div class="inline-row auth-actions">
+            <button id="btn-reset-password" class="btn" type="button">Update Password</button>
+            <button id="btn-back-login-from-reset" class="btn ghost" type="button">Come Back</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="admin-screen" class="admin-screen hidden">
+    <div class="admin-shell">
+      <header class="admin-hero">
+        <div>
+          <p class="tag">PROJECT NEXUS</p>
+          <h1>User Administration</h1>
+    
+        </div>
+        <div class="admin-hero-actions">
+          <button id="admin-go-main" class="icon-btn admin-home-btn" type="button" title="Go to main app" aria-label="Go to main app">
+            <span class="btn-icon">🏠</span>
+          </button>
+          <button id="admin-refresh" class="btn ghost" type="button">Refresh</button>
+        </div>
+      </header>
+
+      <section class="admin-summary-grid">
+        <article class="admin-summary-card">
+          <span class="admin-summary-label">Total Users</span>
+          <strong id="admin-total-users">0</strong>
+        </article>
+        <article class="admin-summary-card">
+          <span class="admin-summary-label">Admins</span>
+          <strong id="admin-total-admins">0</strong>
+        </article>
+        <article class="admin-summary-card">
+          <span class="admin-summary-label">Operators</span>
+          <strong id="admin-total-operators">0</strong>
+        </article>
+        <article class="admin-summary-card">
+          <span class="admin-summary-label">Online</span>
+          <strong id="admin-total-online">0</strong>
+        </article>
+      </section>
+
+      <section class="admin-grid">
+        <article class="admin-card admin-create-card">
+          <div class="admin-card-head">
+            <div>
+              <p class="section-kicker">Create Account</p>
+              <h2>New User</h2>
+            </div>
+          </div>
+          <div class="admin-create-form">
+            <label class="field">
+              <span>Email</span>
+              <input id="admin-create-email" type="email" placeholder="new.user@company.com" />
+            </label>
+            <label class="field">
+              <span>Temporary Password</span>
+              <input id="admin-create-password" type="password" placeholder="Enter password" />
+            </label>
+            <label class="field">
+              <span>Role</span>
+              <select id="admin-create-role">
+                <option value="operator">Operator</option>
+                <option value="viewer">Viewer</option>
+                <option value="admin">Admin</option>
+              </select>
+            </label>
+            <label class="admin-check">
+              <input id="admin-create-force-change" type="checkbox" checked />
+              <span>Force password change on first login</span>
+            </label>
+            <button id="admin-create-user" class="btn" type="button">Create User</button>
+          </div>
+        </article>
+
+        <article class="admin-card admin-users-card">
+          <div class="admin-card-head">
+            <div>
+              <p class="section-kicker">Users</p>
+              <h2>Account Management</h2>
+            </div>
+          </div>
+          <div class="table-wrap admin-table-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Email</th>
+                  <th>Role</th>
+                  <th>Created</th>
+                  <th>Last Login</th>
+                  <th>Last Logout</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="admin-user-rows"></tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="admin-card admin-activity-card">
+          <div class="admin-card-head">
+            <div class="admin-activity-head-main">
+              <p class="section-kicker">Activity</p>
+            </div>
+            <div class="admin-activity-selected-wrap">
+              <span id="admin-selected-user" class="pill soft">Select a user</span>
+            </div>
+          </div>
+          <p class="admin-card-note">Click View on a user row to inspect login/logout activity.</p>
+          <div id="admin-activity-list" class="admin-activity-list"></div>
+        </article>
+      </section>
+    </div>
+  </section>
+
+  <div id="app-shell" class="app-shell hidden">
+    <aside class="sidebar">
+      <div class="sidebar-head">
+        <p class="tag">PROJECT NEXUS</p>
+        <h1>VRPTW</h1>
+        <p id="sidebar-subtitle" class="sidebar-subtitle">Ops Control</p>
+      </div>
+
+      <div class="left-panel">
+        <div class="panel-head">
+          <h2 id="config-title">Configuration</h2>
+          <span id="connection-pill" class="pill soft">Offline</span>
+        </div>
+        <p id="config-note" class="panel-note">Fleet, data, import.</p>
+
+        <label class="switch-row" for="mode-toggle">
+          <span id="mode-toggle-label">Data Mode</span>
+          <div class="toggle-wrap">
+            <span>Solomon RC</span>
+            <input id="mode-toggle" type="checkbox" />
+            <span>Real Data</span>
+          </div>
+        </label>
+
+        <div id="dataset-picker" class="field dataset-picker-field">
+          <span id="dataset-picker-label">Solomon Instance</span>
+          <div class="dataset-picker-row">
+            <select id="dataset-select" class="dataset-select">
+              <option value="demo" selected>Demo (12 customers, HCMC)</option>
+            </select>
+            <button id="load-dataset" class="btn ghost" type="button">Load</button>
+          </div>
+        </div>
+
+        <label class="field">
+          <span>Vehicles: <strong id="vehicles-value">4</strong></span>
+          <input id="vehicles-slider" type="range" min="1" max="30" step="1" value="4" />
+        </label>
+
+        <label class="field">
+          <span>Capacity: <strong id="capacity-value">120</strong></span>
+          <input id="capacity-slider" type="range" min="10" max="1000" step="10" value="120" />
+        </label>
+
+        <div class="field">
+          <span id="import-label">Import from Excel / CSV</span>
+          <div id="dropzone" class="dropzone">
+            <input id="excel-input" type="file" accept=".xlsx,.xls,.csv" hidden />
+            <div class="dropzone-copy">
+              <strong id="dropzone-title">Drag and drop a file here</strong>
+              <p id="dropzone-copy">.xlsx, .xls, .csv or paste data directly.</p>
+            </div>
+            <button id="pick-excel" class="btn ghost" type="button">Choose File</button>
+          </div>
+        </div>
+
+        <p class="hint">Click the map to drop a pin quickly.</p>
+        <p id="status" class="status">Ready.</p>
+      </div>
+
+      <div class="sidebar-foot">
+        <div class="session-box">
+          <p id="session-kicker" class="section-kicker">Session</p>
+          <p id="user-email" class="session-email">-</p>
+          <button id="btn-logout" class="btn ghost" type="button">Logout</button>
+          <a id="feedback-link" class="btn ghost" href="feedback.html">Feedback</a>
+          <a id="feedback-admin-link" class="btn ghost hidden" href="feedback_admin.html">Feedback Inbox</a>
+        </div>
+      </div>
+    </aside>
+
+    <main class="workspace">
+      <nav class="tabbar" role="tablist" aria-label="Dashboard tabs">
+        <button class="tab-btn active" data-tab="overview" role="tab" aria-selected="true">Overview</button>
+        <button class="tab-btn" data-tab="maps" role="tab" aria-selected="false">Route Map</button>
+        <button class="tab-btn" data-tab="results" role="tab" aria-selected="false">Results</button>
+        <span class="tabbar-indicator" aria-hidden="true"></span>
+      </nav>
+      <section class="main-panel">
+        <header class="hero tab-panel active" data-panel="overview">
+          <div class="hero-copy">
+            <p id="hero-kicker" class="tag">Executive Control Panel</p>
+            <h2 id="hero-title">Real-time AI-powered delivery dispatch.</h2>
+            <p id="hero-copy">Focus on core data and operational decisions.</p>
+          </div>
+
+          <div class="hero-stats">
+            <article class="hero-stat">
+              <span>Input</span>
+              <strong>Excel + Pin + Search</strong>
+            </article>
+            <article class="hero-stat">
+              <span>Compute</span>
+              <strong>Queue Background</strong>
+            </article>
+            <article class="hero-stat">
+              <span>Benchmark</span>
+              <strong>DDQN vs ALNS</strong>
+            </article>
+            <article class="hero-stat">
+              <span>Constraints</span>
+              <strong>Capacity + Time Windows</strong>
+            </article>
+          </div>
+        </header>
+
+        <section class="table-card tab-panel active" data-panel="overview">
+          <div class="row-head">
+            <div>
+              <p id="demo-kicker" class="section-kicker">VRPTW Inference Demo</p>
+              <h2 id="customer-title">Customer List</h2>
+              <p id="customer-note" class="panel-note">Each row has a time window (<strong>Ready / Due</strong>) and <strong>Service</strong> duration. Units are consistent with distance (~1 km ≈ 1 time unit).</p>
+            </div>
+            <div class="table-actions">
+              <button id="add-row" class="btn ghost icon-btn icon-only-btn" type="button" title="Add row" aria-label="Add row">
+                <span class="btn-icon">＋</span>
+              </button>
+              <button id="delete-selected" class="btn ghost icon-btn icon-only-btn" type="button" title="Delete selected rows" aria-label="Delete selected rows">
+                <span class="btn-icon">🗑</span>
+              </button>
+              <button id="run-model" class="btn danger icon-btn" type="button">
+                <span class="btn-icon">▶</span>
+                <span>Run Model</span>
+              </button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Pick</th>
+                  <th>ID</th>
+                  <th>Name</th>
+                  <th>Address</th>
+                  <th>Lat</th>
+                  <th>Lng</th>
+                  <th>Demand</th>
+                  <th title="Earliest arrival time">Ready</th>
+                  <th title="Latest arrival time">Due</th>
+                  <th title="Service duration at this stop">Service</th>
+                </tr>
+              </thead>
+              <tbody id="customer-rows"></tbody>
+            </table>
+            <div id="table-empty" class="empty-state hidden">
+              <div class="empty-icon">⌁</div>
+              <h3>No customer data yet</h3>
+              <p>Import from Excel/CSV or load sample data to get started.</p>
+            </div>
+            <div id="table-skeleton" class="skeleton-grid hidden">
+              <div class="skeleton-row"></div>
+              <div class="skeleton-row"></div>
+              <div class="skeleton-row"></div>
+              <div class="skeleton-row"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="metrics-grid tab-panel" data-panel="results">
+          <div class="analysis-scope-banner live-banner">
+            <span class="analysis-scope-tag">Live Run Output</span>
+            <span class="analysis-scope-text">Results from the current model run on your active dataset.</span>
+          </div>
+
+          <article id="metric-runtime-card" class="metric runtime-strip" data-winner="tie">
+            <p class="metric-title">Runtime</p>
+            <div class="runtime-strip-grid">
+              <div class="runtime-chip ddqn">
+                <span class="algo-tag">DDQN</span>
+                <strong id="metric-runtime-ddqn" class="metric-value">-</strong>
+              </div>
+              <div class="runtime-chip alns">
+                <span class="algo-tag">ALNS</span>
+                <strong id="metric-runtime-alns" class="metric-value">-</strong>
+              </div>
+              <div class="runtime-chip delta">
+                <span class="algo-tag">Delta</span>
+                <strong id="metric-runtime-delta" class="metric-value">-</strong>
+              </div>
+            </div>
+          </article>
+
+          <article id="metric-distance-card" class="metric compare-metric" data-winner="tie">
+            <div class="metric-head">
+              <p class="metric-title">Total Distance</p>
+              <span id="metric-distance-delta" class="metric-delta">-</span>
+            </div>
+            <div class="metric-compare">
+              <div class="metric-col ddqn">
+                <span class="algo-tag">DDQN</span>
+                <strong id="metric-distance-ddqn" class="metric-value">-</strong>
+              </div>
+              <div class="metric-col alns">
+                <span class="algo-tag">ALNS</span>
+                <strong id="metric-distance-alns" class="metric-value">-</strong>
+              </div>
+            </div>
+            <div class="metric-bars">
+              <div class="bar-track"><span id="metric-distance-bar-ddqn" class="bar-fill ddqn" style="width: 0%"></span></div>
+              <div class="bar-track"><span id="metric-distance-bar-alns" class="bar-fill alns" style="width: 0%"></span></div>
+            </div>
+          </article>
+
+          <article id="metric-vehicles-card" class="metric compare-metric" data-winner="tie">
+            <div class="metric-head">
+              <p class="metric-title">Vehicles Used</p>
+              <span id="metric-vehicles-delta" class="metric-delta">-</span>
+            </div>
+            <div class="metric-compare">
+              <div class="metric-col ddqn">
+                <span class="algo-tag">DDQN</span>
+                <strong id="metric-vehicles-ddqn" class="metric-value">-</strong>
+              </div>
+              <div class="metric-col alns">
+                <span class="algo-tag">ALNS</span>
+                <strong id="metric-vehicles-alns" class="metric-value">-</strong>
+              </div>
+            </div>
+            <div class="metric-bars">
+              <div class="bar-track"><span id="metric-vehicles-bar-ddqn" class="bar-fill ddqn" style="width: 0%"></span></div>
+              <div class="bar-track"><span id="metric-vehicles-bar-alns" class="bar-fill alns" style="width: 0%"></span></div>
+            </div>
+          </article>
+
+          <article id="metric-load-card" class="metric load-insight-card" data-winner="tie">
+            <div class="metric-head">
+              <p class="metric-title">Fleet Utilization</p>
+              <span id="metric-load-delta" class="metric-delta">-</span>
+            </div>
+            <div class="load-insight-grid">
+              <div class="load-insight-col ddqn">
+                <span class="algo-tag">DDQN</span>
+                <div id="metric-load-donut-ddqn" class="load-donut ddqn" style="--p:0%">
+                  <span id="metric-load-donut-ddqn-label">0%</span>
+                </div>
+                <strong id="metric-load-ddqn" class="metric-value">-</strong>
+                <div class="bar-track"><span id="metric-load-bar-ddqn" class="bar-fill ddqn" style="width: 0%"></span></div>
+                <small id="metric-load-ddqn-state" class="load-state">-</small>
+              </div>
+              <div class="load-insight-col alns">
+                <span class="algo-tag">ALNS</span>
+                <div id="metric-load-donut-alns" class="load-donut alns" style="--p:0%">
+                  <span id="metric-load-donut-alns-label">0%</span>
+                </div>
+                <strong id="metric-load-alns" class="metric-value">-</strong>
+                <div class="bar-track"><span id="metric-load-bar-alns" class="bar-fill alns" style="width: 0%"></span></div>
+                <small id="metric-load-alns-state" class="load-state">-</small>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <section class="map-container tab-panel" data-panel="maps">
+          <div id="map-main" class="map-full"></div>
+          
+          <div class="map-floating-panel">
+            <h3 class="map-panel-title">Routing Benchmark Engine</h3>
+            <p class="map-panel-desc">Compare algorithm performance on the real-world road network.</p>
+            
+            <div class="algo-toggle-group" id="map-algo-toggles">
+              <button class="algo-toggle active" data-algo="ddqn">
+                <span class="icon">🚀</span> DDQN-ALNS
+              </button>
+              <button class="algo-toggle" data-algo="hybrid">
+                <span class="icon">⚡️</span> Hybrid++
+              </button>
+              <button class="algo-toggle" data-algo="alns">
+                <span class="icon">🐢</span> ALNS Pure
+              </button>
+            </div>
+          </div>
+
+          <div id="map-empty-main" class="empty-state map-empty hidden">
+            <div class="empty-icon">🗺</div>
+            <h3>Awaiting Optimization</h3>
+            <p>Run the model to see your vehicles mapped perfectly to the road network.</p>
+          </div>
+        </section>
+
+        <section class="gantt-card tab-panel" data-panel="results">
+          <div class="row-head">
+            <div>
+              <p class="section-kicker">Trip Timeline</p>
+              <h2 id="gantt-title">Route Schedule (Gantt)</h2>
+              <p id="gantt-note" class="panel-note">Each bar shows a vehicle's journey: departure → stops → return. Hover for details.</p>
+            </div>
+            <div class="gantt-actions">
+              <select id="gantt-algo-select" class="dataset-select">
+                <option value="ddqn" selected>DDQN</option>
+                <option value="alns">ALNS</option>
+              </select>
+            </div>
+          </div>
+          <div id="gantt-chart" class="gantt-chart">
+            <div id="gantt-empty" class="empty-state">
+              <div class="empty-icon">📊</div>
+              <h3>No schedule data yet</h3>
+              <p>Run the model to see the trip Gantt chart here.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="analysis-card tab-panel" data-panel="results">
+          <div class="analysis-scope-banner archive-banner">
+            <span class="analysis-scope-tag">Training Analysis Archive</span>
+            <span class="analysis-scope-text">Historical benchmark and training diagnostics loaded from logs/ (flat) or logs/results-vX (legacy).</span>
+          </div>
+
+          <div class="row-head analysis-head">
+            <div>
+              <p class="section-kicker">Model Intelligence</p>
+              <h2>Training Analysis</h2>
+              <p id="analysis-last-updated" class="analysis-sub">Select a version to inspect benchmark behavior.</p>
+            </div>
+            <div class="analysis-actions">
+              <label class="analysis-version-wrap" for="analysis-version">
+                <span>Version</span>
+                <select id="analysis-version"></select>
+              </label>
+              <label class="analysis-version-wrap" for="analysis-instance">
+                <span>Instance</span>
+                <select id="analysis-instance"></select>
+              </label>
+              <button id="analysis-open-popup" class="btn" type="button">Deep Analysis</button>
+            </div>
+          </div>
+
+          <p id="analysis-status" class="status">Analysis data is loading...</p>
+
+          <div id="analysis-summary-kpis" class="analysis-kpi-grid"></div>
+
+          <div class="analysis-grid">
+            <article class="analysis-block">
+              <h3>Convergence Snapshot</h3>
+              <div id="analysis-convergence-chart" class="analysis-chart">No convergence data yet.</div>
+            </article>
+
+            <article class="analysis-block">
+              <h3>Operator Policy Heatmap</h3>
+              <div id="analysis-policy-grid" class="analysis-heatmap-wrap">No policy matrix available.</div>
+            </article>
+          </div>
+
+          <article class="analysis-block analysis-wide-block">
+            <h3>Hourly Activity</h3>
+            <div id="analysis-activity-chart" class="analysis-chart">No activity data yet.</div>
+          </article>
+
+          <div class="analysis-grid">
+            <article class="analysis-block">
+              <h3>Instance Leaderboard</h3>
+              <div class="analysis-table-wrap">
+                <table class="analysis-table">
+                  <thead>
+                    <tr>
+                      <th>Instance</th>
+                      <th>Gap Winner</th>
+                      <th>Runtime Winner</th>
+                      <th>Stability</th>
+                    </tr>
+                  </thead>
+                  <tbody id="analysis-leaderboard-body"></tbody>
+                </table>
+              </div>
+            </article>
+
+            <article class="analysis-block">
+              <h3>Transfer Snapshot</h3>
+              <div class="analysis-table-wrap">
+                <table class="analysis-table">
+                  <thead>
+                    <tr>
+                      <th>Instance</th>
+                      <th>Gap %</th>
+                      <th>Vehicles</th>
+                    </tr>
+                  </thead>
+                  <tbody id="analysis-transfer-body"></tbody>
+                </table>
+              </div>
+            </article>
+          </div>
+        </section>
+      </section>
+
+<<<<<<< HEAD:web/frontend/index.html
+=======
+
+>>>>>>> test:src/frontend/app.html
+    </main>
+  </div>
+
+  <div id="loading" class="loading hidden">
+    <div id="loading-card" class="loading-card">
+      <div class="loading-actions" aria-label="Loading controls">
+        <button id="loading-minimize" class="loading-action-btn" type="button" aria-label="Minimize loading screen">−</button>
+        <button id="loading-cancel" class="loading-action-btn danger" type="button" aria-label="Cancel optimization">×</button>
+      </div>
+
+      <div class="loading-head">
+        <div class="loader-ring"></div>
+        <p id="loading-title">AI is optimizing routes...</p>
+        <p id="loading-subtitle" class="loading-subtitle">Sending request to the backend solver...</p>
+      </div>
+
+      <div class="dispatch-progress" aria-hidden="true">
+        <div class="progress-track">
+          <div id="loading-track-fill" class="progress-fill"></div>
+          <div id="loading-truck" class="progress-truck">
+            <span class="truck-trail"></span>
+            <span class="truck-stack"></span>
+            <span class="truck-head"></span>
+            <span class="truck-wheel truck-wheel-a"></span>
+            <span class="truck-wheel truck-wheel-b"></span>
+          </div>
+        </div>
+
+        <div class="progress-meta">
+          <span id="loading-phase" class="phase">Collecting route data...</span>
+          <strong id="loading-percent" class="percent">0%</strong>
+        </div>
+      </div>
+
+      <div class="loading-stats">
+        <div class="loading-stat">
+          <span class="loading-stat-label">Elapsed</span>
+          <strong id="loading-elapsed" class="loading-stat-value">0.0s</strong>
+        </div>
+        <div class="loading-stat">
+          <span class="loading-stat-label">Backend</span>
+          <strong id="loading-backend" class="loading-stat-value">connecting...</strong>
+        </div>
+        <div class="loading-stat">
+          <span class="loading-stat-label">Compute</span>
+          <strong id="loading-device" class="loading-stat-value">CPU</strong>
+        </div>
+      </div>
+
+      <div class="loading-lines" aria-hidden="true">
+        <div class="line"></div>
+        <div class="line"></div>
+        <div class="line"></div>
+      </div>
+    </div>
+
+    <button id="loading-launcher" class="loading-launcher hidden" type="button" aria-label="Restore loading screen">
+      <span class="loading-launcher-icon" aria-hidden="true">🚚</span>
+      <span class="loading-launcher-text">Routes</span>
+    </button>
+  </div>
+
+  <div id="toast-root" class="toast-root" aria-live="polite" aria-atomic="true"></div>
+
+  <div id="help-modal" class="help-modal hidden" role="dialog" aria-modal="true" aria-labelledby="help-modal-title">
+    <div class="help-modal-card" role="document">
+      <header class="help-modal-head">
+        <div>
+          <p class="section-kicker">Quick start</p>
+          <h2 id="help-modal-title">How to drive the VRPTW demo</h2>
+          <p class="help-modal-sub">Five steps from sample data to a side-by-side DDQN vs. ALNS comparison.</p>
+        </div>
+        <button id="help-modal-close" class="btn ghost" type="button" aria-label="Close help">Close</button>
+      </header>
+
+      <ol class="help-steps">
+        <li>
+          <span class="help-step-num">1</span>
+          <div>
+            <h3>Pick a data mode</h3>
+            <p>Toggle <strong>Solomon RC</strong> (built-in <code>demo</code> instance, 12 customers around HCMC) or <strong>Real Data</strong> to upload your own.</p>
+          </div>
+        </li>
+        <li>
+          <span class="help-step-num">2</span>
+          <div>
+            <h3>Edit the table inline</h3>
+            <p>Double-click any cell to update <code>name</code>, <code>lat/lng</code>, <code>demand</code>, or the time window (<strong>ready / due / service</strong>). Add rows with <kbd>+</kbd> or import from <code>.csv</code>/<code>.xlsx</code>.</p>
+          </div>
+        </li>
+        <li>
+          <span class="help-step-num">3</span>
+          <div>
+            <h3>Tune the fleet</h3>
+            <p>Use the sliders for <strong>vehicles</strong> and <strong>capacity</strong>. The first row (<code>id 0</code>) is the depot and is non-editable.</p>
+          </div>
+        </li>
+        <li>
+          <span class="help-step-num">4</span>
+          <div>
+            <h3>Run Model</h3>
+            <p>Click <strong>Run Model</strong>. The backend solves twice: <em>DDQN-ALNS</em> and the <em>ALNS</em> baseline. Progress streams to the loading panel - you can minimize it.</p>
+          </div>
+        </li>
+        <li>
+          <span class="help-step-num">5</span>
+          <div>
+            <h3>Read the comparison</h3>
+            <p>Switch to the <strong>Maps</strong> tab for routes side-by-side, or the <strong>Results</strong> tab for runtime, total distance, vehicles used, and fleet utilisation deltas.</p>
+          </div>
+        </li>
+      </ol>
+
+      <div class="help-tips">
+        <h3>Tips</h3>
+        <ul>
+          <li><strong>Click the map</strong> to drop a customer pin (Real Data mode only).</li>
+          <li><strong>Paste a TSV/CSV</strong> anywhere on the page to import in Real Data mode.</li>
+          <li><strong>Demo / Guest mode</strong>: when Firebase is not configured, your data lives in memory only.</li>
+          <li><strong>Shortcut</strong>: press <kbd>Shift</kbd> + <kbd>?</kbd> to reopen this guide.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div id="analysis-modal" class="analysis-modal hidden" role="dialog" aria-modal="true" aria-labelledby="analysis-modal-title">
+    <div class="analysis-modal-card">
+      <div class="analysis-modal-head">
+        <div>
+          <p class="section-kicker">Deep Analysis</p>
+          <h2 id="analysis-modal-title">Version Diagnostics</h2>
+          <p id="analysis-modal-subtitle" class="analysis-sub">Full training diagnostics from selected version.</p>
+        </div>
+        <div class="analysis-actions">
+          <button id="analysis-modal-close" class="btn ghost" type="button">Close</button>
+        </div>
+      </div>
+
+      <div class="analysis-modal-grid">
+        <article class="analysis-block">
+          <h3>Meta</h3>
+          <div id="analysis-modal-meta" class="analysis-meta-list">No metadata available.</div>
+        </article>
+        <article class="analysis-block">
+          <h3>Convergence</h3>
+          <div id="analysis-modal-convergence" class="analysis-chart">No convergence history.</div>
+        </article>
+      </div>
+
+      <div class="analysis-modal-grid">
+        <article class="analysis-block">
+          <h3>Transfer Plot</h3>
+          <div id="analysis-modal-transfer-plot" class="analysis-chart">No transfer data.</div>
+        </article>
+        <article class="analysis-block">
+          <h3>Transfer Table</h3>
+          <div class="analysis-table-wrap">
+            <table class="analysis-table">
+              <thead>
+                <tr>
+                  <th>Instance</th>
+                  <th>TD</th>
+                  <th>Gap %</th>
+                  <th>NV</th>
+                </tr>
+              </thead>
+              <tbody id="analysis-modal-transfer-body"></tbody>
+            </table>
+          </div>
+        </article>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/observability.js?v=20260429a"></script>
+  <script type="module" src="js/main.js?v=20260429a"></script>
+</body>
+</html>

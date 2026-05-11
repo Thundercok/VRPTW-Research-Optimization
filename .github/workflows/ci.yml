@@ -1,0 +1,119 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend lint + smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dev tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff
+
+      - name: Ruff lint (src/backend + main.py + scripts)
+        run: |
+          ruff check src/backend main.py scripts/smoke_hardening.py
+
+      - name: Install runtime deps (without ML extras)
+        run: |
+          pip install \
+            "fastapi>=0.116" \
+            "uvicorn[standard]>=0.35" \
+            "httpx>=0.28" \
+            "pydantic>=2.11" \
+            "firebase-admin>=7.0" \
+            "python-dotenv>=1.0" \
+            "passlib[argon2]>=1.7.4" \
+            "argon2-cffi>=23.1" \
+            "slowapi>=0.1.9" \
+            "sentry-sdk[fastapi]>=2.0"
+
+      - name: Compile backend modules
+        run: |
+          python -m compileall src/backend main.py
+
+      - name: Smoke import (security helpers)
+        env:
+          PYTHONPATH: src/backend
+        run: |
+          python - <<'PY'
+          from core.security import hash_password, verify_password, needs_upgrade
+
+          h = hash_password('hunter2')
+          assert verify_password('hunter2', h)
+          assert not verify_password('nope', h)
+          assert not needs_upgrade(h)
+
+          legacy = '0' * 64
+          assert needs_upgrade(legacy)
+          print('security helpers OK')
+          PY
+
+      - name: Smoke (rate limit + config + builtin demo)
+        run: |
+          python scripts/smoke_hardening.py
+
+  frontend:
+    name: Frontend syntax check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Parse ES modules with esbuild
+        run: |
+          npx --yes esbuild@0.24 \
+            src/frontend/js/App.js \
+            src/frontend/js/landing.js \
+            src/frontend/js/main.js \
+            src/frontend/js/createInitialState.js \
+            src/frontend/js/constants.js \
+            src/frontend/js/firebaseConfig.js \
+            src/frontend/js/firebaseService.js \
+            --format=esm \
+            --target=es2022 \
+            --bundle=false \
+            --log-level=warning \
+            --outdir=/tmp/esbuild-check \
+            --allow-overwrite
+
+      - name: Parse classic scripts with esbuild
+        run: |
+          npx --yes esbuild@0.24 \
+            src/frontend/js/observability.js \
+            --format=iife \
+            --target=es2022 \
+            --bundle=false \
+            --log-level=warning \
+            --outdir=/tmp/esbuild-iife \
+            --allow-overwrite
