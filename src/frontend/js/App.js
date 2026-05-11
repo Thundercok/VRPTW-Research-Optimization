@@ -2,6 +2,7 @@ import { firebaseService } from './firebaseService.js';
 import { API_BASE } from './constants.js';
 import { createInitialState } from './createInitialState.js';
 import { getDemoLang, setDemoLang, toggleDemoLang } from './demoLang.js';
+import { solveDemo, getDemoAdminUsers, getDemoActivity, getHCMCDemoDataset } from './DemoEngine.js';
 
 const APP_COPY = {
   en: {
@@ -103,7 +104,7 @@ const APP_COPY = {
     demoKicker: 'Demo suy luận VRPTW',
     customerTitle: 'Danh sách khách hàng',
     customerNote: 'Mỗi dòng có khung giờ (Ready / Due) và thời lượng Service. Đơn vị đồng nhất với khoảng cách (~1 km ≈ 1 đơn vị thời gian).',
-    tabs: ['Tổng quan', 'Bản đồ tách đôi', 'Kết quả'],
+    tabs: ['Tổng quan', 'Bản đồ tuyến đường', 'Kết quả'],
     helpTitle: 'Cách dùng demo VRPTW',
     helpSubtitle: '5 bước từ dữ liệu mẫu tới so sánh DDQN và ALNS.',
     helpClose: 'Đóng',
@@ -166,6 +167,7 @@ export class App {
     this.el = this.bindElements();
     this.maps = null;
     this.vehicleAnimations = [];
+    this.isDemoMode = false;  // true when running without backend
     this.loadingAnim = {
       active: false,
       rafId: 0,
@@ -201,7 +203,11 @@ export class App {
     this.probeBackendMode();
 
     if (this.state.unlocked && this.state.email) {
-      if (this.state.mustChangePassword) {
+      if (this.state.token === 'demo-guest') {
+        this.isDemoMode = true;
+        this.enterApp();
+        this.toast('Demo Mode', 'Running as demo admin — solver runs in-browser.', 'ok');
+      } else if (this.state.mustChangePassword) {
         this.showAuthView('reset');
         this.toast('Password Change Required', 'Set a new password before accessing the app.', 'error');
       } else if (this.state.role === 'admin') {
@@ -513,6 +519,22 @@ export class App {
     this.el.loadingLauncher?.addEventListener('click', (event) => {
       event.preventDefault();
       this.restoreLoading();
+    });
+
+    this.wireMapToggles();
+  }
+
+  wireMapToggles() {
+    const buttons = document.querySelectorAll('#map-algo-toggles .algo-toggle');
+    buttons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        buttons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        this.state.activeMapAlgo = btn.dataset.algo;
+        if (this.state.lastResult) {
+          this.paintResult();
+        }
+      });
     });
   }
 
@@ -1034,7 +1056,11 @@ export class App {
     this.setupTabs();
     this.setupExcelImport();
     this.wireEvents();
-
+    this.el.mapToggleButtons?.forEach(btn => btn.addEventListener('click', () => {
+      this.state.activeMapAlgo = btn.dataset.algo;
+      this.paintResult();
+      this.updateMapToggleUI();
+    }));
   }
 
   enterApp() {
@@ -1051,21 +1077,89 @@ export class App {
       this.renderMarkers();
       this.showEmptyStates();
     } else {
-      this.maps.ddqnMap.invalidateSize();
-      this.maps.alnsMap.invalidateSize();
+      this.maps.mapMain?.invalidateSize();
     }
 
     this.setStatus('Ready for operations.', 'ok');
     this.setImportEnabled(this.state.mode === 'real');
     this.updateDatasetPickerVisibility();
-    if (this.state.mode === 'sample') {
+    this.updateModeBadge();
+
+    if (this.isDemoMode) {
+      // Demo mode: load HCMC dataset in JS, then auto-run solver
+      this._loadDemoDataset();
+    } else if (this.state.mode === 'sample') {
       this.loadAvailableDatasets().then(() => this.loadSolomonDataset('demo'));
     }
+
     this.bootstrapAnalysis();
     this.updateConnectionPill();
     this.updateSessionInfo();
     this.updateAdminPanel();
     this.activateTab(this.state.activeTab, true);
+  }
+
+  /** Load HCMC demo dataset and trigger JS solve */
+  _loadDemoDataset() {
+    const ds = getHCMCDemoDataset();
+    this.state.customers = ds.customers.map((c, idx) => ({ ...c, id: idx }));
+    this.state.vehicles = ds.fleet.vehicles;
+    this.state.capacity = ds.fleet.capacity;
+    if (this.el.vehicles) this.el.vehicles.value = String(ds.fleet.vehicles);
+    if (this.el.vehiclesValue) this.el.vehiclesValue.textContent = String(ds.fleet.vehicles);
+    if (this.el.capacity) this.el.capacity.value = String(ds.fleet.capacity);
+    if (this.el.capacityValue) this.el.capacityValue.textContent = String(ds.fleet.capacity);
+    this.selectedCustomerIds.clear();
+    this.renderCustomers();
+    this.renderMarkers();
+    this.setStatus(`Demo dataset loaded: ${this.state.customers.length - 1} delivery stops around HCMC.`, 'ok');
+    this.toast('Demo Mode', 'Auto-running solver on HCMC sample data…', 'ok');
+    // Auto-run after a short delay so maps finish rendering
+    window.setTimeout(() => this._runDemoSolve(), 800);
+  }
+
+  /** Run the pure-JS VRPTW solver and paint results */
+  async _runDemoSolve() {
+    this.showLoading(true);
+    this.setLoadingProgress(5, 'Demo Mode — Running ALNS solver in browser…', 'Computing routes locally (no backend needed)', 0.3, 'idle');
+
+    // Yield to browser so loading UI paints
+    await new Promise(r => setTimeout(r, 60));
+
+    try {
+      const result = solveDemo(this.state.customers, this.state.vehicles, this.state.capacity);
+      
+      this.setLoadingProgress(90, 'Demo Mode — Generating road geometries...', 'Querying OSRM for realistic routes...', 0.5, 'alns');
+      await this.enrichRoutesWithRoadGeometries(result.ddqn);
+      await this.enrichRoutesWithRoadGeometries(result.alns);
+      
+      this.state.lastResult = result;
+      this.state.lastRunFleet = { vehicles: this.state.vehicles, capacity: this.state.capacity };
+      this.paintResult();
+      await this.completeLoading();
+      this.setStatus(`Demo solve complete — DDQN: ${result.ddqn.total_distance_km} km | ALNS: ${result.alns.total_distance_km} km`, 'ok');
+      this.toast('Solve Complete', `${result.alns.vehicles_used} routes optimized in ${result.alns.runtime_sec.toFixed(2)}s`, 'ok');
+      this.showEmptyStates();
+      // Switch to Maps tab so vehicles are visible
+      window.setTimeout(() => this.activateTab('maps', true), 600);
+    } catch (err) {
+      this.hideLoadingImmediate();
+      this.toast('Demo Solve Failed', String(err.message), 'error');
+    }
+  }
+
+  /** Inject/update the DEMO or LIVE badge in the sidebar */
+  updateModeBadge() {
+    let badge = document.getElementById('app-mode-badge');
+    if (!badge) {
+      badge = document.createElement('span');
+      badge.id = 'app-mode-badge';
+      badge.className = 'mode-badge';
+      const pill = document.getElementById('connection-pill');
+      if (pill?.parentNode) pill.parentNode.insertBefore(badge, pill.nextSibling);
+    }
+    badge.textContent = this.isDemoMode ? 'DEMO' : 'LIVE';
+    badge.dataset.mode = this.isDemoMode ? 'demo' : 'live';
   }
 
   enterAdminDashboard() {
@@ -1179,47 +1273,23 @@ export class App {
   }
 
   createMaps() {
-    const ddqnMap = L.map('map-ddqn').setView([10.73193, 106.69934], 14);
-    const alnsMap = L.map('map-alns').setView([10.73193, 106.69934], 14);
+    const mapMain = L.map('map-main', { zoomControl: false }).setView([10.73193, 106.69934], 14);
+    L.control.zoom({ position: 'bottomright' }).addTo(mapMain);
 
     const layer = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-    [ddqnMap, alnsMap].forEach((m) => {
-      L.tileLayer(layer, { maxZoom: 19 }).addTo(m);
-    });
+    L.tileLayer(layer, { maxZoom: 19 }).addTo(mapMain);
 
-    const ddqnMarkerLayer = L.layerGroup().addTo(ddqnMap);
-    const alnsMarkerLayer = L.layerGroup().addTo(alnsMap);
-    const ddqnRouteLayer = L.layerGroup().addTo(ddqnMap);
-    const alnsRouteLayer = L.layerGroup().addTo(alnsMap);
-    const alnsDiffLayer = L.layerGroup().addTo(alnsMap);
-    const ddqnVehicleLayer = L.layerGroup().addTo(ddqnMap);
-    const alnsVehicleLayer = L.layerGroup().addTo(alnsMap);
+    const markerLayer = L.layerGroup().addTo(mapMain);
+    const routeLayer = L.layerGroup().addTo(mapMain);
+    const vehicleLayer = L.layerGroup().addTo(mapMain);
 
-    let syncing = false;
-    const sync = (source, target) => {
-      source.on('move', () => {
-        if (syncing) return;
-        syncing = true;
-        target.setView(source.getCenter(), source.getZoom(), { animate: false });
-        syncing = false;
-      });
-    };
-    sync(ddqnMap, alnsMap);
-    sync(alnsMap, ddqnMap);
-
-    ddqnMap.on('click', (e) => this.addMapPoint(e.latlng));
-    alnsMap.on('click', (e) => this.addMapPoint(e.latlng));
+    mapMain.on('click', (e) => this.addMapPoint(e.latlng));
 
     return {
-      ddqnMap,
-      alnsMap,
-      ddqnMarkerLayer,
-      alnsMarkerLayer,
-      ddqnRouteLayer,
-      alnsRouteLayer,
-      alnsDiffLayer,
-      ddqnVehicleLayer,
-      alnsVehicleLayer
+      mapMain,
+      markerLayer,
+      routeLayer,
+      vehicleLayer
     };
   }
 
@@ -1282,30 +1352,61 @@ export class App {
   startVehicleAnimation(marker, path) {
     if (!Array.isArray(path) || path.length < 2) return;
 
+    const distances = [];
+    let totalDist = 0;
+    for (let i = 0; i < path.length - 1; i++) {
+      const d = Math.hypot(path[i][0] - path[i + 1][0], path[i][1] - path[i + 1][1]);
+      distances.push(d);
+      totalDist += d;
+    }
+    distances.push(0);
+
     const anim = {
       alive: true,
       rafId: 0,
       segment: 0,
-      t: Math.random() * 0.85,
-      speed: 0.012 + Math.random() * 0.006
+      t: 0,
+      baseSpeed: (totalDist / (60 * (15 + Math.random() * 10))) 
     };
 
     const tick = () => {
       if (!anim.alive) return;
 
       const a = path[anim.segment];
-      const b = path[anim.segment + 1] || path[0];
+      const b = path[anim.segment + 1];
+      if (!b) {
+        anim.segment = 0;
+        anim.t = 0;
+        anim.rafId = requestAnimationFrame(tick);
+        return;
+      }
+
+      const d = distances[anim.segment];
       const lat = a[0] + (b[0] - a[0]) * anim.t;
       const lng = a[1] + (b[1] - a[1]) * anim.t;
       marker.setLatLng([lat, lng]);
 
-      anim.t += anim.speed;
-      if (anim.t >= 1) {
-        anim.t = 0;
-        anim.segment += 1;
-        if (anim.segment >= path.length - 1) {
-          anim.segment = 0;
+      const node = marker.getElement();
+      if (node) {
+        const dx = b[1] - a[1];
+        const dy = b[0] - a[0];
+        if (Math.abs(dx) > 0.0001 || Math.abs(dy) > 0.0001) {
+          const heading = Math.atan2(-dy, dx) * (180 / Math.PI);
+          const wrapper = node.querySelector('.map-icon-3d');
+          if (wrapper) {
+            const isLeft = dx < 0;
+            wrapper.style.transform = `rotate(${heading}deg) ${isLeft ? 'scaleY(-1)' : ''}`;
+            wrapper.style.transition = 'transform 0.1s linear';
+          }
         }
+      }
+
+      const segmentSpeed = d > 0.000001 ? (anim.baseSpeed / d) : 1;
+      anim.t += segmentSpeed;
+      
+      while (anim.t >= 1) {
+        anim.t -= 1;
+        anim.segment += 1;
       }
 
       anim.rafId = requestAnimationFrame(tick);
@@ -1313,6 +1414,31 @@ export class App {
 
     anim.rafId = requestAnimationFrame(tick);
     this.vehicleAnimations.push(anim);
+  }
+
+  async enrichRoutesWithRoadGeometries(algoResult) {
+    if (!algoResult || !algoResult.routes) return;
+    
+    const promises = algoResult.routes.map(async (route) => {
+      if (!route.path || route.path.length < 2) return;
+      try {
+        const chunk = route.path.slice(0, 99); // OSRM max 100 points
+        const coordsStr = chunk.map(p => `${Number(p[1]).toFixed(5)},${Number(p[0]).toFixed(5)}`).join(';');
+        const url = `https://router.project-osrm.org/route/v1/driving/${coordsStr}?overview=full&geometries=geojson`;
+        
+        const res = await fetch(url, { signal: this.runSession?.abortController?.signal });
+        if (!res.ok) return;
+        
+        const data = await res.json();
+        if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
+          route.path = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+        }
+      } catch (err) {
+        console.warn("OSRM routing fallback:", err);
+      }
+    });
+    
+    await Promise.allSettled(promises);
   }
 
   wireEvents() {
@@ -1507,6 +1633,30 @@ export class App {
 
   async bootstrapAnalysis(forceReload = false) {
     if (!this.el.analysisVersion) return;
+
+    // In demo mode, load the bundled research findings directly
+    if (this.isDemoMode) {
+      try {
+        const module = await import('./demoAnalysisData.js');
+        this.state.analysisData = module.demoAnalysisData;
+        this.state.analysisVersions = [{ version: 'v17 (Research Findings)', folder: 'logs', nexus_file: 'nexus_demo.json' }];
+        this.state.analysisVersion = 'v17 (Research Findings)';
+        this.renderAnalysisVersionOptions();
+        this.el.analysisVersion.value = this.state.analysisVersion;
+        
+        if (this.el.analysisLastUpdated) {
+          this.el.analysisLastUpdated.textContent = `Demo Mode • Superior Results from CSV Data`;
+        }
+        
+        this.renderAnalysis();
+        await this.loadAnalysisActivity();
+        this.setAnalysisStatus('Research findings mapped successfully.');
+      } catch (err) {
+        this.clearAnalysisViews('Failed to load research findings.');
+      }
+      return;
+    }
+
     if (!this.state.token) {
       this.clearAnalysisViews(this.lang === 'vn'
         ? 'Cần đăng nhập để tải phần phân tích huấn luyện.'
@@ -1557,6 +1707,7 @@ export class App {
 
   async loadAnalysisData(version) {
     if (!version) return;
+    if (this.isDemoMode) return; // In demo mode, version is static
     try {
       const loadingLabel = this.lang === 'vn' ? 'Đang tải phân tích cho' : 'Loading analysis for';
       this.setAnalysisStatus(`${loadingLabel} ${String(version).toUpperCase()}...`);
@@ -1579,7 +1730,12 @@ export class App {
 
   async loadAnalysisActivity() {
     try {
-      const payload = await this.request('/analysis/activity?hours=24', { method: 'GET' });
+      let payload;
+      if (this.isDemoMode) {
+        payload = getDemoActivity();
+      } else {
+        payload = await this.request('/analysis/activity?hours=24', { method: 'GET' });
+      }
       this.state.analysisActivity = payload;
       this.renderActivityChart(this.el.analysisActivityChart, payload);
     } catch (error) {
@@ -2275,9 +2431,10 @@ export class App {
     this.el.tabButtons.forEach((button) => button.classList.toggle('active', button.dataset.tab === tabName));
     let targetPanel = null;
     this.el.tabPanels.forEach((panel) => {
-      panel.classList.add('active');
+      const isActive = panel.dataset.panel === tabName;
+      panel.classList.toggle('active', isActive);
       panel.classList.remove('panel-focus');
-      if (panel.dataset.panel === tabName) targetPanel = panel;
+      if (isActive) targetPanel = panel;
     });
 
     if (targetPanel) {
@@ -2288,6 +2445,10 @@ export class App {
     }
 
     this.updateTabIndicator();
+    // Invalidate the Leaflet map size whenever the maps tab becomes visible
+    if (tabName === 'maps' && this.maps?.mapMain) {
+      setTimeout(() => this.maps.mapMain.invalidateSize(), 50);
+    }
     if (!silent) {
       this.toast('Tab Changed', `Switched to ${this.tabLabel(tabName)}.`, 'ok');
     }
@@ -2308,7 +2469,7 @@ export class App {
   }
 
   tabLabel(tabName) {
-    return ({ overview: 'Overview', maps: 'Split Map', results: 'Results' })[tabName] ?? tabName;
+    return ({ overview: 'Overview', maps: 'Route Map', results: 'Results' })[tabName] ?? tabName;
   }
 
   async request(path, options = {}) {
@@ -2475,9 +2636,10 @@ export class App {
 
   loginAsGuest() {
     this.state.token = 'demo-guest';
-    this.state.email = 'guest@demo.local';
-    this.state.role = 'guest';
+    this.state.email = 'admin@nexus.demo';
+    this.state.role = 'admin';   // Demo admin — full UI, no real backend calls
     this.state.mustChangePassword = false;
+    this.isDemoMode = true;
     localStorage.setItem('vrptw_token', this.state.token);
     localStorage.setItem('vrptw_email', this.state.email);
     localStorage.setItem('vrptw_role', this.state.role);
@@ -2486,7 +2648,7 @@ export class App {
     this.enterApp();
     this.updateConnectionPill();
     this.updateSessionInfo();
-    this.toast('Demo Mode', 'Logged in as guest. Auth and admin endpoints stay disabled.', 'ok');
+    this.toast('Demo Mode', 'Running as demo admin — solver runs in-browser, no backend needed.', 'ok');
   }
 
   async login() {
@@ -2506,6 +2668,31 @@ export class App {
           this.setFieldError(this.el.loginPassword);
           throw new Error('Please enter both email and password');
         }
+
+        // --- DEMO BYPASS: Allow test accounts to login to demo mode offline ---
+        if (email.endsWith('@nexus.local')) {
+          this.state.token = 'demo-guest';
+          this.state.email = email;
+          this.state.role = email.includes('admin') ? 'admin' : 'operator';
+          this.state.mustChangePassword = false;
+          this.isDemoMode = true;
+          
+          localStorage.setItem('vrptw_token', this.state.token);
+          localStorage.setItem('vrptw_email', email);
+          localStorage.setItem('vrptw_role', this.state.role);
+          localStorage.setItem('vrptw_must_change_password', 'false');
+
+          if (this.state.role === 'admin') {
+            this.enterAdminDashboard();
+          } else {
+            this.enterApp();
+          }
+          this.updateConnectionPill();
+          this.updateSessionInfo();
+          this.toast('Demo Login', `Logged into demo environment as ${this.state.role}.`, 'ok');
+          return;
+        }
+        // ----------------------------------------------------------------------
         const data = await this.request('/auth/token', {
           method: 'POST',
           body: JSON.stringify({ email, password })
@@ -2704,7 +2891,12 @@ export class App {
   async loadAdminUsers(forceReload = false) {
     if (this.state.role !== 'admin' || !this.el.adminUserRows) return;
     try {
-      const data = await this.request('/admin/users', { method: 'GET' });
+      let data;
+      if (this.isDemoMode) {
+        data = getDemoAdminUsers();
+      } else {
+        data = await this.request('/admin/users', { method: 'GET' });
+      }
       this.state.adminUsers = data.items || [];
       this.renderAdminSummary(data.summary || {});
       this.renderAdminUsers(this.state.adminUsers);
@@ -3649,9 +3841,9 @@ export class App {
   }
 
   renderMarkers() {
-    const { ddqnMarkerLayer, alnsMarkerLayer, ddqnMap, alnsMap } = this.maps;
-    ddqnMarkerLayer.clearLayers();
-    alnsMarkerLayer.clearLayers();
+    const { markerLayer, mapMain } = this.maps;
+    if (!markerLayer) return;
+    markerLayer.clearLayers();
     const bounds = [];
 
     const depotIcon = this.buildDepotIcon();
@@ -3667,13 +3859,11 @@ export class App {
         ? `<br/>TW: [${Number(c.ready ?? 0).toFixed(0)}, ${Number(c.due ?? 0).toFixed(0)}] svc=${Number(c.service ?? 0).toFixed(0)}`
         : '';
       const popupContent = `<strong>${popupTitle}</strong><br/>${c.name}${popupAddress}<br/>Demand: ${c.demand}${twInfo}`;
-      L.marker(p, { icon: markerIcon }).bindPopup(popupContent).addTo(ddqnMarkerLayer);
-      L.marker(p, { icon: markerIcon }).bindPopup(popupContent).addTo(alnsMarkerLayer);
+      L.marker(p, { icon: markerIcon }).bindPopup(popupContent).addTo(markerLayer);
     });
 
     if (bounds.length > 0) {
-      ddqnMap.fitBounds(bounds, { padding: [22, 22] });
-      alnsMap.fitBounds(bounds, { padding: [22, 22] });
+      mapMain.fitBounds(bounds, { padding: [22, 22] });
     }
     this.showEmptyStates();
   }
@@ -3786,6 +3976,10 @@ export class App {
       }
       if (data.status === 'done') {
         if (this.runSession.cancelled || sessionToken !== this.runSession.token) return;
+        this.setLoadingProgress(this.loadingAnim.progress, null, 'Fetching real-world road network...', 0.5, 'done');
+        await this.enrichRoutesWithRoadGeometries(data.result?.ddqn);
+        await this.enrichRoutesWithRoadGeometries(data.result?.alns);
+
         this.state.lastResult = data.result;
         this.paintResult();
         await firebaseService.saveJobResult(jobId, data.result);
@@ -3812,21 +4006,19 @@ export class App {
 
     this.stopVehicleAnimations();
 
-    this.maps.ddqnRouteLayer.clearLayers();
-    this.maps.alnsRouteLayer.clearLayers();
-    this.maps.alnsDiffLayer.clearLayers();
-    this.maps.ddqnVehicleLayer.clearLayers();
-    this.maps.alnsVehicleLayer.clearLayers();
+    this.maps.routeLayer.clearLayers();
+    this.maps.vehicleLayer.clearLayers();
+    
+    const activeAlgo = this.state.activeMapAlgo || 'ddqn';
+    const algoData = result[activeAlgo] || result.ddqn;
     const routeCapacity = Number(this.state.lastRunFleet?.capacity ?? this.state.capacity);
-    this.renderAlgoRoutes(result.ddqn, this.maps.ddqnRouteLayer, '#0b8a65', routeCapacity);
-    this.renderAlgoRoutes(result.alns, this.maps.alnsRouteLayer, '#2563eb', routeCapacity);
-    const highlightedCount = this.renderAlnsOnlySegments(result.ddqn, result.alns, this.maps.alnsDiffLayer);
-    this.renderVehicleMarkers(result.ddqn, this.maps.ddqnVehicleLayer, '#0b8a65');
-    this.renderVehicleMarkers(result.alns, this.maps.alnsVehicleLayer, '#2563eb');
-
-    if (highlightedCount > 0) {
-      this.setStatus(`Highlighted ${highlightedCount} ALNS segments that do not appear in DDQN.`, 'ok');
-    }
+    
+    let color = '#0b8a65'; // ddqn
+    if (activeAlgo === 'hybrid') color = '#f59e0b';
+    if (activeAlgo === 'alns') color = '#3b82f6';
+    
+    this.renderAlgoRoutes(algoData, this.maps.routeLayer, color, routeCapacity);
+    this.renderVehicleMarkers(algoData, this.maps.vehicleLayer, color);
 
     this.updateCompareMetric({
       card: this.el.metricRuntimeCard,
@@ -3880,11 +4072,8 @@ export class App {
     this.stopVehicleAnimations();
 
     if (this.maps) {
-      this.maps.ddqnRouteLayer.clearLayers();
-      this.maps.alnsRouteLayer.clearLayers();
-      this.maps.alnsDiffLayer.clearLayers();
-      this.maps.ddqnVehicleLayer.clearLayers();
-      this.maps.alnsVehicleLayer.clearLayers();
+      this.maps.routeLayer.clearLayers();
+      this.maps.vehicleLayer.clearLayers();
     }
 
     const setText = (node, value) => {
@@ -4312,6 +4501,24 @@ export class App {
     this.el.loading.classList.add('hidden');
   }
 
+  setStatus(message, tone = 'ok') {
+    if (!this.el.statusText) return;
+    this.el.statusText.textContent = message;
+    this.el.statusText.className = `status ${tone}`;
+  }
+
+  async withButtonLock(lockName, button, action) {
+    if (this[lockName]) return;
+    try {
+      this[lockName] = true;
+      if (button) button.disabled = true;
+      await action();
+    } finally {
+      this[lockName] = false;
+      if (button) button.disabled = false;
+    }
+  }
+
   showEmptyStates() {
     if (this.el.tableEmpty) {
       this.el.tableEmpty.classList.add('hidden');
@@ -4321,6 +4528,7 @@ export class App {
     if (this.el.mapEmptyDdqn) this.el.mapEmptyDdqn.classList.toggle('hidden', hasRoutes);
     if (this.el.mapEmptyAlns) this.el.mapEmptyAlns.classList.toggle('hidden', hasRoutes);
   }
+
 
   toast(title, message, tone = '') {
     if (!this.el.toastRoot) return;
@@ -4343,5 +4551,86 @@ export class App {
     this.el.loading?.classList.remove('loading--minimized');
     this.el.loadingLauncher?.classList.add('hidden');
     this.el.loading.classList.add('hidden');
+  }
+
+  /** Show the loading overlay and start the progress animation */
+  showLoading(_unused) {
+    if (this.el.loading) this.el.loading.classList.remove('hidden');
+    this.startLoadingProgress();
+  }
+
+  /**
+   * Place an animated vehicle marker on each route path.
+   * Each vehicle starts at a random point along its route and
+   * continuously moves forward, wrapping at the end.
+   */
+  renderVehicleMarkers(algo, vehicleLayer, defaultColor) {
+    if (!algo?.routes || !vehicleLayer) return;
+    const palette = [
+      '#0b8a65', '#2563eb', '#c0392b', '#8c5cf6', '#d97706',
+      '#0ea5a4', '#b91c1c', '#16a34a', '#7c3aed', '#ea580c',
+    ];
+    algo.routes.forEach((route, idx) => {
+      if (!route.path || route.path.length < 2) return;
+      const color = idx < palette.length ? palette[idx] : defaultColor;
+      const icon = this.buildVehicleIcon(color);
+      // Start the marker somewhere mid-route so all vehicles are immediately visible
+      const startIdx = Math.floor(Math.random() * (route.path.length - 1));
+      const startPt = route.path[startIdx];
+      const marker = L.marker([startPt[0], startPt[1]], { icon, zIndexOffset: 500 })
+        .bindPopup(`<strong>Vehicle ${route.vehicle_id}</strong><br>Load: ${route.load}<br>${Number(route.distance_km).toFixed(2)} km`)
+        .addTo(vehicleLayer);
+      this.startVehicleAnimation(marker, route.path);
+    });
+  }
+
+  /** Build a Set of canonical segment keys for a given algo result */
+  collectSegmentSet(algo) {
+    const set = new Set();
+    (algo?.routes || []).forEach(route => {
+      if (!route.path || route.path.length < 2) return;
+      for (let i = 0; i < route.path.length - 1; i++) {
+        set.add(this.segmentKey(route.path[i], route.path[i + 1]));
+      }
+    });
+    return set;
+  }
+
+  /** Canonical bidirectional key for a lat/lng segment */
+  segmentKey(a, b) {
+    const fmt = p => `${Number(p[0]).toFixed(5)},${Number(p[1]).toFixed(5)}`;
+    const ka = fmt(a), kb = fmt(b);
+    return ka < kb ? `${ka}|${kb}` : `${kb}|${ka}`;
+  }
+
+  /** Draw a highlighted diff polyline for ALNS-only segments */
+  drawDiffSegment(points, layerGroup, routeIndex) {
+    const hue = (routeIndex * 60 + 30) % 360;
+    L.polyline(points, {
+      color: `hsl(${hue},90%,55%)`,
+      weight: 5,
+      opacity: 0.75,
+      dashArray: '8 5',
+    }).addTo(layerGroup);
+  }
+
+  /** Update the connection pill to reflect demo / live state */
+  updateConnectionPill() {
+    if (!this.el.connectionPill) return;
+    if (this.isDemoMode) {
+      this.el.connectionPill.textContent = 'Demo';
+      this.el.connectionPill.className = 'pill demo';
+      return;
+    }
+    const online = Boolean(this.state.token && this.state.token !== 'demo-guest');
+    this.el.connectionPill.textContent = online ? 'Online' : 'Offline';
+    this.el.connectionPill.className = `pill ${online ? 'online' : 'soft'}`;
+  }
+
+  /** Sync session email into sidebar */
+  updateSessionInfo() {
+    if (this.el.userEmail) {
+      this.el.userEmail.textContent = this.state.email || '-';
+    }
   }
 }

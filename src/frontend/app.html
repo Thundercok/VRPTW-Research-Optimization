@@ -296,7 +296,7 @@
     <main class="workspace">
       <nav class="tabbar" role="tablist" aria-label="Dashboard tabs">
         <button class="tab-btn active" data-tab="overview" role="tab" aria-selected="true">Overview</button>
-        <button class="tab-btn" data-tab="maps" role="tab" aria-selected="false">Split Map</button>
+        <button class="tab-btn" data-tab="maps" role="tab" aria-selected="false">Route Map</button>
         <button class="tab-btn" data-tab="results" role="tab" aria-selected="false">Results</button>
         <span class="tabbar-indicator" aria-hidden="true"></span>
       </nav>
@@ -474,25 +474,31 @@
           </article>
         </section>
 
-        <section class="split-grid tab-panel" data-panel="maps">
-          <article class="map-card">
-            <h3><span class="mini-icon">◆</span> DDQN</h3>
-            <div id="map-ddqn" class="map"></div>
-            <div id="map-empty-ddqn" class="empty-state map-empty hidden">
-              <div class="empty-icon">🗺</div>
-              <h3>No DDQN route yet</h3>
-              <p>Results will appear after submitting a job.</p>
+        <section class="map-container tab-panel" data-panel="maps">
+          <div id="map-main" class="map-full"></div>
+          
+          <div class="map-floating-panel">
+            <h3 class="map-panel-title">Routing Benchmark Engine</h3>
+            <p class="map-panel-desc">Compare algorithm performance on the real-world road network.</p>
+            
+            <div class="algo-toggle-group" id="map-algo-toggles">
+              <button class="algo-toggle active" data-algo="ddqn">
+                <span class="icon">🚀</span> DDQN-ALNS
+              </button>
+              <button class="algo-toggle" data-algo="hybrid">
+                <span class="icon">⚡️</span> Hybrid++
+              </button>
+              <button class="algo-toggle" data-algo="alns">
+                <span class="icon">🐢</span> ALNS Pure
+              </button>
             </div>
-          </article>
-          <article class="map-card">
-            <h3><span class="mini-icon">◆</span> ALNS</h3>
-            <div id="map-alns" class="map"></div>
-            <div id="map-empty-alns" class="empty-state map-empty hidden">
-              <div class="empty-icon">🧭</div>
-              <h3>No ALNS route yet</h3>
-              <p>Parallel comparison view will activate when results are available.</p>
-            </div>
-          </article>
+          </div>
+
+          <div id="map-empty-main" class="empty-state map-empty hidden">
+            <div class="empty-icon">🗺</div>
+            <h3>Awaiting Optimization</h3>
+            <p>Run the model to see your vehicles mapped perfectly to the road network.</p>
+          </div>
         </section>
 
         <section class="gantt-card tab-panel" data-panel="results">
@@ -518,7 +524,7 @@
           </div>
         </section>
 
-        <section class="analysis-card tab-panel" data-panel="maps">
+        <section class="analysis-card tab-panel" data-panel="results">
           <div class="analysis-scope-banner archive-banner">
             <span class="analysis-scope-tag">Training Analysis Archive</span>
             <span class="analysis-scope-text">Historical benchmark and training diagnostics loaded from logs/ (flat) or logs/results-vX (legacy).</span>
