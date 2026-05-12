@@ -35,7 +35,7 @@ const APP_COPY = {
     demoKicker: 'VRPTW Inference Demo',
     customerTitle: 'Customer List',
     customerNote: 'Each row has a time window (Ready / Due) and Service duration. Units are consistent with distance (~1 km ≈ 1 time unit).',
-    tabs: ['Overview', 'Split Map', 'Results'],
+    tabs: ['Overview', 'Split Map', 'Results', 'Archive'],
     helpTitle: 'How to drive the VRPTW demo',
     helpSubtitle: 'Five steps from sample data to a side-by-side DDQN vs. ALNS comparison.',
     helpClose: 'Close',
@@ -103,7 +103,7 @@ const APP_COPY = {
     demoKicker: 'Demo suy luận VRPTW',
     customerTitle: 'Danh sách khách hàng',
     customerNote: 'Mỗi dòng có khung giờ (Ready / Due) và thời lượng Service. Đơn vị đồng nhất với khoảng cách (~1 km ≈ 1 đơn vị thời gian).',
-    tabs: ['Tổng quan', 'Bản đồ tách đôi', 'Kết quả'],
+    tabs: ['Tổng quan', 'Bản đồ tách đôi', 'Kết quả', 'Lưu trữ'],
     helpTitle: 'Cách dùng demo VRPTW',
     helpSubtitle: '5 bước từ dữ liệu mẫu tới so sánh DDQN và ALNS.',
     helpClose: 'Đóng',
@@ -512,11 +512,9 @@ export class App {
     setText(document.getElementById('admin-feedback-kicker'), copy.adminFeedbackKicker);
     setText(document.getElementById('admin-feedback-title'), copy.adminFeedbackTitle);
 
-    if (this.el.tabButtons.length >= 3) {
-      this.el.tabButtons[0].textContent = copy.tabs[0];
-      this.el.tabButtons[1].textContent = copy.tabs[1];
-      this.el.tabButtons[2].textContent = copy.tabs[2];
-    }
+    this.el.tabButtons.forEach((button, index) => {
+      if (copy.tabs[index]) button.textContent = copy.tabs[index];
+    });
 
     const analysisTitles = document.querySelectorAll('.analysis-block h3');
     analysisTitles.forEach((node, index) => {
@@ -569,6 +567,7 @@ export class App {
       this.el.status.textContent = next === 'vn' ? 'Sẵn sàng.' : 'Ready.';
     }
 
+    this.applyBackendMode();
     this.renderActivityChart(this.el.analysisActivityChart, this.state.analysisActivity);
     if (this.state.adminFeedback) {
       this.renderAdminFeedback(this.state.adminFeedback);
@@ -659,6 +658,35 @@ export class App {
   clearFieldError(field) {
     if (!field) return;
     field.classList.remove('input-error');
+  }
+
+  setStatus(message, tone = '') {
+    if (!this.el.status) return;
+    this.el.status.textContent = message || '';
+    this.el.status.className = `status${tone ? ` ${tone}` : ''}`;
+  }
+
+  toast(title, message = '', tone = '') {
+    if (!this.el.toastRoot) return;
+
+    const node = document.createElement('div');
+    node.className = `toast${tone ? ` ${tone}` : ''}`;
+    node.setAttribute('role', tone === 'error' ? 'alert' : 'status');
+
+    const titleNode = document.createElement('div');
+    titleNode.className = 'toast-title';
+    titleNode.textContent = title || 'Notice';
+    node.appendChild(titleNode);
+
+    if (message) {
+      const messageNode = document.createElement('div');
+      messageNode.className = 'toast-message';
+      messageNode.textContent = message;
+      node.appendChild(messageNode);
+    }
+
+    this.el.toastRoot.appendChild(node);
+    window.setTimeout(() => node.remove(), tone === 'error' ? 6500 : 4200);
   }
 
   updateRegisterButtonState() {
@@ -2183,13 +2211,20 @@ export class App {
   }
 
   activateTab(tabName, silent = false) {
-    this.state.activeTab = tabName;
-    this.el.tabButtons.forEach((button) => button.classList.toggle('active', button.dataset.tab === tabName));
+    const availableTabs = new Set(this.el.tabButtons.map((button) => button.dataset.tab));
+    const nextTab = availableTabs.has(tabName) ? tabName : 'overview';
+    this.state.activeTab = nextTab;
+    this.el.tabButtons.forEach((button) => {
+      const isActive = button.dataset.tab === nextTab;
+      button.classList.toggle('active', isActive);
+      button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    });
     let targetPanel = null;
     this.el.tabPanels.forEach((panel) => {
-      panel.classList.add('active');
+      const isActive = panel.dataset.panel === nextTab;
+      panel.classList.toggle('active', isActive);
       panel.classList.remove('panel-focus');
-      if (panel.dataset.panel === tabName) targetPanel = panel;
+      if (isActive && !targetPanel) targetPanel = panel;
     });
 
     if (targetPanel) {
@@ -2201,7 +2236,7 @@ export class App {
 
     this.updateTabIndicator();
     if (!silent) {
-      this.toast('Tab Changed', `Switched to ${this.tabLabel(tabName)}.`, 'ok');
+      this.toast('Tab Changed', `Switched to ${this.tabLabel(nextTab)}.`, 'ok');
     }
   }
 
@@ -2220,7 +2255,7 @@ export class App {
   }
 
   tabLabel(tabName) {
-    return ({ overview: 'Overview', maps: 'Split Map', results: 'Results' })[tabName] ?? tabName;
+    return ({ overview: 'Overview', maps: 'Split Map', results: 'Results', archive: 'Archive' })[tabName] ?? tabName;
   }
 
   async request(path, options = {}) {
@@ -2363,12 +2398,28 @@ export class App {
     if (!this.el.guestBlock) return;
     const demo = this.backendMode.demo_mode;
     const fb = this.backendMode.firebase_enabled;
+    const localAuthDisabled = this.isLocalAuthDisabled();
     // Show guest button when backend is in demo mode, or when we cannot probe
     const showGuest = demo === true || demo === null;
     this.el.guestBlock.classList.toggle('hidden', !showGuest);
+    this.el.loginEmail && (this.el.loginEmail.disabled = localAuthDisabled);
+    this.el.loginPassword && (this.el.loginPassword.disabled = localAuthDisabled);
+    this.el.btnOpenRegister?.classList.toggle('hidden', localAuthDisabled);
+    this.el.linkForgotPassword?.classList.toggle('hidden', localAuthDisabled);
+    if (this.el.btnLogin && localAuthDisabled) {
+      this.el.btnLogin.textContent = this.lang === 'vn' ? 'Vào Demo' : 'Continue Demo';
+    } else if (this.el.btnLogin) {
+      this.el.btnLogin.textContent = APP_COPY[this.lang]?.loginButton || 'Login';
+    }
+    if (this.el.authHint && localAuthDisabled && !this.state.unlocked) {
+      this.el.authHint.textContent = this.lang === 'vn'
+        ? 'Đăng nhập bằng email đang tắt vì Firebase chưa được cấu hình trên máy này. Dùng Demo để chạy solver.'
+        : 'Email login is disabled because Firebase is not configured on this machine. Use Demo to run the solver.';
+      this.el.authHint.style.display = 'block';
+    }
     if (this.el.guestHint) {
       if (demo === true) {
-        this.el.guestHint.textContent = 'Demo mode active - skip auth and try the VRPTW solver right away.';
+        this.el.guestHint.textContent = 'Local demo mode is active. Real email/password login needs Firebase credentials.';
       } else if (demo === null) {
         this.el.guestHint.textContent = 'Backend reachability unknown - guest mode kept available as fallback.';
       } else if (fb === true) {
@@ -2376,6 +2427,35 @@ export class App {
       } else {
         this.el.guestHint.textContent = '';
       }
+    }
+  }
+
+  isLocalAuthDisabled() {
+    return this.backendMode.firebase_enabled === false && this.backendMode.demo_mode === true;
+  }
+
+  updateConnectionPill() {
+    if (!this.el.connectionPill) return;
+    const demo = this.backendMode.demo_mode;
+    const hasToken = Boolean(this.state.token);
+    this.el.connectionPill.className = 'pill soft';
+
+    if (!hasToken) {
+      this.el.connectionPill.textContent = 'Offline';
+      return;
+    }
+    if (demo === true || this.state.role === 'guest') {
+      this.el.connectionPill.textContent = 'Demo';
+      this.el.connectionPill.classList.add('warn');
+      return;
+    }
+    this.el.connectionPill.textContent = 'Online';
+    this.el.connectionPill.classList.add('ok');
+  }
+
+  updateSessionInfo() {
+    if (this.el.userEmail) {
+      this.el.userEmail.textContent = this.state.email || '-';
     }
   }
 
@@ -2397,6 +2477,11 @@ export class App {
 
   async login() {
     try {
+      if (this.isLocalAuthDisabled()) {
+        this.loginAsGuest();
+        return;
+      }
+
       const email = this.el.loginEmail.value.trim().toLowerCase();
       const password = this.el.loginPassword.value.trim();
       this.clearFieldError(this.el.loginEmail);
@@ -3463,6 +3548,20 @@ export class App {
     this.showEmptyStates();
   }
 
+  showEmptyStates() {
+    const hasCustomers = this.state.customers.length > 0;
+    const hasResult = Boolean(this.state.lastResult);
+
+    this.el.tableEmpty?.classList.toggle('hidden', hasCustomers || this.tableInputVisible);
+    this.el.mapEmptyDdqn?.classList.toggle('hidden', hasResult);
+    this.el.mapEmptyAlns?.classList.toggle('hidden', hasResult);
+
+    if (!hasResult) {
+      this.maps?.ddqnVehicleLayer?.clearLayers();
+      this.maps?.alnsVehicleLayer?.clearLayers();
+    }
+  }
+
   async submitJob() {
     try {
       if (!this.state.token) {
@@ -3884,6 +3983,50 @@ export class App {
     });
   }
 
+  renderVehicleMarkers(algo, layerGroup, color) {
+    const routes = Array.isArray(algo?.routes) ? algo.routes : [];
+    routes.forEach((route, routeIndex) => {
+      const path = Array.isArray(route.path) ? route.path : [];
+      if (path.length < 2) return;
+      const markerColor = this.colorForRoute(routeIndex, route, color);
+      const marker = L.marker([path[0][0], path[0][1]], {
+        icon: this.buildVehicleIcon(markerColor),
+        interactive: false
+      }).addTo(layerGroup);
+      this.startVehicleAnimation(marker, path);
+    });
+  }
+
+  segmentKey(a, b) {
+    const normalize = (point) => [
+      Number(point?.[0] ?? 0).toFixed(5),
+      Number(point?.[1] ?? 0).toFixed(5)
+    ].join(',');
+    return [normalize(a), normalize(b)].sort().join('|');
+  }
+
+  collectSegmentSet(algo) {
+    const segments = new Set();
+    const routes = Array.isArray(algo?.routes) ? algo.routes : [];
+    routes.forEach((route) => {
+      const path = Array.isArray(route.path) ? route.path : [];
+      for (let i = 0; i < path.length - 1; i += 1) {
+        segments.add(this.segmentKey(path[i], path[i + 1]));
+      }
+    });
+    return segments;
+  }
+
+  drawDiffSegment(path, layerGroup, routeIndex) {
+    if (!Array.isArray(path) || path.length < 2) return;
+    L.polyline(path, {
+      color: this.colorForRoute(routeIndex, null, '#f97316'),
+      weight: 7,
+      opacity: 0.5,
+      dashArray: '8 8'
+    }).bindPopup('ALNS-only segment').addTo(layerGroup);
+  }
+
   renderAlnsOnlySegments(ddqn, alns, layerGroup) {
     const ddqnSegments = this.collectSegmentSet(ddqn);
     let highlightedSegments = 0;
@@ -3944,6 +4087,17 @@ export class App {
     }
     if (this.el.loadingTruck) {
       this.el.loadingTruck.style.setProperty('--loading-progress', `${clamped}%`);
+    }
+  }
+
+  showLoading(show) {
+    if (!this.el.loading) return;
+    if (show) {
+      this.el.loading.classList.remove('hidden', 'loading--minimized');
+      this.el.loadingLauncher?.classList.add('hidden');
+      this.startLoadingProgress();
+    } else {
+      this.hideLoadingImmediate();
     }
   }
 

@@ -189,6 +189,7 @@
         <button class="tab-btn active" data-tab="overview" role="tab" aria-selected="true">Overview</button>
         <button class="tab-btn" data-tab="maps" role="tab" aria-selected="false">Split Map</button>
         <button class="tab-btn" data-tab="results" role="tab" aria-selected="false">Results</button>
+        <button class="tab-btn" data-tab="archive" role="tab" aria-selected="false">Archive</button>
         <span class="tabbar-indicator" aria-hidden="true"></span>
       </nav>
       <section class="main-panel">
@@ -386,30 +387,7 @@
           </article>
         </section>
 
-        <section class="gantt-card tab-panel" data-panel="results">
-          <div class="row-head">
-            <div>
-              <p class="section-kicker">Trip Timeline</p>
-              <h2 id="gantt-title">Route Schedule (Gantt)</h2>
-              <p id="gantt-note" class="panel-note">Each bar shows a vehicle's journey: departure → stops → return. Hover for details.</p>
-            </div>
-            <div class="gantt-actions">
-              <select id="gantt-algo-select" class="dataset-select">
-                <option value="ddqn" selected>DDQN</option>
-                <option value="alns">ALNS</option>
-              </select>
-            </div>
-          </div>
-          <div id="gantt-chart" class="gantt-chart">
-            <div id="gantt-empty" class="empty-state">
-              <div class="empty-icon">📊</div>
-              <h3>No schedule data yet</h3>
-              <p>Run the model to see the trip Gantt chart here.</p>
-            </div>
-          </div>
-        </section>
-
-        <section class="analysis-card tab-panel" data-panel="maps">
+        <section class="analysis-card tab-panel" data-panel="archive">
           <div class="analysis-scope-banner archive-banner">
             <span class="analysis-scope-tag">Training Analysis Archive</span>
             <span class="analysis-scope-text">Historical benchmark and training diagnostics loaded from logs/ (flat) or logs/results-vX (legacy).</span>

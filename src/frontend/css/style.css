@@ -12,8 +12,7 @@
   --error: #c0392b;
   --radius: 16px;
   --shadow: 0 10px 30px rgba(15, 39, 64, 0.08);
-  --sidebar-collapsed: 88px;
-  --sidebar-expanded: 360px;
+  --sidebar-width: 340px;
 }
 
 * {
@@ -476,6 +475,7 @@ p {
 .app-shell {
   min-height: 100vh;
   display: flex;
+  background: #f3f7fb;
 }
 
 .sidebar {
@@ -483,17 +483,12 @@ p {
   background: var(--panel);
   display: grid;
   grid-template-rows: auto auto 1fr auto;
-  width: var(--sidebar-collapsed);
+  width: var(--sidebar-width);
+  min-width: var(--sidebar-width);
   height: 100vh;
   position: sticky;
   top: 0;
-  overflow: hidden;
-  transition: width 240ms ease;
-}
-
-.sidebar:hover,
-.sidebar:focus-within {
-  width: var(--sidebar-expanded);
+  overflow-y: auto;
 }
 
 .sidebar-head {
@@ -514,18 +509,6 @@ p {
   font-size: 30px;
   line-height: 1.05;
   letter-spacing: -0.03em;
-
-.loading:not(.hidden) {
-  pointer-events: auto;
-}
-
-.loading.loading--minimized {
-  background: transparent;
-  backdrop-filter: none;
-  pointer-events: none;
-  place-items: end end;
-  padding: 18px;
-}
   white-space: nowrap;
 }
 
@@ -537,10 +520,15 @@ p {
 
 .tabbar {
   position: relative;
-  padding: 16px;
-  display: grid;
+  padding: 8px;
+  display: flex;
   gap: 8px;
-  border-bottom: 1px solid var(--line);
+  margin-bottom: 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: var(--shadow);
+  overflow-x: auto;
 }
 
 .tab-btn {
@@ -551,7 +539,7 @@ p {
   font-weight: 700;
   font-size: 15px;
   text-align: left;
-  padding: 12px 14px;
+  padding: 10px 14px;
   display: inline-flex;
   align-items: center;
   gap: 10px;
@@ -559,33 +547,6 @@ p {
   z-index: 2;
   transition: color 180ms ease, transform 180ms ease, border-color 180ms ease;
   white-space: nowrap;
-}
-
-.sidebar:not(:hover):not(:focus-within) .sidebar-head h1,
-.sidebar:not(:hover):not(:focus-within) .sidebar-subtitle,
-.sidebar:not(:hover):not(:focus-within) .left-panel,
-.sidebar:not(:hover):not(:focus-within) .sidebar-foot,
-.sidebar:not(:hover):not(:focus-within) .tab-btn span:last-child,
-.sidebar:not(:hover):not(:focus-within) .tabbar-indicator {
-  opacity: 0;
-  pointer-events: none;
-}
-
-.sidebar:not(:hover):not(:focus-within) .sidebar-head {
-  padding: 22px 18px;
-}
-
-.sidebar:not(:hover):not(:focus-within) .tabbar {
-  padding: 12px;
-}
-
-.sidebar:not(:hover):not(:focus-within) .tab-btn {
-  justify-content: center;
-  padding: 12px;
-}
-
-.sidebar:not(:hover):not(:focus-within) .tag {
-  margin-bottom: 0;
 }
 
 .tab-btn:hover {
@@ -600,6 +561,7 @@ p {
 }
 
 .tabbar-indicator {
+  display: none;
   position: absolute;
   left: 0;
   top: 0;
@@ -941,7 +903,7 @@ select.input-error {
 .workspace {
   flex: 1;
   min-width: 0;
-  padding: 16px;
+  padding: 18px;
 }
 
 .main-panel {
@@ -2138,23 +2100,16 @@ td.is-editing {
 
 
 .tab-panel {
-  opacity: 0.96;
-  transform: translateY(8px);
-  transition: opacity 220ms ease, transform 220ms ease;
+  display: none;
 }
 
 .tab-panel.active {
-  opacity: 1;
+  display: grid;
   transform: translateY(0);
 }
 
-.tab-panel:not(.active) {
-  display: block;
-}
-
 .panel-focus {
-  outline: 2px solid rgba(45, 143, 216, 0.32);
-  outline-offset: 2px;
+  outline: none;
 }
 
 .pill {
@@ -2837,6 +2792,7 @@ td.is-editing {
 
   .sidebar {
     width: 100%;
+    min-width: 0;
     height: auto;
     position: static;
     border-right: 0;
@@ -2846,7 +2802,7 @@ td.is-editing {
 
   .left-panel,
   .sidebar-foot {
-    display: none;
+    display: grid;
   }
 
   .tabbar {
