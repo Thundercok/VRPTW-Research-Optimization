@@ -66,3 +66,5 @@ __notebook__.ipynb
 # Notes (not published)
 # ---------------------------------------------------------------
 CLAUDE.md
+.env.test
+.env.test
