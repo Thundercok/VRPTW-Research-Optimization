@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -10,15 +11,19 @@
   <meta http-equiv="Expires" content="0" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+    rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <link rel="stylesheet" href="css/style.css?v=20260429a" />
 </head>
+
 <body>
   <a class="back-to-landing" href="index.html" title="Back to landing page">&larr; Home</a>
-  <button id="lang-toggle" class="lang-fab" type="button" aria-label="Switch language" title="Switch language">VN</button>
+  <button id="lang-toggle" class="lang-fab" type="button" aria-label="Switch language"
+    title="Switch language">VN</button>
   <button id="help-button" class="help-fab" type="button" aria-label="Open quick help" title="Quick help (Shift+?)">
     <span aria-hidden="true">?</span>
   </button>
@@ -41,15 +46,16 @@
               <stop offset="100%" stop-color="#2d8fd8" />
             </linearGradient>
           </defs>
-          <path class="route-path" d="M20 85 C100 20, 180 110, 260 50 S370 60, 400 30" fill="none" stroke="url(#routeGrad)" stroke-width="5" stroke-linecap="round" stroke-dasharray="7 9"/>
-          <circle class="route-node route-node-1" cx="20" cy="85" r="7" fill="#2d8fd8"/>
-          <circle class="route-node route-node-2" cx="260" cy="50" r="7" fill="#2d8fd8"/>
-          <circle class="route-node route-node-3" cx="400" cy="30" r="7" fill="#2d8fd8"/>
+          <path class="route-path" d="M20 85 C100 20, 180 110, 260 50 S370 60, 400 30" fill="none"
+            stroke="url(#routeGrad)" stroke-width="5" stroke-linecap="round" stroke-dasharray="7 9" />
+          <circle class="route-node route-node-1" cx="20" cy="85" r="7" fill="#2d8fd8" />
+          <circle class="route-node route-node-2" cx="260" cy="50" r="7" fill="#2d8fd8" />
+          <circle class="route-node route-node-3" cx="400" cy="30" r="7" fill="#2d8fd8" />
           <g class="route-truck" transform="translate(150 70)">
-            <rect x="0" y="10" width="72" height="24" rx="7" fill="#2476b4"/>
-            <rect x="48" y="2" width="20" height="16" rx="4" fill="#2d8fd8"/>
-            <circle cx="16" cy="36" r="6" fill="#0f2740"/>
-            <circle cx="52" cy="36" r="6" fill="#0f2740"/>
+            <rect x="0" y="10" width="72" height="24" rx="7" fill="#2476b4" />
+            <rect x="48" y="2" width="20" height="16" rx="4" fill="#2d8fd8" />
+            <circle cx="16" cy="36" r="6" fill="#0f2740" />
+            <circle cx="52" cy="36" r="6" fill="#0f2740" />
           </g>
         </svg>
       </div>
@@ -68,7 +74,8 @@
           <div id="guest-block" class="auth-guest hidden">
             <div class="auth-divider"><span>or</span></div>
             <button id="btn-guest-login" class="btn ghost guest-btn" type="button">Continue as Guest</button>
-            <p id="guest-hint" class="hint auth-hint">Demo mode active - skip auth and try the VRPTW solver right away.</p>
+            <p id="guest-hint" class="hint auth-hint">Demo mode active - skip auth and try the VRPTW solver right away.
+            </p>
           </div>
         </div>
 
@@ -79,7 +86,8 @@
           <input id="register-password" type="password" placeholder="Enter password" />
           <label>OTP</label>
           <div class="otp-row">
-            <input id="register-otp" class="otp-input" type="text" inputmode="numeric" placeholder="Enter 6-digit OTP" maxlength="6" />
+            <input id="register-otp" class="otp-input" type="text" inputmode="numeric" placeholder="Enter 6-digit OTP"
+              maxlength="6" />
             <button id="btn-request-otp" class="btn ghost otp-send-btn" type="button">Send OTP</button>
           </div>
           <p id="register-otp-countdown" class="otp-countdown">Click Send OTP to receive a verification code.</p>
@@ -225,13 +233,17 @@
             <div>
               <p id="demo-kicker" class="section-kicker">VRPTW Inference Demo</p>
               <h2 id="customer-title">Customer List</h2>
-              <p id="customer-note" class="panel-note">Each row has a time window (<strong>Ready / Due</strong>) and <strong>Service</strong> duration. Units are consistent with distance (~1 km ≈ 1 time unit).</p>
+              <p id="customer-note" class="panel-note">Each row has a time window (<strong>Ready / Due</strong>) and
+                <strong>Service</strong> duration. Units are consistent with distance (~1 km ≈ 1 time unit).
+              </p>
             </div>
             <div class="table-actions">
-              <button id="add-row" class="btn ghost icon-btn icon-only-btn" type="button" title="Add row" aria-label="Add row">
+              <button id="add-row" class="btn ghost icon-btn icon-only-btn" type="button" title="Add row"
+                aria-label="Add row">
                 <span class="btn-icon">＋</span>
               </button>
-              <button id="delete-selected" class="btn ghost icon-btn icon-only-btn" type="button" title="Delete selected rows" aria-label="Delete selected rows">
+              <button id="delete-selected" class="btn ghost icon-btn icon-only-btn" type="button"
+                title="Delete selected rows" aria-label="Delete selected rows">
                 <span class="btn-icon">🗑</span>
               </button>
               <button id="run-model" class="btn danger icon-btn" type="button">
@@ -312,8 +324,10 @@
               </div>
             </div>
             <div class="metric-bars">
-              <div class="bar-track"><span id="metric-distance-bar-ddqn" class="bar-fill ddqn" style="width: 0%"></span></div>
-              <div class="bar-track"><span id="metric-distance-bar-alns" class="bar-fill alns" style="width: 0%"></span></div>
+              <div class="bar-track"><span id="metric-distance-bar-ddqn" class="bar-fill ddqn" style="width: 0%"></span>
+              </div>
+              <div class="bar-track"><span id="metric-distance-bar-alns" class="bar-fill alns" style="width: 0%"></span>
+              </div>
             </div>
           </article>
 
@@ -333,8 +347,10 @@
               </div>
             </div>
             <div class="metric-bars">
-              <div class="bar-track"><span id="metric-vehicles-bar-ddqn" class="bar-fill ddqn" style="width: 0%"></span></div>
-              <div class="bar-track"><span id="metric-vehicles-bar-alns" class="bar-fill alns" style="width: 0%"></span></div>
+              <div class="bar-track"><span id="metric-vehicles-bar-ddqn" class="bar-fill ddqn" style="width: 0%"></span>
+              </div>
+              <div class="bar-track"><span id="metric-vehicles-bar-alns" class="bar-fill alns" style="width: 0%"></span>
+              </div>
             </div>
           </article>
 
@@ -350,7 +366,8 @@
                   <span id="metric-load-donut-ddqn-label">0%</span>
                 </div>
                 <strong id="metric-load-ddqn" class="metric-value">-</strong>
-                <div class="bar-track"><span id="metric-load-bar-ddqn" class="bar-fill ddqn" style="width: 0%"></span></div>
+                <div class="bar-track"><span id="metric-load-bar-ddqn" class="bar-fill ddqn" style="width: 0%"></span>
+                </div>
                 <small id="metric-load-ddqn-state" class="load-state">-</small>
               </div>
               <div class="load-insight-col alns">
@@ -359,7 +376,8 @@
                   <span id="metric-load-donut-alns-label">0%</span>
                 </div>
                 <strong id="metric-load-alns" class="metric-value">-</strong>
-                <div class="bar-track"><span id="metric-load-bar-alns" class="bar-fill alns" style="width: 0%"></span></div>
+                <div class="bar-track"><span id="metric-load-bar-alns" class="bar-fill alns" style="width: 0%"></span>
+                </div>
                 <small id="metric-load-alns-state" class="load-state">-</small>
               </div>
             </div>
@@ -390,7 +408,8 @@
         <section class="analysis-card tab-panel" data-panel="archive">
           <div class="analysis-scope-banner archive-banner">
             <span class="analysis-scope-tag">Training Analysis Archive</span>
-            <span class="analysis-scope-text">Historical benchmark and training diagnostics loaded from logs/ (flat) or logs/results-vX (legacy).</span>
+            <span class="analysis-scope-text">Historical benchmark and training diagnostics loaded from logs/ (flat) or
+              logs/results-vX (legacy).</span>
           </div>
 
           <div class="row-head analysis-head">
@@ -519,8 +538,10 @@
   <div id="loading" class="loading hidden">
     <div id="loading-card" class="loading-card">
       <div class="loading-actions" aria-label="Loading controls">
-        <button id="loading-minimize" class="loading-action-btn" type="button" aria-label="Minimize loading screen">−</button>
-        <button id="loading-cancel" class="loading-action-btn danger" type="button" aria-label="Cancel optimization">×</button>
+        <button id="loading-minimize" class="loading-action-btn" type="button"
+          aria-label="Minimize loading screen">−</button>
+        <button id="loading-cancel" class="loading-action-btn danger" type="button"
+          aria-label="Cancel optimization">×</button>
       </div>
 
       <div class="loading-head">
@@ -593,35 +614,43 @@
           <span class="help-step-num">1</span>
           <div>
             <h3>Pick a data mode</h3>
-            <p>Toggle <strong>Solomon RC</strong> (built-in <code>demo</code> instance, 12 customers around HCMC) or <strong>Real Data</strong> to upload your own.</p>
+            <p>Toggle <strong>Solomon RC</strong> (built-in <code>demo</code> instance, 12 customers around HCMC) or
+              <strong>Real Data</strong> to upload your own.
+            </p>
           </div>
         </li>
         <li>
           <span class="help-step-num">2</span>
           <div>
             <h3>Edit the table inline</h3>
-            <p>Double-click any cell to update <code>name</code>, <code>lat/lng</code>, <code>demand</code>, or the time window (<strong>ready / due / service</strong>). Add rows with <kbd>+</kbd> or import from <code>.csv</code>/<code>.xlsx</code>.</p>
+            <p>Double-click any cell to update <code>name</code>, <code>lat/lng</code>, <code>demand</code>, or the time
+              window (<strong>ready / due / service</strong>). Add rows with <kbd>+</kbd> or import from
+              <code>.csv</code>/<code>.xlsx</code>.
+            </p>
           </div>
         </li>
         <li>
           <span class="help-step-num">3</span>
           <div>
             <h3>Tune the fleet</h3>
-            <p>Use the sliders for <strong>vehicles</strong> and <strong>capacity</strong>. The first row (<code>id 0</code>) is the depot and is non-editable.</p>
+            <p>Use the sliders for <strong>vehicles</strong> and <strong>capacity</strong>. The first row
+              (<code>id 0</code>) is the depot and is non-editable.</p>
           </div>
         </li>
         <li>
           <span class="help-step-num">4</span>
           <div>
             <h3>Run Model</h3>
-            <p>Click <strong>Run Model</strong>. The backend solves twice: <em>DDQN-ALNS</em> and the <em>ALNS</em> baseline. Progress streams to the loading panel - you can minimize it.</p>
+            <p>Click <strong>Run Model</strong>. The backend solves twice: <em>DDQN-ALNS</em> and the <em>ALNS</em>
+              baseline. Progress streams to the loading panel - you can minimize it.</p>
           </div>
         </li>
         <li>
           <span class="help-step-num">5</span>
           <div>
             <h3>Read the comparison</h3>
-            <p>Switch to the <strong>Maps</strong> tab for routes side-by-side, or the <strong>Results</strong> tab for runtime, total distance, vehicles used, and fleet utilisation deltas.</p>
+            <p>Switch to the <strong>Maps</strong> tab for routes side-by-side, or the <strong>Results</strong> tab for
+              runtime, total distance, vehicles used, and fleet utilisation deltas.</p>
           </div>
         </li>
       </ol>
@@ -638,7 +667,8 @@
     </div>
   </div>
 
-  <div id="analysis-modal" class="analysis-modal hidden" role="dialog" aria-modal="true" aria-labelledby="analysis-modal-title">
+  <div id="analysis-modal" class="analysis-modal hidden" role="dialog" aria-modal="true"
+    aria-labelledby="analysis-modal-title">
     <div class="analysis-modal-card">
       <div class="analysis-modal-head">
         <div>
@@ -686,8 +716,18 @@
       </div>
     </div>
   </div>
+  <script type="importmap">
+      {
+        "imports": {
+          "firebase/app": "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js",
+          "firebase/auth": "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js",
+          "firebase/firestore": "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js"
+        }
+      }
+    </script>
 
   <script src="js/observability.js?v=20260429a"></script>
   <script type="module" src="js/main.js?v=20260429a"></script>
 </body>
+
 </html>
