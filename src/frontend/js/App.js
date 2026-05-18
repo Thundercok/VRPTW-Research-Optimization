@@ -1862,13 +1862,13 @@ export class App {
     rows
       .filter((row) => selectedInstance === 'ALL' || String(row?.instance || '') === selectedInstance)
       .forEach((row) => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
         <td>${this.escapeHtml(String(row.instance || '-'))}</td>
         <td>${Number(row.gap_pct || 0).toFixed(2)}%</td>
         <td>${Number(row.nv || 0).toFixed(1)}</td>
       `;
-      this.el.analysisTransferBody.appendChild(tr);
+        this.el.analysisTransferBody.appendChild(tr);
       });
   }
 
@@ -1995,14 +1995,14 @@ export class App {
     (Array.isArray(rows) ? rows : [])
       .filter((row) => selectedInstance === 'ALL' || String(row?.instance || '') === selectedInstance)
       .forEach((row) => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
         <td>${this.escapeHtml(String(row.instance || '-'))}</td>
         <td>${Number(row.td || 0).toFixed(2)}</td>
         <td>${Number(row.gap_pct || 0).toFixed(2)}%</td>
         <td>${Number(row.nv || 0).toFixed(1)}</td>
       `;
-      this.el.analysisModalTransferBody.appendChild(tr);
+        this.el.analysisModalTransferBody.appendChild(tr);
       });
   }
 
@@ -2484,8 +2484,13 @@ export class App {
 
       const email = this.el.loginEmail.value.trim().toLowerCase();
       const password = this.el.loginPassword.value.trim();
+
       this.clearFieldError(this.el.loginEmail);
       this.clearFieldError(this.el.loginPassword);
+
+      // Hide the hint box when a new attempt starts
+      if (this.el.authHint) this.el.authHint.style.display = 'none';
+
       if (!this.isValidEmail(email)) {
         this.setFieldError(this.el.loginEmail);
         throw new Error('Invalid email format');
@@ -2494,47 +2499,35 @@ export class App {
         this.setFieldError(this.el.loginPassword);
         throw new Error('Please enter both email and password');
       }
+
+      // This will throw an error if the backend returns 401 or 422
       const data = await this.request('/auth/token', {
         method: 'POST',
         body: JSON.stringify({ email, password })
       });
+
       this.state.token = data.access_token;
       this.state.email = email;
       this.state.role = data.role || 'operator';
-      this.state.mustChangePassword = Boolean(data.must_change_password);
-      localStorage.setItem('vrptw_token', this.state.token);
-      localStorage.setItem('vrptw_email', email);
-      localStorage.setItem('vrptw_role', this.state.role);
-      localStorage.setItem('vrptw_must_change_password', String(this.state.mustChangePassword));
 
-      if (this.state.mustChangePassword) {
-        this.state.resetToken = '';
-        this.el.resetPassword.value = '';
-        this.el.resetPasswordConfirm.value = '';
-        this.showAuthView('reset');
-        this.toast('Password Change Required', 'Use the temporary password once, then set a new password now.', 'error');
-        return;
-      }
+      // Proceed to dashboard...
+      this.initDashboard();
 
-      this.enterApp();
-      await this.initFirebase(email);
-      this.updateConnectionPill();
-      this.toast('Login Successful', 'Token has been saved in your browser.', 'ok');
-    } catch (error) {
-      const message = this.parseApiError(error);
-      if (/email/i.test(message)) {
-        this.setFieldError(this.el.loginEmail);
-        this.toast('Login Failed', 'Please check your email address', 'error');
-      } else if (/password|credential|invalid/i.test(message)) {
-        this.setFieldError(this.el.loginPassword);
-        this.toast('Login Failed', 'Email or password is incorrect. Please try again or reset your password.', 'error');
-      } else {
-        this.toast('Login Failed', message, 'error');
-      }
+    } catch (err) {
+      // THE FIX: Catch the backend rejection and display it in the UI
+      console.error("[Login Failed]:", err);
+
       if (this.el.authHint) {
-        this.el.authHint.textContent = '💡 Tip: Use "Forgot Password" if you do not remember your credentials';
+        // Extract the error message from the backend response if it exists
+        const errorMsg = err.message || "Invalid credentials or server error.";
+        this.el.authHint.textContent = errorMsg;
         this.el.authHint.style.display = 'block';
+        this.el.authHint.style.color = '#e74c3c'; // Ensure it's visible as an error (red)
       }
+
+      // Highlight the inputs in red to indicate failure
+      this.setFieldError(this.el.loginEmail);
+      this.setFieldError(this.el.loginPassword);
     }
   }
 

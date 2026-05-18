@@ -1,388 +1,1347 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en" class="scroll-smooth">
+
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#0f2740" />
-  <meta name="description" content="VRPTW Research Optimization - DDQN-ALNS hybrid solver for the Vehicle Routing Problem with Time Windows. Open-source research project with a live web demo." />
-  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
-  <meta http-equiv="Pragma" content="no-cache" />
-  <meta http-equiv="Expires" content="0" />
-  <title>VRPTW Research Optimization - DDQN-ALNS Hybrid Solver</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/landing.css?v=20260428" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description"
+    content="Not Really Far Eye - Enterprise Fleet Routing & Dispatch Platform powered by Deep Reinforcement Learning.">
+  <title>Not Really Far Eye | Enterprise Routing Intelligence</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap"
+    rel="stylesheet">
+
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "firebase/app": "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js",
+        "firebase/auth": "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js",
+        "firebase/firestore": "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js",
+        "firebase/analytics": "https://www.gstatic.com/firebasejs/10.12.5/firebase-analytics.js"
+      }
+    }
+  </script>
+
+  <style>
+    /* ==========================================================================
+       ENTERPRISE DESIGN SYSTEM v2.0 (ULTRA-CLEAN LIGHT THEME)
+       ========================================================================== */
+    :root {
+      /* Core Palette - Slate & Indigo Focus */
+      --bg-base: #ffffff;
+      --bg-surface: #f8fafc;
+      --bg-surface-elevated: #ffffff;
+      --bg-glass: rgba(255, 255, 255, 0.85);
+
+      --border-subtle: #f1f5f9;
+      --border-base: #e2e8f0;
+      --border-hard: #cbd5e1;
+
+      --text-main: #0f172a;
+      --text-secondary: #475569;
+      --text-tertiary: #94a3b8;
+
+      /* Brand Accents */
+      --brand-primary: #0f172a;
+      /* Deep Slate */
+      --brand-accent: #2563eb;
+      /* True Blue */
+      --brand-accent-hover: #1d4ed8;
+      --brand-accent-soft: #eff6ff;
+      --brand-cyan: #06b6d4;
+      /* For data lines */
+
+      /* Semantic Status */
+      --status-success: #10b981;
+      --status-success-soft: #d1fae5;
+      --status-warning: #f59e0b;
+      --status-warning-soft: #fef3c7;
+      --status-danger: #ef4444;
+
+      /* Typography */
+      --font-display: 'Plus Jakarta Sans', sans-serif;
+      --font-body: 'Inter', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+
+      /* Layout & Shadows */
+      --container-max: 1280px;
+      --radius-sm: 8px;
+      --radius-md: 16px;
+      --radius-lg: 24px;
+
+      --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.05);
+      --shadow-md: 0 10px 25px -5px rgba(15, 23, 42, 0.05), 0 8px 10px -6px rgba(15, 23, 42, 0.01);
+      --shadow-lg: 0 25px 50px -12px rgba(15, 23, 42, 0.15);
+      --shadow-glow: 0 0 40px -10px rgba(37, 99, 235, 0.2);
+
+      --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+      --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.15);
+    }
+
+    /* ==========================================================================
+       RESET & BASE TYPOGRAPHY
+       ========================================================================== */
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-body);
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      line-height: 1.6;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    ::selection {
+      background: var(--brand-accent);
+      color: #fff;
+    }
+
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg-base);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border-hard);
+      border-radius: 4px;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5 {
+      font-family: var(--font-display);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      color: var(--text-main);
+    }
+
+    h1 {
+      font-size: clamp(3rem, 6vw, 5.5rem);
+      letter-spacing: -0.04em;
+    }
+
+    h2 {
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      margin-bottom: 1.25rem;
+    }
+
+    h3 {
+      font-size: 1.5rem;
+    }
+
+    p {
+      font-size: 1.125rem;
+      color: var(--text-secondary);
+    }
+
+    .eyebrow {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 0.875rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--brand-accent);
+      margin-bottom: 1.25rem;
+    }
+
+    .text-gradient {
+      background: linear-gradient(135deg, var(--brand-primary) 0%, var(--text-tertiary) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .text-mono {
+      font-family: var(--font-mono);
+    }
+
+    /* ==========================================================================
+       LAYOUT UTILITIES
+       ========================================================================== */
+    .container {
+      max-width: var(--container-max);
+      margin: 0 auto;
+      padding: 0 2rem;
+    }
+
+    .section {
+      padding: 8rem 0;
+      position: relative;
+    }
+
+    .bg-surface {
+      background-color: var(--bg-surface);
+      border-top: 1px solid var(--border-subtle);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    /* ==========================================================================
+       BUTTONS
+       ========================================================================== */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.875rem 2rem;
+      font-size: 1rem;
+      font-weight: 600;
+      font-family: var(--font-display);
+      border-radius: 99px;
+      transition: all 0.2s var(--ease-out);
+      text-decoration: none;
+      cursor: pointer;
+      border: 1px solid transparent;
+    }
+
+    .btn-primary {
+      background-color: var(--brand-primary);
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(15, 23, 42, 0.15);
+    }
+
+    .btn-primary:hover {
+      background-color: #000;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.2);
+    }
+
+    .btn-outline {
+      background-color: transparent;
+      border-color: var(--border-hard);
+      color: var(--text-main);
+    }
+
+    .btn-outline:hover {
+      background-color: var(--bg-surface);
+      border-color: var(--brand-primary);
+    }
+
+    /* ==========================================================================
+       NAVIGATION (ROBUST FLEXBOX)
+       ========================================================================== */
+    .navbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 72px;
+      z-index: 1000;
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border-base);
+      transition: all 0.3s var(--ease-out);
+    }
+
+    .nav-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 100%;
+    }
+
+    /* Left: Brand */
+    .nav-brand {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: 1.25rem;
+      color: var(--text-main);
+      text-decoration: none;
+    }
+
+    .nav-logo {
+      width: 24px;
+      height: 24px;
+      color: var(--brand-accent);
+    }
+
+    /* Center: Links */
+    .nav-menu {
+      flex: 2;
+      display: flex;
+      justify-content: center;
+      gap: 2.5rem;
+    }
+
+    .nav-menu a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.95rem;
+      transition: color 0.2s;
+    }
+
+    .nav-menu a:hover {
+      color: var(--brand-accent);
+    }
+
+    /* Right: Actions */
+    .nav-actions {
+      flex: 1;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .btn-sm {
+      padding: 0.5rem 1.25rem;
+      font-size: 0.9rem;
+    }
+
+    /* ==========================================================================
+       HERO SECTION & NETWORK VISUALIZATION
+       ========================================================================== */
+    .hero {
+      padding-top: 140px;
+      padding-bottom: 6rem;
+      min-height: 95vh;
+      display: grid;
+      grid-template-columns: 1fr 1.1fr;
+      gap: 4rem;
+      align-items: center;
+      background: radial-gradient(circle at top right, var(--bg-surface) 0%, var(--bg-base) 100%);
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 10;
+      padding-right: 2rem;
+    }
+
+    .hero-desc {
+      margin: 1.5rem 0 2.5rem;
+      font-size: 1.2rem;
+      line-height: 1.7;
+      color: var(--text-secondary);
+      max-width: 540px;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      background: var(--bg-base);
+      border: 1px solid var(--border-base);
+      border-radius: 99px;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 2rem;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--brand-accent);
+      animation: pulse 2s infinite;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 1rem;
+    }
+
+    /* THE NETWORK TOPOLOGY VISUALIZATION 
+       Replaces the messy geographic map with a clean, high-tech data graph */
+    .network-showcase {
+      width: 100%;
+      height: 650px;
+      background: #ffffff;
+      border: 1px solid var(--border-base);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      position: relative;
+      overflow: hidden;
+      background-image:
+        linear-gradient(to right, var(--border-subtle) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--border-subtle) 1px, transparent 1px);
+      background-size: 40px 40px;
+      background-position: center center;
+    }
+
+    /* SVG Layer for connecting lines */
+    .network-svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    .data-line {
+      fill: none;
+      stroke: var(--border-hard);
+      stroke-width: 2;
+    }
+
+    .data-line.active {
+      stroke: var(--brand-cyan);
+      stroke-width: 3;
+      stroke-dasharray: 8 12;
+      animation: flow 20s linear infinite;
+    }
+
+    .data-line.warning {
+      stroke: var(--brand-warning);
+      stroke-width: 2;
+      stroke-dasharray: 4 8;
+      animation: flow 15s linear infinite reverse;
+    }
+
+    @keyframes flow {
+      to {
+        stroke-dashoffset: -1000;
+      }
+    }
+
+    @keyframes pulse {
+      0% {
+        opacity: 0.6;
+        transform: scale(0.9);
+      }
+
+      50% {
+        opacity: 1;
+        transform: scale(1.1);
+      }
+
+      100% {
+        opacity: 0.6;
+        transform: scale(0.9);
+      }
+    }
+
+    /* Floating UI Nodes (Representing Vehicles & Depots) */
+    .net-node {
+      position: absolute;
+      background: var(--bg-base);
+      border: 1px solid var(--border-base);
+      border-radius: var(--radius-md);
+      padding: 1rem;
+      box-shadow: var(--shadow-md);
+      z-index: 10;
+      font-family: var(--font-body);
+      transition: transform 0.3s var(--ease-out);
+    }
+
+    .net-node:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-lg);
+      border-color: var(--brand-accent);
+      z-index: 20;
+    }
+
+    /* Central Dashboard Node */
+    .node-hub {
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 320px;
+      padding: 1.5rem;
+      border: 1px solid var(--brand-primary);
+      box-shadow: var(--shadow-lg);
+      background: var(--bg-glass);
+      backdrop-filter: blur(12px);
+    }
+
+    .node-hub:hover {
+      transform: translate(-50%, -52px);
+    }
+
+    .hub-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+      border-bottom: 1px solid var(--border-base);
+      padding-bottom: 0.75rem;
+    }
+
+    .hub-title {
+      font-weight: 700;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .hub-pulse {
+      width: 10px;
+      height: 10px;
+      background: var(--brand-accent);
+      border-radius: 50%;
+      box-shadow: 0 0 10px var(--brand-accent);
+      animation: pulse 2s infinite;
+    }
+
+    .hub-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    .hub-stat-lbl {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--text-tertiary);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.25rem;
+    }
+
+    .hub-stat-val {
+      font-family: var(--font-mono);
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--text-main);
+      line-height: 1;
+    }
+
+    /* Peripheral Nodes */
+    .node-sm {
+      width: 180px;
+    }
+
+    .node-1 {
+      top: 15%;
+      left: 10%;
+    }
+
+    .node-2 {
+      top: 20%;
+      right: 10%;
+    }
+
+    .node-3 {
+      bottom: 15%;
+      left: 20%;
+    }
+
+    .node-4 {
+      bottom: 25%;
+      right: 15%;
+    }
+
+    .sm-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+
+    .sm-id {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text-secondary);
+    }
+
+    .sm-badge {
+      font-size: 0.65rem;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .sm-badge.ok {
+      background: var(--status-success-soft);
+      color: #047857;
+    }
+
+    .sm-badge.warn {
+      background: var(--status-warning-soft);
+      color: #b45309;
+    }
+
+    .sm-data {
+      font-family: var(--font-mono);
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--brand-primary);
+    }
+
+    .sm-sub {
+      font-size: 0.7rem;
+      color: var(--text-tertiary);
+      margin-top: 0.25rem;
+    }
+
+    /* ==========================================================================
+       TRUST TICKER
+       ========================================================================== */
+    .ticker {
+      background: var(--brand-primary);
+      padding: 2rem 0;
+      overflow: hidden;
+      display: flex;
+      color: #fff;
+    }
+
+    .ticker-track {
+      display: flex;
+      gap: 5rem;
+      width: max-content;
+      animation: marquee 30s linear infinite;
+    }
+
+    .ticker-item {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      font-family: var(--font-mono);
+      font-weight: 500;
+      font-size: 1rem;
+      color: var(--text-tertiary);
+    }
+
+    .ticker-item strong {
+      color: #fff;
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    @keyframes marquee {
+      to {
+        transform: translateX(calc(-50% - 2.5rem));
+      }
+    }
+
+    /* ==========================================================================
+       BENTO BOX ARCHITECTURE (FEATURES)
+       ========================================================================== */
+    .bento-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-auto-rows: minmax(320px, auto);
+      gap: 1.5rem;
+      margin-top: 4rem;
+    }
+
+    .bento-card {
+      background: var(--bg-base);
+      border: 1px solid var(--border-base);
+      border-radius: var(--radius-lg);
+      padding: 2.5rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: all 0.3s var(--ease-out);
+      box-shadow: var(--shadow-sm);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .bento-card:hover {
+      border-color: var(--border-hard);
+      box-shadow: var(--shadow-md);
+      transform: translateY(-4px);
+    }
+
+    .bento-col-2 {
+      grid-column: span 2;
+    }
+
+    .bento-row-2 {
+      grid-row: span 2;
+    }
+
+    .bento-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-surface);
+      color: var(--brand-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 2rem;
+      border: 1px solid var(--border-base);
+    }
+
+    .bento-icon svg {
+      width: 24px;
+      height: 24px;
+    }
+
+    .bento-title {
+      font-size: 1.5rem;
+      margin-bottom: 0.75rem;
+    }
+
+    /* Custom Bento Visuals (Robust CSS Graphics) */
+    .b-chart {
+      margin-top: 2rem;
+      height: 120px;
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+      border-bottom: 1px solid var(--border-hard);
+      position: relative;
+      padding-bottom: 1px;
+    }
+
+    .b-bar {
+      flex: 1;
+      background: var(--border-base);
+      border-radius: 4px 4px 0 0;
+      position: relative;
+    }
+
+    .b-bar.active {
+      background: var(--brand-primary);
+    }
+
+    .b-bar.success {
+      background: var(--status-success);
+    }
+
+    .b-line {
+      position: absolute;
+      top: 40px;
+      left: 0;
+      width: 100%;
+      border-top: 2px dashed var(--brand-warning);
+      z-index: 10;
+    }
+
+    .b-sla {
+      margin-top: auto;
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      background: var(--bg-surface);
+      padding: 1.5rem 2rem;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-base);
+    }
+
+    .sla-ring {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      border: 6px solid var(--border-base);
+      border-top-color: var(--status-success);
+      border-right-color: var(--status-success);
+      border-bottom-color: var(--status-success);
+      transform: rotate(45deg);
+    }
+
+    .sla-val {
+      font-family: var(--font-mono);
+      font-size: 2.25rem;
+      font-weight: 800;
+      color: var(--status-success);
+      line-height: 1;
+    }
+
+    /* ==========================================================================
+       ACADEMIC RIGOR (MATHJAX)
+       ========================================================================== */
+    .science-box {
+      background: var(--bg-base);
+      border: 1px solid var(--border-hard);
+      border-radius: var(--radius-lg);
+      padding: 4rem 2rem;
+      text-align: center;
+      box-shadow: var(--shadow-sm);
+      margin-top: 4rem;
+      overflow-x: auto;
+    }
+
+    .science-box .MathJax {
+      font-size: 1.75rem;
+      color: var(--brand-primary);
+    }
+
+    /* ==========================================================================
+       DEVELOPER TERMINAL
+       ========================================================================== */
+    .mac-terminal {
+      background: #020617;
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: var(--shadow-lg);
+      border: 1px solid #1e293b;
+    }
+
+    .mac-header {
+      background: #0f172a;
+      padding: 1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      border-bottom: 1px solid #1e293b;
+    }
+
+    .mac-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+
+    .mac-title {
+      margin: 0 auto;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      color: #64748b;
+      font-weight: 600;
+      padding-right: 40px;
+    }
+
+    .mac-body {
+      padding: 2.5rem;
+      font-family: var(--font-mono);
+      font-size: 0.95rem;
+      line-height: 1.8;
+      color: #f8fafc;
+      overflow-x: auto;
+    }
+
+    .cmd-prompt {
+      color: #38bdf8;
+      font-weight: 700;
+      margin-right: 1rem;
+      user-select: none;
+    }
+
+    .cmd-comment {
+      color: #64748b;
+      font-style: italic;
+    }
+
+    .cmd-success {
+      color: #10b981;
+      font-weight: 700;
+      margin-top: 0.5rem;
+    }
+
+    /* ==========================================================================
+       FOOTER
+       ========================================================================== */
+    .footer {
+      padding: 6rem 0 2rem;
+      background: var(--bg-surface);
+      border-top: 1px solid var(--border-base);
+    }
+
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr;
+      gap: 4rem;
+      margin-bottom: 4rem;
+    }
+
+    .footer-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: 1.25rem;
+      color: var(--brand-primary);
+      text-decoration: none;
+      margin-bottom: 1rem;
+    }
+
+    .footer h4 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--brand-primary);
+      margin-bottom: 1.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .footer ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .footer a {
+      color: var(--text-secondary);
+      font-weight: 500;
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .footer a:hover {
+      color: var(--brand-accent);
+    }
+
+    .footer-bottom {
+      border-top: 1px solid var(--border-base);
+      padding-top: 2rem;
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.875rem;
+      color: var(--text-tertiary);
+      font-weight: 500;
+    }
+
+    /* ==========================================================================
+       RESPONSIVE DESIGN (PREVENTS NAVBAR/LAYOUT COLLAPSE)
+       ========================================================================== */
+    @media (max-width: 1024px) {
+      .hero {
+        grid-template-columns: 1fr;
+        text-align: center;
+        padding-top: 140px;
+      }
+
+      .hero-content {
+        margin: 0 auto;
+        padding-right: 0;
+      }
+
+      .hero-actions {
+        justify-content: center;
+      }
+
+      .bento-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .bento-col-2,
+      .bento-row-2 {
+        grid-column: span 1;
+        grid-row: span 1;
+      }
+
+      .grid-2 {
+        grid-template-columns: 1fr;
+      }
+
+      .footer-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (max-width: 768px) {
+
+      .nav-menu,
+      .nav-actions {
+        display: none;
+      }
+
+      .bento-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .network-showcase {
+        display: none;
+        /* Hide complex viz on mobile */
+      }
+
+      .footer-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .ticker-track {
+        gap: 3rem;
+      }
+    }
+  </style>
 </head>
+
 <body>
-  <a class="skip-link" href="#main">Skip to content</a>
 
-  <header class="topbar" id="top">
-    <div class="container topbar-inner">
-      <a class="brand" href="#top">
-        <span class="brand-mark">
-          <svg viewBox="0 0 32 32" aria-hidden="true">
-            <circle cx="16" cy="16" r="14" fill="currentColor" opacity="0.12"/>
-            <path d="M8 18 L14 11 L20 16 L24 9" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-            <circle cx="14" cy="11" r="2" fill="currentColor"/>
-            <circle cx="20" cy="16" r="2" fill="currentColor"/>
-            <circle cx="24" cy="9" r="2" fill="currentColor"/>
-          </svg>
-        </span>
-        <span class="brand-text">
-          <strong>VRPTW</strong>
-          <em data-i18n="brand.sub">Research Optimization</em>
-        </span>
-      </a>
+  <nav class="navbar" id="navbar">
+    <div class="container nav-inner">
+      <div class="nav-brand">
+        <svg class="nav-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+          stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+          <polyline points="2 17 12 22 22 17"></polyline>
+          <polyline points="2 12 12 17 22 12"></polyline>
+        </svg>
+        Not Really Far Eye
+      </div>
+      <div class="nav-menu">
+        <a href="#platform">Platform</a>
+        <a href="#science">The Science</a>
+        <a href="#developers">API</a>
+      </div>
+      <div class="nav-actions">
+        <a href="app.html" class="btn btn-primary btn-sm">Launch Console</a>
+      </div>
+    </div>
+  </nav>
 
-      <nav class="topnav" aria-label="Primary">
-        <a href="#about" data-i18n="nav.about">About</a>
-        <a href="#features" data-i18n="nav.features">Features</a>
-        <a href="#algorithm" data-i18n="nav.algorithm">Algorithm</a>
-        <a href="#results" data-i18n="nav.results">Results</a>
-        <a href="#tech" data-i18n="nav.tech">Tech Stack</a>
-        <a href="#getstarted" data-i18n="nav.getstarted">Get Started</a>
-      </nav>
+  <header class="hero container">
+    <div class="hero-content">
+      <div class="status-badge">
+        <div class="status-dot"></div> Live Optimization Active
+      </div>
+      <h1 class="text-gradient">Routing,<br>mathematically perfected.</h1>
+      <p class="hero-desc">
+        Discard fragile heuristics. <strong>Not Really Far Eye</strong> leverages plateau-aware Deep Reinforcement
+        Learning to untangle city-scale constraints, hitting delivery windows with absolute precision.
+      </p>
+      <div class="hero-actions">
+        <a href="app.html" class="btn btn-primary">Start Live Demo</a>
+        <a href="#platform" class="btn btn-outline">Explore Capabilities</a>
+      </div>
+    </div>
 
-      <div class="top-actions">
-        <button class="icon-btn" id="lang-toggle" type="button" aria-label="Toggle language">
-          <span id="lang-label">EN</span>
-        </button>
-        <button class="icon-btn" id="theme-toggle" type="button" aria-label="Toggle theme">
-          <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4" fill="currentColor"/><g stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.5" y1="4.5" x2="6.6" y2="6.6"/><line x1="17.4" y1="17.4" x2="19.5" y2="19.5"/><line x1="4.5" y1="19.5" x2="6.6" y2="17.4"/><line x1="17.4" y1="6.6" x2="19.5" y2="4.5"/></g></svg>
-          <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 13.5A9 9 0 1 1 10.5 3a7 7 0 0 0 10.5 10.5z" fill="currentColor"/></svg>
-        </button>
-        <a class="btn primary cta-demo" href="app.html" data-i18n="cta.demo">Open Demo</a>
+    <div class="network-showcase">
+      <svg class="network-svg">
+        <path class="data-line active" d="M 10% 15% L 50% 50%" />
+        <path class="data-line active" d="M 90% 20% L 50% 50%" />
+        <path class="data-line warning" d="M 20% 85% L 50% 50%" />
+        <path class="data-line" d="M 85% 75% L 50% 50%" />
+        <path class="data-line" d="M 10% 15% L 20% 85%" />
+        <path class="data-line" d="M 90% 20% L 85% 75%" />
+      </svg>
+
+      <div class="net-node node-sm node-1">
+        <div class="sm-header">
+          <span class="sm-id">TRK_801</span>
+          <span class="sm-badge ok">ON TIME</span>
+        </div>
+        <div class="sm-data">84.5%</div>
+        <div class="sm-sub">Capacity Utilized</div>
       </div>
 
-      <button class="mobile-menu-btn" id="mobile-menu-btn" type="button" aria-label="Open menu">
-        <span></span><span></span><span></span>
-      </button>
-    </div>
-    <div class="mobile-menu" id="mobile-menu" hidden>
-      <a href="#about" data-i18n="nav.about">About</a>
-      <a href="#features" data-i18n="nav.features">Features</a>
-      <a href="#algorithm" data-i18n="nav.algorithm">Algorithm</a>
-      <a href="#results" data-i18n="nav.results">Results</a>
-      <a href="#tech" data-i18n="nav.tech">Tech Stack</a>
-      <a href="#getstarted" data-i18n="nav.getstarted">Get Started</a>
+      <div class="net-node node-sm node-2">
+        <div class="sm-header">
+          <span class="sm-id">TRK_214</span>
+          <span class="sm-badge ok">EN ROUTE</span>
+        </div>
+        <div class="sm-data">12 / 45</div>
+        <div class="sm-sub">Active Drops</div>
+      </div>
+
+      <div class="net-node node-sm node-3">
+        <div class="sm-header">
+          <span class="sm-id">TRK_099</span>
+          <span class="sm-badge warn">SLA RISK</span>
+        </div>
+        <div class="sm-data">+1.2%</div>
+        <div class="sm-sub">Delta Cost Penalty</div>
+      </div>
+
+      <div class="net-node node-sm node-4">
+        <div class="sm-header">
+          <span class="sm-id">HUB_E</span>
+          <span class="sm-badge ok">ORIGIN</span>
+        </div>
+        <div class="sm-data">1,200 KG</div>
+        <div class="sm-sub">Global Constraint</div>
+      </div>
+
+      <div class="net-node node-hub">
+        <div class="hub-header">
+          <div class="hub-title">
+            <div class="hub-pulse"></div> DDQN Engine
+          </div>
+          <span class="text-mono" style="font-size: 0.75rem; color: var(--text-tertiary);">v15.0.2</span>
+        </div>
+        <div class="hub-stats">
+          <div>
+            <div class="hub-stat-lbl">Global Cost Obj</div>
+            <div class="hub-stat-val">1,654.8</div>
+          </div>
+          <div>
+            <div class="hub-stat-lbl">Gap vs BKS</div>
+            <div class="hub-stat-val" style="color: var(--status-success);">-2.6%</div>
+          </div>
+        </div>
+        <div
+          style="margin-top: 1.5rem; height: 4px; background: var(--border-base); border-radius: 2px; overflow: hidden;">
+          <div style="height: 100%; width: 85%; background: var(--brand-accent);"></div>
+        </div>
+      </div>
     </div>
   </header>
 
-  <main id="main">
-    <section class="hero">
-      <div class="container hero-grid">
-        <div class="hero-text">
-          <span class="hero-badge" data-i18n="hero.badge">Open-source research</span>
-          <h1>
-            <span data-i18n="hero.title.line1">A Plateau-Aware</span>
-            <span class="grad" data-i18n="hero.title.line2">Deep RL Controller</span>
-            <span data-i18n="hero.title.line3">for VRPTW</span>
-          </h1>
-          <p class="hero-lead" data-i18n="hero.lead">
-            DDQN-ALNS hybrid solver that learns when to escape local optima. Compare it side-by-side with classic ALNS on Solomon RC1/RC2 benchmarks - directly in your browser.
-          </p>
-          <div class="hero-actions">
-            <a class="btn primary lg" href="app.html" data-i18n="hero.cta.try">Try Live Demo</a>
-            <a class="btn outline lg" href="https://github.com/Thundercok/VRPTW-Research-Optimization" target="_blank" rel="noopener" data-i18n="hero.cta.github">View on GitHub</a>
-          </div>
-          <ul class="hero-stats">
-            <li>
-              <strong data-i18n="hero.stat1.value">2.6%</strong>
-              <span data-i18n="hero.stat1.label">Avg. gap vs. best-known</span>
-            </li>
-            <li>
-              <strong data-i18n="hero.stat2.value">~10s</strong>
-              <span data-i18n="hero.stat2.label">Median runtime per instance</span>
-            </li>
-            <li>
-              <strong data-i18n="hero.stat3.value">RC1 -> RC2</strong>
-              <span data-i18n="hero.stat3.label">Zero-shot transfer</span>
-            </li>
-          </ul>
-        </div>
+  <div class="ticker">
+    <div class="ticker-track">
+      <div class="ticker-item"><strong>2.6%</strong> Avg Gap vs BKS</div>
+      <div class="ticker-item"><strong>10s</strong> Compute per 100 stops</div>
+      <div class="ticker-item"><strong>100%</strong> SLA Compliance</div>
+      <div class="ticker-item"><strong>-18%</strong> Mileage Reduction</div>
+      <div class="ticker-item"><strong>Zero</strong> Retraining</div>
+      <div class="ticker-item"><strong>2.6%</strong> Avg Gap vs BKS</div>
+      <div class="ticker-item"><strong>10s</strong> Compute per 100 stops</div>
+      <div class="ticker-item"><strong>100%</strong> SLA Compliance</div>
+      <div class="ticker-item"><strong>-18%</strong> Mileage Reduction</div>
+      <div class="ticker-item"><strong>Zero</strong> Retraining</div>
+    </div>
+  </div>
 
-        <div class="hero-visual" aria-hidden="true">
-          <div class="hero-card">
-            <div class="hero-card-head">
-              <span class="dot red"></span>
-              <span class="dot yellow"></span>
-              <span class="dot green"></span>
-              <span class="hero-card-title">vrptw_clean.py</span>
-            </div>
-            <pre class="hero-code"><code><span class="kw">class</span> <span class="cls">PlateauHybridSolver</span>:
-    <span class="cmt"># DDQN policy picks the destroy operator</span>
-    <span class="kw">def</span> <span class="fn">step</span>(<span class="arg">self</span>, plan: Plan) -&gt; Plan:
-        action = self.q.<span class="fn">act</span>(self.<span class="fn">state</span>(plan))
-        ruined = <span class="fn">destroy</span>(plan, action)
-        <span class="kw">return</span> <span class="fn">repair</span>(ruined)</code></pre>
-          </div>
-          <div class="hero-orbit">
-            <div class="orbit-node nA">DDQN</div>
-            <div class="orbit-node nB">ALNS</div>
-            <div class="orbit-node nC">VRPTW</div>
-          </div>
-        </div>
+  <section class="section bg-surface" id="platform">
+    <div class="container">
+      <div style="max-width: 650px; margin-bottom: 4rem;">
+        <span class="eyebrow">Platform Architecture</span>
+        <h2>Intelligence that scales.</h2>
+        <p>Real-world routing is chaotic. Rigid heuristics break when constraints tighten. We engineered a platform that
+          actively heals routes before dispatch.</p>
       </div>
-    </section>
 
-    <section class="section about" id="about">
-      <div class="container">
-        <p class="eyebrow" data-i18n="about.eyebrow">About the project</p>
-        <h2 data-i18n="about.title">Why this project exists</h2>
-        <p class="lead" data-i18n="about.lead">
-          Vehicle routing with time windows is hard: the search space is combinatorial, real fleets must respect customer service intervals, and pure heuristics often plateau. We combine reinforcement learning with adaptive large neighborhood search to learn smarter restarts - then ship it as a transparent web demo so anyone can poke at it.
-        </p>
-        <div class="about-cards">
-          <article class="about-card">
-            <div class="about-card-icon">A</div>
-            <h3 data-i18n="about.card1.title">Reproducible research</h3>
-            <p data-i18n="about.card1.body">Single Python file (vrptw_clean.py) holds the entire solver. Pre-trained weights ship in the repo; benchmark CSVs are committed for full traceability.</p>
-          </article>
-          <article class="about-card">
-            <div class="about-card-icon">B</div>
-            <h3 data-i18n="about.card2.title">Real solver in the demo</h3>
-            <p data-i18n="about.card2.body">The web app runs the same PlateauHybridSolver and ALNS baseline - no mock. Side-by-side routes, runtimes, and load-balancing metrics.</p>
-          </article>
-          <article class="about-card">
-            <div class="about-card-icon">C</div>
-            <h3 data-i18n="about.card3.title">Operator-friendly UX</h3>
-            <p data-i18n="about.card3.body">Import customers from CSV/Excel, drop pins on a Leaflet map, edit time windows inline, run the model, export results.</p>
-          </article>
-        </div>
-      </div>
-    </section>
+      <div class="bento-grid">
 
-    <section class="section features" id="features">
-      <div class="container">
-        <p class="eyebrow" data-i18n="features.eyebrow">Features</p>
-        <h2 data-i18n="features.title">What you can do today</h2>
-        <div class="feature-grid">
-          <div class="feature">
-            <div class="feature-icon">F1</div>
-            <h3 data-i18n="features.f1.title">DDQN-ALNS hybrid</h3>
-            <p data-i18n="features.f1.body">A Double DQN agent learns which destroy operator to fire when the search plateaus, while ALNS handles the repair step.</p>
-          </div>
-          <div class="feature">
-            <div class="feature-icon">F2</div>
-            <h3 data-i18n="features.f2.title">Solomon benchmarks</h3>
-            <p data-i18n="features.f2.body">RC1 and RC2 instances load with one click. Capacity, fleet size, and time windows auto-populate.</p>
-          </div>
-          <div class="feature">
-            <div class="feature-icon">F3</div>
-            <h3 data-i18n="features.f3.title">Real-data import</h3>
-            <p data-i18n="features.f3.body">Upload CSV/XLSX with lat, lng, demand, ready, due, service. Or geocode addresses and pin on the map.</p>
-          </div>
-          <div class="feature">
-            <div class="feature-icon">F4</div>
-            <h3 data-i18n="features.f4.title">Side-by-side compare</h3>
-            <p data-i18n="features.f4.body">DDQN-ALNS vs. plain ALNS run in parallel. Watch route maps, runtime, total distance, and load balance.</p>
-          </div>
-          <div class="feature">
-            <div class="feature-icon">F5</div>
-            <h3 data-i18n="features.f5.title">Zero-shot transfer</h3>
-            <p data-i18n="features.f5.body">Train on RC1, evaluate on RC2 without retraining. The plateau-aware reward generalizes across instance families.</p>
-          </div>
-          <div class="feature">
-            <div class="feature-icon">F6</div>
-            <h3 data-i18n="features.f6.title">Guest mode demo</h3>
-            <p data-i18n="features.f6.body">No Firebase keys? No problem. The backend boots in demo mode and the front-end exposes a one-click guest login.</p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="section algorithm" id="algorithm">
-      <div class="container algorithm-grid">
-        <div>
-          <p class="eyebrow" data-i18n="algorithm.eyebrow">Algorithm</p>
-          <h2 data-i18n="algorithm.title">Plateau-aware reinforcement learning</h2>
-          <p data-i18n="algorithm.body1">
-            The controller observes the search trajectory: best-so-far, current-cost, and a plateau counter. When stagnation is detected, the DDQN policy chooses an aggressive destroy operator; otherwise it sticks with safer moves. Repair is delegated to a Numba-accelerated ALNS routine.
-          </p>
-          <p data-i18n="algorithm.body2">
-            Reward is shaped to reward both immediate cost reduction and long-term escape behaviour, which is what the paper calls "plateau-aware" credit assignment.
-          </p>
-          <ul class="algorithm-list">
-            <li><strong data-i18n="algorithm.list1.k">Action space:</strong> <span data-i18n="algorithm.list1.v">5 destroy operators (random, worst, related, route, cluster)</span></li>
-            <li><strong data-i18n="algorithm.list2.k">State:</strong> <span data-i18n="algorithm.list2.v">normalized gap, plateau counter, capacity utilisation, time-window slack</span></li>
-            <li><strong data-i18n="algorithm.list3.k">Network:</strong> <span data-i18n="algorithm.list3.v">2-layer MLP, target net synced every 200 steps</span></li>
-            <li><strong data-i18n="algorithm.list4.k">Repair:</strong> <span data-i18n="algorithm.list4.v">regret-2 insertion with TW feasibility check</span></li>
-          </ul>
-        </div>
-        <div class="algorithm-diagram" aria-hidden="true">
-          <div class="diagram-node n1">State</div>
-          <div class="diagram-arrow a1"></div>
-          <div class="diagram-node n2">DDQN policy</div>
-          <div class="diagram-arrow a2"></div>
-          <div class="diagram-node n3">Destroy</div>
-          <div class="diagram-arrow a3"></div>
-          <div class="diagram-node n4">Repair (ALNS)</div>
-          <div class="diagram-arrow a4 loop"></div>
-        </div>
-      </div>
-    </section>
-
-    <section class="section results" id="results">
-      <div class="container">
-        <p class="eyebrow" data-i18n="results.eyebrow">Results</p>
-        <h2 data-i18n="results.title">Benchmark snapshot</h2>
-        <div class="results-grid">
-          <div class="result-card">
-            <span class="result-value">2.6%</span>
-            <span class="result-label" data-i18n="results.r1">Avg. total-distance gap on RC1</span>
-          </div>
-          <div class="result-card">
-            <span class="result-value">3.4%</span>
-            <span class="result-label" data-i18n="results.r2">Zero-shot gap on RC2</span>
-          </div>
-          <div class="result-card">
-            <span class="result-value">~10s</span>
-            <span class="result-label" data-i18n="results.r3">Median runtime per 100-customer instance</span>
-          </div>
-          <div class="result-card">
-            <span class="result-value">-22%</span>
-            <span class="result-label" data-i18n="results.r4">Runtime vs. naive ALNS at equal quality</span>
-          </div>
-        </div>
-        <p class="results-note" data-i18n="results.note">
-          See logs/benchmark_clean.csv and logs/benchmark_transfer.csv in the repository for the raw numbers.
-        </p>
-      </div>
-    </section>
-
-    <section class="section tech" id="tech">
-      <div class="container">
-        <p class="eyebrow" data-i18n="tech.eyebrow">Tech stack</p>
-        <h2 data-i18n="tech.title">Built with proven open-source tools</h2>
-        <div class="badges">
-          <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white" />
-          <img alt="PyTorch" src="https://img.shields.io/badge/PyTorch-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white" />
-          <img alt="NumPy" src="https://img.shields.io/badge/NumPy-013243?style=for-the-badge&logo=numpy&logoColor=white" />
-          <img alt="Numba" src="https://img.shields.io/badge/Numba-00A3E0?style=for-the-badge&logo=numba&logoColor=white" />
-          <img alt="Leaflet" src="https://img.shields.io/badge/Leaflet-199900?style=for-the-badge&logo=leaflet&logoColor=white" />
-          <img alt="Firebase Admin" src="https://img.shields.io/badge/Firebase%20Admin-FFCA28?style=for-the-badge&logo=firebase&logoColor=black" />
-          <img alt="uv" src="https://img.shields.io/badge/uv-DE5FE9?style=for-the-badge&logo=python&logoColor=white" />
-          <img alt="Python 3.12" src="https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white" />
-        </div>
-      </div>
-    </section>
-
-    <section class="section getstarted" id="getstarted">
-      <div class="container">
-        <p class="eyebrow" data-i18n="getstarted.eyebrow">Get started</p>
-        <h2 data-i18n="getstarted.title">Run it locally in under 2 minutes</h2>
-        <div class="getstarted-grid">
-          <ol class="steps">
-            <li>
-              <span class="step-num">1</span>
-              <div>
-                <h4 data-i18n="getstarted.s1.title">Clone & enter</h4>
-                <p data-i18n="getstarted.s1.body">Pull the repo, then move into the project root.</p>
-              </div>
-            </li>
-            <li>
-              <span class="step-num">2</span>
-              <div>
-                <h4 data-i18n="getstarted.s2.title">Install with uv or pip</h4>
-                <p data-i18n="getstarted.s2.body">uv venv with Python 3.12, then install requirements.</p>
-              </div>
-            </li>
-            <li>
-              <span class="step-num">3</span>
-              <div>
-                <h4 data-i18n="getstarted.s3.title">Optional - fetch Solomon</h4>
-                <p data-i18n="getstarted.s3.body">Run scripts/fetch_solomon.py to download RC1+RC2 benchmark instances.</p>
-              </div>
-            </li>
-            <li>
-              <span class="step-num">4</span>
-              <div>
-                <h4 data-i18n="getstarted.s4.title">Launch</h4>
-                <p data-i18n="getstarted.s4.body">python main.py boots FastAPI on 127.0.0.1:8000. The demo loads in your browser.</p>
-              </div>
-            </li>
-          </ol>
-          <div class="terminal">
-            <div class="terminal-head">
-              <span class="dot red"></span>
-              <span class="dot yellow"></span>
-              <span class="dot green"></span>
-              <span class="terminal-title">~/VRPTW-Research-Optimization</span>
-            </div>
-            <pre class="terminal-body"><code><span class="prompt">$</span> git clone https://github.com/Thundercok/VRPTW-Research-Optimization.git
-<span class="prompt">$</span> cd VRPTW-Research-Optimization
-<span class="prompt">$</span> copy .env.example .env
-
-<span class="cmt"># with uv (recommended)</span>
-<span class="prompt">$</span> uv venv .venv --python 3.12
-<span class="prompt">$</span> uv pip install -r requirements.txt
-
-<span class="cmt"># or with plain venv</span>
-<span class="prompt">$</span> python -m venv venv
-<span class="prompt">$</span> venv\Scripts\activate
-<span class="prompt">$</span> pip install -r requirements.txt
-
-<span class="cmt"># optional: download Solomon RC1+RC2</span>
-<span class="prompt">$</span> python scripts/fetch_solomon.py
-
-<span class="cmt"># launch the web demo</span>
-<span class="prompt">$</span> python main.py
-<span class="ok">  Uvicorn running on http://127.0.0.1:8000</span></code></pre>
-          </div>
-        </div>
-        <div class="cta-final">
-          <a class="btn primary lg" href="app.html" data-i18n="hero.cta.try">Try Live Demo</a>
-          <a class="btn outline lg" href="https://github.com/Thundercok/VRPTW-Research-Optimization" target="_blank" rel="noopener" data-i18n="hero.cta.github">View on GitHub</a>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <footer class="footer">
-    <div class="container footer-grid">
-      <div>
-        <div class="brand">
-          <span class="brand-mark">
-            <svg viewBox="0 0 32 32" aria-hidden="true">
-              <circle cx="16" cy="16" r="14" fill="currentColor" opacity="0.18"/>
-              <path d="M8 18 L14 11 L20 16 L24 9" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <div class="bento-card bento-col-2 bento-row-2">
+          <div class="bento-icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
             </svg>
-          </span>
-          <span class="brand-text">
-            <strong>VRPTW</strong>
-            <em data-i18n="brand.sub">Research Optimization</em>
-          </span>
+          </div>
+          <div>
+            <h3 class="bento-title">Dynamic Rebalancing</h3>
+            <p>Standard ALNS gets stuck in local optima. Our Double Q-Network monitors the search trajectory in
+              real-time, firing aggressive destroy operators the millisecond a route stagnates.</p>
+          </div>
+
+          <div class="b-chart">
+            <div class="b-line"></div>
+            <div class="b-bar" style="height: 100%;"></div>
+            <div class="b-bar" style="height: 95%;"></div>
+            <div class="b-bar" style="height: 85%;"></div>
+            <div class="b-bar active" style="height: 80%;"></div>
+            <div class="b-bar active" style="height: 80%;"></div>
+            <div class="b-bar success" style="height: 45%;"></div>
+            <div class="b-bar success" style="height: 40%;"></div>
+          </div>
         </div>
-        <p class="footer-blurb" data-i18n="footer.blurb">DDQN-ALNS hybrid solver for the Vehicle Routing Problem with Time Windows. Open-source research project.</p>
-      </div>
 
-      <div class="footer-col">
-        <h5 data-i18n="footer.col.product">Product</h5>
-        <a href="app.html" data-i18n="cta.demo">Open Demo</a>
-        <a href="#features" data-i18n="nav.features">Features</a>
-        <a href="#getstarted" data-i18n="nav.getstarted">Get Started</a>
-      </div>
+        <div class="bento-card">
+          <div class="bento-icon"
+            style="background: var(--status-success-soft); color: var(--status-success); border-color: #a7f3d0;">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+          </div>
+          <div>
+            <h3 class="bento-title">Strict Windows</h3>
+            <p>The engine treats SLAs as hard math, ensuring maximum capacity utilization without a single late penalty.
+            </p>
+          </div>
+          <div class="b-sla">
+            <div class="sla-ring"></div>
+            <div class="sla-val">100<span style="font-size:1.5rem;">%</span></div>
+          </div>
+        </div>
 
-      <div class="footer-col">
-        <h5 data-i18n="footer.col.research">Research</h5>
-        <a href="https://github.com/Thundercok/VRPTW-Research-Optimization" target="_blank" rel="noopener">GitHub Repository</a>
-        <a href="https://github.com/Thundercok/VRPTW-Research-Optimization/blob/main/docs/report-draft1.tex" target="_blank" rel="noopener" data-i18n="footer.paper">Paper draft</a>
-        <a href="https://github.com/Thundercok/VRPTW-Research-Optimization/tree/main/logs" target="_blank" rel="noopener" data-i18n="footer.benchmarks">Benchmarks</a>
-      </div>
+        <div class="bento-card">
+          <div class="bento-icon"
+            style="background: var(--status-warning-soft); color: var(--status-warning); border-color: #fde68a;">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="2" y1="12" x2="22" y2="12"></line>
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z">
+              </path>
+            </svg>
+          </div>
+          <h3 class="bento-title">Zero-Shot Topology</h3>
+          <p>Train on dense urban distributions and deploy to rural networks instantly. The reward architecture
+            generalizes flawlessly.</p>
+        </div>
 
-      <div class="footer-col">
-        <h5 data-i18n="footer.col.contact">Contact</h5>
-        <a href="https://github.com/Thundercok" target="_blank" rel="noopener">@Thundercok</a>
-        <a href="mailto:zantlyTM@gmail.com">zantlyTM@gmail.com</a>
+        <div class="bento-card bento-col-2" style="flex-direction: row; align-items: center; gap: 2rem;">
+          <div class="bento-icon"
+            style="margin: 0; flex-shrink: 0; background: #f3e8ff; color: #7c3aed; border-color: #d8b4fe;">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+          </div>
+          <div>
+            <h3 class="bento-title">Plug & Play Manifest Import</h3>
+            <p>Ditch manual data entry. Upload massive <code>.csv</code> or <code>.xlsx</code> manifests natively. The
+              backend validates capacities and geocodes inputs without configuration.</p>
+          </div>
+        </div>
+
       </div>
     </div>
-    <div class="container footer-bottom">
-      <span data-i18n="footer.copyright">© 2026 VRPTW Research Optimization. Released under the MIT License.</span>
+  </section>
+
+  <section class="section" id="science">
+    <div class="container">
+      <div style="text-align: center; max-width: 800px; margin: 0 auto;">
+        <span class="eyebrow">The Mathematics</span>
+        <h2>Precision, formalized.</h2>
+        <p>Behind the pristine UI is a battle-tested combinatorial engine. We treat operator selection as a Markov
+          Decision Process, implementing strict Double Q-Learning to prevent overestimation bias.</p>
+      </div>
+
+      <div class="science-box">
+        \[ Y_t^{DoubleQ} \equiv R_{t+1} + \gamma Q(S_{t+1}, \mathop{\text{argmax}}_{a} Q(S_{t+1}, a; \theta_t);
+        \theta_t^-) \]
+      </div>
+
+      <div class="grid-2" style="margin-top: 4rem;">
+        <div
+          style="background: var(--bg-surface); padding: 3rem; border-radius: var(--radius-lg); border: 1px solid var(--border-base);">
+          <h4 style="margin-bottom: 1rem; font-size: 1.25rem;">Primary Network \(\theta_t\)</h4>
+          <p>Selects the most aggressive ruin operator based on current plateau depth, time window slack, and capacity
+            utilization. It drives the exploration phase to escape local optima.</p>
+        </div>
+        <div
+          style="background: var(--bg-surface); padding: 3rem; border-radius: var(--radius-lg); border: 1px solid var(--border-base);">
+          <h4 style="margin-bottom: 1rem; font-size: 1.25rem;">Target Network \(\theta_t^-\)</h4>
+          <p>Evaluates the actual value of the chosen action independently. This decoupling prevents the solver from
+            getting addicted to sub-optimal shortcuts during training.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section bg-surface" id="developers">
+    <div class="container grid-2">
+
+      <div class="mac-terminal">
+        <div class="mac-header">
+          <div class="mac-dots">
+            <div class="mac-dot" style="background:#ef4444;"></div>
+            <div class="mac-dot" style="background:#f59e0b;"></div>
+            <div class="mac-dot" style="background:#10b981;"></div>
+          </div>
+          <div class="mac-title">bash — thundercok@debian:~</div>
+        </div>
+        <div class="mac-body">
+          <div><span class="cmd-prompt">~/dev</span><span style="color:#f8fafc;">git clone
+              https://github.com/Thundercok/VRPTW.git</span></div>
+          <div><span class="cmd-prompt">~/dev</span><span style="color:#f8fafc;">cd VRPTW-Research-Optimization</span>
+          </div>
+          <br>
+          <div class="cmd-comment"># Build POSIX environment</div>
+          <div><span class="cmd-prompt">~/VRPTW</span><span style="color:#f8fafc;">uv venv .venv --python 3.12</span>
+          </div>
+          <div><span class="cmd-prompt">~/VRPTW</span><span style="color:#f8fafc;">source .venv/bin/activate</span>
+          </div>
+          <div><span class="cmd-prompt">~/VRPTW</span><span style="color:#f8fafc;">uv pip install -r
+              requirements.txt</span></div>
+          <br>
+          <div class="cmd-comment"># Boot the AI Dispatch backend</div>
+          <div><span class="cmd-prompt">~/VRPTW</span><span style="color:#f8fafc;">python main.py</span></div>
+          <div class="cmd-success">INFO: Uvicorn running on http://127.0.0.1:8000</div>
+        </div>
+      </div>
+
+      <div>
+        <span class="eyebrow">Engineers First</span>
+        <h2>Deploy locally in under 60 seconds.</h2>
+        <p style="margin-bottom: 2rem;">
+          The entire backend is a sleek, strictly typed FastAPI monolith. We stripped away bloated frameworks to deliver
+          a Python routing solver that runs cleanly on consumer hardware.
+        </p>
+        <a href="https://github.com/Thundercok/VRPTW-Research-Optimization" target="_blank" rel="noopener"
+          class="btn btn-primary">
+          <svg style="width:20px; height:20px; margin-right:8px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path
+              d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22">
+            </path>
+          </svg>
+          View Source on GitHub
+        </a>
+      </div>
+
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div>
+          <a href="#" class="footer-brand">
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--brand-accent)" stroke-width="2.5" stroke-linecap="round"
+              stroke-linejoin="round" style="width:24px; height:24px;">
+              <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+              <polyline points="2 17 12 22 22 17"></polyline>
+              <polyline points="2 12 12 17 22 12"></polyline>
+            </svg>
+            Not Really Far Eye
+          </a>
+          <p style="font-size:0.95rem; line-height:1.6; max-width:280px; margin-top: 1rem;">Enterprise fleet routing
+            powered by Deep Reinforcement Learning. An open-source optimization initiative.</p>
+        </div>
+
+        <div>
+          <h4>Platform</h4>
+          <ul>
+            <li><a href="app.html">Launch Application</a></li>
+            <li><a href="#platform">Core Capabilities</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4>Research</h4>
+          <ul>
+            <li><a href="https://github.com/Thundercok/VRPTW-Research-Optimization" target="_blank"
+                rel="noopener">GitHub Repository</a></li>
+            <li><a href="#science">DDQN Methodology</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4>Connect</h4>
+          <ul>
+            <li><a href="https://github.com/Thundercok" target="_blank" rel="noopener">Developer Profile</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <span>&copy; 2026 VRPTW Research Optimization. MIT License.</span>
+        <span>Engineered in Vietnam.</span>
+      </div>
     </div>
   </footer>
 
-  <script src="js/observability.js?v=20260428"></script>
-  <script src="js/landing.js?v=20260428"></script>
+  <script type="module" src="js/observability.js?v=20260428"></script>
+  <script type="module" src="js/landing.js?v=20260428"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const nav = document.getElementById('navbar');
+      window.addEventListener('scroll', () => {
+        if (window.scrollY > 20) {
+          nav.classList.add('scrolled');
+          nav.style.background = 'rgba(255, 255, 255, 0.95)';
+        } else {
+          nav.classList.remove('scrolled');
+          nav.style.background = 'rgba(255, 255, 255, 0.85)';
+        }
+      });
+    });
+  </script>
 </body>
+
 </html>

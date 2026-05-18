@@ -1,13 +1,3 @@
-import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-// Your web app's Firebase configuration
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
-
-
 export const firebaseConfig = {
   apiKey: "AIzaSyDN79GLbCxzim88cTw7LajhcmZT0UoM7P4",
   authDomain: "vrptw-54d81.firebaseapp.com",

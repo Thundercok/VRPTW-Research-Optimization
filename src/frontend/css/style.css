@@ -122,10 +122,12 @@ body {
 }
 
 @keyframes authIconFloat {
+
   0%,
   100% {
     transform: translateY(0);
   }
+
   50% {
     transform: translateY(-3px);
   }
@@ -135,17 +137,20 @@ body {
   from {
     stroke-dashoffset: 0;
   }
+
   to {
     stroke-dashoffset: -120;
   }
 }
 
 @keyframes routePulse {
+
   0%,
   100% {
     transform: scale(1);
     opacity: 1;
   }
+
   50% {
     transform: scale(1.12);
     opacity: 0.9;
@@ -153,16 +158,20 @@ body {
 }
 
 @keyframes truckMove {
+
   0%,
   100% {
     transform: translate(150px, 70px);
   }
+
   25% {
     transform: translate(165px, 62px);
   }
+
   55% {
     transform: translate(190px, 68px);
   }
+
   80% {
     transform: translate(205px, 56px);
   }
@@ -248,6 +257,7 @@ body {
   z-index: 1000;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
+
 .lang-fab {
   position: fixed;
   bottom: 86px;
@@ -265,18 +275,22 @@ body {
   z-index: 1000;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
+
 .lang-fab:hover {
   transform: translateY(-2px) scale(1.04);
   box-shadow: 0 18px 38px rgba(15, 39, 64, 0.45);
 }
+
 .lang-fab:focus-visible {
   outline: 3px solid #ffd166;
   outline-offset: 3px;
 }
+
 .help-fab:hover {
   transform: translateY(-2px) scale(1.04);
   box-shadow: 0 18px 38px rgba(31, 95, 166, 0.55);
 }
+
 .help-fab:focus-visible {
   outline: 3px solid #ffd166;
   outline-offset: 3px;
@@ -293,9 +307,11 @@ body {
   padding: 24px;
   backdrop-filter: blur(4px);
 }
+
 .help-modal.hidden {
   display: none;
 }
+
 .help-modal-card {
   background: #ffffff;
   border-radius: 18px;
@@ -306,6 +322,7 @@ body {
   padding: 28px 32px 32px;
   box-shadow: 0 30px 80px rgba(15, 39, 64, 0.35);
 }
+
 .help-modal-head {
   display: flex;
   align-items: flex-start;
@@ -313,16 +330,19 @@ body {
   gap: 16px;
   margin-bottom: 18px;
 }
+
 .help-modal-head h2 {
   margin: 4px 0 6px;
   font-size: 22px;
   color: #0f2740;
 }
+
 .help-modal-sub {
   color: #4a5b73;
   font-size: 14px;
   margin: 0;
 }
+
 .help-steps {
   list-style: none;
   padding: 0;
@@ -330,6 +350,7 @@ body {
   display: grid;
   gap: 14px;
 }
+
 .help-steps li {
   display: grid;
   grid-template-columns: 36px 1fr;
@@ -340,6 +361,7 @@ body {
   border-radius: 12px;
   padding: 12px 14px;
 }
+
 .help-step-num {
   background: linear-gradient(135deg, #2d8fd8, #1f5fa6);
   color: #fff;
@@ -352,17 +374,20 @@ body {
   justify-content: center;
   font-size: 14px;
 }
+
 .help-steps h3 {
   margin: 2px 0 4px;
   font-size: 15px;
   color: #0f2740;
 }
+
 .help-steps p {
   margin: 0;
   color: #455a73;
   font-size: 14px;
   line-height: 1.5;
 }
+
 .help-steps code,
 .help-tips code {
   background: #e6eef8;
@@ -371,6 +396,7 @@ body {
   font-size: 12.5px;
   color: #1f5fa6;
 }
+
 .help-steps kbd,
 .help-tips kbd {
   background: #0f2740;
@@ -380,17 +406,20 @@ body {
   font-size: 11px;
   font-family: 'IBM Plex Mono', ui-monospace, monospace;
 }
+
 .help-tips {
   background: #fff8e6;
   border: 1px solid #fde68a;
   border-radius: 12px;
   padding: 14px 16px;
 }
+
 .help-tips h3 {
   margin: 0 0 6px;
   font-size: 14px;
   color: #92580a;
 }
+
 .help-tips ul {
   margin: 0;
   padding-left: 20px;
@@ -398,7 +427,8 @@ body {
   font-size: 13.5px;
   line-height: 1.55;
 }
-.help-tips li + li {
+
+.help-tips li+li {
   margin-top: 4px;
 }
 
@@ -636,7 +666,7 @@ p {
   background: var(--panel-soft);
 }
 
-.dataset-picker-field > span {
+.dataset-picker-field>span {
   font-size: 13px;
   font-weight: 600;
   color: var(--ink-soft);
@@ -1816,16 +1846,19 @@ td.is-editing {
 }
 
 @keyframes markerFloat {
+
   0%,
   100% {
     transform: translateY(0);
   }
+
   50% {
     transform: translateY(-3px);
   }
 }
 
 @keyframes markerPulse {
+
   0%,
   100% {
     transform: scale(1);
@@ -1833,6 +1866,7 @@ td.is-editing {
       0 3px 0 color-mix(in srgb, var(--icon-dark), #000 4%),
       0 8px 18px var(--icon-shadow);
   }
+
   50% {
     transform: scale(1.06);
     box-shadow:
@@ -1933,7 +1967,7 @@ td.is-editing {
   border: 1px solid #dbe7f2;
 }
 
-.load-donut > span {
+.load-donut>span {
   position: relative;
   z-index: 1;
   font-size: 12px;
@@ -2238,6 +2272,7 @@ td.is-editing {
     opacity: 0;
     transform: translateY(8px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -2697,9 +2732,11 @@ td.is-editing {
   0% {
     transform: translate(-42%, -53%);
   }
+
   50% {
     transform: translate(-42%, -57%);
   }
+
   100% {
     transform: translate(-42%, -53%);
   }
@@ -2718,19 +2755,24 @@ td.is-editing {
 }
 
 @keyframes loadingCardShake {
+
   0%,
   100% {
     transform: translateX(0);
   }
+
   20% {
     transform: translateX(-1px);
   }
+
   40% {
     transform: translateX(1px);
   }
+
   60% {
     transform: translateX(-1px);
   }
+
   80% {
     transform: translateX(1px);
   }
@@ -2779,6 +2821,7 @@ td.is-editing {
     opacity: 0;
     transform: translateY(6px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
