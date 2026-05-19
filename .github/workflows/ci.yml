@@ -36,7 +36,7 @@ jobs:
 
       - name: Ruff lint (src/backend + main.py + scripts)
         run: |
-          ruff check src/backend main.py scripts/smoke_hardening.py
+          ruff check src/backend main.py docs/scripts/smoke_hardening.py
 
       - name: Install runtime deps (without ML extras)
         run: |
@@ -75,7 +75,7 @@ jobs:
 
       - name: Smoke (rate limit + config + builtin demo)
         run: |
-          python scripts/smoke_hardening.py
+          python docs/scripts/smoke_hardening.py
 
   frontend:
     name: Frontend syntax check

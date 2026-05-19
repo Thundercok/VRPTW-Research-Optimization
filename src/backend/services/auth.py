@@ -1,6 +1,9 @@
 from __future__ import annotations
+
 from typing import Any
+
 from core.firebase import is_firebase_enabled
+
 
 class _AuthService:
     def list_users(self) -> dict[str, Any]:

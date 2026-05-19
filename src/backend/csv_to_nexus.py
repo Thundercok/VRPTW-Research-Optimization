@@ -20,8 +20,13 @@ CSV algo → nexus label:
     everything else         → summary[] (not paired, visible in scatter)
 """
 from __future__ import annotations
-import argparse, csv, json, math, os
-from datetime import datetime, timezone
+
+import argparse
+import csv
+import json
+import math
+import os
+from datetime import UTC, datetime
 from typing import Any
 
 BKS: dict[str, dict[str, float]] = {
@@ -49,23 +54,32 @@ BKS: dict[str, dict[str, float]] = {
 
 def _map_algo(csv_algo: str) -> tuple[str, bool]:
     a = csv_algo.strip()
-    if a == "ALNS-Base":       return "ALNS", False
-    if a == "Hybrid-DDQN":     return "DDQN-ALNS", False
-    if "Transfer" in a or "transfer" in a: return a, True
+    if a == "ALNS-Base":
+        return "ALNS", False
+    if a == "Hybrid-DDQN":
+        return "DDQN-ALNS", False
+    if "Transfer" in a or "transfer" in a:
+        return a, True
     return a, False
 
 def _f(v: str) -> float | None:
     try:
-        x = float(v); return None if math.isnan(x) else round(x, 4)
-    except: return None
+        x = float(v)
+        return None if math.isnan(x) else round(x, 4)
+    except (ValueError, TypeError):
+        return None
 
 def _raws(s: str) -> list[float]:
-    try: return [float(x) for x in s.split(";") if x.strip()]
-    except: return []
+    try:
+        return [float(x) for x in s.split(";") if x.strip()]
+    except (ValueError, TypeError):
+        return []
 
 def _rawi(s: str) -> list[int]:
-    try: return [int(x) for x in s.split(";") if x.strip()]
-    except: return []
+    try:
+        return [int(x) for x in s.split(";") if x.strip()]
+    except (ValueError, TypeError):
+        return []
 
 def load_csv(path: str) -> list[dict]:
     with open(path, newline="", encoding="utf-8") as fh:
@@ -112,7 +126,7 @@ def build_nexus(rows: list[dict], version: str) -> dict[str, Any]:
 
     return {
         "version": version,
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
         "summary":  summary,
         "transfer": transfer,
         # Empty convergence — frontend shows "No convergence data" gracefully
@@ -144,7 +158,8 @@ def main() -> None:
     rows = load_csv(args.main)
     print(f"Loaded {len(rows)} rows  ← {args.main}")
     if args.dr and os.path.exists(args.dr):
-        dr = load_csv(args.dr); rows += dr
+        dr = load_csv(args.dr)
+        rows += dr
         print(f"Loaded {len(dr)} rows  ← {args.dr}")
     elif args.dr:
         print(f"[WARN] --dr not found: {args.dr}")
@@ -152,15 +167,18 @@ def main() -> None:
     nexus = build_nexus(rows, args.version)
 
     counts: dict[str, int] = {}
-    for r in nexus["summary"]: counts[r["algo"]] = counts.get(r["algo"], 0) + 1
-    paired = min(counts.get("ALNS",0), counts.get("DDQN-ALNS",0))
+    for r in nexus["summary"]:
+        counts[r["algo"]] = counts.get(r["algo"], 0) + 1
+    paired = min(counts.get("ALNS", 0), counts.get("DDQN-ALNS", 0))
     print(f"\nSummary rows   : {len(nexus['summary'])}")
     print(f"Transfer rows  : {len(nexus['transfer'])}")
     print(f"Algo breakdown : {counts}")
     print(f"Paired instances (leaderboard): {paired}")
 
-    if not counts.get("ALNS"):      print("[WARN] No ALNS rows — leaderboard empty")
-    if not counts.get("DDQN-ALNS"): print("[WARN] No DDQN-ALNS rows — leaderboard empty")
+    if not counts.get("ALNS"):
+        print("[WARN] No ALNS rows — leaderboard empty")
+    if not counts.get("DDQN-ALNS"):
+        print("[WARN] No DDQN-ALNS rows — leaderboard empty")
 
     os.makedirs(os.path.dirname(os.path.abspath(args.out)), exist_ok=True)
     with open(args.out, "w", encoding="utf-8") as fh:

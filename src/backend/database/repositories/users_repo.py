@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
-from firebase_admin import firestore
-
 from core.firebase import get_db
+from firebase_admin import firestore
 
 
 def _users_collection():
@@ -25,12 +24,12 @@ def _ts_to_int(value: Any) -> int:
     if isinstance(value, (int, float)):
         return int(value)
     if isinstance(value, datetime):
-        dt = value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+        dt = value if value.tzinfo else value.replace(tzinfo=UTC)
         return int(dt.timestamp())
     if hasattr(value, "to_datetime"):
         try:
             dt = value.to_datetime()
-            dt = dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+            dt = dt if dt.tzinfo else dt.replace(tzinfo=UTC)
             return int(dt.timestamp())
         except Exception:
             return 0
@@ -66,7 +65,7 @@ def update_user_password(email: str, password_hash: str, must_change_password: b
 
 
 def record_user_event(email: str, event_type: str, source: str = "auth") -> None:
-    now = int(datetime.now(tz=timezone.utc).timestamp())
+    now = int(datetime.now(tz=UTC).timestamp())
     payload: dict[str, Any] = {
         "updatedAt": now,
         "lastEventType": event_type,

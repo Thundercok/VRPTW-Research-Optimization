@@ -12,7 +12,6 @@ from api.routers import config as config_router
 from core.config import cors_allow_origins, demo_auth_bypass_enabled, load_local_env
 from core.firebase import init_firebase, is_firebase_enabled
 from core.rate_limit import limiter
-
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -21,7 +20,6 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
-
 
 load_local_env()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
@@ -118,6 +116,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "https://cdn.jsdelivr.net "
             "https://apis.google.com "
             "https://www.gstatic.com "
+            "https://browser.sentry-cdn.com "
+            "https://plausible.io "
             "https://cdn.tailwindcss.com; "
         "style-src 'self' 'unsafe-inline' "
             "https://unpkg.com "
@@ -126,6 +126,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         "connect-src 'self' "
             "https://*.firebaseio.com "
             "https://*.googleapis.com "
+            "https://*.sentry.io "
+            "https://plausible.io "
             "wss://*.firebaseio.com "
             "http://127.0.0.1:* "
             "http://localhost:* "
@@ -150,7 +152,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers.setdefault("X-Frame-Options", "DENY")
         response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
         response.headers.setdefault("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
-        
+
         csp = os.getenv("CONTENT_SECURITY_POLICY", "").strip() or self.DEFAULT_CSP
         response.headers.setdefault("Content-Security-Policy", csp)
         return response
@@ -171,7 +173,7 @@ async def _rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONR
     return JSONResponse(status_code=429, content={"detail": detail}, headers=headers)
 
 
-# Middleware execution order: Last added -> First executed. 
+# Middleware execution order: Last added -> First executed.
 # CORSMiddleware processes preflight checks early.
 app.add_middleware(NoCacheHTMLMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)

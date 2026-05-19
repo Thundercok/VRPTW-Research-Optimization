@@ -1,8 +1,11 @@
 from __future__ import annotations
+
 import os
 import sys
 from pathlib import Path
+
 import uvicorn
+
 
 def main() -> None:
     root = Path(__file__).resolve().parent
