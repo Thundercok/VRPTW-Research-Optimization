@@ -1,33 +1,28 @@
-from __future__ import annotations
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from firebase_admin import auth
+from core.firebase import init_firebase
 
-from core.config import demo_auth_bypass_enabled
-from core.firebase import is_firebase_enabled
-from fastapi import Header, HTTPException
-from services.auth_service import get_user_by_token
+# Ensure Firebase is initialized
+init_firebase()
 
+security = HTTPBearer()
 
-async def require_user(authorization: str | None = Header(default=None)) -> dict[str, str]:
-    """Resolve the current user, with optional demo bypass for local runs.
-
-    - If Firebase is configured, real bearer-token auth is required (no bypass).
-    - If Firebase is NOT configured AND ``DEMO_AUTH_BYPASS`` is true (default),
-      requests are served as a synthetic ``anonymous@demo.local`` operator.
-    - If Firebase is NOT configured AND ``DEMO_AUTH_BYPASS=false``, the API
-      returns 503 so production deploys never accidentally expose endpoints.
+async def require_user(cred: HTTPAuthorizationCredentials = Depends(security)) -> dict[str, str]:
     """
-    if not is_firebase_enabled():
-        if demo_auth_bypass_enabled():
-            return {
-                "email": "anonymous@demo.local",
-                "role": "operator",
-                "mode": "demo",
-            }
+    Intercepts the Bearer token, passes it to Firebase for cryptographic verification, 
+    and returns the decoded user payload.
+    """
+    try:
+        decoded_token = auth.verify_id_token(cred.credentials)
+        return {
+            "uid": decoded_token.get("uid"), 
+            "email": decoded_token.get("email"), 
+            "role": "operator"
+        }
+    except Exception as e:
         raise HTTPException(
-            status_code=503,
-            detail="Authentication backend not configured. Set up Firebase or enable DEMO_AUTH_BYPASS.",
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired Firebase ID token.",
+            headers={"WWW-Authenticate": "Bearer"},
         )
-
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing bearer token")
-    token = authorization.removeprefix("Bearer ").strip()
-    return get_user_by_token(token)

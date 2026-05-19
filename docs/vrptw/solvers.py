@@ -9,7 +9,7 @@ import torch
 from .config import Config, MODES, BKS, ALGO_ALNS_BASE, ALGO_HYBRID_FIXED, ALGO_HYBRID_RULE, ALGO_HYBRID_DDQN, MODE_DEFAULT, MODE_INTENSIFY, MODE_DIVERSIFY, MODE_TW_RESCUE, MODE_POOL_RECOMBINE, MODE_ROUTE_REDUCE, ALGO_ORTOOLS
 from .core import Inst, Plan, _avg_slack, _plan_spread, _fleet_fill
 from .heuristics import build_greedy
-from .operators import DESTROY, REPAIR, accept, accept_with_nv_ceiling, destroy_size
+from .operators import DESTROY, REPAIR, accept, accept_with_nv_ceiling, destroy_size, N_D, N_R
 from .local_search import local_search, _iterative_route_elimination
 from .pool import RoutePool, recombine_with_route_pool
 from .rl import PrioritizedReplayBuffer, ThompsonBandit, EliteArchive, PlateauController, OperatorController, LearnedAcceptanceCriterion, DEVICE

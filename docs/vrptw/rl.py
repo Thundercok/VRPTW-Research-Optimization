@@ -23,7 +23,7 @@ class PrioritizedReplayBuffer:
     def __init__(self, capacity: int, alpha: float = 0.6,
                  beta_start: float = 0.4, beta_end: float = 1.0):
         self.capacity:      int            = capacity
-        self.alpha:         np.ndarray     = np.ones((N_D, N_R), dtype=np.float64) * alpha
+        self.alpha:         float          = float(alpha)
         self.beta:          float          = beta_start
         self.beta_end:      float          = beta_end   
         self.beta_inc:      float          = (beta_end - beta_start) / 200_000

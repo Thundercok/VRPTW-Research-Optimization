@@ -392,8 +392,10 @@ def smoke_test(inst: Inst, seed: int = 42) -> Dict[str, Tuple[float, float]]:
         plan, _= solver_cls(inst, short_cfg).solve(seed=seed)
         elapsed= time.time() - t0
         td_gap, nv_gap = plan.gap()
+        gap_str = f"{td_gap:+.1f}%" if td_gap is not None else "N/A"
+        nv_str  = f"{nv_gap:+d}"   if nv_gap  is not None else "N/A"
         print(f"{algo_name:<24} nv={plan.nv:>3} cost={plan.cost:>8.1f} "
-              f"BKS TD {td_gap:+.1f}% NV {nv_gap:+d} ({elapsed:.1f}s)")
+              f"BKS TD {gap_str} NV {nv_str} ({elapsed:.1f}s)")
         results[algo_name] = (float(td_gap) if td_gap is not None else 0.0, elapsed)
     return results
 

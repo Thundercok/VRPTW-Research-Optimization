@@ -12,6 +12,7 @@ from api.routers import config as config_router
 from core.config import cors_allow_origins, demo_auth_bypass_enabled, load_local_env
 from core.firebase import init_firebase, is_firebase_enabled
 from core.rate_limit import limiter
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -20,6 +21,8 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
+from core.firebase import init_firebase
+
 
 load_local_env()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
