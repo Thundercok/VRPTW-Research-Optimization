@@ -102,27 +102,49 @@ class NoCacheHTMLMiddleware(BaseHTTPMiddleware):
             response.headers["Expires"] = "0"
         return response
 
-
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """Apply baseline security headers to every response.
 
-    Defaults are conservative but compatible with the current frontend, which
-    loads Leaflet, SheetJS, Google Fonts, and Shields.io badges from CDNs.
-    Adjust the CSP via the ``CONTENT_SECURITY_POLICY`` env var if you swap
-    asset providers or self-host them.
+    Defaults are conservative but updated to natively support:
+    - Leaflet maps & OpenStreetMap routing tile assets
+    - Google APIs & Firebase client SDK components
+    - Local development configurations (Firebase Emulators on ports 8080/9099)
     """
 
     DEFAULT_CSP = (
         "default-src 'self'; "
-        "img-src 'self' data: https:; "
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; "
-        "font-src 'self' https://fonts.gstatic.com data:; "
-        "script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net "
-        "https://www.gstatic.com https://browser.sentry-cdn.com https://js.sentry-cdn.com "
-        "https://plausible.io https://app.posthog.com https://*.posthog.com; "
-        "connect-src 'self' https: ws: wss:; "
-        "frame-ancestors 'none'; "
-        "base-uri 'self'"
+        # 1. Scripts: Code runtime execution sources
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' "
+            "https://unpkg.com "
+            "https://cdn.jsdelivr.net "
+            "https://apis.google.com "
+            "https://www.gstatic.com; "
+        # 2. Styles: Leaflet asset sheets and frontend inline styling injections
+        "style-src 'self' 'unsafe-inline' "
+            "https://unpkg.com "
+            "https://cdn.jsdelivr.net "
+            "https://fonts.googleapis.com; "
+        # 3. Network Connections: API calls, WebSockets, and Local Firebase Emulators
+        "connect-src 'self' "
+            "https://*.firebaseio.com "
+            "https://*.googleapis.com "
+            "wss://*.firebaseio.com "
+            "http://127.0.0.1:* "
+            "http://localhost:* "
+            "ws://127.0.0.1:* "
+            "ws://localhost:*; "
+        # 4. Images: Map background tiles (OSM), Google metadata gifs, and data-URIs
+        "img-src 'self' data: blob: "
+            "https://*.openstreetmap.org "
+            "https://unpkg.com/leaflet@* "
+            "https://www.google.com "
+            "https://*.gstatic.com; "
+        # 5. Frames: Embedded Firebase Emulator iframe auth handshakes
+        "frame-src 'self' "
+            "http://127.0.0.1:* "
+            "http://localhost:* "
+            "https://*.firebase.app "
+            "https://*.google.com;"
     )
 
     async def dispatch(self, request: Request, call_next):
@@ -131,6 +153,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers.setdefault("X-Frame-Options", "DENY")
         response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
         response.headers.setdefault("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
+        
         csp = os.getenv("CONTENT_SECURITY_POLICY", "").strip() or self.DEFAULT_CSP
         response.headers.setdefault("Content-Security-Policy", csp)
         return response
@@ -151,6 +174,8 @@ async def _rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONR
     return JSONResponse(status_code=429, content={"detail": detail}, headers=headers)
 
 
+# Middleware execution order: Last added -> First executed. 
+# CORSMiddleware processes preflight checks early.
 app.add_middleware(NoCacheHTMLMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(SlowAPIMiddleware)

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0f2740" />
+  <title>Login | VRPTW AI Dispatch</title>
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <meta http-equiv="Content-Security-Policy" content="
+  default-src 'self'; 
+  script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://www.gstatic.com https://unpkg.com https://cdn.jsdelivr.net https://*.firebaseio.com http://localhost:* http://127.0.0.1:*; 
+  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; 
+  font-src 'self' https://fonts.gstatic.com; 
+  img-src 'self' data: https://*.tile.openstreetmap.org https://unpkg.com; 
+  connect-src 'self' https://*.googleapis.com https://*.firebaseapp.com https://*.firebaseio.com wss://*.firebaseio.com http://localhost:* http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:*; 
+  frame-src 'self' https://*.firebaseapp.com https://apis.google.com http://localhost:* http://127.0.0.1:*;
+">
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css?v=20260429a" />
+
+  <script type="importmap">
+      {
+        "imports": {
+          "firebase/app": "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js",
+          "firebase/auth": "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js",
+          "firebase/firestore": "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js",
+          "firebase/analytics": "https://www.gstatic.com/firebasejs/10.12.5/firebase-analytics.js"
+        }
+      }
+  </script>
+  <script type="module">
+    // 1. Import your unified Firebase Service
+    import { firebaseService } from "./js/firebaseService.js";
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+
+    // 2. THE REVERSE AUTH GUARD
+    if (firebaseService.auth) {
+      onAuthStateChanged(firebaseService.auth, (user) => {
+        if (user) {
+          // If already logged in, send straight to dashboard
+          window.location.replace("app.html");
+        } else {
+          // Safe to show the login screen
+          document.getElementById('auth-screen').classList.remove('hidden');
+        }
+      });
+    } else {
+      // Fallback if Firebase is disabled (Demo Mode)
+      document.getElementById('auth-screen').classList.remove('hidden');
+    }
+  </script>
+</head>
+
+<body>
+  <!-- The reverse auth guard starts this section as hidden to prevent UI flicker -->
+  <section id="auth-screen" class="auth-screen hidden">
+    <div class="auth-card">
+      <p class="tag">PROJECT NEXUS</p>
+      <div class="auth-headline">
+        <h1 id="auth-title">VRPTW Dispatch Portal</h1>
+        <div class="auth-icons" aria-hidden="true">
+          <span class="auth-icon">🚚</span>
+          <span class="auth-icon">📍</span>
+          <span class="auth-icon">🗺️</span>
+        </div>
+      </div>
+
+      <!-- Decorative SVG Route -->
+      <div class="auth-visual" aria-hidden="true">
+        <svg viewBox="0 0 420 120" role="img" focusable="false">
+          <defs>
+            <linearGradient id="routeGrad" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#7cb9e6" />
+              <stop offset="100%" stop-color="#2d8fd8" />
+            </linearGradient>
+          </defs>
+          <path class="route-path" d="M20 85 C100 20, 180 110, 260 50 S370 60, 400 30" fill="none"
+            stroke="url(#routeGrad)" stroke-width="5" stroke-linecap="round" stroke-dasharray="7 9" />
+          <circle class="route-node route-node-1" cx="20" cy="85" r="7" fill="#2d8fd8" />
+          <circle class="route-node route-node-2" cx="260" cy="50" r="7" fill="#2d8fd8" />
+          <circle class="route-node route-node-3" cx="400" cy="30" r="7" fill="#2d8fd8" />
+          <g class="route-truck" transform="translate(150 70)">
+            <rect x="0" y="10" width="72" height="24" rx="7" fill="#2476b4" />
+            <rect x="48" y="2" width="20" height="16" rx="4" fill="#2d8fd8" />
+            <circle cx="16" cy="36" r="6" fill="#0f2740" />
+            <circle cx="52" cy="36" r="6" fill="#0f2740" />
+          </g>
+        </svg>
+      </div>
+
+      <div class="auth-views">
+        <!-- LOGIN VIEW -->
+        <div id="auth-view-login" class="auth-form auth-view active">
+          <label>Email</label>
+          <input id="login-email" type="email" placeholder="you@company.com" />
+          <label>Password</label>
+          <input id="login-password" type="password" placeholder="Enter password" />
+          <button id="btn-login" class="btn" type="button">Login</button>
+          <p id="auth-hint" class="hint auth-hint" style="display: none;"></p>
+          <div class="auth-links">
+            <button id="link-forgot-password" class="link-btn" type="button">Forgot Password?</button>
+            <button id="btn-open-register" class="btn ghost" type="button">Create Account</button>
+          </div>
+          <div id="guest-block" class="auth-guest hidden">
+            <div class="auth-divider"><span>or</span></div>
+            <button id="btn-guest-login" class="btn ghost guest-btn" type="button">Continue as Guest</button>
+            <p id="guest-hint" class="hint auth-hint">Demo mode active - skip auth and try the VRPTW solver right away.
+            </p>
+          </div>
+        </div>
+
+        <!-- REGISTER VIEW -->
+        <div id="auth-view-register" class="auth-form auth-view hidden">
+          <label>Email</label>
+          <input id="register-email" type="email" placeholder="you@company.com" />
+          <label>Password</label>
+          <input id="register-password" type="password" placeholder="Enter password" />
+          <label>OTP</label>
+          <div class="otp-row">
+            <input id="register-otp" class="otp-input" type="text" inputmode="numeric" placeholder="Enter 6-digit OTP"
+              maxlength="6" />
+            <button id="btn-request-otp" class="btn ghost otp-send-btn" type="button">Send OTP</button>
+          </div>
+          <p id="register-otp-countdown" class="otp-countdown">Click Send OTP to receive a verification code.</p>
+          <div class="inline-row auth-actions">
+            <button id="btn-register" class="btn hidden" type="button" disabled>Register</button>
+            <button id="btn-back-login-from-register" class="btn ghost" type="button">Come Back</button>
+          </div>
+        </div>
+
+        <!-- FORGOT PASSWORD VIEW -->
+        <div id="auth-view-forgot" class="auth-form auth-view hidden">
+          <label>Email</label>
+          <input id="forgot-email" type="email" placeholder="you@company.com" />
+          <p class="hint">The system will send a temporary password to your email. You must change it after login.</p>
+          <div class="inline-row auth-actions">
+            <button id="btn-forgot-password" class="btn" type="button">Send Reset Link</button>
+            <button id="btn-back-login-from-forgot" class="btn ghost" type="button">Come Back</button>
+          </div>
+        </div>
+
+        <!-- RESET PASSWORD VIEW -->
+        <div id="auth-view-reset" class="auth-form auth-view hidden">
+          <label>New Password</label>
+          <input id="reset-password" type="password" placeholder="Enter new password" />
+          <label>Confirm New Password</label>
+          <input id="reset-password-confirm" type="password" placeholder="Re-enter new password" />
+          <div class="inline-row auth-actions">
+            <button id="btn-reset-password" class="btn" type="button">Update Password</button>
+            <button id="btn-back-login-from-reset" class="btn ghost" type="button">Come Back</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Required scripts -->
+  <script src="js/observability.js?v=20260429a"></script>
+  <script type="module" src="js/main.js?v=20260429a"></script>
+</body>
+
+</html>

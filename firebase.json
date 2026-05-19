@@ -11,20 +11,35 @@
         "source": "**",
         "destination": "/index.html"
       }
+    ],
+    "headers": [
+      {
+        "source": "**",
+        "headers": [
+          {
+            "key": "Content-Security-Policy",
+            "value": "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:;"
+          }
+        ]
+      }
     ]
   },
   "emulators": {
     "auth": {
+      "host": "127.0.0.1",
       "port": 9099
     },
     "firestore": {
+      "host": "127.0.0.1",
       "port": 8080
     },
     "hosting": {
+      "host": "127.0.0.1",
       "port": 5050
     },
     "ui": {
       "enabled": true,
+      "host": "127.0.0.1",
       "port": 4000
     }
   }

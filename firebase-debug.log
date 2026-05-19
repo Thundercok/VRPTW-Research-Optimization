@@ -1,37 +1,36 @@
-[debug] [2026-05-19T03:24:59.101Z] ----------------------------------------------------------------------
-[debug] [2026-05-19T03:24:59.103Z] Command:       /Users/thundercock2/.nvm/versions/node/v20.18.0/bin/node /Users/thundercock2/.nvm/versions/node/v20.18.0/bin/firebase emulators:start --only auth,hosting
-[debug] [2026-05-19T03:24:59.103Z] CLI Version:   15.18.0
-[debug] [2026-05-19T03:24:59.103Z] Platform:      darwin
-[debug] [2026-05-19T03:24:59.103Z] Node Version:  v20.18.0
-[debug] [2026-05-19T03:24:59.103Z] Time:          Tue May 19 2026 10:24:59 GMT+0700 (Indochina Time)
-[debug] [2026-05-19T03:24:59.103Z] ----------------------------------------------------------------------
+[debug] [2026-05-19T13:05:04.623Z] ----------------------------------------------------------------------
+[debug] [2026-05-19T13:05:04.628Z] Command:       /Users/thundercock2/.nvm/versions/node/v20.18.0/bin/node /Users/thundercock2/.nvm/versions/node/v20.18.0/bin/firebase emulators:start --only auth,hosting
+[debug] [2026-05-19T13:05:04.629Z] CLI Version:   15.18.0
+[debug] [2026-05-19T13:05:04.629Z] Platform:      darwin
+[debug] [2026-05-19T13:05:04.629Z] Node Version:  v20.18.0
+[debug] [2026-05-19T13:05:04.629Z] Time:          Tue May 19 2026 20:05:04 GMT+0700 (Indochina Time)
+[debug] [2026-05-19T13:05:04.629Z] ----------------------------------------------------------------------
 [debug] 
-[debug] [2026-05-19T03:25:00.019Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
-[debug] [2026-05-19T03:25:00.020Z] > authorizing via signed-in user (cathuys69@gmail.com)
+[debug] [2026-05-19T13:05:05.522Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-05-19T13:05:05.523Z] > authorizing via signed-in user (cathuys69@gmail.com)
 [info] i  emulators: Starting emulators: auth, hosting {"metadata":{"emulator":{"name":"hub"},"message":"Starting emulators: auth, hosting"}}
-[debug] [2026-05-19T03:25:00.539Z] [logging] Logging Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
-[debug] [2026-05-19T03:25:00.539Z] [auth] Authentication Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
-[debug] [2026-05-19T03:25:00.539Z] [hosting] Hosting Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
-[debug] [2026-05-19T03:25:00.539Z] assigned listening specs for emulators {"user":{"hub":[{"address":"127.0.0.1","family":"IPv4","port":4400},{"address":"::1","family":"IPv6","port":4400}],"ui":[{"address":"127.0.0.1","family":"IPv4","port":4000},{"address":"::1","family":"IPv6","port":4000}],"logging":[{"address":"127.0.0.1","family":"IPv4","port":4500}],"auth":[{"address":"127.0.0.1","family":"IPv4","port":9099}],"hosting":[{"address":"127.0.0.1","family":"IPv4","port":5050}]},"metadata":{"message":"assigned listening specs for emulators"}}
-[debug] [2026-05-19T03:25:00.542Z] Write emulator hub locator at /var/folders/xb/k2ck7tjx0j5gskqznf3ql7480000gn/T/hub-vrptw-cd89d.json
-[debug] [2026-05-19T03:25:05.630Z] Checked if tokens are valid: true, expires at: 1779164491764
-[debug] [2026-05-19T03:25:05.630Z] Checked if tokens are valid: true, expires at: 1779164491764
-[debug] [2026-05-19T03:25:05.631Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/vrptw-cd89d/sites 
-[debug] [2026-05-19T03:25:07.494Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/vrptw-cd89d/sites 200
-[debug] [2026-05-19T03:25:07.507Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/vrptw-cd89d/sites {"sites":[{"name":"projects/vrptw-cd89d/sites/vrptw-cd89d","defaultUrl":"https://vrptw-cd89d.web.app","appId":"1:64698467415:web:60b40aec4ea26fd45f4f12","type":"DEFAULT_SITE"}]}
-[debug] [2026-05-19T03:25:07.510Z] Checked if tokens are valid: true, expires at: 1779164491764
-[debug] [2026-05-19T03:25:07.510Z] Checked if tokens are valid: true, expires at: 1779164491764
-[debug] [2026-05-19T03:25:07.511Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/vrptw-cd89d/webApps/1:64698467415:web:60b40aec4ea26fd45f4f12/config [none]
-[debug] [2026-05-19T03:25:08.849Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/vrptw-cd89d/webApps/1:64698467415:web:60b40aec4ea26fd45f4f12/config 200
-[debug] [2026-05-19T03:25:08.850Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/vrptw-cd89d/webApps/1:64698467415:web:60b40aec4ea26fd45f4f12/config {"projectId":"vrptw-cd89d","appId":"1:64698467415:web:60b40aec4ea26fd45f4f12","storageBucket":"vrptw-cd89d.firebasestorage.app","apiKey":"AIzaSyAUBSuO9KRa9UNeO9Btb1A-zwWoCfRcfkY","authDomain":"vrptw-cd89d.firebaseapp.com","messagingSenderId":"64698467415","measurementId":"G-QXLLWR6RLP","projectNumber":"64698467415","version":"2"}
-[debug] [2026-05-19T03:25:08.866Z] Checked if tokens are valid: true, expires at: 1779164491764
-[debug] [2026-05-19T03:25:08.866Z] Checked if tokens are valid: true, expires at: 1779164491764
-[debug] [2026-05-19T03:25:08.867Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/vrptw-cd89d [none]
-[debug] [2026-05-19T03:25:09.222Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/vrptw-cd89d 200
-[debug] [2026-05-19T03:25:09.222Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/vrptw-cd89d {"projectId":"vrptw-cd89d","projectNumber":"64698467415","displayName":"VRPTW","name":"projects/vrptw-cd89d","resources":{"hostingSite":"vrptw-cd89d"},"state":"ACTIVE","etag":"1_e769fa42-b3bd-4702-a076-c5946a56ce1a"}
+[debug] [2026-05-19T13:05:05.870Z] [logging] Logging Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2026-05-19T13:05:05.870Z] assigned listening specs for emulators {"user":{"ui":[{"address":"127.0.0.1","family":"IPv4","port":4000}],"auth":[{"address":"127.0.0.1","family":"IPv4","port":9099}],"hosting":[{"address":"127.0.0.1","family":"IPv4","port":5050}],"hub":[{"address":"127.0.0.1","family":"IPv4","port":4400},{"address":"::1","family":"IPv6","port":4400}],"logging":[{"address":"127.0.0.1","family":"IPv4","port":4500}]},"metadata":{"message":"assigned listening specs for emulators"}}
+[debug] [2026-05-19T13:05:05.874Z] Found emulator hub locator: {"version":"15.18.0","origins":["http://127.0.0.1:4400","http://[::1]:4400"],"pid":65249}
+[debug] [2026-05-19T13:05:05.874Z] Write emulator hub locator at /var/folders/xb/k2ck7tjx0j5gskqznf3ql7480000gn/T/hub-vrptw-cd89d.json
+[debug] [2026-05-19T13:05:10.086Z] Checked if tokens are valid: true, expires at: 1779197727932
+[debug] [2026-05-19T13:05:10.086Z] Checked if tokens are valid: true, expires at: 1779197727932
+[debug] [2026-05-19T13:05:10.087Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/vrptw-cd89d/sites 
+[debug] [2026-05-19T13:05:11.027Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/vrptw-cd89d/sites 200
+[debug] [2026-05-19T13:05:11.027Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/vrptw-cd89d/sites {"sites":[{"name":"projects/vrptw-cd89d/sites/vrptw-cd89d","defaultUrl":"https://vrptw-cd89d.web.app","appId":"1:64698467415:web:60b40aec4ea26fd45f4f12","type":"DEFAULT_SITE"}]}
+[debug] [2026-05-19T13:05:11.027Z] Checked if tokens are valid: true, expires at: 1779197727932
+[debug] [2026-05-19T13:05:11.027Z] Checked if tokens are valid: true, expires at: 1779197727932
+[debug] [2026-05-19T13:05:11.027Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/vrptw-cd89d/webApps/1:64698467415:web:60b40aec4ea26fd45f4f12/config [none]
+[debug] [2026-05-19T13:05:12.546Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/vrptw-cd89d/webApps/1:64698467415:web:60b40aec4ea26fd45f4f12/config 200
+[debug] [2026-05-19T13:05:12.547Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/vrptw-cd89d/webApps/1:64698467415:web:60b40aec4ea26fd45f4f12/config {"projectId":"vrptw-cd89d","appId":"1:64698467415:web:60b40aec4ea26fd45f4f12","storageBucket":"vrptw-cd89d.firebasestorage.app","apiKey":"AIzaSyAUBSuO9KRa9UNeO9Btb1A-zwWoCfRcfkY","authDomain":"vrptw-cd89d.firebaseapp.com","messagingSenderId":"64698467415","measurementId":"G-QXLLWR6RLP","projectNumber":"64698467415","version":"2"}
+[debug] [2026-05-19T13:05:12.571Z] Checked if tokens are valid: true, expires at: 1779197727932
+[debug] [2026-05-19T13:05:12.571Z] Checked if tokens are valid: true, expires at: 1779197727932
+[debug] [2026-05-19T13:05:12.571Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/vrptw-cd89d [none]
+[debug] [2026-05-19T13:05:13.121Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/vrptw-cd89d 200
+[debug] [2026-05-19T13:05:13.122Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/vrptw-cd89d {"projectId":"vrptw-cd89d","projectNumber":"64698467415","displayName":"VRPTW","name":"projects/vrptw-cd89d","resources":{"hostingSite":"vrptw-cd89d"},"state":"ACTIVE","etag":"1_e769fa42-b3bd-4702-a076-c5946a56ce1a"}
 [info] i  hosting[vrptw-cd89d]: Serving hosting files from: dist {"metadata":{"emulator":{"name":"hosting"},"message":"Serving hosting files from: \u001b[1mdist\u001b[22m"}}
 [info] ✔  hosting[vrptw-cd89d]: Local server: http://127.0.0.1:5050 {"metadata":{"emulator":{"name":"hosting"},"message":"Local server: \u001b[4m\u001b[1mhttp://127.0.0.1:5050\u001b[22m\u001b[24m"}}
-[debug] [2026-05-19T03:25:09.316Z] Could not find VSCode notification endpoint: FetchError: request to http://localhost:40001/vscode/notify failed, reason: . If you are not running the Firebase SQL Connect VSCode extension, this is expected and not an issue.
+[debug] [2026-05-19T13:05:13.221Z] Could not find VSCode notification endpoint: FetchError: request to http://localhost:40001/vscode/notify failed, reason: . If you are not running the Firebase SQL Connect VSCode extension, this is expected and not an issue.
 [info] 
 ┌─────────────────────────────────────────────────────────────┐
 │ ✔  All emulators ready! It is now safe to connect your app. │
@@ -50,3 +49,226 @@
 
 Issues? Report them at https://github.com/firebase/firebase-tools/issues and attach the *-debug.log files.
  
+[debug] [2026-05-19T13:11:57.755Z] ----------------------------------------------------------------------
+[debug] [2026-05-19T13:11:57.757Z] Command:       /Users/thundercock2/.nvm/versions/node/v20.18.0/bin/node /Users/thundercock2/.nvm/versions/node/v20.18.0/bin/firebase emulators:start --only auth,firestore,hosting
+[debug] [2026-05-19T13:11:57.757Z] CLI Version:   15.18.0
+[debug] [2026-05-19T13:11:57.757Z] Platform:      darwin
+[debug] [2026-05-19T13:11:57.757Z] Node Version:  v20.18.0
+[debug] [2026-05-19T13:11:57.758Z] Time:          Tue May 19 2026 20:11:57 GMT+0700 (Indochina Time)
+[debug] [2026-05-19T13:11:57.758Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-05-19T13:11:58.532Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-05-19T13:11:58.533Z] > authorizing via signed-in user (cathuys69@gmail.com)
+[debug] [2026-05-19T13:12:00.754Z] openjdk version "21.0.11" 2026-04-21
+OpenJDK Runtime Environment Homebrew (build 21.0.11)
+OpenJDK 64-Bit Server VM Homebrew (build 21.0.11, mixed mode, sharing)
+
+[debug] [2026-05-19T13:12:00.756Z] Parsed Java major version: 21
+[info] i  emulators: Starting emulators: auth, firestore, hosting {"metadata":{"emulator":{"name":"hub"},"message":"Starting emulators: auth, firestore, hosting"}}
+[debug] [2026-05-19T13:12:01.164Z] [logging] Logging Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2026-05-19T13:12:01.164Z] assigned listening specs for emulators {"user":{"ui":[{"address":"127.0.0.1","family":"IPv4","port":4000}],"auth":[{"address":"127.0.0.1","family":"IPv4","port":9099}],"firestore":[{"address":"127.0.0.1","family":"IPv4","port":8080}],"firestore.websocket":[{"address":"127.0.0.1","family":"IPv4","port":9150}],"hosting":[{"address":"127.0.0.1","family":"IPv4","port":5050}],"hub":[{"address":"127.0.0.1","family":"IPv4","port":4400},{"address":"::1","family":"IPv6","port":4400}],"logging":[{"address":"127.0.0.1","family":"IPv4","port":4500}]},"metadata":{"message":"assigned listening specs for emulators"}}
+[debug] [2026-05-19T13:12:01.169Z] Found emulator hub locator: {"version":"15.18.0","origins":["http://127.0.0.1:4400","http://[::1]:4400"],"pid":67902}
+[debug] [2026-05-19T13:12:01.169Z] Write emulator hub locator at /var/folders/xb/k2ck7tjx0j5gskqznf3ql7480000gn/T/hub-vrptw-cd89d.json
+[warn] ⚠  firestore: Cloud Firestore Emulator does not support multiple databases yet. {"metadata":{"emulator":{"name":"firestore"},"message":"Cloud Firestore Emulator does not support multiple databases yet."}}
+[warn] ⚠  firestore: Did not find a Cloud Firestore rules file specified in a firebase.json config file. {"metadata":{"emulator":{"name":"firestore"},"message":"Did not find a Cloud Firestore rules file specified in a firebase.json config file."}}
+[warn] ⚠  firestore: The emulator will default to allowing all reads and writes. Learn more about this option: https://firebase.google.com/docs/emulator-suite/install_and_configure#security_rules_configuration. {"metadata":{"emulator":{"name":"firestore"},"message":"The emulator will default to allowing all reads and writes. Learn more about this option: https://firebase.google.com/docs/emulator-suite/install_and_configure#security_rules_configuration."}}
+[info] i  firestore: downloading cloud-firestore-emulator-v1.21.0.jar... {"metadata":{"emulator":{"name":"firestore"},"message":"downloading cloud-firestore-emulator-v1.21.0.jar..."}}
+[debug] [2026-05-19T13:12:01.176Z] >>> [apiv2][query] GET https://storage.googleapis.com/firebase-preview-drop/emulator/cloud-firestore-emulator-v1.21.0.jar 
+[debug] [2026-05-19T13:12:01.575Z] <<< [apiv2][status] GET https://storage.googleapis.com/firebase-preview-drop/emulator/cloud-firestore-emulator-v1.21.0.jar 200
+[debug] [2026-05-19T13:12:01.575Z] <<< [apiv2][body] GET https://storage.googleapis.com/firebase-preview-drop/emulator/cloud-firestore-emulator-v1.21.0.jar [stream]
+[debug] [2026-05-19T13:13:42.242Z] Ignoring unsupported arg: auto_download {"metadata":{"emulator":{"name":"firestore"},"message":"Ignoring unsupported arg: auto_download"}}
+[debug] [2026-05-19T13:13:42.243Z] Ignoring unsupported arg: single_project_mode_error {"metadata":{"emulator":{"name":"firestore"},"message":"Ignoring unsupported arg: single_project_mode_error"}}
+[debug] [2026-05-19T13:13:42.243Z] Starting Firestore Emulator with command {"binary":"java","args":["-Dgoogle.cloud_firestore.debug_log_level=FINE","-Duser.language=en","-jar","/Users/thundercock2/.cache/firebase/emulators/cloud-firestore-emulator-v1.21.0.jar","--host","127.0.0.1","--port",8080,"--websocket_port",9150,"--database-edition","standard","--project_id","vrptw-cd89d","--single_project_mode",true],"optionalArgs":["port","webchannel_port","host","rules","websocket_port","database-edition","functions_emulator","seed_from_export","project_id","single_project_mode"],"joinArgs":false,"shell":false,"port":8080} {"metadata":{"emulator":{"name":"firestore"},"message":"Starting Firestore Emulator with command {\"binary\":\"java\",\"args\":[\"-Dgoogle.cloud_firestore.debug_log_level=FINE\",\"-Duser.language=en\",\"-jar\",\"/Users/thundercock2/.cache/firebase/emulators/cloud-firestore-emulator-v1.21.0.jar\",\"--host\",\"127.0.0.1\",\"--port\",8080,\"--websocket_port\",9150,\"--database-edition\",\"standard\",\"--project_id\",\"vrptw-cd89d\",\"--single_project_mode\",true],\"optionalArgs\":[\"port\",\"webchannel_port\",\"host\",\"rules\",\"websocket_port\",\"database-edition\",\"functions_emulator\",\"seed_from_export\",\"project_id\",\"single_project_mode\"],\"joinArgs\":false,\"shell\":false,\"port\":8080}"}}
+[info] i  firestore: Firestore Emulator logging to firestore-debug.log {"metadata":{"emulator":{"name":"firestore"},"message":"Firestore Emulator logging to \u001b[1mfirestore-debug.log\u001b[22m"}}
+[debug] [2026-05-19T13:13:43.122Z] May 19, 2026 8:13:43 PM com.google.cloud.datastore.emulator.firestore.websocket.WebSocketServer start
+INFO: Started WebSocket server on ws://127.0.0.1:9150
+ {"metadata":{"emulator":{"name":"firestore"},"message":"May 19, 2026 8:13:43 PM com.google.cloud.datastore.emulator.firestore.websocket.WebSocketServer start\nINFO: Started WebSocket server on ws://127.0.0.1:9150\n"}}
+[debug] [2026-05-19T13:13:43.136Z] 
+API endpoint: http://127.0.0.1:8080
+ {"metadata":{"emulator":{"name":"firestore"},"message":"\nAPI endpoint: http://127.0.0.1:8080\n"}}
+[debug] [2026-05-19T13:13:43.137Z] Database Edition: STANDARD
+Database Mode: CLOUD_FIRESTORE
+
+If you are using a library that supports the FIRESTORE_EMULATOR_HOST environment variable, run:
+
+   export FIRESTORE_EMULATOR_HOST=127.0.0.1:8080
+
+If you are running a Firestore in Datastore Mode project, run:
+
+   export DATASTORE_EMULATOR_HOST=127.0.0.1:8080
+
+Note: Support for Datastore Mode is in preview. If you encounter any bugs please file at https://github.com/firebase/firebase-tools/issues.
+Dev App Server is now running.
+
+ {"metadata":{"emulator":{"name":"firestore"},"message":"Database Edition: STANDARD\nDatabase Mode: CLOUD_FIRESTORE\n\nIf you are using a library that supports the FIRESTORE_EMULATOR_HOST environment variable, run:\n\n   export FIRESTORE_EMULATOR_HOST=127.0.0.1:8080\n\nIf you are running a Firestore in Datastore Mode project, run:\n\n   export DATASTORE_EMULATOR_HOST=127.0.0.1:8080\n\nNote: Support for Datastore Mode is in preview. If you encounter any bugs please file at https://github.com/firebase/firebase-tools/issues.\nDev App Server is now running.\n\n"}}
+[info] ✔  firestore: Firestore Emulator was started in standard edition. {"metadata":{"emulator":{"name":"firestore"},"message":"Firestore Emulator was started in standard edition."}}
+[info] ✔  firestore: Firestore Emulator UI websocket is running on 9150. {"metadata":{"emulator":{"name":"firestore"},"message":"Firestore Emulator UI websocket is running on 9150."}}
+[debug] [2026-05-19T13:13:48.097Z] May 19, 2026 8:13:44 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+INFO: Detected non-HTTP/2 connection.
+May 19, 2026 8:13:45 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+INFO: Detected non-HTTP/2 connection.
+May 19, 2026 8:13:45 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+INFO: Detected non-HTTP/2 connection.
+ {"metadata":{"emulator":{"name":"firestore"},"message":"May 19, 2026 8:13:44 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead\nINFO: Detected non-HTTP/2 connection.\nMay 19, 2026 8:13:45 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead\nINFO: Detected non-HTTP/2 connection.\nMay 19, 2026 8:13:45 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead\nINFO: Detected non-HTTP/2 connection.\n"}}
+[debug] [2026-05-19T13:13:48.097Z] Multiple projectIds are not recommended in single project mode. Requested project ID vrptw-54d81, but the emulator is configured for vrptw-cd89d. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+Multiple projectIds are not recommended in single project mode. Requested project ID vrptw-54d81, but the emulator is configured for vrptw-cd89d. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+ {"metadata":{"emulator":{"name":"firestore"},"message":"Multiple projectIds are not recommended in single project mode. Requested project ID vrptw-54d81, but the emulator is configured for vrptw-cd89d. To opt-out of single project mode add/set the '\"singleProjectMode\": false' property in the firebase.json emulators config.\nMultiple projectIds are not recommended in single project mode. Requested project ID vrptw-54d81, but the emulator is configured for vrptw-cd89d. To opt-out of single project mode add/set the '\"singleProjectMode\": false' property in the firebase.json emulators config.\n"}}
+[debug] [2026-05-19T13:13:48.099Z] Checked if tokens are valid: true, expires at: 1779197727932
+[debug] [2026-05-19T13:13:48.099Z] Checked if tokens are valid: true, expires at: 1779197727932
+[debug] [2026-05-19T13:13:48.100Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/vrptw-cd89d/sites 
+[debug] [2026-05-19T13:13:49.078Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/vrptw-cd89d/sites 200
+[debug] [2026-05-19T13:13:49.079Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/vrptw-cd89d/sites {"sites":[{"name":"projects/vrptw-cd89d/sites/vrptw-cd89d","defaultUrl":"https://vrptw-cd89d.web.app","appId":"1:64698467415:web:60b40aec4ea26fd45f4f12","type":"DEFAULT_SITE"}]}
+[debug] [2026-05-19T13:13:49.079Z] Checked if tokens are valid: true, expires at: 1779197727932
+[debug] [2026-05-19T13:13:49.079Z] Checked if tokens are valid: true, expires at: 1779197727932
+[debug] [2026-05-19T13:13:49.079Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/vrptw-cd89d/webApps/1:64698467415:web:60b40aec4ea26fd45f4f12/config [none]
+[debug] [2026-05-19T13:13:50.583Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/vrptw-cd89d/webApps/1:64698467415:web:60b40aec4ea26fd45f4f12/config 200
+[debug] [2026-05-19T13:13:50.585Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/vrptw-cd89d/webApps/1:64698467415:web:60b40aec4ea26fd45f4f12/config {"projectId":"vrptw-cd89d","appId":"1:64698467415:web:60b40aec4ea26fd45f4f12","storageBucket":"vrptw-cd89d.firebasestorage.app","apiKey":"AIzaSyAUBSuO9KRa9UNeO9Btb1A-zwWoCfRcfkY","authDomain":"vrptw-cd89d.firebaseapp.com","messagingSenderId":"64698467415","measurementId":"G-QXLLWR6RLP","projectNumber":"64698467415","version":"2"}
+[debug] [2026-05-19T13:13:50.618Z] Checked if tokens are valid: true, expires at: 1779197727932
+[debug] [2026-05-19T13:13:50.618Z] Checked if tokens are valid: true, expires at: 1779197727932
+[debug] [2026-05-19T13:13:50.619Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/vrptw-cd89d [none]
+[debug] [2026-05-19T13:13:50.984Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/vrptw-cd89d 200
+[debug] [2026-05-19T13:13:50.984Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/vrptw-cd89d {"projectId":"vrptw-cd89d","projectNumber":"64698467415","displayName":"VRPTW","name":"projects/vrptw-cd89d","resources":{"hostingSite":"vrptw-cd89d"},"state":"ACTIVE","etag":"1_e769fa42-b3bd-4702-a076-c5946a56ce1a"}
+[info] i  hosting[vrptw-cd89d]: Serving hosting files from: dist {"metadata":{"emulator":{"name":"hosting"},"message":"Serving hosting files from: \u001b[1mdist\u001b[22m"}}
+[info] ✔  hosting[vrptw-cd89d]: Local server: http://127.0.0.1:5050 {"metadata":{"emulator":{"name":"hosting"},"message":"Local server: \u001b[4m\u001b[1mhttp://127.0.0.1:5050\u001b[22m\u001b[24m"}}
+[debug] [2026-05-19T13:13:51.102Z] Could not find VSCode notification endpoint: FetchError: request to http://localhost:40001/vscode/notify failed, reason: . If you are not running the Firebase SQL Connect VSCode extension, this is expected and not an issue.
+[info] 
+┌─────────────────────────────────────────────────────────────┐
+│ ✔  All emulators ready! It is now safe to connect your app. │
+│ i  View Emulator UI at http://127.0.0.1:4000/               │
+└─────────────────────────────────────────────────────────────┘
+
+┌────────────────┬────────────────┬─────────────────────────────────┐
+│ Emulator       │ Host:Port      │ View in Emulator UI             │
+├────────────────┼────────────────┼─────────────────────────────────┤
+│ Authentication │ 127.0.0.1:9099 │ http://127.0.0.1:4000/auth      │
+├────────────────┼────────────────┼─────────────────────────────────┤
+│ Firestore      │ 127.0.0.1:8080 │ http://127.0.0.1:4000/firestore │
+├────────────────┼────────────────┼─────────────────────────────────┤
+│ Hosting        │ 127.0.0.1:5050 │ n/a                             │
+└────────────────┴────────────────┴─────────────────────────────────┘
+  Emulator Hub host: 127.0.0.1 port: 4400
+  Other reserved ports: 4500, 9150
+
+Issues? Report them at https://github.com/firebase/firebase-tools/issues and attach the *-debug.log files.
+ 
+[debug] [2026-05-19T13:15:13.349Z] ----------------------------------------------------------------------
+[debug] [2026-05-19T13:15:13.351Z] Command:       /Users/thundercock2/.nvm/versions/node/v20.18.0/bin/node /Users/thundercock2/.nvm/versions/node/v20.18.0/bin/firebase emulators:start --only auth,firestore,hosting
+[debug] [2026-05-19T13:15:13.352Z] CLI Version:   15.18.0
+[debug] [2026-05-19T13:15:13.352Z] Platform:      darwin
+[debug] [2026-05-19T13:15:13.352Z] Node Version:  v20.18.0
+[debug] [2026-05-19T13:15:13.352Z] Time:          Tue May 19 2026 20:15:13 GMT+0700 (Indochina Time)
+[debug] [2026-05-19T13:15:13.352Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-05-19T13:15:14.387Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-05-19T13:15:14.388Z] > authorizing via signed-in user (cathuys69@gmail.com)
+[debug] [2026-05-19T13:15:14.446Z] openjdk version "21.0.11" 2026-04-21
+
+[debug] [2026-05-19T13:15:14.446Z] OpenJDK Runtime Environment Homebrew (build 21.0.11)
+OpenJDK 64-Bit Server VM Homebrew (build 21.0.11, mixed mode, sharing)
+
+[debug] [2026-05-19T13:15:14.447Z] Parsed Java major version: 21
+[info] i  emulators: Starting emulators: auth, firestore, hosting {"metadata":{"emulator":{"name":"hub"},"message":"Starting emulators: auth, firestore, hosting"}}
+[debug] [2026-05-19T13:15:14.884Z] [logging] Logging Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2026-05-19T13:15:14.884Z] assigned listening specs for emulators {"user":{"ui":[{"address":"127.0.0.1","family":"IPv4","port":4000}],"auth":[{"address":"127.0.0.1","family":"IPv4","port":9099}],"firestore":[{"address":"127.0.0.1","family":"IPv4","port":8080}],"firestore.websocket":[{"address":"127.0.0.1","family":"IPv4","port":9150}],"hosting":[{"address":"127.0.0.1","family":"IPv4","port":5050}],"hub":[{"address":"127.0.0.1","family":"IPv4","port":4400},{"address":"::1","family":"IPv6","port":4400}],"logging":[{"address":"127.0.0.1","family":"IPv4","port":4500}]},"metadata":{"message":"assigned listening specs for emulators"}}
+[debug] [2026-05-19T13:15:14.888Z] Found emulator hub locator: {"version":"15.18.0","origins":["http://127.0.0.1:4400","http://[::1]:4400"],"pid":70658}
+[debug] [2026-05-19T13:15:14.888Z] Write emulator hub locator at /var/folders/xb/k2ck7tjx0j5gskqznf3ql7480000gn/T/hub-vrptw-cd89d.json
+[warn] ⚠  firestore: Cloud Firestore Emulator does not support multiple databases yet. {"metadata":{"emulator":{"name":"firestore"},"message":"Cloud Firestore Emulator does not support multiple databases yet."}}
+[warn] ⚠  firestore: Did not find a Cloud Firestore rules file specified in a firebase.json config file. {"metadata":{"emulator":{"name":"firestore"},"message":"Did not find a Cloud Firestore rules file specified in a firebase.json config file."}}
+[warn] ⚠  firestore: The emulator will default to allowing all reads and writes. Learn more about this option: https://firebase.google.com/docs/emulator-suite/install_and_configure#security_rules_configuration. {"metadata":{"emulator":{"name":"firestore"},"message":"The emulator will default to allowing all reads and writes. Learn more about this option: https://firebase.google.com/docs/emulator-suite/install_and_configure#security_rules_configuration."}}
+[debug] [2026-05-19T13:15:14.895Z] Ignoring unsupported arg: auto_download {"metadata":{"emulator":{"name":"firestore"},"message":"Ignoring unsupported arg: auto_download"}}
+[debug] [2026-05-19T13:15:14.895Z] Ignoring unsupported arg: single_project_mode_error {"metadata":{"emulator":{"name":"firestore"},"message":"Ignoring unsupported arg: single_project_mode_error"}}
+[debug] [2026-05-19T13:15:14.895Z] Starting Firestore Emulator with command {"binary":"java","args":["-Dgoogle.cloud_firestore.debug_log_level=FINE","-Duser.language=en","-jar","/Users/thundercock2/.cache/firebase/emulators/cloud-firestore-emulator-v1.21.0.jar","--host","127.0.0.1","--port",8080,"--websocket_port",9150,"--database-edition","standard","--project_id","vrptw-cd89d","--single_project_mode",true],"optionalArgs":["port","webchannel_port","host","rules","websocket_port","database-edition","functions_emulator","seed_from_export","project_id","single_project_mode"],"joinArgs":false,"shell":false,"port":8080} {"metadata":{"emulator":{"name":"firestore"},"message":"Starting Firestore Emulator with command {\"binary\":\"java\",\"args\":[\"-Dgoogle.cloud_firestore.debug_log_level=FINE\",\"-Duser.language=en\",\"-jar\",\"/Users/thundercock2/.cache/firebase/emulators/cloud-firestore-emulator-v1.21.0.jar\",\"--host\",\"127.0.0.1\",\"--port\",8080,\"--websocket_port\",9150,\"--database-edition\",\"standard\",\"--project_id\",\"vrptw-cd89d\",\"--single_project_mode\",true],\"optionalArgs\":[\"port\",\"webchannel_port\",\"host\",\"rules\",\"websocket_port\",\"database-edition\",\"functions_emulator\",\"seed_from_export\",\"project_id\",\"single_project_mode\"],\"joinArgs\":false,\"shell\":false,\"port\":8080}"}}
+[info] i  firestore: Firestore Emulator logging to firestore-debug.log {"metadata":{"emulator":{"name":"firestore"},"message":"Firestore Emulator logging to \u001b[1mfirestore-debug.log\u001b[22m"}}
+[debug] [2026-05-19T13:15:15.540Z] May 19, 2026 8:15:15 PM com.google.cloud.datastore.emulator.firestore.websocket.WebSocketServer start
+INFO: Started WebSocket server on ws://127.0.0.1:9150
+ {"metadata":{"emulator":{"name":"firestore"},"message":"May 19, 2026 8:15:15 PM com.google.cloud.datastore.emulator.firestore.websocket.WebSocketServer start\nINFO: Started WebSocket server on ws://127.0.0.1:9150\n"}}
+[debug] [2026-05-19T13:15:15.556Z] 
+API endpoint: http://127.0.0.1:8080
+ {"metadata":{"emulator":{"name":"firestore"},"message":"\nAPI endpoint: http://127.0.0.1:8080\n"}}
+[debug] [2026-05-19T13:15:15.557Z] Database Edition: STANDARD
+Database Mode: CLOUD_FIRESTORE
+
+If you are using a library that supports the FIRESTORE_EMULATOR_HOST environment variable, run:
+
+   export FIRESTORE_EMULATOR_HOST=127.0.0.1:8080
+
+If you are running a Firestore in Datastore Mode project, run:
+
+   export DATASTORE_EMULATOR_HOST=127.0.0.1:8080
+
+Note: Support for Datastore Mode is in preview. If you encounter any bugs please file at https://github.com/firebase/firebase-tools/issues.
+Dev App Server is now running.
+
+ {"metadata":{"emulator":{"name":"firestore"},"message":"Database Edition: STANDARD\nDatabase Mode: CLOUD_FIRESTORE\n\nIf you are using a library that supports the FIRESTORE_EMULATOR_HOST environment variable, run:\n\n   export FIRESTORE_EMULATOR_HOST=127.0.0.1:8080\n\nIf you are running a Firestore in Datastore Mode project, run:\n\n   export DATASTORE_EMULATOR_HOST=127.0.0.1:8080\n\nNote: Support for Datastore Mode is in preview. If you encounter any bugs please file at https://github.com/firebase/firebase-tools/issues.\nDev App Server is now running.\n\n"}}
+[info] ✔  firestore: Firestore Emulator was started in standard edition. {"metadata":{"emulator":{"name":"firestore"},"message":"Firestore Emulator was started in standard edition."}}
+[info] ✔  firestore: Firestore Emulator UI websocket is running on 9150. {"metadata":{"emulator":{"name":"firestore"},"message":"Firestore Emulator UI websocket is running on 9150."}}
+[debug] [2026-05-19T13:15:18.728Z] Checked if tokens are valid: true, expires at: 1779197727932
+[debug] [2026-05-19T13:15:18.728Z] Checked if tokens are valid: true, expires at: 1779197727932
+[debug] [2026-05-19T13:15:18.729Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/vrptw-cd89d/sites 
+[debug] [2026-05-19T13:15:19.613Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/vrptw-cd89d/sites 200
+[debug] [2026-05-19T13:15:19.613Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/vrptw-cd89d/sites {"sites":[{"name":"projects/vrptw-cd89d/sites/vrptw-cd89d","defaultUrl":"https://vrptw-cd89d.web.app","appId":"1:64698467415:web:60b40aec4ea26fd45f4f12","type":"DEFAULT_SITE"}]}
+[debug] [2026-05-19T13:15:19.613Z] Checked if tokens are valid: true, expires at: 1779197727932
+[debug] [2026-05-19T13:15:19.613Z] Checked if tokens are valid: true, expires at: 1779197727932
+[debug] [2026-05-19T13:15:19.613Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/vrptw-cd89d/webApps/1:64698467415:web:60b40aec4ea26fd45f4f12/config [none]
+[debug] [2026-05-19T13:15:20.676Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/vrptw-cd89d/webApps/1:64698467415:web:60b40aec4ea26fd45f4f12/config 200
+[debug] [2026-05-19T13:15:20.677Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/vrptw-cd89d/webApps/1:64698467415:web:60b40aec4ea26fd45f4f12/config {"projectId":"vrptw-cd89d","appId":"1:64698467415:web:60b40aec4ea26fd45f4f12","storageBucket":"vrptw-cd89d.firebasestorage.app","apiKey":"AIzaSyAUBSuO9KRa9UNeO9Btb1A-zwWoCfRcfkY","authDomain":"vrptw-cd89d.firebaseapp.com","messagingSenderId":"64698467415","measurementId":"G-QXLLWR6RLP","projectNumber":"64698467415","version":"2"}
+[debug] [2026-05-19T13:15:20.695Z] Checked if tokens are valid: true, expires at: 1779197727932
+[debug] [2026-05-19T13:15:20.695Z] Checked if tokens are valid: true, expires at: 1779197727932
+[debug] [2026-05-19T13:15:20.696Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/vrptw-cd89d [none]
+[debug] [2026-05-19T13:15:21.255Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/vrptw-cd89d 200
+[debug] [2026-05-19T13:15:21.255Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/vrptw-cd89d {"projectId":"vrptw-cd89d","projectNumber":"64698467415","displayName":"VRPTW","name":"projects/vrptw-cd89d","resources":{"hostingSite":"vrptw-cd89d"},"state":"ACTIVE","etag":"1_e769fa42-b3bd-4702-a076-c5946a56ce1a"}
+[info] i  hosting[vrptw-cd89d]: Serving hosting files from: dist {"metadata":{"emulator":{"name":"hosting"},"message":"Serving hosting files from: \u001b[1mdist\u001b[22m"}}
+[info] ✔  hosting[vrptw-cd89d]: Local server: http://127.0.0.1:5050 {"metadata":{"emulator":{"name":"hosting"},"message":"Local server: \u001b[4m\u001b[1mhttp://127.0.0.1:5050\u001b[22m\u001b[24m"}}
+[debug] [2026-05-19T13:15:21.360Z] Could not find VSCode notification endpoint: FetchError: request to http://localhost:40001/vscode/notify failed, reason: . If you are not running the Firebase SQL Connect VSCode extension, this is expected and not an issue.
+[info] 
+┌─────────────────────────────────────────────────────────────┐
+│ ✔  All emulators ready! It is now safe to connect your app. │
+│ i  View Emulator UI at http://127.0.0.1:4000/               │
+└─────────────────────────────────────────────────────────────┘
+
+┌────────────────┬────────────────┬─────────────────────────────────┐
+│ Emulator       │ Host:Port      │ View in Emulator UI             │
+├────────────────┼────────────────┼─────────────────────────────────┤
+│ Authentication │ 127.0.0.1:9099 │ http://127.0.0.1:4000/auth      │
+├────────────────┼────────────────┼─────────────────────────────────┤
+│ Firestore      │ 127.0.0.1:8080 │ http://127.0.0.1:4000/firestore │
+├────────────────┼────────────────┼─────────────────────────────────┤
+│ Hosting        │ 127.0.0.1:5050 │ n/a                             │
+└────────────────┴────────────────┴─────────────────────────────────┘
+  Emulator Hub host: 127.0.0.1 port: 4400
+  Other reserved ports: 4500, 9150
+
+Issues? Report them at https://github.com/firebase/firebase-tools/issues and attach the *-debug.log files.
+ 
+[debug] [2026-05-19T13:16:44.873Z] May 19, 2026 8:16:44 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+INFO: Detected non-HTTP/2 connection.
+ {"metadata":{"emulator":{"name":"firestore"},"message":"May 19, 2026 8:16:44 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead\nINFO: Detected non-HTTP/2 connection.\n"}}
+[debug] [2026-05-19T13:16:45.359Z] May 19, 2026 8:16:45 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+INFO: Detected non-HTTP/2 connection.
+ {"metadata":{"emulator":{"name":"firestore"},"message":"May 19, 2026 8:16:45 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead\nINFO: Detected non-HTTP/2 connection.\n"}}
+[debug] [2026-05-19T13:16:45.628Z] Multiple projectIds are not recommended in single project mode. Requested project ID vrptw-54d81, but the emulator is configured for vrptw-cd89d. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+ {"metadata":{"emulator":{"name":"firestore"},"message":"Multiple projectIds are not recommended in single project mode. Requested project ID vrptw-54d81, but the emulator is configured for vrptw-cd89d. To opt-out of single project mode add/set the '\"singleProjectMode\": false' property in the firebase.json emulators config.\n"}}
+[debug] [2026-05-19T13:16:48.004Z] Multiple projectIds are not recommended in single project mode. Requested project ID vrptw-54d81, but the emulator is configured for vrptw-cd89d. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+ {"metadata":{"emulator":{"name":"firestore"},"message":"Multiple projectIds are not recommended in single project mode. Requested project ID vrptw-54d81, but the emulator is configured for vrptw-cd89d. To opt-out of single project mode add/set the '\"singleProjectMode\": false' property in the firebase.json emulators config.\n"}}
+[debug] [2026-05-19T13:16:48.115Z] May 19, 2026 8:16:48 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+INFO: Detected non-HTTP/2 connection.
+ {"metadata":{"emulator":{"name":"firestore"},"message":"May 19, 2026 8:16:48 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead\nINFO: Detected non-HTTP/2 connection.\n"}}
+[debug] [2026-05-19T13:16:48.162Z] Multiple projectIds are not recommended in single project mode. Requested project ID vrptw-54d81, but the emulator is configured for vrptw-cd89d. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+Multiple projectIds are not recommended in single project mode. Requested project ID vrptw-54d81, but the emulator is configured for vrptw-cd89d. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+ {"metadata":{"emulator":{"name":"firestore"},"message":"Multiple projectIds are not recommended in single project mode. Requested project ID vrptw-54d81, but the emulator is configured for vrptw-cd89d. To opt-out of single project mode add/set the '\"singleProjectMode\": false' property in the firebase.json emulators config.\nMultiple projectIds are not recommended in single project mode. Requested project ID vrptw-54d81, but the emulator is configured for vrptw-cd89d. To opt-out of single project mode add/set the '\"singleProjectMode\": false' property in the firebase.json emulators config.\n"}}
+[debug] [2026-05-19T13:17:02.570Z] May 19, 2026 8:17:02 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+INFO: Detected non-HTTP/2 connection.
+ {"metadata":{"emulator":{"name":"firestore"},"message":"May 19, 2026 8:17:02 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead\nINFO: Detected non-HTTP/2 connection.\n"}}
+[debug] [2026-05-19T13:17:02.595Z] Multiple projectIds are not recommended in single project mode. Requested project ID vrptw-54d81, but the emulator is configured for vrptw-cd89d. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+ {"metadata":{"emulator":{"name":"firestore"},"message":"Multiple projectIds are not recommended in single project mode. Requested project ID vrptw-54d81, but the emulator is configured for vrptw-cd89d. To opt-out of single project mode add/set the '\"singleProjectMode\": false' property in the firebase.json emulators config.\n"}}
+[debug] [2026-05-19T13:17:02.598Z] Multiple projectIds are not recommended in single project mode. Requested project ID vrptw-54d81, but the emulator is configured for vrptw-cd89d. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+ {"metadata":{"emulator":{"name":"firestore"},"message":"Multiple projectIds are not recommended in single project mode. Requested project ID vrptw-54d81, but the emulator is configured for vrptw-cd89d. To opt-out of single project mode add/set the '\"singleProjectMode\": false' property in the firebase.json emulators config.\n"}}
+[debug] [2026-05-19T13:17:02.617Z] May 19, 2026 8:17:02 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+INFO: Detected non-HTTP/2 connection.
+ {"metadata":{"emulator":{"name":"firestore"},"message":"May 19, 2026 8:17:02 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead\nINFO: Detected non-HTTP/2 connection.\n"}}
+[debug] [2026-05-19T13:17:02.644Z] May 19, 2026 8:17:02 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+INFO: Detected non-HTTP/2 connection.
+ {"metadata":{"emulator":{"name":"firestore"},"message":"May 19, 2026 8:17:02 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead\nINFO: Detected non-HTTP/2 connection.\n"}}
+[debug] [2026-05-19T13:17:03.388Z] May 19, 2026 8:17:03 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+INFO: Detected non-HTTP/2 connection.
+ {"metadata":{"emulator":{"name":"firestore"},"message":"May 19, 2026 8:17:03 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead\nINFO: Detected non-HTTP/2 connection.\n"}}

@@ -1,15 +1,16 @@
 .PHONY: dev dev-emulator test dist emulators test-e2e
+
 dev:
 	PYTHONPATH=./src/backend uv run uvicorn main:app --host 127.0.0.1 --port 8000 --reload --app-dir src/backend
 
 dev-emulator:
 	FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099 PYTHONPATH=./src/backend uv run uvicorn main:app --host 127.0.0.1 --port 8000 --reload --app-dir src/backend
+
 test:
 	PYTHONPATH=/src/backend uv run pytest tests/ -v
 
 # ── Firebase Emulator Suite ──────────────────────────────────────────
-# Auth (9099) + Hosting/SPA (5050) + Emulator UI (4000)
-# Note: Firestore emulator skipped — requires Java 21+ (install if needed)
+# Auth (9099) + Firestore (8080) + Hosting/SPA (5050) + Emulator UI (4000)
 
 dist:
 	@echo "Copying src/frontend/ → dist/ ..."
@@ -18,7 +19,9 @@ dist:
 	@echo "dist/ ready."
 
 emulators: dist
-	@firebase emulators:start --only auth,hosting &
+	@echo "Flushing old background emulator processes..."
+	-@npx kill-port 4000 5050 8080 9099 4400 4500 2>/dev/null || true
+	@firebase emulators:start --only auth,firestore,hosting &
 	@echo "Waiting for Auth Emulator on port 9099..."
 	@for i in $$(seq 1 30); do \
 		nc -z 127.0.0.1 9099 2>/dev/null && echo "  Auth Emulator ready." && break; \
@@ -38,8 +41,10 @@ emulators: dist
 # ── E2E Testing (Playwright + Emulators) ─────────────────────────────
 
 test-e2e: dist
+	@echo "Flushing old background process configurations..."
+	-@npx kill-port 4000 5050 8000 8080 9099 4400 4500 2>/dev/null || true
 	@echo "Starting Firebase Emulators in background..."
-	@firebase emulators:start --only auth,hosting &
+	@firebase emulators:start --only auth,firestore,hosting &
 	@echo "Waiting for Auth Emulator on port 9099..."
 	@for i in $$(seq 1 30); do \
 		nc -z 127.0.0.1 9099 2>/dev/null && echo "  Auth Emulator ready." && break; \

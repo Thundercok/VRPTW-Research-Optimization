@@ -5,7 +5,8 @@ import {
   doc,
   setDoc,
   addDoc,
-  collection
+  collection,
+  connectFirestoreEmulator // <-- ADDED THIS IMPORT
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 // Native Auth Imports
 import { getAuth, signInWithEmailAndPassword, connectAuthEmulator } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
@@ -24,9 +25,10 @@ class FirebaseService {
       this.db = getFirestore(app);
       this.auth = getAuth(app);
 
-      // Route Auth traffic to the local emulator during local development/testing
+      // Route Auth and Firestore traffic to the local emulators during local development/testing
       if (window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost") {
         connectAuthEmulator(this.auth, "http://127.0.0.1:9099", { disableWarnings: true });
+        connectFirestoreEmulator(this.db, "127.0.0.1", 8080); // <-- ADDED THIS LINE
       }
     }
   }
