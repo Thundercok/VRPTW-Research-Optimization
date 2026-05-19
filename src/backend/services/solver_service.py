@@ -13,102 +13,89 @@ import os
 import sys
 import time
 from pathlib import Path
-from typing import Any
-
-try:
-    import torch
-    HAS_TORCH = True
-except ImportError:
-    HAS_TORCH = False
-    import types
-    # Set up mock torch before importing vrptw so compilation and import pass
-    class MockTensor:
-        pass
-
-    class MockDevice:
-        def __init__(self, *args, **kwargs):
-            pass
-
-    class MockModule:
-        def __init__(self, *args, **kwargs):
-            pass
-        def __call__(self, *args, **kwargs):
-            return self
-        def __getattr__(self, name):
-            return MockModule()
-
-    class MockOptimizer:
-        def __init__(self, *args, **kwargs):
-            pass
-
-    mock_torch = types.ModuleType("torch")
-    mock_torch.device = MockDevice
-    mock_torch.Tensor = MockTensor
-    mock_torch.set_num_threads = lambda *args, **kwargs: None
-
-    mock_nn = types.ModuleType("torch.nn")
-    mock_nn.Module = MockModule
-    mock_nn.Sequential = lambda *args, **kwargs: MockModule()
-    mock_nn.Linear = lambda *args, **kwargs: MockModule()
-    mock_nn.LayerNorm = lambda *args, **kwargs: MockModule()
-    mock_nn.ReLU = lambda *args, **kwargs: MockModule()
-
-    mock_functional = types.ModuleType("torch.nn.functional")
-    mock_optim = types.ModuleType("torch.optim")
-    mock_optim.Adam = MockOptimizer
-
-    sys.modules["torch"] = mock_torch
-    sys.modules["torch.nn"] = mock_nn
-    sys.modules["torch.nn.functional"] = mock_functional
-    sys.modules["torch.optim"] = mock_optim
-    import torch
-
-try:
-    import numpy
-except ImportError:
-    import types
-    mock_numpy = types.ModuleType("numpy")
-    sys.modules["numpy"] = mock_numpy
-
-try:
-    import pandas
-except ImportError:
-    import types
-    class DummyDataFrame:
-        pass
-    mock_pandas = types.ModuleType("pandas")
-    mock_pandas.DataFrame = DummyDataFrame
-    sys.modules["pandas"] = mock_pandas
-
-try:
-    import numba
-except ImportError:
-    import types
-    def mock_njit(*args, **kwargs):
-        if len(args) == 1 and callable(args[0]):
-            return args[0]
-        return lambda f: f
-    mock_numba = types.ModuleType("numba")
-    mock_numba.njit = mock_njit
-    sys.modules["numba"] = mock_numba
+from typing import Any, NamedTuple
 
 from fastapi import HTTPException
 from models.schemas import JobRequest
-from services.research_adapter import build_inst, plan_to_payload
 
 _ROOT = Path(__file__).resolve().parents[3]
 for candidate in (_ROOT, _ROOT / "docs"):
     if candidate.exists():
         sys.path.insert(0, str(candidate))
 
-from vrptw import ALNSSolver, Config, PlateauHybridSolver  # noqa: E402
-
 logger = logging.getLogger(__name__)
+
+
+class SolverRuntime(NamedTuple):
+    torch: Any
+    config: Any
+    alns_solver: Any
+    plateau_hybrid_solver: Any
+    build_inst: Any
+    plan_to_payload: Any
+
+
+_RUNTIME: SolverRuntime | None = None
+_RUNTIME_IMPORT_ERROR: str | None = None
+_WEB_CONFIG: Any | None = None
+
+
+def _load_solver_runtime() -> SolverRuntime:
+    """Import the heavy research stack only when a solve actually runs."""
+    global _RUNTIME, _RUNTIME_IMPORT_ERROR
+    if _RUNTIME is not None:
+        return _RUNTIME
+    if _RUNTIME_IMPORT_ERROR is not None:
+        raise RuntimeError(_RUNTIME_IMPORT_ERROR)
+
+    try:
+        import torch
+        from services.research_adapter import build_inst, plan_to_payload
+
+        from vrptw import ALNSSolver, Config, PlateauHybridSolver
+    except ImportError as exc:
+        _RUNTIME_IMPORT_ERROR = str(exc)
+        raise RuntimeError(_RUNTIME_IMPORT_ERROR) from exc
+
+    _RUNTIME = SolverRuntime(
+        torch=torch,
+        config=Config,
+        alns_solver=ALNSSolver,
+        plateau_hybrid_solver=PlateauHybridSolver,
+        build_inst=build_inst,
+        plan_to_payload=plan_to_payload,
+    )
+    return _RUNTIME
+
+
+def _get_web_config() -> Any:
+    global _WEB_CONFIG
+    if _WEB_CONFIG is None:
+        runtime = _load_solver_runtime()
+        _WEB_CONFIG = runtime.config(
+            alns_iterations=500,
+            hybrid_iterations=500,
+            early_stop_patience=200,
+            polish_iterations=100,
+            polish_patience=60,
+            n_runs=1,
+        )
+    return _WEB_CONFIG
+
+
+class _LazyWebConfig:
+    def __getattr__(self, name: str) -> Any:
+        return getattr(_get_web_config(), name)
+
+
+WEB_CONFIG = _LazyWebConfig()
 
 
 def device_summary() -> dict[str, Any]:
     """Inspect the active torch device. Used for /api/health and startup logs."""
-    if not HAS_TORCH:
+    try:
+        import torch
+    except ImportError:
         return {
             "torch_version": "not-installed",
             "cuda_available": False,
@@ -155,16 +142,10 @@ def _log_device_once() -> None:
             info.get("torch_version"),
         )
 
-WEB_CONFIG = Config(
-    alns_iterations=500,
-    hybrid_iterations=500,
-    early_stop_patience=200,
-    polish_iterations=100,
-    polish_patience=60,
-    n_runs=1,
-)
-
 _DEFAULT_TRANSFER_PATH = _ROOT / "model" / "rl_alns_transfer.safetensors"
+_DR_TRANSFER_PATH = _ROOT / "rl_alns_dr_v15.safetensors"
+_DOCS_DR_TRANSFER_PATH = _ROOT / "docs" / "rl_alns_dr_v15.safetensors"
+_DOCS_TRANSFER_PATH = _ROOT / "docs" / "model" / "rl_alns_transfer.safetensors"
 _LEGACY_TRANSFER_PATH = _ROOT / "logs" / "results-v9.5" / "rl_alns_transfer.safetensors"
 
 _WEIGHTS_LOADED_ONCE = False
@@ -177,14 +158,19 @@ def _resolve_transfer_path() -> Path | None:
     if path_env:
         candidate = Path(path_env)
         return candidate if candidate.exists() else None
-    if _DEFAULT_TRANSFER_PATH.exists():
-        return _DEFAULT_TRANSFER_PATH
-    if _LEGACY_TRANSFER_PATH.exists():
-        return _LEGACY_TRANSFER_PATH
+    for candidate in (
+        _DEFAULT_TRANSFER_PATH,
+        _DR_TRANSFER_PATH,
+        _DOCS_DR_TRANSFER_PATH,
+        _DOCS_TRANSFER_PATH,
+        _LEGACY_TRANSFER_PATH,
+    ):
+        if candidate.exists():
+            return candidate
     return None
 
 
-def _align_action_head(state: dict[str, torch.Tensor], target_module: torch.nn.Module) -> tuple[dict[str, torch.Tensor], int]:
+def _align_action_head(state: dict[str, Any], target_module: Any) -> tuple[dict[str, Any], int]:
     """Pad the action-head row dimension when the checkpoint was trained with
     fewer modes than the current code defines.
 
@@ -194,6 +180,8 @@ def _align_action_head(state: dict[str, torch.Tensor], target_module: torch.nn.M
     the last mode). The new rows are seeded with the mean of the trained rows
     so they do not dominate or get systematically ignored at argmax time.
     """
+    runtime = _load_solver_runtime()
+    torch = runtime.torch
     aligned = dict(state)
     padded = 0
     target_state = target_module.state_dict()
@@ -220,22 +208,28 @@ def _align_action_head(state: dict[str, torch.Tensor], target_module: torch.nn.M
     return aligned, padded
 
 
-def _load_transfer_weights(solver: PlateauHybridSolver) -> bool:
+def _load_transfer_weights(solver: Any) -> bool:
     """Hot-load the trained DDQN policy. Logs the outcome on first call."""
     global _WEIGHTS_LOADED_ONCE, _WEIGHTS_PATH_USED
 
+    runtime = _load_solver_runtime()
+    torch = runtime.torch
+    config = _get_web_config()
     path = _resolve_transfer_path()
     if path is None:
         if not _WEIGHTS_LOADED_ONCE:
             _WEIGHTS_LOADED_ONCE = True
             logger.warning(
-                "DDQN transfer weights NOT FOUND. Searched %s and %s. The DDQN "
+                "DDQN transfer weights NOT FOUND. Searched %s, %s, %s, %s, and %s. The DDQN "
                 "policy will run on randomly-initialised weights (epsilon = "
                 "%.3f). Set VRPTW_TRANSFER_WEIGHTS or restore "
                 "model/rl_alns_transfer.safetensors.",
                 _DEFAULT_TRANSFER_PATH,
+                _DR_TRANSFER_PATH,
+                _DOCS_DR_TRANSFER_PATH,
+                _DOCS_TRANSFER_PATH,
                 _LEGACY_TRANSFER_PATH,
-                float(WEB_CONFIG.ctrl_eps_end),
+                float(config.ctrl_eps_end),
             )
         return False
 
@@ -243,6 +237,14 @@ def _load_transfer_weights(solver: PlateauHybridSolver) -> bool:
         from safetensors.torch import load_file
 
         state = load_file(str(path))
+        if any(key.startswith(("plateau.", "operator.", "lac.", "reward_norm.", "ucb.")) for key in state):
+            solver.load_weights(state)
+            if not _WEIGHTS_LOADED_ONCE:
+                _WEIGHTS_LOADED_ONCE = True
+                _WEIGHTS_PATH_USED = str(path)
+                logger.info("DDQN solver weights loaded from %s (%d tensors).", path, len(state))
+            return True
+
         aligned_q, padded_q = _align_action_head(state, solver.ctrl.q)
         aligned_qt, _ = _align_action_head(state, solver.ctrl.q_t)
         # strict=True now that shapes match, so we never silently skip layers.
@@ -284,12 +286,14 @@ def transfer_weights_summary() -> dict[str, Any]:
 
 
 def _run_ddqn_alns(payload: JobRequest) -> dict[str, Any]:
-    inst = build_inst(payload.customers, capacity=payload.fleet.capacity, name="DDQN-ALNS")
-    solver = PlateauHybridSolver(inst, WEB_CONFIG)
+    runtime = _load_solver_runtime()
+    config = _get_web_config()
+    inst = runtime.build_inst(payload.customers, capacity=payload.fleet.capacity, name="DDQN-ALNS")
+    solver = runtime.plateau_hybrid_solver(inst, config)
     _load_transfer_weights(solver)
-    solver.ctrl.eps = WEB_CONFIG.ctrl_eps_end
+    solver.ctrl.eps = config.ctrl_eps_end
     start = time.time()
-    plan, _ = solver.solve(seed=WEB_CONFIG.seed)
+    plan, _ = solver.solve(seed=config.seed)
     elapsed = time.time() - start
 
     if plan.nv > payload.fleet.vehicles:
@@ -297,14 +301,16 @@ def _run_ddqn_alns(payload: JobRequest) -> dict[str, Any]:
             f"Infeasible configuration: requires {plan.nv} vehicles but only {payload.fleet.vehicles} provided"
         )
 
-    return plan_to_payload(plan, payload.customers, elapsed)
+    return runtime.plan_to_payload(plan, payload.customers, elapsed)
 
 
 def _run_alns(payload: JobRequest) -> dict[str, Any]:
-    inst = build_inst(payload.customers, capacity=payload.fleet.capacity, name="ALNS")
-    solver = ALNSSolver(inst, WEB_CONFIG)
+    runtime = _load_solver_runtime()
+    config = _get_web_config()
+    inst = runtime.build_inst(payload.customers, capacity=payload.fleet.capacity, name="ALNS")
+    solver = runtime.alns_solver(inst, config)
     start = time.time()
-    plan, _ = solver.solve(seed=WEB_CONFIG.seed)
+    plan, _ = solver.solve(seed=config.seed)
     elapsed = time.time() - start
 
     if plan.nv > payload.fleet.vehicles:
@@ -312,7 +318,7 @@ def _run_alns(payload: JobRequest) -> dict[str, Any]:
             f"Infeasible configuration: requires {plan.nv} vehicles but only {payload.fleet.vehicles} provided"
         )
 
-    return plan_to_payload(plan, payload.customers, elapsed)
+    return runtime.plan_to_payload(plan, payload.customers, elapsed)
 
 
 def _validate(payload: JobRequest) -> None:
@@ -333,14 +339,17 @@ def _validate(payload: JobRequest) -> None:
 
 
 async def solve_model(payload: JobRequest, matrix: list[list[float]] | None = None) -> dict[str, Any]:
-    if not HAS_TORCH:
+    try:
+        runtime = _load_solver_runtime()
+        _get_web_config()
+    except RuntimeError as exc:
         raise HTTPException(
             status_code=503,
-            detail="Machine learning solver is disabled because PyTorch is not installed."
-        )
+            detail=f"Solver is unavailable because a runtime dependency is not installed: {exc}",
+        ) from exc
     _validate(payload)
     _log_device_once()
-    torch.set_num_threads(max(1, (os.cpu_count() or 4) // 2))
+    runtime.torch.set_num_threads(max(1, (os.cpu_count() or 4) // 2))
 
     loop = asyncio.get_running_loop()
     ddqn_task = loop.run_in_executor(None, _run_ddqn_alns, payload)

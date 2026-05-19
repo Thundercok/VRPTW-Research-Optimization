@@ -16,7 +16,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src" / "backend"))
 
 import torch  # noqa: E402
@@ -55,7 +55,8 @@ def _payload():
 
 def _run(seed: int, load_weights: bool):
     from services.research_adapter import build_inst
-    from vrptw_clean import PlateauHybridSolver
+
+    from vrptw import PlateauHybridSolver
 
     payload = _payload()
     inst = build_inst(payload.customers, capacity=payload.fleet.capacity, name="probe")
