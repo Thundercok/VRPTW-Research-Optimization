@@ -1,0 +1,179 @@
+from __future__ import annotations
+import numpy as np
+from typing import List, Dict, Optional, Tuple
+from numba import njit
+from .config import BKS
+
+class Inst:
+    def __init__(self, raw: Dict):
+        self.name     = raw["name"]
+        data          = raw["data"]
+        self.capacity = raw["capacity"]
+        self.coords       = data[:, 1:3]
+        self.demands      = data[:, 3]
+        self.ready_times  = data[:, 4]
+        self.due_times    = data[:, 5]
+        self.service_times= data[:, 6]
+        self.horizon      = self.due_times[0]
+        self.n            = len(data) - 1
+        diff              = self.coords[:, None, :] - self.coords[None, :, :]
+        self.dist         = np.sqrt((diff ** 2).sum(axis=2))
+        self.max_dist     = float(self.dist.max())
+        self.tw_width     = self.due_times - self.ready_times
+        self.max_tw_width = float(self.tw_width[1:].max() + 1e-9)
+        self.tw_tight_frac = sum(
+            1 for i in range(1, self.n + 1)
+            if self.tw_width[i] < 0.2 * self.horizon
+        ) / max(self.n, 1)
+
+
+@njit(cache=True)
+def _route_cost(route: np.ndarray, dist: np.ndarray) -> float:
+    cost = dist[0, route[0]]
+    for idx in range(len(route) - 1):
+        cost += dist[route[idx], route[idx + 1]]
+    return cost + dist[route[-1], 0]
+
+
+@njit(cache=True)
+def _route_ok(route: np.ndarray, demands: np.ndarray, capacity: float,
+              ready: np.ndarray, due: np.ndarray,
+              service: np.ndarray, dist: np.ndarray) -> bool:
+    load = 0.0
+    for node in route:
+        load += demands[node]
+    if load > capacity:
+        return False
+    t, prev = 0.0, 0
+    for node in route:
+        t += dist[prev, node]
+        if t < ready[node]:
+            t = ready[node]
+        if t > due[node]:
+            return False
+        t   += service[node]
+        prev = node
+    return True
+
+
+class Plan:
+    __slots__ = ("routes", "inst", "_cost", "_ok", "algo")
+
+    def __init__(self, routes: List[List[int]], inst: Inst, algo: str = ""):
+        self.routes = [r for r in routes if r]
+        self.inst   = inst
+        self._cost: Optional[float] = None
+        self._ok:   Optional[bool]  = None
+        self.algo   = algo
+
+    @property
+    def cost(self) -> float:
+        if self._cost is None:
+            self._cost = sum(
+                _route_cost(np.array(r, np.int64), self.inst.dist)
+                for r in self.routes
+            )
+        return self._cost
+
+    @property
+    def feasible(self) -> bool:
+        if self._ok is None:
+            self._ok = all(
+                _route_ok(np.array(r, np.int64), self.inst.demands,
+                          self.inst.capacity, self.inst.ready_times,
+                          self.inst.due_times, self.inst.service_times,
+                          self.inst.dist)
+                for r in self.routes
+            )
+        return self._ok
+
+    @property
+    def nv(self) -> int:
+        return len(self.routes)
+
+    @property
+    def on_time_rate(self) -> float:
+        on_time = total = 0
+        for route in self.routes:
+            t, prev = 0.0, 0
+            for node in route:
+                t += self.inst.dist[prev, node]
+                t  = max(t, self.inst.ready_times[node])
+                total += 1
+                if t <= self.inst.due_times[node]:
+                    on_time += 1
+                t   += self.inst.service_times[node]
+                prev = node
+        return on_time / max(total, 1)
+
+    def gap(self) -> Tuple[Optional[float], Optional[int]]:
+        bks = BKS.get(self.inst.name)
+        if not bks:
+            return None, None
+        return (self.cost - bks["td"]) / bks["td"] * 100, int(self.nv) - int(bks["nv"])
+
+    def dominates(self, other: "Plan") -> bool:
+        return self.nv < other.nv or (self.nv == other.nv and self.cost < other.cost)
+
+    def copy(self) -> "Plan":
+        return Plan([r[:] for r in self.routes], self.inst, self.algo)
+
+    def invalidate(self) -> None:
+        self._cost = None
+        self._ok   = None
+
+
+def _invalidate(plan: Plan) -> Plan:
+    plan.invalidate()
+    return plan
+
+def _route_duration_no_return(route: List[int], inst: "Inst") -> float:
+    """Calculate duration of a route without returning to depot."""
+    if not route:
+        return 0.0
+    t, prev = 0.0, 0
+    for node in route:
+        t += inst.dist[prev, node]
+        t  = max(t, float(inst.ready_times[node])) + float(inst.service_times[node])
+        prev = node
+    return float(t)
+
+def _check_route(route: List[int], inst: "Inst") -> bool:
+    """Check capacity + time-window feasibility (delegates to numba ``_route_ok``)."""
+    return bool(_route_ok(
+        np.array(route, np.int64), inst.demands, inst.capacity,
+        inst.ready_times, inst.due_times, inst.service_times, inst.dist,
+    ))
+
+def _avg_slack(plan: Plan) -> float:
+    inst = plan.inst
+    slack_sum = count = 0
+    for route in plan.routes:
+        t, prev = 0.0, 0
+        for node in route:
+            t += inst.dist[prev, node]
+            t  = max(t, inst.ready_times[node])
+            slack_sum += inst.due_times[node] - t
+            t   += inst.service_times[node]
+            prev = node
+            count += 1
+    return (slack_sum / count) / max(inst.horizon, 1) if count else 0.0
+
+
+def _plan_spread(plan: Plan, inst: Inst) -> Tuple[float, float]:
+    lengths = [len(r) for r in plan.routes] or [0]
+    loads   = [sum(inst.demands[n] for n in r) for r in plan.routes] or [0]
+    rb = min(float(np.std(lengths)) / max(float(np.mean(lengths)), 1.0), 1.0) \
+         if len(lengths) > 1 else 0.0
+    lb = min(float(np.std(loads)) / max(float(inst.capacity), 1.0), 1.0)
+    return rb, lb
+
+
+def _fleet_fill(plan: Plan) -> float:
+    if not plan.routes:
+        return 0.0
+    return float(np.mean(
+        [sum(plan.inst.demands[n] for n in r) / max(plan.inst.capacity, 1)
+         for r in plan.routes]
+    ))
+

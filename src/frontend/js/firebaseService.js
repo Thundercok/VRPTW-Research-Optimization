@@ -5,26 +5,47 @@ import {
   doc,
   setDoc,
   addDoc,
-  collection
+  collection,
+  connectFirestoreEmulator // <-- ADDED THIS IMPORT
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
-
+// Native Auth Imports
+import { getAuth, signInWithEmailAndPassword, connectAuthEmulator } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 import { firebaseConfig, hasFirebaseConfig } from "./firebaseConfig.js";
 
 class FirebaseService {
   constructor() {
     this.enabled = false;
     this.db = null;
+    this.auth = null;
     this.userKey = null;
+
+    // Initialize immediately so Auth is ready before Playwright clicks login
+    if (hasFirebaseConfig()) {
+      const app = getApps().length > 0 ? getApps()[0] : initializeApp(firebaseConfig);
+      this.db = getFirestore(app);
+      this.auth = getAuth(app);
+
+      // Route Auth and Firestore traffic to the local emulators during local development/testing
+      if (window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost") {
+        connectAuthEmulator(this.auth, "http://127.0.0.1:9099", { disableWarnings: true });
+        connectFirestoreEmulator(this.db, "127.0.0.1", 8080); // <-- ADDED THIS LINE
+      }
+    }
+  }
+
+  // NEW WRAPPER: Handles login natively inside the module
+  async loginUser(email, password) {
+    if (!this.auth) throw new Error("Firebase Auth is not initialized. Check your config.");
+    const userCredential = await signInWithEmailAndPassword(this.auth, email, password);
+    return userCredential.user;
   }
 
   async init(email) {
-    if (!hasFirebaseConfig()) {
+    if (!this.db) {
       this.enabled = false;
       return false;
     }
 
-    const app = getApps().length > 0 ? getApps()[0] : initializeApp(firebaseConfig);
-    this.db = getFirestore(app);
     this.userKey = this.makeUserKey(email);
     this.enabled = true;
 

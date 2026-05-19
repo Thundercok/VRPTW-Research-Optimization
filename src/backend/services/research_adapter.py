@@ -19,7 +19,7 @@ for candidate in (_ROOT, _ROOT / "docs"):
     if candidate.exists():
         sys.path.insert(0, str(candidate))
 from models.schemas import Point  # noqa: E402
-from vrptw_clean import Inst, Plan  # noqa: E402
+from vrptw import Inst, Plan  # noqa: E402
 
 DEG_TO_KM = 111.0
 
