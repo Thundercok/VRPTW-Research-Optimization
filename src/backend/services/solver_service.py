@@ -63,6 +63,35 @@ except ImportError:
     sys.modules["torch.optim"] = mock_optim
     import torch
 
+try:
+    import numpy
+except ImportError:
+    import types
+    mock_numpy = types.ModuleType("numpy")
+    sys.modules["numpy"] = mock_numpy
+
+try:
+    import pandas
+except ImportError:
+    import types
+    class DummyDataFrame:
+        pass
+    mock_pandas = types.ModuleType("pandas")
+    mock_pandas.DataFrame = DummyDataFrame
+    sys.modules["pandas"] = mock_pandas
+
+try:
+    import numba
+except ImportError:
+    import types
+    def mock_njit(*args, **kwargs):
+        if len(args) == 1 and callable(args[0]):
+            return args[0]
+        return lambda f: f
+    mock_numba = types.ModuleType("numba")
+    mock_numba.njit = mock_njit
+    sys.modules["numba"] = mock_numba
+
 from fastapi import HTTPException
 from models.schemas import JobRequest
 from services.research_adapter import build_inst, plan_to_payload
