@@ -1,0 +1,52 @@
+[debug] [2026-05-19T03:24:59.101Z] ----------------------------------------------------------------------
+[debug] [2026-05-19T03:24:59.103Z] Command:       /Users/thundercock2/.nvm/versions/node/v20.18.0/bin/node /Users/thundercock2/.nvm/versions/node/v20.18.0/bin/firebase emulators:start --only auth,hosting
+[debug] [2026-05-19T03:24:59.103Z] CLI Version:   15.18.0
+[debug] [2026-05-19T03:24:59.103Z] Platform:      darwin
+[debug] [2026-05-19T03:24:59.103Z] Node Version:  v20.18.0
+[debug] [2026-05-19T03:24:59.103Z] Time:          Tue May 19 2026 10:24:59 GMT+0700 (Indochina Time)
+[debug] [2026-05-19T03:24:59.103Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-05-19T03:25:00.019Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-05-19T03:25:00.020Z] > authorizing via signed-in user (cathuys69@gmail.com)
+[info] i  emulators: Starting emulators: auth, hosting {"metadata":{"emulator":{"name":"hub"},"message":"Starting emulators: auth, hosting"}}
+[debug] [2026-05-19T03:25:00.539Z] [logging] Logging Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2026-05-19T03:25:00.539Z] [auth] Authentication Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2026-05-19T03:25:00.539Z] [hosting] Hosting Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2026-05-19T03:25:00.539Z] assigned listening specs for emulators {"user":{"hub":[{"address":"127.0.0.1","family":"IPv4","port":4400},{"address":"::1","family":"IPv6","port":4400}],"ui":[{"address":"127.0.0.1","family":"IPv4","port":4000},{"address":"::1","family":"IPv6","port":4000}],"logging":[{"address":"127.0.0.1","family":"IPv4","port":4500}],"auth":[{"address":"127.0.0.1","family":"IPv4","port":9099}],"hosting":[{"address":"127.0.0.1","family":"IPv4","port":5050}]},"metadata":{"message":"assigned listening specs for emulators"}}
+[debug] [2026-05-19T03:25:00.542Z] Write emulator hub locator at /var/folders/xb/k2ck7tjx0j5gskqznf3ql7480000gn/T/hub-vrptw-cd89d.json
+[debug] [2026-05-19T03:25:05.630Z] Checked if tokens are valid: true, expires at: 1779164491764
+[debug] [2026-05-19T03:25:05.630Z] Checked if tokens are valid: true, expires at: 1779164491764
+[debug] [2026-05-19T03:25:05.631Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/vrptw-cd89d/sites 
+[debug] [2026-05-19T03:25:07.494Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/vrptw-cd89d/sites 200
+[debug] [2026-05-19T03:25:07.507Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/vrptw-cd89d/sites {"sites":[{"name":"projects/vrptw-cd89d/sites/vrptw-cd89d","defaultUrl":"https://vrptw-cd89d.web.app","appId":"1:64698467415:web:60b40aec4ea26fd45f4f12","type":"DEFAULT_SITE"}]}
+[debug] [2026-05-19T03:25:07.510Z] Checked if tokens are valid: true, expires at: 1779164491764
+[debug] [2026-05-19T03:25:07.510Z] Checked if tokens are valid: true, expires at: 1779164491764
+[debug] [2026-05-19T03:25:07.511Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/vrptw-cd89d/webApps/1:64698467415:web:60b40aec4ea26fd45f4f12/config [none]
+[debug] [2026-05-19T03:25:08.849Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/vrptw-cd89d/webApps/1:64698467415:web:60b40aec4ea26fd45f4f12/config 200
+[debug] [2026-05-19T03:25:08.850Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/vrptw-cd89d/webApps/1:64698467415:web:60b40aec4ea26fd45f4f12/config {"projectId":"vrptw-cd89d","appId":"1:64698467415:web:60b40aec4ea26fd45f4f12","storageBucket":"vrptw-cd89d.firebasestorage.app","apiKey":"AIzaSyAUBSuO9KRa9UNeO9Btb1A-zwWoCfRcfkY","authDomain":"vrptw-cd89d.firebaseapp.com","messagingSenderId":"64698467415","measurementId":"G-QXLLWR6RLP","projectNumber":"64698467415","version":"2"}
+[debug] [2026-05-19T03:25:08.866Z] Checked if tokens are valid: true, expires at: 1779164491764
+[debug] [2026-05-19T03:25:08.866Z] Checked if tokens are valid: true, expires at: 1779164491764
+[debug] [2026-05-19T03:25:08.867Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/vrptw-cd89d [none]
+[debug] [2026-05-19T03:25:09.222Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/vrptw-cd89d 200
+[debug] [2026-05-19T03:25:09.222Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/vrptw-cd89d {"projectId":"vrptw-cd89d","projectNumber":"64698467415","displayName":"VRPTW","name":"projects/vrptw-cd89d","resources":{"hostingSite":"vrptw-cd89d"},"state":"ACTIVE","etag":"1_e769fa42-b3bd-4702-a076-c5946a56ce1a"}
+[info] i  hosting[vrptw-cd89d]: Serving hosting files from: dist {"metadata":{"emulator":{"name":"hosting"},"message":"Serving hosting files from: \u001b[1mdist\u001b[22m"}}
+[info] ✔  hosting[vrptw-cd89d]: Local server: http://127.0.0.1:5050 {"metadata":{"emulator":{"name":"hosting"},"message":"Local server: \u001b[4m\u001b[1mhttp://127.0.0.1:5050\u001b[22m\u001b[24m"}}
+[debug] [2026-05-19T03:25:09.316Z] Could not find VSCode notification endpoint: FetchError: request to http://localhost:40001/vscode/notify failed, reason: . If you are not running the Firebase SQL Connect VSCode extension, this is expected and not an issue.
+[info] 
+┌─────────────────────────────────────────────────────────────┐
+│ ✔  All emulators ready! It is now safe to connect your app. │
+│ i  View Emulator UI at http://127.0.0.1:4000/               │
+└─────────────────────────────────────────────────────────────┘
+
+┌────────────────┬────────────────┬────────────────────────────┐
+│ Emulator       │ Host:Port      │ View in Emulator UI        │
+├────────────────┼────────────────┼────────────────────────────┤
+│ Authentication │ 127.0.0.1:9099 │ http://127.0.0.1:4000/auth │
+├────────────────┼────────────────┼────────────────────────────┤
+│ Hosting        │ 127.0.0.1:5050 │ n/a                        │
+└────────────────┴────────────────┴────────────────────────────┘
+  Emulator Hub host: 127.0.0.1 port: 4400
+  Other reserved ports: 4500
+
+Issues? Report them at https://github.com/firebase/firebase-tools/issues and attach the *-debug.log files.
+ 

@@ -1,6 +1,11 @@
 import os
 import firebase_admin
-from firebase_admin import credentials
+from firebase_admin import credentials, firestore
+
+_db = None
+
+def is_firebase_enabled() -> bool:
+    return bool(firebase_admin._apps)
 
 def init_firebase():
     """Initializes Firebase Admin SDK supporting both Emulator and Prod contexts."""
@@ -21,3 +26,11 @@ def init_firebase():
         cred = credentials.Certificate(cred_path)
         if not firebase_admin._apps:
             firebase_admin.initialize_app(cred)
+
+
+def get_db():
+    global _db
+    if _db is None:
+        init_firebase()
+        _db = firestore.client()
+    return _db

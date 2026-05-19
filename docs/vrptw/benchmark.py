@@ -107,7 +107,8 @@ def _diversified_init(run_idx: int, inst: Inst, archive: EliteArchive,
     if run_idx == 0:
         return base
     if run_idx == 1 and base is not None:
-        random.seed(cfg.seed + 7919); np.random.seed(cfg.seed + 7919)
+        inst_hash = hash(inst.name) % 100_000
+        random.seed(cfg.seed + 7919 + inst_hash); np.random.seed(cfg.seed + 7919 + inst_hash)
         size = max(4, int(0.20 * inst.n))
         dest, removed = op_shaw(base.copy(), size)
         cand = op_regret_2(dest, removed)
@@ -154,7 +155,9 @@ def run_benchmark(
     wall_start = time.time()
 
     for inst_idx, inst in enumerate(instances):
-        dataset = "RC1" if inst.name[2] == "1" else "RC2"
+        dataset = ("RC1" if inst.name.upper().startswith("RC1") else
+           "RC2" if inst.name.upper().startswith("RC2") else
+           inst.name[:2].upper())
         for algo in algorithms:
             algo_label = canonical_algo_label(algo)
             if (inst.name, algo_label) in completed:
@@ -202,7 +205,7 @@ def run_benchmark(
             bks = BKS.get(inst.name)
             nv_inflated = (bks is not None
                            and float(np.mean(nv_v)) > bks["nv"] + 0.4
-                           and gap_v[0] is not None
+                           and all(g is not None for g in gap_v)
                            and float(np.mean(gap_v)) < 0)
             if nv_inflated:
                 print(f"  ⚠️  NV_mean={np.mean(nv_v):.1f} > BKS_NV={bks['nv']} "
@@ -211,7 +214,7 @@ def run_benchmark(
             row = {
                 "Dataset":     dataset,
                 "Instance":    inst.name,
-                "Algorithm":   run_results[-1][0]["algo"],
+                "Algorithm":   algo_label,
                 "NV_mean":     round(float(np.mean(nv_v)),  2),
                 "NV_std":      round(float(np.std(nv_v)),   2),
                 "NV_diff":     round(float(np.mean(nvd_v)), 2) if nvd_v[0] is not None else None,
@@ -249,8 +252,6 @@ def run_benchmark(
 # ---------------------------------------------------------------------------
 def print_summary_table(df: pd.DataFrame) -> None:
     df = normalize_algorithm_frame(df)
-
-    # Completeness check
     expected = {"RC1": 8, "RC2": 8}
     for ds, exp_n in expected.items():
         for algo in df[df["Dataset"] == ds]["Algorithm"].dropna().unique():

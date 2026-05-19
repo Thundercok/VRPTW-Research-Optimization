@@ -6,8 +6,8 @@ from api.dependencies import require_user
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi import Path as ApiPath
 from models.schemas import RoleUpdateRequest
-from services.auth_service import auth_service
 from services.auth import auth_service
+
 router = APIRouter(tags=["admin"])
 
 

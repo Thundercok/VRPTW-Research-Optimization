@@ -24,7 +24,7 @@ for candidate in (_ROOT, _ROOT / "docs"):
     if candidate.exists():
         sys.path.insert(0, str(candidate))
 
-from vrptw_clean import ALNSSolver, Config, PlateauHybridSolver  # noqa: E402
+from vrptw import ALNSSolver, Config, PlateauHybridSolver  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
