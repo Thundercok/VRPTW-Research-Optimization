@@ -1,6 +1,6 @@
 from api.dependencies import require_user
-from fastapi import APIRouter, Depends, Request, HTTPException, status
 from core.rate_limit import AUTH_TOKEN_LIMIT, limiter
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 router = APIRouter(tags=["auth"])
 
