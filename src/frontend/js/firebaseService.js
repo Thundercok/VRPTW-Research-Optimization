@@ -1,4 +1,5 @@
 import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+
 import {
   getFirestore,
   serverTimestamp,
@@ -11,6 +12,7 @@ import {
 // Native Auth Imports
 import { getAuth, signInWithEmailAndPassword, connectAuthEmulator } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 import { firebaseConfig, hasFirebaseConfig } from "./firebaseConfig.js";
+
 
 class FirebaseService {
   constructor() {
@@ -156,4 +158,10 @@ class FirebaseService {
   }
 }
 
+// Singleton instance — initialized once at module load.
+// Auth and db are exposed via .auth / .db so other modules can import them directly.
 export const firebaseService = new FirebaseService();
+
+// Named convenience exports for modules that destructure-import { auth, db }
+export const auth = firebaseService.auth;
+export const db   = firebaseService.db;

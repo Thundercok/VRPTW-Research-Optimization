@@ -15,7 +15,7 @@ def init_firebase():
         # when running against local emulators.
         if not firebase_admin._apps:
             firebase_admin.initialize_app(options={
-                'projectId': os.getenv("FIREBASE_PROJECT_ID", "vrptw-cd89d")
+                'projectId': os.getenv("FIREBASE_PROJECT_ID", "vrptw-54d81")
             })
     else:
         # Standard production credential resolution path

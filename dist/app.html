@@ -4,231 +4,154 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>VRPTW AI Dispatch | Workspace</title>
+  <title>VRPTW | Ops Control Tower</title>
 
-  <!-- FIX 1: Cache-busting Leaflet to bypass ghost CSP blocks and fix Variable L -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css?v=force" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js?v=force"></script>
-
-  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-  <link rel="stylesheet" href="css/style.css?v=20260429a" />
-
-  <script type="importmap">
-      {
-        "imports": {
-          "firebase/app": "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js",
-          "firebase/auth": "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js",
-          "firebase/firestore": "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js",
-          "firebase/analytics": "https://www.gstatic.com/firebasejs/10.12.5/firebase-analytics.js"
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { 900: '#0f172a', 600: '#2563eb', 500: '#3b82f6' }, // Corporate Slates & Blues
+            status: { safe: '#10b981', warn: '#f59e0b', danger: '#ef4444' } // Strict Semantic Colors
+          }
         }
       }
+    }
   </script>
-  <script type="module">
-    // 1. Import your unified Firebase Service
-    import { firebaseService } from "./js/firebaseService.js";
-    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 
-    // 2. THE AUTHENTICATION GUARD
-    if (firebaseService.auth) {
-      onAuthStateChanged(firebaseService.auth, (user) => {
-        if (!user) {
-          // Kick unauthenticated users back to login
-          window.location.replace("auth.html");
-        } else {
-          // User is valid. Reveal the dashboard.
-          document.getElementById('app-shell').classList.remove('hidden');
-          const emailElement = document.getElementById('user-email');
-          if (emailElement) emailElement.textContent = user.email;
-        }
-      });
-    } else {
-      // Fallback if Firebase is disabled (Demo Mode)
-      document.getElementById('app-shell').classList.remove('hidden');
+  <script type="importmap">
+    {
+      "imports": {
+        "firebase/app": "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js",
+        "firebase/auth": "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js",
+        "firebase/firestore": "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js"
+      }
     }
   </script>
 </head>
 
-<body>
-  <a class="back-to-landing" href="index.html" title="Back to landing page">&larr; Home</a>
-  <button id="lang-toggle" class="lang-fab" type="button" aria-label="Switch language"
-    title="Switch language">VN</button>
-  <button id="help-button" class="help-fab" type="button" aria-label="Open quick help" title="Quick help (Shift+?)">
-    <span aria-hidden="true">?</span>
-  </button>
+<body class="h-screen w-screen overflow-hidden bg-slate-50 text-slate-800 flex flex-col font-sans">
 
-  <div id="app-shell" class="app-shell hidden">
-    <aside class="sidebar">
-      <div class="sidebar-head">
-        <p class="tag">PROJECT NEXUS</p>
-        <h1>VRPTW</h1>
-        <p id="sidebar-subtitle" class="sidebar-subtitle">Ops Control</p>
+  <header class="h-16 bg-brand-900 text-white flex items-center justify-between px-6 shadow-md z-20 shrink-0">
+    <div class="flex items-center gap-4">
+      <h1 class="text-xl font-bold tracking-tight">VRPTW <span class="font-light text-slate-400">Control Tower</span>
+      </h1>
+      <span id="connection-status"
+        class="px-2 py-1 text-xs font-semibold bg-status-safe/20 text-status-safe rounded-full border border-status-safe/30">Live
+        (Firebase)</span>
+    </div>
+
+    <div class="hidden md:flex gap-8 items-center text-sm">
+      <div class="flex flex-col items-center"><span class="text-slate-400 text-xs">Total Orders</span><strong
+          id="kpi-orders" class="text-lg">142</strong></div>
+      <div class="flex flex-col items-center"><span class="text-slate-400 text-xs">Active Fleet</span><strong
+          id="kpi-fleet" class="text-lg">18/24</strong></div>
+      <div class="flex flex-col items-center"><span class="text-slate-400 text-xs">SLA Breaches</span><strong
+          id="kpi-breaches" class="text-lg text-status-danger">2</strong></div>
+    </div>
+
+    <div class="flex gap-4 items-center">
+      <button id="btn-open-config"
+        class="bg-brand-600 hover:bg-brand-500 text-white px-4 py-2 text-sm font-semibold rounded shadow transition-colors">
+        + New Routing Plan
+      </button>
+      <div class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-xs" title="Operator Profile">
+        OP</div>
+    </div>
+  </header>
+
+  <main class="flex-1 flex overflow-hidden relative">
+
+    <aside class="w-80 bg-white border-r border-slate-200 shadow-xl z-10 flex flex-col shrink-0">
+      <div class="p-4 border-b border-slate-100 bg-slate-50/50">
+        <h2 class="text-sm font-bold text-slate-500 uppercase tracking-wider">Exception Queue</h2>
       </div>
 
-      <div class="left-panel">
-        <div class="panel-head">
-          <h2 id="config-title">Configuration</h2>
-          <span id="connection-pill" class="pill soft">Offline</span>
-        </div>
-        <p id="config-note" class="panel-note">Fleet, data, import.</p>
+      <div id="fleet-list" class="flex-1 overflow-y-auto p-2 space-y-1">
 
-        <label class="switch-row" for="mode-toggle">
-          <span id="mode-toggle-label">Data Mode</span>
-          <div class="toggle-wrap">
-            <span>Solomon RC</span>
-            <input id="mode-toggle" type="checkbox" />
-            <span>Real Data</span>
+        <button
+          class="w-full text-left p-3 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-all group flex items-start gap-3">
+          <div class="w-3 h-3 rounded-full bg-status-danger mt-1.5 shrink-0 shadow-[0_0_8px_rgba(239,68,68,0.6)]"></div>
+          <div>
+            <h3 class="text-sm font-semibold text-slate-900 group-hover:text-brand-600">Vehicle 04 <span
+                class="text-xs font-normal text-slate-500 ml-1">#ALNS-92</span></h3>
+            <p class="text-xs text-slate-600 mt-0.5">SLA Breach Warning: Cust_12 window closes in 14m.</p>
           </div>
-        </label>
+        </button>
 
-        <div id="dataset-picker" class="field dataset-picker-field">
-          <span id="dataset-picker-label">Solomon Instance</span>
-          <div class="dataset-picker-row">
-            <select id="dataset-select" class="dataset-select">
-              <option value="demo" selected>Demo (12 customers, HCMC)</option>
-            </select>
-            <button id="load-dataset" class="btn ghost" type="button">Load</button>
+        <button
+          class="w-full text-left p-3 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-all group flex items-start gap-3">
+          <div class="w-3 h-3 rounded-full bg-status-safe mt-1.5 shrink-0"></div>
+          <div>
+            <h3 class="text-sm font-semibold text-slate-900 group-hover:text-brand-600">Vehicle 01 <span
+                class="text-xs font-normal text-slate-500 ml-1">#ALNS-92</span></h3>
+            <p class="text-xs text-slate-600 mt-0.5">On route to Cust_03. ETA 10:45 AM.</p>
           </div>
-        </div>
+        </button>
 
-        <label class="field">
-          <span>Vehicles: <strong id="vehicles-value">4</strong></span>
-          <input id="vehicles-slider" type="range" min="1" max="30" step="1" value="4" />
-        </label>
-
-        <label class="field">
-          <span>Capacity: <strong id="capacity-value">120</strong></span>
-          <input id="capacity-slider" type="range" min="10" max="1000" step="10" value="120" />
-        </label>
-
-        <div class="field">
-          <span id="import-label">Import from Excel / CSV</span>
-          <div id="dropzone" class="dropzone">
-            <input id="excel-input" type="file" accept=".xlsx,.xls,.csv" hidden />
-            <div class="dropzone-copy">
-              <strong id="dropzone-title">Drag and drop a file here</strong>
-              <p id="dropzone-copy">.xlsx, .xls, .csv or paste data directly.</p>
-            </div>
-            <button id="pick-excel" class="btn ghost" type="button">Choose File</button>
-          </div>
-        </div>
-
-        <p class="hint">Click the map to drop a pin quickly.</p>
-        <p id="status" class="status">Ready.</p>
-      </div>
-
-      <div class="sidebar-foot">
-        <div class="session-box">
-          <p id="session-kicker" class="section-kicker">Session</p>
-          <p id="user-email" class="session-email">Loading...</p>
-          <button id="btn-logout" class="btn ghost" type="button">Logout</button>
-          <a id="feedback-link" class="btn ghost" href="feedback.html">Feedback</a>
-          <a id="feedback-admin-link" class="btn ghost hidden" href="feedback_admin.html">Feedback Inbox</a>
-        </div>
       </div>
     </aside>
 
-    <main class="workspace">
-      <nav class="tabbar" role="tablist" aria-label="Dashboard tabs">
-        <button class="tab-btn active" data-tab="overview" role="tab" aria-selected="true">Overview</button>
-        <button class="tab-btn" data-tab="maps" role="tab" aria-selected="false">Split Map</button>
-        <button class="tab-btn" data-tab="results" role="tab" aria-selected="false">Results</button>
-        <button class="tab-btn" data-tab="archive" role="tab" aria-selected="false">Archive</button>
-        <span class="tabbar-indicator" aria-hidden="true"></span>
-      </nav>
+    <section class="flex-1 relative bg-slate-100">
+      <div id="map-core" class="absolute inset-0 z-0"></div>
+    </section>
 
-      <section class="main-panel">
-        <header class="hero tab-panel active" data-panel="overview">
-          <div class="hero-copy">
-            <p id="hero-kicker" class="tag">Executive Control Panel</p>
-            <h2 id="hero-title">Real-time AI-powered delivery dispatch.</h2>
-            <p id="hero-copy">Focus on core data and operational decisions.</p>
+  </main>
+
+  <div id="config-modal"
+    class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh]">
+      <div class="p-6 border-b border-slate-100 flex justify-between items-center">
+        <h2 class="text-xl font-bold text-slate-800">Configure Routing Simulation</h2>
+        <button id="btn-close-config" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
+      </div>
+
+      <div class="p-6 overflow-y-auto space-y-6">
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-2">Solomon Instance</label>
+          <select
+            class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none">
+            <option value="demo">Demo (12 customers, HCMC)</option>
+            <option value="r101">R101 (100 customers)</option>
+          </select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-6">
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-2">Fleet Size: <span id="val-vehicles"
+                class="text-brand-600">4</span></label>
+            <input type="range" min="1" max="30" value="4" class="w-full accent-brand-600" />
           </div>
-          <div class="hero-stats">
-            <article class="hero-stat"><span>Input</span><strong>Excel + Pin + Search</strong></article>
-            <article class="hero-stat"><span>Compute</span><strong>Queue Background</strong></article>
-            <article class="hero-stat"><span>Benchmark</span><strong>DDQN vs ALNS</strong></article>
-            <article class="hero-stat"><span>Constraints</span><strong>Capacity + Time Windows</strong></article>
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-2">Capacity: <span id="val-capacity"
+                class="text-brand-600">120</span></label>
+            <input type="range" min="10" max="1000" step="10" value="120" class="w-full accent-brand-600" />
           </div>
-        </header>
+        </div>
 
-        <section class="table-card tab-panel active" data-panel="overview">
-          <div class="row-head">
-            <div>
-              <p id="demo-kicker" class="section-kicker">VRPTW Inference Demo</p>
-              <h2 id="customer-title">Customer List</h2>
-              <p id="customer-note" class="panel-note">Each row has a time window (<strong>Ready / Due</strong>) and
-                <strong>Service</strong> duration.
-              </p>
-            </div>
-            <div class="table-actions">
-              <button id="add-row" class="btn ghost icon-btn icon-only-btn" type="button" title="Add row"><span
-                  class="btn-icon">＋</span></button>
-              <button id="delete-selected" class="btn ghost icon-btn icon-only-btn" type="button"
-                title="Delete selected rows"><span class="btn-icon">🗑</span></button>
-              <button id="run-model" class="btn danger icon-btn" type="button">
-                <span class="btn-icon">▶</span><span>Run Model</span>
-              </button>
-            </div>
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-2">Custom Import (CSV/Excel)</label>
+          <div
+            class="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center hover:bg-slate-50 hover:border-brand-500 transition-colors cursor-pointer">
+            <p class="text-sm text-slate-600 font-medium">Drag and drop file here, or click to browse</p>
           </div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Pick</th>
-                  <th>ID</th>
-                  <th>Name</th>
-                  <th>Address</th>
-                  <th>Lat</th>
-                  <th>Lng</th>
-                  <th>Demand</th>
-                  <th>Ready</th>
-                  <th>Due</th>
-                  <th>Service</th>
-                </tr>
-              </thead>
-              <tbody id="customer-rows"></tbody>
-            </table>
-            <div id="table-empty" class="empty-state hidden">
-              <div class="empty-icon">⌁</div>
-              <h3>No customer data yet</h3>
-              <p>Import from Excel/CSV or load sample data to get started.</p>
-            </div>
-          </div>
-        </section>
+        </div>
+      </div>
 
-        <section class="metrics-grid tab-panel" data-panel="results">
-          <div class="analysis-scope-banner live-banner">
-            <span class="analysis-scope-tag">Live Run Output</span>
-            <span class="analysis-scope-text">Results from the current model run on your active dataset.</span>
-          </div>
-        </section>
-
-        <section class="split-grid tab-panel" data-panel="maps">
-          <article class="map-card">
-            <h3><span class="mini-icon">◆</span> DDQN</h3>
-            <div id="map-ddqn" class="map"></div>
-          </article>
-          <article class="map-card">
-            <h3><span class="mini-icon">◆</span> ALNS</h3>
-            <div id="map-alns" class="map"></div>
-          </article>
-        </section>
-
-        <section class="analysis-card tab-panel" data-panel="archive"></section>
-      </section>
-
-      <section id="admin-panel" class="table-card hidden"></section>
-    </main>
+      <div class="p-6 border-t border-slate-100 bg-slate-50 rounded-b-xl flex justify-end gap-3">
+        <button id="btn-cancel-config"
+          class="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800">Cancel</button>
+        <button id="btn-run-model"
+          class="bg-brand-600 hover:bg-brand-500 text-white px-6 py-2 text-sm font-bold rounded shadow">Run
+          Optimization</button>
+      </div>
+    </div>
   </div>
 
-  <div id="loading" class="loading hidden"></div>
-  <div id="toast-root" class="toast-root" aria-live="polite" aria-atomic="true"></div>
-  <div id="help-modal" class="help-modal hidden" role="dialog"></div>
-  <div id="analysis-modal" class="analysis-modal hidden" role="dialog"></div>
-
-  <!-- 4. LOAD YOUR CUSTOM SCRIPTS LAST -->
-  <script src="js/observability.js?v=20260429a"></script>
-  <script type="module" src="js/main.js?v=20260429a"></script>
+  <script type="module" src="./js/app.js"></script>
 </body>
 
 </html>

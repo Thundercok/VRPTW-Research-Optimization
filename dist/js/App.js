@@ -1,8 +1,14 @@
-import { firebaseService } from './firebaseService.js';
+import { firebaseService, db, auth } from './firebaseService.js';
 import { API_BASE } from './constants.js';
 import { createInitialState } from './createInitialState.js';
 import { getDemoLang, setDemoLang, toggleDemoLang } from './demoLang.js';
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { MapController } from './MapController.js';
+import { TelemetryService } from './TelemetryService.js';
+
+// Initialize the map UI shell immediately (no auth required)
+const map = new MapController('map-core');
+// TelemetryService is constructed but NOT started — streaming begins in enterApp() after login
+const telemetry = new TelemetryService(db, map);
 
 const APP_COPY = {
   en: {
@@ -1009,6 +1015,17 @@ export class App {
 
     this.setStatus('Ready for operations.', 'ok');
     this.setImportEnabled(this.state.mode === 'real');
+
+    // Start Firestore real-time telemetry only after the user is authenticated.
+    // Calling onSnapshot before login triggers a known CORS bug on the emulator's
+    // gRPC-Web streaming channel (/Listen/channel?TYPE=xmlhttp).
+    if (db) {
+      try {
+        telemetry.startStreaming();
+      } catch (e) {
+        console.warn('[Telemetry] Firestore streaming unavailable:', e?.message || e);
+      }
+    }
     this.updateDatasetPickerVisibility();
     if (this.state.mode === 'sample') {
       this.loadAvailableDatasets().then(() => this.loadSolomonDataset('demo'));

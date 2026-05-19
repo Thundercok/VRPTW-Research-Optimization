@@ -1,4 +1,5 @@
 import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+
 import {
   getFirestore,
   serverTimestamp,
@@ -11,6 +12,7 @@ import {
 // Native Auth Imports
 import { getAuth, signInWithEmailAndPassword, connectAuthEmulator } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 import { firebaseConfig, hasFirebaseConfig } from "./firebaseConfig.js";
+
 
 class FirebaseService {
   constructor() {
@@ -63,7 +65,23 @@ class FirebaseService {
   }
 
   makeUserKey(email) {
-    return btoa(unescape(encodeURIComponent(email))).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+    return String(email || '').trim().toLowerCase();
+  }
+
+  async markLogout() {
+    if (!this.enabled || !this.db || !this.userKey) return;
+    try {
+      await setDoc(
+        doc(this.db, "users", this.userKey),
+        {
+          lastLogoutAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        },
+        { merge: true }
+      );
+    } catch (error) {
+      console.warn("firebase markLogout skipped:", error?.message || error);
+    }
   }
 
   async logEvent(type, meta = {}) {
@@ -140,4 +158,10 @@ class FirebaseService {
   }
 }
 
+// Singleton instance — initialized once at module load.
+// Auth and db are exposed via .auth / .db so other modules can import them directly.
 export const firebaseService = new FirebaseService();
+
+// Named convenience exports for modules that destructure-import { auth, db }
+export const auth = firebaseService.auth;
+export const db   = firebaseService.db;

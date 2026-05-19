@@ -113,18 +113,16 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
     DEFAULT_CSP = (
         "default-src 'self'; "
-        # 1. Scripts: Code runtime execution sources
         "script-src 'self' 'unsafe-inline' 'unsafe-eval' "
             "https://unpkg.com "
             "https://cdn.jsdelivr.net "
             "https://apis.google.com "
-            "https://www.gstatic.com; "
-        # 2. Styles: Leaflet asset sheets and frontend inline styling injections
+            "https://www.gstatic.com "
+            "https://cdn.tailwindcss.com; "
         "style-src 'self' 'unsafe-inline' "
             "https://unpkg.com "
             "https://cdn.jsdelivr.net "
             "https://fonts.googleapis.com; "
-        # 3. Network Connections: API calls, WebSockets, and Local Firebase Emulators
         "connect-src 'self' "
             "https://*.firebaseio.com "
             "https://*.googleapis.com "
@@ -133,13 +131,12 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "http://localhost:* "
             "ws://127.0.0.1:* "
             "ws://localhost:*; "
-        # 4. Images: Map background tiles (OSM), Google metadata gifs, and data-URIs
         "img-src 'self' data: blob: "
             "https://*.openstreetmap.org "
+            "https://*.basemaps.cartocdn.com "
             "https://unpkg.com/leaflet@* "
             "https://www.google.com "
             "https://*.gstatic.com; "
-        # 5. Frames: Embedded Firebase Emulator iframe auth handshakes
         "frame-src 'self' "
             "http://127.0.0.1:* "
             "http://localhost:* "
