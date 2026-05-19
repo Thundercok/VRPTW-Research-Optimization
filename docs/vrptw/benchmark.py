@@ -6,6 +6,7 @@ import torch
 import numpy as np
 import pandas as pd
 from typing import List, Dict, Tuple, Optional, Iterable
+import multiprocessing as mp
 from concurrent.futures import ProcessPoolExecutor
 from .config import Config, BKS, canonical_algo_label, normalize_algorithm_frame, ALGO_ORTOOLS, ALGO_ALNS_BASE, ALGO_HYBRID_FIXED, ALGO_HYBRID_RULE, ALGO_HYBRID_DDQN, ALGO_HYBRID_DDQN_TRANSFER, ALGO_HYBRID_DDQN_TRANSFER_RC2, ALGO_HYBRID_DDQN_TRANSFER_DR
 from .core import Inst, Plan
@@ -126,6 +127,7 @@ def run_benchmark(
     archive:          Optional[EliteArchive] = None,
     checkpoint_path:  Optional[str]  = None,
 ) -> pd.DataFrame:
+    cfg.validate()
     instances   = list(instances)
     result_path = result_path or os.path.join(cfg.output_dir, "benchmark_clean.csv")
     ckpt_path   = checkpoint_path or os.path.join(cfg.output_dir, "benchmark_checkpoint.csv")
@@ -176,7 +178,6 @@ def run_benchmark(
             _n_workers = 1 if algo_label == ALGO_ORTOOLS else n_workers
             
             # --- THE SPAWN FIX ---
-            import multiprocessing as mp
             ctx = mp.get_context('spawn')
             with ProcessPoolExecutor(max_workers=_n_workers, mp_context=ctx) as ex:
                 run_results = list(ex.map(_benchmark_worker, worker_args))

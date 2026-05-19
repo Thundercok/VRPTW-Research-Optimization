@@ -1,13 +1,7 @@
 from __future__ import annotations
 import numpy as np
 from typing import List, Tuple, Optional
-from .core import Inst, Plan, _route_ok, _route_cost
-
-def _check_route(route: List[int], inst: Inst) -> bool:
-    return bool(_route_ok(
-        np.array(route, np.int64), inst.demands, inst.capacity,
-        inst.ready_times, inst.due_times, inst.service_times, inst.dist,
-    ))
+from .core import Inst, Plan, _route_ok, _route_cost, _check_route, _route_duration_no_return
 
 
 def _best_insert_position(node: int, route: List[int], inst: Inst) -> Tuple[float, Optional[int]]:
@@ -56,15 +50,6 @@ def _route_avg_slack(route: List[int], inst: Inst) -> float:
         prev = node
     return slack / len(route)
 
-
-def _route_duration_no_return(route: List[int], inst: Inst) -> float:
-    t, prev = 0.0, 0
-    for node in route:
-        t += inst.dist[prev, node]
-        t  = max(t, inst.ready_times[node])
-        t += inst.service_times[node]
-        prev = node
-    return float(t)
 
 
 def build_greedy(inst: Inst, algo: str = "") -> Plan:

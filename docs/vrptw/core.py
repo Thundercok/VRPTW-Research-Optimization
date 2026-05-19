@@ -128,6 +128,7 @@ def _invalidate(plan: Plan) -> Plan:
     return plan
 
 def _route_duration_no_return(route: List[int], inst: "Inst") -> float:
+    """Calculate duration of a route without returning to depot."""
     if not route:
         return 0.0
     t, prev = 0.0, 0
@@ -135,19 +136,14 @@ def _route_duration_no_return(route: List[int], inst: "Inst") -> float:
         t += inst.dist[prev, node]
         t  = max(t, float(inst.ready_times[node])) + float(inst.service_times[node])
         prev = node
-    return t
+    return float(t)
 
 def _check_route(route: List[int], inst: "Inst") -> bool:
-    if sum(inst.demands[n] for n in route) > inst.capacity:
-        return False
-    t, prev = 0.0, 0
-    for node in route:
-        t += inst.dist[prev, node]
-        if t > inst.due_times[node]:
-            return False
-        t  = max(t, float(inst.ready_times[node])) + float(inst.service_times[node])
-        prev = node
-    return True
+    """Check capacity + time-window feasibility (delegates to numba ``_route_ok``)."""
+    return bool(_route_ok(
+        np.array(route, np.int64), inst.demands, inst.capacity,
+        inst.ready_times, inst.due_times, inst.service_times, inst.dist,
+    ))
 
 def _avg_slack(plan: Plan) -> float:
     inst = plan.inst

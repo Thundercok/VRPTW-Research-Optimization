@@ -28,46 +28,79 @@ from vrptw import (
 # ── REQUIRED: all execution must be inside this guard so that spawn workers
 # ── that re-import this script do NOT re-execute the benchmark call.
 if __name__ == "__main__":
-    # ── Configuration ─────────────────────────────────────────────────────
-    cfg = Config(
-        data_path   = "./data/Solomon",
-        output_dir  = "./logs",
-        n_runs      = 3,
-        alns_iterations    = 1200,
-        hybrid_iterations  = 1200,
-        early_stop_patience= 250,
-        polish_iterations  = 80,
-        max_wall_hours     = 9.5,
+    import argparse
+
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    default_data = os.path.join(base_dir, "data", "Solomon")
+    default_logs = os.path.join(base_dir, "logs")
+
+    parser = argparse.ArgumentParser(
+        description="Run VRPTW Solomon benchmark suite.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
+    parser.add_argument("--data-path", type=str, default=default_data, help="Path to Solomon datasets")
+    parser.add_argument("--output-dir", type=str, default=default_logs, help="Directory to save logs/results")
+    parser.add_argument("--runs", type=int, default=3, help="Number of runs per algorithm/instance combo")
+    parser.add_argument("--alns-iters", type=int, default=1200, help="ALNS iteration limit")
+    parser.add_argument("--hybrid-iters", type=int, default=1200, help="Hybrid ALNS/DDQN iteration limit")
+    parser.add_argument("--early-stop", type=int, default=250, help="Early stop patience")
+    parser.add_argument("--polish-iters", type=int, default=80, help="Polish iterations")
+    parser.add_argument("--max-hours", type=float, default=9.5, help="Max wall-clock execution time limit in hours")
+    parser.add_argument(
+        "--algorithms",
+        nargs="+",
+        choices=[ALGO_ALNS_BASE, ALGO_HYBRID_FIXED, ALGO_HYBRID_RULE, ALGO_HYBRID_DDQN],
+        default=[ALGO_ALNS_BASE, ALGO_HYBRID_FIXED, ALGO_HYBRID_RULE, ALGO_HYBRID_DDQN],
+        help="Algorithms to include in benchmark"
+    )
+    parser.add_argument(
+        "--instances",
+        nargs="+",
+        default=[],
+        help="List of specific instance names to run (e.g. RC101 RC201). If empty, runs all available."
     )
 
-    ALGORITHMS = [
-        ALGO_ALNS_BASE,
-        ALGO_HYBRID_FIXED,
-        ALGO_HYBRID_RULE,
-        ALGO_HYBRID_DDQN,
-    ]
+    args = parser.parse_args()
+
+    cfg = Config(
+        data_path=args.data_path,
+        output_dir=args.output_dir,
+        n_runs=args.runs,
+        alns_iterations=args.alns_iters,
+        hybrid_iterations=args.hybrid_iters,
+        early_stop_patience=args.early_stop,
+        polish_iterations=args.polish_iters,
+        max_wall_hours=args.max_hours,
+    )
 
     # ── Load Solomon instances ─────────────────────────────────────────────
     print(f"Loading datasets from: {cfg.data_path}")
-    datasets  = load_datasets(cfg.data_path)
+    datasets = load_datasets(cfg.data_path)
     rc1_insts = datasets.get("rc1", [])
     rc2_insts = datasets.get("rc2", [])
-    all_insts  = rc1_insts + rc2_insts
-    print(f"  RC1: {len(rc1_insts)} instances  |  RC2: {len(rc2_insts)} instances")
+    all_insts = rc1_insts + rc2_insts
+    
+    # Filter by user-requested instances if provided
+    if args.instances:
+        req_lower = {inst.lower() for inst in args.instances}
+        all_insts = [inst for inst in all_insts if inst.name.lower() in req_lower]
+        print(f"Filtered to {len(all_insts)} requested instances: {[i.name for i in all_insts]}")
+    else:
+        print(f"  RC1: {len(rc1_insts)} instances  |  RC2: {len(rc2_insts)} instances")
 
     if not all_insts:
-        print("ERROR: No instances found. Check data_path in Config.")
+        print("ERROR: No matching instances found. Check data-path and instance filters.")
         sys.exit(1)
 
     os.makedirs(cfg.output_dir, exist_ok=True)
 
     # ── Run ───────────────────────────────────────────────────────────────
     df = run_benchmark(
-        instances       = all_insts,
-        algorithms      = ALGORITHMS,
-        cfg             = cfg,
-        result_path     = os.path.join(cfg.output_dir, "benchmark_clean.csv"),
-        checkpoint_path = os.path.join(cfg.output_dir, "benchmark_checkpoint.csv"),
+        instances=all_insts,
+        algorithms=args.algorithms,
+        cfg=cfg,
+        result_path=os.path.join(cfg.output_dir, "benchmark_clean.csv"),
+        checkpoint_path=os.path.join(cfg.output_dir, "benchmark_checkpoint.csv"),
     )
 
     print("\n\n═══ BENCHMARK SUMMARY ═══")

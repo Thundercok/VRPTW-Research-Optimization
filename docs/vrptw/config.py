@@ -8,6 +8,7 @@ from typing import Dict, Tuple
 # BKS table
 # ---------------------------------------------------------------------------
 BKS: Dict[str, Dict[str, float]] = {
+    # RC1
     "RC101": {"nv": 14, "td": 1696.94},
     "RC102": {"nv": 12, "td": 1554.75},
     "RC103": {"nv": 11, "td": 1261.67},
@@ -16,6 +17,7 @@ BKS: Dict[str, Dict[str, float]] = {
     "RC106": {"nv": 11, "td": 1424.73},
     "RC107": {"nv": 11, "td": 1230.48},
     "RC108": {"nv": 10, "td": 1139.82},
+    # RC2
     "RC201": {"nv": 4,  "td": 1406.94},
     "RC202": {"nv": 3,  "td": 1365.64},
     "RC203": {"nv": 3,  "td": 1049.62},
@@ -24,6 +26,34 @@ BKS: Dict[str, Dict[str, float]] = {
     "RC206": {"nv": 3,  "td": 1146.32},
     "RC207": {"nv": 3,  "td": 1061.14},
     "RC208": {"nv": 3,  "td": 828.14},
+    # C1
+    "C101": {"nv": 10, "td": 828.94},
+    "C102": {"nv": 10, "td": 828.94},
+    "C103": {"nv": 10, "td": 828.06},
+    "C104": {"nv": 10, "td": 824.78},
+    "C105": {"nv": 10, "td": 828.94},
+    "C106": {"nv": 10, "td": 828.94},
+    "C107": {"nv": 10, "td": 828.94},
+    "C108": {"nv": 10, "td": 828.94},
+    "C109": {"nv": 10, "td": 828.94},
+    # C2
+    "C201": {"nv": 3, "td": 591.56},
+    "C202": {"nv": 3, "td": 591.56},
+    "C203": {"nv": 3, "td": 591.17},
+    "C204": {"nv": 3, "td": 590.60},
+    "C205": {"nv": 3, "td": 588.88},
+    "C206": {"nv": 3, "td": 588.49},
+    "C207": {"nv": 3, "td": 588.29},
+    "C208": {"nv": 3, "td": 588.32},
+    # R1
+    "R101": {"nv": 19, "td": 1650.80},
+    "R102": {"nv": 17, "td": 1486.86},
+    "R103": {"nv": 13, "td": 1292.67},
+    "R104": {"nv": 9,  "td": 1007.31},
+    "R105": {"nv": 14, "td": 1377.11},
+    # R2
+    "R201": {"nv": 4, "td": 1252.37},
+    "R202": {"nv": 3, "td": 1191.70},
 }
 
 ALGO_ORTOOLS               = "OR-Tools"
@@ -77,8 +107,13 @@ def normalize_algorithm_frame(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def default_data_path() -> str:
+    """Resolve the Solomon data directory relative to this package, not CWD."""
+    _pkg_dir  = os.path.dirname(os.path.abspath(__file__))
+    _docs_dir = os.path.dirname(_pkg_dir)
+    local     = os.path.join(_docs_dir, "data", "Solomon")
+    if os.path.isdir(local):
+        return local
     candidates = [
-        "./data/Solomon",
         "/workspace/data/Solomon",
         "/root/data/Solomon",
         "/kaggle/input/vrptw-benchmark-datasets/data/Solomon",
@@ -86,9 +121,9 @@ def default_data_path() -> str:
         "/content/vrptw-benchmark/data/Solomon",
     ]
     for path in candidates:
-        if os.path.exists(path):
+        if os.path.isdir(path):
             return path
-    return candidates[0]
+    return local  # fall back — caller will get a clear error from load_datasets
 
 
 def default_output_dir() -> str:
@@ -199,6 +234,24 @@ class Config:
     # ── domain randomization ──────────────────────────────────────────────
     domain_randomization_epochs: int = 20
     domain_randomization_batch:  int = 15
+
+    def validate(self) -> None:
+        """Validate configuration settings to prevent runtime failures during long-running tasks."""
+        if self.alns_iterations < 0:
+            raise ValueError(f"alns_iterations must be >= 0, got {self.alns_iterations}")
+        if self.hybrid_iterations < 0:
+            raise ValueError(f"hybrid_iterations must be >= 0, got {self.hybrid_iterations}")
+        if self.early_stop_patience <= 0:
+            raise ValueError(f"early_stop_patience must be > 0, got {self.early_stop_patience}")
+        if not (0.0 <= self.destroy_ratio_min < self.destroy_ratio_max <= 1.0):
+            raise ValueError(
+                f"Invalid destroy ratios: min={self.destroy_ratio_min}, max={self.destroy_ratio_max}. "
+                "Must satisfy 0.0 <= min < max <= 1.0"
+            )
+        if self.max_wall_hours <= 0.0:
+            raise ValueError(f"max_wall_hours must be > 0, got {self.max_wall_hours}")
+        if self.n_runs < 1:
+            raise ValueError(f"n_runs must be >= 1, got {self.n_runs}")
 
 
 # ---------------------------------------------------------------------------

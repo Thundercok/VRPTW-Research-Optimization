@@ -1,8 +1,8 @@
 from __future__ import annotations
 from typing import List, Tuple, Optional
 import numpy as np
-from .core import Inst, Plan
-from .heuristics import _check_route, _route_cost_list, _route_load, _best_insert_position
+from .core import Inst, Plan, _check_route
+from .heuristics import _route_cost_list, _route_load, _best_insert_position
 
 def _two_opt_best(route: List[int], inst: Inst) -> List[int]:
     if len(route) < 4:

@@ -2,9 +2,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import List, Dict, Tuple, Optional
 import numpy as np
-from .core import Inst, Plan
+from .core import Inst, Plan, _check_route
 from .config import Config
-from .heuristics import _route_cost_list, _route_load, _route_avg_slack, _check_route, _insert_customer
+from .heuristics import _route_cost_list, _route_load, _route_avg_slack, _insert_customer
 
 try:
     from scipy.optimize import Bounds, LinearConstraint, milp as _scipy_milp
