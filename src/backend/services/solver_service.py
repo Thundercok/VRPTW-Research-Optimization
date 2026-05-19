@@ -15,7 +15,55 @@ import time
 from pathlib import Path
 from typing import Any
 
-import torch
+try:
+    import torch
+    HAS_TORCH = True
+except ImportError:
+    HAS_TORCH = False
+    import types
+    # Set up mock torch before importing vrptw so compilation and import pass
+    class MockTensor:
+        pass
+
+    class MockDevice:
+        def __init__(self, *args, **kwargs):
+            pass
+
+    class MockModule:
+        def __init__(self, *args, **kwargs):
+            pass
+        def __call__(self, *args, **kwargs):
+            return self
+        def __getattr__(self, name):
+            return MockModule()
+
+    class MockOptimizer:
+        def __init__(self, *args, **kwargs):
+            pass
+
+    mock_torch = types.ModuleType("torch")
+    mock_torch.device = MockDevice
+    mock_torch.Tensor = MockTensor
+    mock_torch.set_num_threads = lambda *args, **kwargs: None
+
+    mock_nn = types.ModuleType("torch.nn")
+    mock_nn.Module = MockModule
+    mock_nn.Sequential = lambda *args, **kwargs: MockModule()
+    mock_nn.Linear = lambda *args, **kwargs: MockModule()
+    mock_nn.LayerNorm = lambda *args, **kwargs: MockModule()
+    mock_nn.ReLU = lambda *args, **kwargs: MockModule()
+
+    mock_functional = types.ModuleType("torch.nn.functional")
+    mock_optim = types.ModuleType("torch.optim")
+    mock_optim.Adam = MockOptimizer
+
+    sys.modules["torch"] = mock_torch
+    sys.modules["torch.nn"] = mock_nn
+    sys.modules["torch.nn.functional"] = mock_functional
+    sys.modules["torch.optim"] = mock_optim
+    import torch
+
+from fastapi import HTTPException
 from models.schemas import JobRequest
 from services.research_adapter import build_inst, plan_to_payload
 
@@ -31,6 +79,13 @@ logger = logging.getLogger(__name__)
 
 def device_summary() -> dict[str, Any]:
     """Inspect the active torch device. Used for /api/health and startup logs."""
+    if not HAS_TORCH:
+        return {
+            "torch_version": "not-installed",
+            "cuda_available": False,
+            "cuda_built": None,
+            "device": "cpu",
+        }
     cuda_available = bool(torch.cuda.is_available())
     info: dict[str, Any] = {
         "torch_version": torch.__version__,
@@ -249,6 +304,11 @@ def _validate(payload: JobRequest) -> None:
 
 
 async def solve_model(payload: JobRequest, matrix: list[list[float]] | None = None) -> dict[str, Any]:
+    if not HAS_TORCH:
+        raise HTTPException(
+            status_code=503,
+            detail="Machine learning solver is disabled because PyTorch is not installed."
+        )
     _validate(payload)
     _log_device_once()
     torch.set_num_threads(max(1, (os.cpu_count() or 4) // 2))
