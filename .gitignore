@@ -68,3 +68,4 @@ __notebook__.ipynb
 CLAUDE.md
 .env.test
 .env.test
+node_modules
