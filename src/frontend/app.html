@@ -3,155 +3,221 @@
 
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>VRPTW | Ops Control Tower</title>
-
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css?v=force" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js?v=force"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            brand: { 900: '#0f172a', 600: '#2563eb', 500: '#3b82f6' }, // Corporate Slates & Blues
-            status: { safe: '#10b981', warn: '#f59e0b', danger: '#ef4444' } // Strict Semantic Colors
-          }
-        }
-      }
-    }
-  </script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nexus | Dispatch Control Tower</title>
 
   <script type="importmap">
-    {
-      "imports": {
-        "firebase/app": "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js",
-        "firebase/auth": "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js",
-        "firebase/firestore": "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js"
+      {
+        "imports": {
+          "firebase/app": "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js",
+          "firebase/auth": "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js",
+          "firebase/firestore": "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js",
+          "firebase/analytics": "https://www.gstatic.com/firebasejs/10.12.5/firebase-analytics.js"
+        }
       }
-    }
   </script>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="css/style.css?v=ForceSafariToLoad1" />
 </head>
 
-<body class="h-screen w-screen overflow-hidden bg-slate-50 text-slate-800 flex flex-col font-sans">
+<body class="light-theme-enforced">
 
-  <header class="h-16 bg-brand-900 text-white flex items-center justify-between px-6 shadow-md z-20 shrink-0">
-    <div class="flex items-center gap-4">
-      <h1 class="text-xl font-bold tracking-tight">VRPTW <span class="font-light text-slate-400">Control Tower</span>
-      </h1>
-      <span id="connection-status"
-        class="px-2 py-1 text-xs font-semibold bg-status-safe/20 text-status-safe rounded-full border border-status-safe/30">Live
-        (Firebase)</span>
-    </div>
-
-    <div class="hidden md:flex gap-8 items-center text-sm">
-      <div class="flex flex-col items-center"><span class="text-slate-400 text-xs">Total Orders</span><strong
-          id="kpi-orders" class="text-lg">142</strong></div>
-      <div class="flex flex-col items-center"><span class="text-slate-400 text-xs">Active Fleet</span><strong
-          id="kpi-fleet" class="text-lg">18/24</strong></div>
-      <div class="flex flex-col items-center"><span class="text-slate-400 text-xs">SLA Breaches</span><strong
-          id="kpi-breaches" class="text-lg text-status-danger">2</strong></div>
-    </div>
-
-    <div class="flex gap-4 items-center">
-      <button id="btn-open-config"
-        class="bg-brand-600 hover:bg-brand-500 text-white px-4 py-2 text-sm font-semibold rounded shadow transition-colors">
-        + New Routing Plan
-      </button>
-      <div class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-xs" title="Operator Profile">
-        OP</div>
-    </div>
-  </header>
-
-  <main class="flex-1 flex overflow-hidden relative">
-
-    <aside class="w-80 bg-white border-r border-slate-200 shadow-xl z-10 flex flex-col shrink-0">
-      <div class="p-4 border-b border-slate-100 bg-slate-50/50">
-        <h2 class="text-sm font-bold text-slate-500 uppercase tracking-wider">Exception Queue</h2>
+  <div id="app-shell" class="saas-layout">
+    <aside class="saas-sidebar">
+      <div class="brand">
+        <div class="brand-logo">N</div>
+        <span class="brand-text">NEXUS OPS</span>
       </div>
 
-      <div id="fleet-list" class="flex-1 overflow-y-auto p-2 space-y-1">
+      <nav class="saas-nav">
+        <p class="nav-label">Planning</p>
+        <a href="#" class="nav-item active">Live Dispatch</a>
+        <a href="#" class="nav-item">Fleet Config</a>
 
-        <button
-          class="w-full text-left p-3 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-all group flex items-start gap-3">
-          <div class="w-3 h-3 rounded-full bg-status-danger mt-1.5 shrink-0 shadow-[0_0_8px_rgba(239,68,68,0.6)]"></div>
-          <div>
-            <h3 class="text-sm font-semibold text-slate-900 group-hover:text-brand-600">Vehicle 04 <span
-                class="text-xs font-normal text-slate-500 ml-1">#ALNS-92</span></h3>
-            <p class="text-xs text-slate-600 mt-0.5">SLA Breach Warning: Cust_12 window closes in 14m.</p>
-          </div>
-        </button>
+        <p class="nav-label" style="margin-top: 24px;">Intelligence</p>
+        <a href="#" class="nav-item">Model Analytics</a>
+        <a href="#" class="nav-item">Settings</a>
+      </nav>
 
-        <button
-          class="w-full text-left p-3 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-all group flex items-start gap-3">
-          <div class="w-3 h-3 rounded-full bg-status-safe mt-1.5 shrink-0"></div>
-          <div>
-            <h3 class="text-sm font-semibold text-slate-900 group-hover:text-brand-600">Vehicle 01 <span
-                class="text-xs font-normal text-slate-500 ml-1">#ALNS-92</span></h3>
-            <p class="text-xs text-slate-600 mt-0.5">On route to Cust_03. ETA 10:45 AM.</p>
-          </div>
-        </button>
-
+      <div class="sidebar-footer">
+        <a href="index.html" class="nav-item"
+          style="color: var(--text-muted); margin-bottom: 12px; font-size: 12px;">&larr; Back to Home</a>
+        <div class="user-badge" id="user-email">guest@nexus.local</div>
+        <button id="btn-logout" class="btn-text">Sign Out</button>
       </div>
     </aside>
 
-    <section class="flex-1 relative bg-slate-100">
-      <div id="map-core" class="absolute inset-0 z-0"></div>
-    </section>
+    <main class="saas-main">
 
-  </main>
+      <header class="saas-header">
+        <div class="header-left">
+          <h1 class="page-title">Route Optimization</h1>
+          <span class="status-pill status-ready" id="status">System Ready</span>
+        </div>
 
-  <div id="config-modal"
-    class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh]">
-      <div class="p-6 border-b border-slate-100 flex justify-between items-center">
-        <h2 class="text-xl font-bold text-slate-800">Configure Routing Simulation</h2>
-        <button id="btn-close-config" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
-      </div>
-
-      <div class="p-6 overflow-y-auto space-y-6">
-        <div>
-          <label class="block text-sm font-semibold text-slate-700 mb-2">Solomon Instance</label>
-          <select
-            class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none">
-            <option value="demo">Demo (12 customers, HCMC)</option>
-            <option value="r101">R101 (100 customers)</option>
+        <div class="header-right">
+          <!-- Hidden mode-toggle for compatibility with App.js -->
+          <input type="checkbox" id="mode-toggle" class="hidden" />
+          <select id="dataset-select" class="saas-select">
+            <option value="demo">Solomon RC101 (Demo)</option>
+            <option value="custom">Custom Import...</option>
           </select>
+          <div class="fleet-toggles">
+            <label>Vehicles: <input type="number" id="vehicles-slider" value="4" class="saas-input-small" /></label>
+            <span id="vehicles-value" class="hidden"></span>
+            <label>Capacity: <input type="number" id="capacity-slider" value="120" class="saas-input-small" /></label>
+            <span id="capacity-value" class="hidden"></span>
+          </div>
+          <button id="run-model" class="btn-primary">Execute DDQN Solver</button>
+        </div>
+      </header>
+
+      <section class="kpi-row">
+        <div class="kpi-card">
+          <div class="kpi-title">Algorithm Gap (DDQN vs ALNS)</div>
+          <div class="kpi-value highlight-emerald" id="kpi-gap">-0.00%</div>
+          <div class="kpi-sub">Closer to BKS is better</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-title">Total Distance (km)</div>
+          <div class="kpi-split">
+            <div><span class="kpi-label">DDQN</span><strong id="kpi-dist-ddqn">0.00</strong></div>
+            <div><span class="kpi-label">ALNS</span><strong id="kpi-dist-alns">0.00</strong></div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-title">Vehicles Dispatched</div>
+          <div class="kpi-split">
+            <div><span class="kpi-label">DDQN</span><strong id="kpi-veh-ddqn">0</strong></div>
+            <div><span class="kpi-label">ALNS</span><strong id="kpi-veh-alns">0</strong></div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-title">Compute Time</div>
+          <div class="kpi-split">
+            <div><span class="kpi-label">DDQN</span><strong id="kpi-time-ddqn">0.0s</strong></div>
+            <div><span class="kpi-label">ALNS</span><strong id="kpi-time-alns">0.0s</strong></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="workspace-full" style="position: relative;">
+
+        <!-- Slide-out Manifest Drawer (over the map) -->
+        <div id="manifest-drawer" class="manifest-drawer">
+          <div class="drawer-header">
+            <h3>Manifest (Waypoints)</h3>
+            <div class="drawer-header-actions">
+              <button id="add-row" class="btn-secondary btn-sm">+ Add Stop</button>
+              <button id="btn-close-drawer" class="drawer-close-btn" title="Close">&times;</button>
+            </div>
+          </div>
+          <div class="table-container">
+            <table class="saas-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Location</th>
+                  <th class="num">Demand</th>
+                  <th class="num">Ready</th>
+                  <th class="num">Due</th>
+                  <th class="num">Service</th>
+                </tr>
+              </thead>
+              <tbody id="customer-rows">
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-6">
-          <div>
-            <label class="block text-sm font-semibold text-slate-700 mb-2">Fleet Size: <span id="val-vehicles"
-                class="text-brand-600">4</span></label>
-            <input type="range" min="1" max="30" value="4" class="w-full accent-brand-600" />
+        <!-- Toggle Drawer Button (floating on map) -->
+        <button id="btn-toggle-drawer" class="drawer-toggle-btn" title="Toggle Manifest">
+          <span class="drawer-toggle-icon">☰</span>
+          <span class="drawer-toggle-label">Manifest</span>
+        </button>
+
+        <!-- Full-width Map Pane -->
+        <div class="pane pane-map-full" style="position: relative;">
+          <div class="pane-header">
+            <h3>Geospatial View</h3>
+            <div class="map-toggles">
+              <label><input type="radio" name="map_view" value="ddqn" checked /> DDQN</label>
+              <label><input type="radio" name="map_view" value="alns" /> ALNS Base</label>
+            </div>
           </div>
-          <div>
-            <label class="block text-sm font-semibold text-slate-700 mb-2">Capacity: <span id="val-capacity"
-                class="text-brand-600">120</span></label>
-            <input type="range" min="10" max="1000" step="10" value="120" class="w-full accent-brand-600" />
+          <div style="flex: 1; display: flex; flex-direction: column; position: relative; min-height: 0;">
+            <div id="map-container" class="map-view" style="flex: 1;"></div>
+            
+            <!-- Simulation Control Bar -->
+            <div id="sim-control-panel" class="sim-control-bar hidden">
+              <button id="btn-sim-play" class="btn-sim-play">▶ Play</button>
+              <span id="sim-time-display" class="sim-time-text">Time: 00:00m</span>
+              <div class="sim-slider-container">
+                <input type="range" id="sim-slider" class="sim-slider" min="0" max="100" value="0" />
+              </div>
+              <select id="sim-speed" class="sim-speed-select">
+                <option value="1">1x Speed</option>
+                <option value="2">2x Speed</option>
+                <option value="10" selected>10x Speed</option>
+                <option value="50">50x Speed</option>
+              </select>
+            </div>
+          </div>
+          
+          <!-- Vehicle Status Panel -->
+          <div id="sim-vehicle-panel" class="sim-vehicle-panel hidden">
           </div>
         </div>
 
-        <div>
-          <label class="block text-sm font-semibold text-slate-700 mb-2">Custom Import (CSV/Excel)</label>
-          <div
-            class="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center hover:bg-slate-50 hover:border-brand-500 transition-colors cursor-pointer">
-            <p class="text-sm text-slate-600 font-medium">Drag and drop file here, or click to browse</p>
-          </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div id="loading" class="loading-overlay hidden">
+    <div id="loading-card" class="loading-card">
+      <div class="loading-card-header">
+        <h2 id="loading-title" class="loading-title">AI is optimizing routes...</h2>
+        <div class="loading-card-actions">
+          <button id="loading-minimize" class="loading-action-btn" title="Minimize">─</button>
+          <button id="loading-cancel" class="loading-action-btn loading-cancel-btn" title="Cancel">✕</button>
         </div>
       </div>
-
-      <div class="p-6 border-t border-slate-100 bg-slate-50 rounded-b-xl flex justify-end gap-3">
-        <button id="btn-cancel-config"
-          class="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800">Cancel</button>
-        <button id="btn-run-model"
-          class="bg-brand-600 hover:bg-brand-500 text-white px-6 py-2 text-sm font-bold rounded shadow">Run
-          Optimization</button>
+      <p id="loading-subtitle" class="loading-subtitle">Sending request to the backend solver...</p>
+      <p id="loading-phase" class="loading-phase">Queueing job...</p>
+      <div class="loading-track">
+        <div id="loading-track-fill" class="loading-track-fill"></div>
+        <div id="loading-truck" class="loading-truck">🚚</div>
+      </div>
+      <div id="loading-percent" class="loading-percent">0%</div>
+      <div class="loading-stats">
+        <div><span class="loading-stat-label">Elapsed</span><span id="loading-elapsed" class="loading-stat-value">0s</span></div>
+        <div><span class="loading-stat-label">Backend</span><span id="loading-backend" class="loading-stat-value">queued</span></div>
+        <div><span class="loading-stat-label">Compute</span><span id="loading-device" class="loading-stat-value">—</span></div>
       </div>
     </div>
   </div>
 
-  <script type="module" src="./js/App.js"></script>
+  <!-- Loading Launcher (minimized floating button) -->
+  <div id="loading-launcher" class="loading-launcher hidden">
+    <span class="loading-launcher-text">Optimizing...</span>
+  </div>
+
+  <!-- Connection Status -->
+  <div id="connection-pill" class="connection-pill hidden"></div>
+
+  <!-- Toast Notifications -->
+  <div id="toast-root" class="toast-root"></div>
+
+  <script type="module" src="js/observability.js?v=ForceSafariToLoad1"></script>
+  <script type="module" src="js/main.js?v=ForceSafariToLoad1"></script>
 </body>
 
 </html>

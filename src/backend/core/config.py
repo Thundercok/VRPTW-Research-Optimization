@@ -73,10 +73,13 @@ def demo_auth_bypass_enabled() -> bool:
 
 
 def cors_allow_origins() -> list[str]:
-    """Comma-separated list of allowed origins. Defaults to ``*`` for local dev."""
-    raw = os.getenv("CORS_ALLOW_ORIGINS", "*").strip()
-    if not raw:
-        return ["*"]
-    if raw == "*":
-        return ["*"]
+    """Comma-separated list of allowed origins. Defaults to local dev origins."""
+    raw = os.getenv("CORS_ALLOW_ORIGINS", "").strip()
+    if not raw or raw == "*":
+        return [
+            "http://127.0.0.1:5050",
+            "http://localhost:5050",
+            "http://127.0.0.1:8000",
+            "http://localhost:8000",
+        ]
     return [item.strip() for item in raw.split(",") if item.strip()]

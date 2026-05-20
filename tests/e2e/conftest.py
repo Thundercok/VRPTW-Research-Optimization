@@ -72,7 +72,7 @@ def authed_page(page: Page):
         print(f"\n[UI VISIBLE TEXT]:\n{visible_text}")
         raise e
 
-    page.wait_for_load_state("networkidle")
+    page.wait_for_selector("#app-shell", state="visible", timeout=15000)
     return page
 
 

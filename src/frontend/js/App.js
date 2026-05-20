@@ -3,12 +3,8 @@ import { API_BASE } from './constants.js';
 import { createInitialState } from './createInitialState.js';
 import { getDemoLang, setDemoLang, toggleDemoLang } from './demoLang.js';
 import { MapController } from './MapController.js';
+import { SimulationController } from './SimulationController.js';
 import { TelemetryService } from './TelemetryService.js';
-
-// Initialize the map UI shell immediately (no auth required)
-const map = new MapController('map-core');
-// TelemetryService is constructed but NOT started — streaming begins in enterApp() after login
-const telemetry = new TelemetryService(db, map);
 
 const APP_COPY = {
   en: {
@@ -171,8 +167,9 @@ export class App {
     this.tableAddressSuggestTimer = 0;
 
     this.el = this.bindElements();
-    this.maps = null;
-    this.vehicleAnimations = [];
+    this.mapController = new MapController(this);
+    this.simulationController = new SimulationController(this);
+    this.telemetry = new TelemetryService(db, this.mapController);
     this.loadingAnim = {
       active: false,
       rafId: 0,
@@ -995,22 +992,42 @@ export class App {
     this.wireEvents();
     this.el.adminRefresh?.addEventListener('click', () => this.loadAdminUsers());
     this.el.adminFeedbackRefresh?.addEventListener('click', () => this.loadAdminFeedback());
+
+    // Manifest drawer toggle
+    const drawer = document.getElementById('manifest-drawer');
+    const toggleBtn = document.getElementById('btn-toggle-drawer');
+    const closeBtn = document.getElementById('btn-close-drawer');
+    if (drawer && toggleBtn) {
+      toggleBtn.addEventListener('click', () => {
+        drawer.classList.toggle('open');
+      });
+    }
+    if (drawer && closeBtn) {
+      closeBtn.addEventListener('click', () => {
+        drawer.classList.remove('open');
+      });
+    }
   }
 
   enterApp() {
     this.state.unlocked = true;
+    const isAuthPage = window.location.pathname.includes('auth.html') || window.location.pathname.endsWith('/auth');
+    if (isAuthPage) {
+      window.location.replace('app.html');
+      return;
+    }
     this.el.authScreen?.classList.add('hidden');
     this.el.appShell?.classList.remove('hidden');
 
-    if (!this.maps) {
-      this.maps = this.createMaps();
+    if (!this.mapController.ddqnMap) {
+      this.mapController.init();
+      this.simulationController.init();
       this.wireWorkspaceEvents();
       this.renderCustomers();
-      this.renderMarkers();
+      this.mapController.renderMarkers();
       this.showEmptyStates();
     } else {
-      this.maps.ddqnMap.invalidateSize();
-      this.maps.alnsMap.invalidateSize();
+      this.mapController.invalidate();
     }
 
     this.setStatus('Ready for operations.', 'ok');
@@ -1021,7 +1038,7 @@ export class App {
     // gRPC-Web streaming channel (/Listen/channel?TYPE=xmlhttp).
     if (db) {
       try {
-        telemetry.startStreaming();
+        this.telemetry.startStreaming();
       } catch (e) {
         console.warn('[Telemetry] Firestore streaming unavailable:', e?.message || e);
       }
@@ -1039,6 +1056,11 @@ export class App {
 
   leaveApp() {
     this.state.unlocked = false;
+    const isAppPage = window.location.pathname.includes('app.html') || window.location.pathname.endsWith('/app');
+    if (isAppPage) {
+      window.location.replace('auth.html');
+      return;
+    }
     this.el.appShell?.classList.add('hidden');
     this.el.authScreen?.classList.remove('hidden');
     if (this.el.authHint) {
@@ -1133,145 +1155,9 @@ export class App {
     this.selectedCustomerIds.clear();
     this.resetResultOutputs();
     this.renderCustomers();
-    this.renderMarkers();
+    this.mapController.renderMarkers();
   }
 
-  createMaps() {
-    const ddqnMap = L.map('map-ddqn').setView([10.73193, 106.69934], 14);
-    const alnsMap = L.map('map-alns').setView([10.73193, 106.69934], 14);
-
-    const layer = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-    [ddqnMap, alnsMap].forEach((m) => {
-      L.tileLayer(layer, { maxZoom: 19 }).addTo(m);
-    });
-
-    const ddqnMarkerLayer = L.layerGroup().addTo(ddqnMap);
-    const alnsMarkerLayer = L.layerGroup().addTo(alnsMap);
-    const ddqnRouteLayer = L.layerGroup().addTo(ddqnMap);
-    const alnsRouteLayer = L.layerGroup().addTo(alnsMap);
-    const alnsDiffLayer = L.layerGroup().addTo(alnsMap);
-    const ddqnVehicleLayer = L.layerGroup().addTo(ddqnMap);
-    const alnsVehicleLayer = L.layerGroup().addTo(alnsMap);
-
-    let syncing = false;
-    const sync = (source, target) => {
-      source.on('move', () => {
-        if (syncing) return;
-        syncing = true;
-        target.setView(source.getCenter(), source.getZoom(), { animate: false });
-        syncing = false;
-      });
-    };
-    sync(ddqnMap, alnsMap);
-    sync(alnsMap, ddqnMap);
-
-    ddqnMap.on('click', (e) => this.addMapPoint(e.latlng));
-    alnsMap.on('click', (e) => this.addMapPoint(e.latlng));
-
-    return {
-      ddqnMap,
-      alnsMap,
-      ddqnMarkerLayer,
-      alnsMarkerLayer,
-      ddqnRouteLayer,
-      alnsRouteLayer,
-      alnsDiffLayer,
-      ddqnVehicleLayer,
-      alnsVehicleLayer
-    };
-  }
-
-  buildDepotIcon() {
-    return L.divIcon({
-      className: 'map-marker-wrap',
-      iconSize: [72, 84],
-      iconAnchor: [36, 72],
-      popupAnchor: [0, -42],
-      html: `
-        <div class="map-icon-3d depot" style="--icon-main:#0ea5e9;--icon-dark:#0c4a6e;--icon-shadow:rgba(14,165,233,0.36)">
-          <span class="map-icon-glyph">🏭</span>
-        </div>`
-    });
-  }
-
-  buildCustomerIcon() {
-    return L.divIcon({
-      className: 'map-marker-wrap',
-      iconSize: [28, 36],
-      iconAnchor: [14, 33],
-      popupAnchor: [0, -20],
-      html: `
-        <div class="map-icon-3d customer" style="--icon-main:#7c3aed;--icon-dark:#5b21b6;--icon-shadow:rgba(124,58,237,0.35)">
-          <svg class="map-icon-avatar" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <ellipse class="avatar-hair-back" cx="12" cy="9" rx="6.4" ry="5.7"></ellipse>
-            <circle class="avatar-bun" cx="13.6" cy="4.7" r="2.25"></circle>
-            <path class="avatar-hair-front" d="M6.2 9.3c0-3.4 2.5-5.9 5.8-5.9 2.8 0 5.2 1.9 5.8 4.6-.8-.4-1.7-.7-2.8-.7-2.5 0-4.7 1.4-5.9 3.5l-2.9-1.5z"></path>
-            <circle class="avatar-face" cx="12" cy="10.3" r="4.3"></circle>
-            <path class="avatar-shirt" d="M5.1 20.1c.2-3.8 2.8-6.4 6.9-6.4s6.7 2.6 6.9 6.4H5.1z"></path>
-            <circle class="avatar-eye" cx="10.4" cy="10" r="0.5"></circle>
-            <circle class="avatar-eye" cx="13.6" cy="10" r="0.5"></circle>
-            <path class="avatar-mouth" d="M10.1 12.3c.5.4 1.1.6 1.9.6s1.4-.2 1.9-.6"></path>
-          </svg>
-        </div>`
-    });
-  }
-
-  buildVehicleIcon(color = '#0b8a65') {
-    return L.divIcon({
-      className: 'map-marker-wrap',
-      iconSize: [56, 56],
-      iconAnchor: [28, 28],
-      popupAnchor: [0, -18],
-      html: `
-        <div class="map-icon-3d vehicle" style="--icon-main:${color};--icon-dark:#0f3d33;--icon-shadow:rgba(15,61,51,0.35)">
-          <span class="map-icon-glyph">🚚</span>
-        </div>`
-    });
-  }
-
-  stopVehicleAnimations() {
-    this.vehicleAnimations.forEach((anim) => {
-      anim.alive = false;
-      if (anim.rafId) cancelAnimationFrame(anim.rafId);
-    });
-    this.vehicleAnimations = [];
-  }
-
-  startVehicleAnimation(marker, path) {
-    if (!Array.isArray(path) || path.length < 2) return;
-
-    const anim = {
-      alive: true,
-      rafId: 0,
-      segment: 0,
-      t: Math.random() * 0.85,
-      speed: 0.012 + Math.random() * 0.006
-    };
-
-    const tick = () => {
-      if (!anim.alive) return;
-
-      const a = path[anim.segment];
-      const b = path[anim.segment + 1] || path[0];
-      const lat = a[0] + (b[0] - a[0]) * anim.t;
-      const lng = a[1] + (b[1] - a[1]) * anim.t;
-      marker.setLatLng([lat, lng]);
-
-      anim.t += anim.speed;
-      if (anim.t >= 1) {
-        anim.t = 0;
-        anim.segment += 1;
-        if (anim.segment >= path.length - 1) {
-          anim.segment = 0;
-        }
-      }
-
-      anim.rafId = requestAnimationFrame(tick);
-    };
-
-    anim.rafId = requestAnimationFrame(tick);
-    this.vehicleAnimations.push(anim);
-  }
 
   wireEvents() {
     this.setupDirectPasteImport();
@@ -1448,7 +1334,7 @@ export class App {
 
       this.selectedCustomerIds.clear();
       this.renderCustomers();
-      this.renderMarkers();
+      this.mapController.renderMarkers();
       const label = String(data?.dataset || name).toUpperCase();
       this.setStatus(`Loaded Solomon ${label} with ${incoming.length - 1} customers.`, 'ok');
       this.toast('Solomon Loaded', `Dataset ${label} is ready.`, 'ok');
@@ -1456,7 +1342,7 @@ export class App {
       this.state.customers = [];
       this.selectedCustomerIds.clear();
       this.renderCustomers();
-      this.renderMarkers();
+      this.mapController.renderMarkers();
       const message = this.parseApiError(error);
       this.toast('Solomon Load Failed', message, 'error');
       this.setStatus(message, 'error');
@@ -2061,7 +1947,7 @@ export class App {
     }
 
     this.renderCustomers();
-    this.renderMarkers();
+    this.mapController.renderMarkers();
     this.setStatus(`Deleted ${removed} selected customer row(s).`, 'ok');
     this.toast('Rows Deleted', `Removed ${removed} row(s).`, 'ok');
   }
@@ -2155,7 +2041,7 @@ export class App {
       }
       customer.name = nextValue;
       this.renderCustomers();
-      this.renderMarkers();
+      this.mapController.renderMarkers();
       this.setStatus('Customer name updated.', 'ok');
       return;
     }
@@ -2169,7 +2055,7 @@ export class App {
       }
       customer.demand = Math.round(demand);
       this.renderCustomers();
-      this.renderMarkers();
+      this.mapController.renderMarkers();
       this.setStatus('Customer demand updated.', 'ok');
       return;
     }
@@ -2192,7 +2078,7 @@ export class App {
         this.toast('Geocode Warning', 'Could not find coordinates for this address.', 'error');
       }
       this.renderCustomers();
-      this.renderMarkers();
+      this.mapController.renderMarkers();
       return;
     }
 
@@ -3468,7 +3354,7 @@ export class App {
     this.state.customers.push({ ...item, id, isDepot, ready, due, service });
     this.selectedCustomerIds.clear();
     this.renderCustomers();
-    this.renderMarkers();
+    this.mapController.renderMarkers();
   }
 
   renderCustomers() {
@@ -3542,35 +3428,6 @@ export class App {
     this.showEmptyStates();
   }
 
-  renderMarkers() {
-    const { ddqnMarkerLayer, alnsMarkerLayer, ddqnMap, alnsMap } = this.maps;
-    ddqnMarkerLayer.clearLayers();
-    alnsMarkerLayer.clearLayers();
-    const bounds = [];
-
-    const depotIcon = this.buildDepotIcon();
-    const customerIcon = this.buildCustomerIcon();
-
-    this.state.customers.forEach((c) => {
-      const p = [c.lat, c.lng];
-      bounds.push(p);
-      const markerIcon = c.isDepot ? depotIcon : customerIcon;
-      const popupTitle = c.isDepot ? 'Warehouse / Depot' : 'Customer';
-      const popupAddress = c.address ? `<br/>${c.address}` : '';
-      const twInfo = (c.ready != null || c.due != null)
-        ? `<br/>TW: [${Number(c.ready ?? 0).toFixed(0)}, ${Number(c.due ?? 0).toFixed(0)}] svc=${Number(c.service ?? 0).toFixed(0)}`
-        : '';
-      const popupContent = `<strong>${popupTitle}</strong><br/>${c.name}${popupAddress}<br/>Demand: ${c.demand}${twInfo}`;
-      L.marker(p, { icon: markerIcon }).bindPopup(popupContent).addTo(ddqnMarkerLayer);
-      L.marker(p, { icon: markerIcon }).bindPopup(popupContent).addTo(alnsMarkerLayer);
-    });
-
-    if (bounds.length > 0) {
-      ddqnMap.fitBounds(bounds, { padding: [22, 22] });
-      alnsMap.fitBounds(bounds, { padding: [22, 22] });
-    }
-    this.showEmptyStates();
-  }
 
   showEmptyStates() {
     const hasCustomers = this.state.customers.length > 0;
@@ -3581,8 +3438,8 @@ export class App {
     this.el.mapEmptyAlns?.classList.toggle('hidden', hasResult);
 
     if (!hasResult) {
-      this.maps?.ddqnVehicleLayer?.clearLayers();
-      this.maps?.alnsVehicleLayer?.clearLayers();
+      this.mapController.ddqnVehicleLayer?.clearLayers();
+      this.mapController.alnsVehicleLayer?.clearLayers();
     }
   }
 
@@ -3718,23 +3575,30 @@ export class App {
     const result = this.state.lastResult;
     if (!result) return;
 
-    this.stopVehicleAnimations();
-
-    this.maps.ddqnRouteLayer.clearLayers();
-    this.maps.alnsRouteLayer.clearLayers();
-    this.maps.alnsDiffLayer.clearLayers();
-    this.maps.ddqnVehicleLayer.clearLayers();
-    this.maps.alnsVehicleLayer.clearLayers();
+    this.mapController.clearRoutes();
     const routeCapacity = Number(this.state.lastRunFleet?.capacity ?? this.state.capacity);
-    this.renderAlgoRoutes(result.ddqn, this.maps.ddqnRouteLayer, '#0b8a65', routeCapacity);
-    this.renderAlgoRoutes(result.alns, this.maps.alnsRouteLayer, '#2563eb', routeCapacity);
-    const highlightedCount = this.renderAlnsOnlySegments(result.ddqn, result.alns, this.maps.alnsDiffLayer);
-    this.renderVehicleMarkers(result.ddqn, this.maps.ddqnVehicleLayer, '#0b8a65');
-    this.renderVehicleMarkers(result.alns, this.maps.alnsVehicleLayer, '#2563eb');
+    this.mapController.renderAlgoRoutes(result.ddqn, true, '#0b8a65', routeCapacity);
+    this.mapController.renderAlgoRoutes(result.alns, false, '#2563eb', routeCapacity);
+    this.mapController.renderAlnsOnlySegments(result.ddqn, result.alns);
+    this.mapController.initSimulation(result);
 
-    if (highlightedCount > 0) {
-      this.setStatus(`Highlighted ${highlightedCount} ALNS segments that do not appear in DDQN.`, 'ok');
-    }
+    // Calculate maximum completion time
+    let maxTime = 120;
+    const findMax = (algo) => {
+      if (algo && algo.routes) {
+        algo.routes.forEach((r) => {
+          if (r.schedule && r.schedule.length > 0) {
+            const endStep = r.schedule[r.schedule.length - 1];
+            if (endStep && endStep.arrival > maxTime) {
+              maxTime = endStep.arrival;
+            }
+          }
+        });
+      }
+    };
+    findMax(result.ddqn);
+    findMax(result.alns);
+    this.simulationController.start(maxTime);
 
     this.updateCompareMetric({
       card: this.el.metricRuntimeCard,
@@ -3785,15 +3649,8 @@ export class App {
 
   resetResultOutputs() {
     this.state.lastResult = null;
-    this.stopVehicleAnimations();
-
-    if (this.maps) {
-      this.maps.ddqnRouteLayer.clearLayers();
-      this.maps.alnsRouteLayer.clearLayers();
-      this.maps.alnsDiffLayer.clearLayers();
-      this.maps.ddqnVehicleLayer.clearLayers();
-      this.maps.alnsVehicleLayer.clearLayers();
-    }
+    this.mapController.clearRoutes();
+    this.simulationController.showPanels(false);
 
     const setText = (node, value) => {
       if (node) node.textContent = value;
@@ -3960,131 +3817,6 @@ export class App {
     return `${fixed}${unit}`;
   }
 
-  buildLoadBadge(load, cap) {
-    if (!Number.isFinite(cap) || cap <= 0) {
-      return { ratio: null, label: 'N/A', tone: 'low' };
-    }
-    const ratio = load / cap;
-    if (ratio > 0.95) return { ratio, label: 'Critical', tone: 'high' };
-    if (ratio >= 0.8) return { ratio, label: 'Near Full', tone: 'medium' };
-    return { ratio, label: 'Safe', tone: 'low' };
-  }
-
-  colorForRoute(routeIndex, route, fallback) {
-    const palette = [
-      '#2563eb', '#0b8a65', '#c0392b', '#8c5cf6', '#d97706',
-      '#0ea5a4', '#b91c1c', '#16a34a', '#7c3aed', '#ea580c',
-      '#0891b2', '#be185d', '#4f46e5', '#15803d', '#ca8a04', '#1d4ed8'
-    ];
-    if (routeIndex < palette.length) return palette[routeIndex];
-    const hue = (routeIndex * 137.508) % 360;
-    return `hsl(${hue},72%,44%)`;
-  }
-
-  renderAlgoRoutes(algo, layerGroup, color, capacity) {
-    (algo.routes || []).forEach((route, routeIndex) => {
-      if (!route.path || route.path.length < 2) return;
-      const load = Number(route.load ?? 0);
-      const cap = Number(capacity);
-      const loadLine = Number.isFinite(cap) && cap > 0 ? `<br/>Load: ${load}/${cap}` : `<br/>Load: ${load}`;
-      const badge = this.buildLoadBadge(load, cap);
-      const ratioText = Number.isFinite(badge.ratio) ? `${(badge.ratio * 100).toFixed(1)}%` : 'N/A';
-      const popupContent = `
-        <div class="route-popup">
-          <strong>Vehicle ${route.vehicle_id}</strong>
-          ${loadLine}
-          <br/>Distance: ${Number(route.distance_km || 0).toFixed(2)} km
-          <br/>Utilization: ${ratioText}
-          <br/><span class="route-load-pill ${badge.tone}">${badge.label}</span>
-        </div>
-      `;
-      const routeColor = this.colorForRoute(routeIndex, route, color);
-      L.polyline(route.path.map((p) => [p[0], p[1]]), {
-        color: routeColor,
-        weight: 4,
-        opacity: 0.9
-      }).bindPopup(popupContent).addTo(layerGroup);
-    });
-  }
-
-  renderVehicleMarkers(algo, layerGroup, color) {
-    const routes = Array.isArray(algo?.routes) ? algo.routes : [];
-    routes.forEach((route, routeIndex) => {
-      const path = Array.isArray(route.path) ? route.path : [];
-      if (path.length < 2) return;
-      const markerColor = this.colorForRoute(routeIndex, route, color);
-      const marker = L.marker([path[0][0], path[0][1]], {
-        icon: this.buildVehicleIcon(markerColor),
-        interactive: false
-      }).addTo(layerGroup);
-      this.startVehicleAnimation(marker, path);
-    });
-  }
-
-  segmentKey(a, b) {
-    const normalize = (point) => [
-      Number(point?.[0] ?? 0).toFixed(5),
-      Number(point?.[1] ?? 0).toFixed(5)
-    ].join(',');
-    return [normalize(a), normalize(b)].sort().join('|');
-  }
-
-  collectSegmentSet(algo) {
-    const segments = new Set();
-    const routes = Array.isArray(algo?.routes) ? algo.routes : [];
-    routes.forEach((route) => {
-      const path = Array.isArray(route.path) ? route.path : [];
-      for (let i = 0; i < path.length - 1; i += 1) {
-        segments.add(this.segmentKey(path[i], path[i + 1]));
-      }
-    });
-    return segments;
-  }
-
-  drawDiffSegment(path, layerGroup, routeIndex) {
-    if (!Array.isArray(path) || path.length < 2) return;
-    L.polyline(path, {
-      color: this.colorForRoute(routeIndex, null, '#f97316'),
-      weight: 7,
-      opacity: 0.5,
-      dashArray: '8 8'
-    }).bindPopup('ALNS-only segment').addTo(layerGroup);
-  }
-
-  renderAlnsOnlySegments(ddqn, alns, layerGroup) {
-    const ddqnSegments = this.collectSegmentSet(ddqn);
-    let highlightedSegments = 0;
-
-    (alns.routes || []).forEach((route, routeIndex) => {
-      if (!route.path || route.path.length < 2) return;
-
-      let streak = [];
-      for (let i = 0; i < route.path.length - 1; i++) {
-        const a = route.path[i];
-        const b = route.path[i + 1];
-        const key = this.segmentKey(a, b);
-        const isUnique = !ddqnSegments.has(key);
-
-        if (isUnique) {
-          if (streak.length === 0) streak.push([a[0], a[1]]);
-          streak.push([b[0], b[1]]);
-          highlightedSegments += 1;
-          continue;
-        }
-
-        if (streak.length > 1) {
-          this.drawDiffSegment(streak, layerGroup, routeIndex);
-          streak = [];
-        }
-      }
-
-      if (streak.length > 1) {
-        this.drawDiffSegment(streak, layerGroup, routeIndex);
-      }
-    });
-
-    return highlightedSegments;
-  }
 
   setLoadingProgress(value, title = null, subtitle = null, normalizedSpeed = 0, algo = 'idle') {
     const clamped = Math.max(0, Math.min(100, Number(value) || 0));
@@ -4223,14 +3955,14 @@ export class App {
 
   minimizeLoading() {
     if (this.el.loading?.classList.contains('hidden')) return;
-    this.el.loading.classList.add('loading--minimized');
+    this.el.loading?.classList.add('loading--minimized');
     this.el.loadingLauncher?.classList.remove('hidden');
     this.setStatus('Optimization is running in background. Click the floating truck to reopen progress.', 'ok');
   }
 
   restoreLoading() {
     if (this.el.loading?.classList.contains('hidden')) return;
-    this.el.loading.classList.remove('loading--minimized');
+    this.el.loading?.classList.remove('loading--minimized');
     this.el.loadingLauncher?.classList.add('hidden');
   }
 
@@ -4272,7 +4004,7 @@ export class App {
     }
 
     await new Promise((resolve) => setTimeout(resolve, 180));
-    this.el.loading.classList.add('hidden');
+    this.el.loading?.classList.add('hidden');
   }
 
   hideLoadingImmediate() {
@@ -4280,6 +4012,6 @@ export class App {
     this.setLoadingProgress(0, 'AI is optimizing routes...', 'Collecting route data...', 0, 'idle');
     this.el.loading?.classList.remove('loading--minimized');
     this.el.loadingLauncher?.classList.add('hidden');
-    this.el.loading.classList.add('hidden');
+    this.el.loading?.classList.add('hidden');
   }
 }

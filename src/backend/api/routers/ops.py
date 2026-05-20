@@ -218,3 +218,457 @@ async def get_job(job_id: str, _: dict[str, str] = Depends(require_user)) -> dic
 @router.get("/jobs/{job_id}/debug")
 async def get_job_debug(job_id: str, _: dict[str, str] = Depends(require_user)) -> dict[str, Any]:
     return job_service.get_debug(job_id)
+
+
+# ── BENCHMARK, TRAINING, & SMOKE TEST ENDPOINTS ──────────────────────────────────
+import sys
+import threading
+import os
+from pydantic import BaseModel
+
+# Ensure workspace root is in sys.path for importing vrptw package
+_ROOT_PATH = Path(__file__).resolve().parents[4]
+if str(_ROOT_PATH) not in sys.path:
+    sys.path.insert(0, str(_ROOT_PATH))
+
+import vrptw
+
+class BenchmarkSubmitRequest(BaseModel):
+    dataset: str
+    n_runs: int
+    max_wall_hours: float
+    algorithms: list[str]
+
+class DRTrainSubmitRequest(BaseModel):
+    epochs: int
+
+class TransferTrainSubmitRequest(BaseModel):
+    dataset: str
+    epochs: int
+
+class TaskManager:
+    def __init__(self):
+        self.benchmark_state = {
+            "status": "idle",
+            "progress": 0.0,
+            "error": None,
+            "results": []
+        }
+        self.training_state = {
+            "status": "idle",
+            "type": None,
+            "progress": 0.0,
+            "error": None,
+            "logs": [],
+            "epochs_completed": 0,
+            "total_epochs": 0
+        }
+        self.smoke_test_state = {
+            "status": "idle",
+            "error": None,
+            "results": None
+        }
+        self.lock = threading.Lock()
+
+task_manager = TaskManager()
+
+class LogCapture:
+    def __init__(self, log_list):
+        self.log_list = log_list
+        self.stdout = sys.stdout
+
+    def write(self, text):
+        self.stdout.write(text)
+        if text.strip():
+            self.log_list.append(text.strip())
+
+    def flush(self):
+        self.stdout.flush()
+
+def load_weights_for_algo(algo: str, cfg: vrptw.Config) -> Optional[dict]:
+    import os
+    if algo == "hybrid_ddqn_transfer_rc1":
+        label = "rc1"
+    elif algo == "hybrid_ddqn_transfer_rc2":
+        label = "rc2"
+    elif algo == "hybrid_ddqn_transfer_dr":
+        label = "dr"
+    else:
+        return None
+
+    candidates = []
+    if label == "dr":
+        candidates = [
+            os.path.join(cfg.output_dir, "rl_alns_dr_v15"),
+            os.path.join(cfg.output_dir, "rl_alns_dr_v15.safetensors"),
+            os.path.join(cfg.output_dir, "rl_alns_dr_v15.pt"),
+            os.path.join(str(_ROOT_PATH), "rl_alns_dr_v15"),
+            os.path.join(str(_ROOT_PATH), "docs", "rl_alns_dr_v15"),
+        ]
+    else:
+        candidates = [
+            os.path.join(cfg.output_dir, f"rl_alns_transfer_{label}_v15"),
+            os.path.join(cfg.output_dir, f"rl_alns_transfer_{label}_v15.safetensors"),
+            os.path.join(str(_ROOT_PATH), "docs", "model", "rl_alns_transfer"),
+            os.path.join(str(_ROOT_PATH), "logs", "results-v9.7", "rl_alns_transfer"),
+            os.path.join(str(_ROOT_PATH), "logs", "results-v9.8", "rl_alns_transfer"),
+        ]
+
+    for cand in candidates:
+        stem = cand
+        if stem.endswith(".safetensors"):
+            stem = stem[:-12]
+        elif stem.endswith(".pt"):
+            stem = stem[:-3]
+
+        weights = vrptw._load_weights(stem)
+        if weights is not None:
+            print(f"Loaded weights for {algo} from {stem}")
+            return weights
+
+    print(f"No weights found for {algo}. Running with default weights.")
+    return None
+
+def run_benchmark_thread(dataset_key: str, algorithms: list[str], n_runs: int, max_wall_hours: float):
+    import time
+    import numpy as np
+    from concurrent.futures import ProcessPoolExecutor
+    import multiprocessing as mp
+
+    global task_manager
+    try:
+        cfg = vrptw.Config()
+        cfg.data_path = str(_ROOT_PATH / "data" / "Solomon")
+        cfg.output_dir = str(_LOGS_PATH)
+        cfg.n_runs = n_runs
+        cfg.max_wall_hours = max_wall_hours
+
+        datasets = vrptw.load_datasets(cfg.data_path)
+        ds_key = dataset_key.lower()
+        if ds_key == "c":
+            instances = datasets.get("c1", []) + datasets.get("c2", [])
+        elif ds_key == "r":
+            instances = datasets.get("r1", []) + datasets.get("r2", [])
+        elif ds_key in datasets:
+            instances = datasets[ds_key]
+        else:
+            instances = datasets.get(ds_key, [])
+
+        if not instances:
+            raise ValueError(f"No instances found for dataset key: {dataset_key}")
+
+        weights_by_algo = {}
+        for algo in algorithms:
+            if algo in ("hybrid_ddqn_transfer_rc1", "hybrid_ddqn_transfer_rc2", "hybrid_ddqn_transfer_dr"):
+                weights_by_algo[algo] = load_weights_for_algo(algo, cfg)
+
+        archive = vrptw.EliteArchive(k=cfg.elite_archive_k)
+        total_combos = len(instances) * len(algorithms)
+        completed_combos = 0
+
+        with task_manager.lock:
+            task_manager.benchmark_state["status"] = "running"
+            task_manager.benchmark_state["progress"] = 0.0
+            task_manager.benchmark_state["error"] = None
+            task_manager.benchmark_state["results"] = []
+
+        wall_start = time.time()
+        results_rows = []
+        n_workers = min(cfg.n_runs, max(1, os.cpu_count() // 2))
+
+        for inst in instances:
+            elapsed_h = (time.time() - wall_start) / 3600
+            if elapsed_h >= cfg.max_wall_hours:
+                break
+
+            dataset_name = "RC1" if inst.name[2] == "1" else "RC2"
+            if inst.name.startswith("C"):
+                dataset_name = "C"
+            elif inst.name.startswith("R"):
+                dataset_name = "R"
+
+            for algo in algorithms:
+                algo_label = algo
+                if algo == "ortools":
+                    algo_label = vrptw.ALGO_ORTOOLS
+                elif algo == "alns_base":
+                    algo_label = vrptw.ALGO_ALNS_BASE
+                elif algo == "hybrid_fixed":
+                    algo_label = vrptw.ALGO_HYBRID_FIXED
+                elif algo == "hybrid_ddqn":
+                    algo_label = vrptw.ALGO_HYBRID_DDQN
+                elif algo == "hybrid_ddqn_transfer_rc1":
+                    algo_label = vrptw.ALGO_HYBRID_DDQN_TRANSFER
+                elif algo == "hybrid_ddqn_transfer_dr":
+                    algo_label = vrptw.ALGO_HYBRID_DDQN_TRANSFER_DR
+
+                algo_canonical = vrptw.canonical_algo_label(algo_label)
+                nv_v, cost_v, time_v, gap_v, nvd_v, ot_v = [], [], [], [], [], []
+                n_runs_eff = 1 if algo_canonical == vrptw.ALGO_ORTOOLS else cfg.n_runs
+
+                transfer_weights = weights_by_algo.get(algo)
+                worker_args = [
+                    (inst, algo_canonical, cfg, cfg.seed + i,
+                     transfer_weights, vrptw._diversified_init(i, inst, archive, cfg))
+                    for i in range(n_runs_eff)
+                ]
+
+                _n_workers = 1 if algo_canonical == vrptw.ALGO_ORTOOLS else n_workers
+                ctx = mp.get_context('spawn')
+                with ProcessPoolExecutor(max_workers=_n_workers, mp_context=ctx) as ex:
+                    run_results = list(ex.map(vrptw._benchmark_worker, worker_args))
+
+                for i, (res, plan) in enumerate(run_results):
+                    if plan is not None:
+                        archive.update(plan)
+                    time_v.append(res["time"])
+                    if res["nv"] is not None:
+                        nv_v.append(res["nv"])
+                        cost_v.append(res["cost"])
+                        gap_v.append(res["td_gap"])
+                        nvd_v.append(res["nv_diff"])
+                        ot_v.append(res["on_time"])
+
+                if nv_v:
+                    bks = vrptw.BKS.get(inst.name)
+                    nv_inflated = (bks is not None
+                                   and float(np.mean(nv_v)) > bks["nv"] + 0.4
+                                   and gap_v[0] is not None
+                                   and float(np.mean(gap_v)) < 0)
+
+                    row = {
+                        "dataset": dataset_name,
+                        "instance": inst.name,
+                        "algorithm": algo_canonical,
+                        "nv": round(float(np.mean(nv_v)), 2),
+                        "nv_std": round(float(np.std(nv_v)), 2),
+                        "td": round(float(np.mean(cost_v)), 2),
+                        "td_std": round(float(np.std(cost_v)), 2),
+                        "gap": round(float(np.mean(gap_v)), 2) if gap_v[0] is not None else 0.0,
+                        "time": round(float(np.mean(time_v)), 1),
+                        "nv_inflated": nv_inflated,
+                    }
+                    results_rows.append(row)
+
+                completed_combos += 1
+                with task_manager.lock:
+                    task_manager.benchmark_state["progress"] = round((completed_combos / total_combos) * 100, 1)
+                    task_manager.benchmark_state["results"] = results_rows
+
+        with task_manager.lock:
+            task_manager.benchmark_state["status"] = "done"
+            task_manager.benchmark_state["progress"] = 100.0
+    except Exception as e:
+        import traceback
+        print(f"Error in benchmark execution: {e}\n{traceback.format_exc()}")
+        with task_manager.lock:
+            task_manager.benchmark_state["status"] = "failed"
+            task_manager.benchmark_state["error"] = str(e)
+
+def run_training_thread(train_type: str, dataset_key: str | None = None, epochs: int = 1):
+    global task_manager
+    try:
+        cfg = vrptw.Config()
+        cfg.output_dir = str(_LOGS_PATH)
+
+        logs = []
+        old_stdout = sys.stdout
+
+        class LogCaptureWithProgress(LogCapture):
+            def write(self, text):
+                super().write(text)
+                stripped = text.strip()
+                if not stripped:
+                    return
+                import re
+                match = re.search(r"Epoch\s+(\d+)/(\d+)", stripped, re.IGNORECASE)
+                if match:
+                    completed = int(match.group(1))
+                    total = int(match.group(2))
+                    with task_manager.lock:
+                        task_manager.training_state["epochs_completed"] = completed
+                        task_manager.training_state["total_epochs"] = total
+                        task_manager.training_state["progress"] = round((completed / total) * 100, 1)
+
+        capturer = LogCaptureWithProgress(logs)
+        sys.stdout = capturer
+
+        try:
+            if train_type == "dr":
+                cfg.domain_randomization_epochs = epochs
+                cfg.domain_randomization_batch = 4 # moderate batch for testing
+                with task_manager.lock:
+                    task_manager.training_state["status"] = "running"
+                    task_manager.training_state["type"] = "dr"
+                    task_manager.training_state["total_epochs"] = epochs
+                    task_manager.training_state["epochs_completed"] = 0
+                    task_manager.training_state["progress"] = 0.0
+                    task_manager.training_state["logs"] = logs
+                    task_manager.training_state["error"] = None
+
+                vrptw.train_domain_randomization(cfg, seed=42)
+
+            elif train_type == "transfer":
+                cfg.transfer_epochs = epochs
+                with task_manager.lock:
+                    task_manager.training_state["status"] = "running"
+                    task_manager.training_state["type"] = "transfer"
+                    task_manager.training_state["total_epochs"] = epochs
+                    task_manager.training_state["epochs_completed"] = 0
+                    task_manager.training_state["progress"] = 0.0
+                    task_manager.training_state["logs"] = logs
+                    task_manager.training_state["error"] = None
+
+                datasets = vrptw.load_datasets(cfg.data_path)
+                instances = datasets.get(dataset_key.lower() if dataset_key else "rc1", [])
+                if not instances:
+                    raise ValueError(f"No instances found for dataset {dataset_key}")
+
+                vrptw.train_transfer_model(instances, cfg, seed=42, label=dataset_key.upper())
+
+            with task_manager.lock:
+                task_manager.training_state["status"] = "done"
+                task_manager.training_state["progress"] = 100.0
+        except Exception as e:
+            import traceback
+            err_str = f"Error in training: {e}\n{traceback.format_exc()}"
+            print(err_str)
+            with task_manager.lock:
+                task_manager.training_state["status"] = "failed"
+                task_manager.training_state["error"] = str(e)
+        finally:
+            sys.stdout = old_stdout
+    except Exception as e:
+        with task_manager.lock:
+            task_manager.training_state["status"] = "failed"
+            task_manager.training_state["error"] = str(e)
+
+def run_smoke_test_thread():
+    global task_manager
+    try:
+        cfg = vrptw.Config()
+        cfg.data_path = str(_ROOT_PATH / "data" / "Solomon")
+
+        datasets = vrptw.load_datasets(cfg.data_path)
+        rc1 = datasets.get("rc1", [])
+        if not rc1:
+            raise ValueError("No Solomon instances found to run smoke test.")
+        inst = rc1[0]
+
+        with task_manager.lock:
+            task_manager.smoke_test_state["status"] = "running"
+            task_manager.smoke_test_state["error"] = None
+            task_manager.smoke_test_state["results"] = None
+
+        results = vrptw.smoke_test(inst, seed=42)
+        serializable_results = []
+        for algo, (gap, elapsed) in results.items():
+            serializable_results.append({
+                "algorithm": algo,
+                "gap": gap,
+                "time": round(elapsed, 2)
+            })
+
+        with task_manager.lock:
+            task_manager.smoke_test_state["status"] = "done"
+            task_manager.smoke_test_state["results"] = serializable_results
+    except Exception as e:
+        import traceback
+        print(f"Error in smoke test: {e}\n{traceback.format_exc()}")
+        with task_manager.lock:
+            task_manager.smoke_test_state["status"] = "failed"
+            task_manager.smoke_test_state["error"] = str(e)
+
+@router.post("/benchmark")
+async def start_benchmark(
+    body: BenchmarkSubmitRequest,
+    _: dict[str, str] = Depends(require_user),
+):
+    global task_manager
+    with task_manager.lock:
+        if task_manager.benchmark_state["status"] == "running":
+            raise HTTPException(status_code=400, detail="Benchmark is already running")
+
+    thread = threading.Thread(
+        target=run_benchmark_thread,
+        args=(body.dataset, body.algorithms, body.n_runs, body.max_wall_hours),
+        daemon=True
+    )
+    thread.start()
+    return {"message": "Benchmark started successfully"}
+
+@router.get("/benchmark/status")
+async def get_benchmark_status(
+    _: dict[str, str] = Depends(require_user),
+):
+    global task_manager
+    with task_manager.lock:
+        return task_manager.benchmark_state
+
+@router.post("/train/dr")
+async def start_train_dr(
+    body: DRTrainSubmitRequest,
+    _: dict[str, str] = Depends(require_user),
+):
+    global task_manager
+    with task_manager.lock:
+        if task_manager.training_state["status"] == "running":
+            raise HTTPException(status_code=400, detail="Training is already running")
+
+    thread = threading.Thread(
+        target=run_training_thread,
+        args=("dr", None, body.epochs),
+        daemon=True
+    )
+    thread.start()
+    return {"message": "Domain randomization training started"}
+
+@router.post("/train/transfer")
+async def start_train_transfer(
+    body: TransferTrainSubmitRequest,
+    _: dict[str, str] = Depends(require_user),
+):
+    global task_manager
+    with task_manager.lock:
+        if task_manager.training_state["status"] == "running":
+            raise HTTPException(status_code=400, detail="Training is already running")
+
+    thread = threading.Thread(
+        target=run_training_thread,
+        args=("transfer", body.dataset, body.epochs),
+        daemon=True
+    )
+    thread.start()
+    return {"message": "Transfer learning training started"}
+
+@router.get("/train/status")
+async def get_train_status(
+    _: dict[str, str] = Depends(require_user),
+):
+    global task_manager
+    with task_manager.lock:
+        return task_manager.training_state
+
+@router.post("/smoke-test")
+async def start_smoke_test(
+    _: dict[str, str] = Depends(require_user),
+):
+    global task_manager
+    with task_manager.lock:
+        if task_manager.smoke_test_state["status"] == "running":
+            raise HTTPException(status_code=400, detail="Smoke test is already running")
+
+    thread = threading.Thread(
+        target=run_smoke_test_thread,
+        daemon=True
+    )
+    thread.start()
+    return {"message": "Smoke test started"}
+
+@router.get("/smoke-test/status")
+async def get_smoke_test_status(
+    _: dict[str, str] = Depends(require_user),
+):
+    global task_manager
+    with task_manager.lock:
+        return task_manager.smoke_test_state

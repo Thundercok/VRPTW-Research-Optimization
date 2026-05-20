@@ -68,7 +68,7 @@ test-e2e: dist
 	done
 	@echo "Running Playwright E2E tests..."
 	FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099 PYTHONPATH=./src/backend \
-		uv run pytest tests/e2e/ -v -s --headed; \
+		uv run pytest tests/e2e/ -v -s; \
 	EXIT_CODE=$$?; \
 	echo "Killing emulators and backend..."; \
 	pkill -f "firebase.*emulators" 2>/dev/null || true; \

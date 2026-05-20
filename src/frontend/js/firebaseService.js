@@ -1,13 +1,13 @@
 import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
 
 import {
-  getFirestore,
+  initializeFirestore,
   serverTimestamp,
   doc,
   setDoc,
   addDoc,
   collection,
-  connectFirestoreEmulator // <-- ADDED THIS IMPORT
+  connectFirestoreEmulator
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 // Native Auth Imports
 import { getAuth, signInWithEmailAndPassword, connectAuthEmulator } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
@@ -24,13 +24,16 @@ class FirebaseService {
     // Initialize immediately so Auth is ready before Playwright clicks login
     if (hasFirebaseConfig()) {
       const app = getApps().length > 0 ? getApps()[0] : initializeApp(firebaseConfig);
-      this.db = getFirestore(app);
+      this.db = initializeFirestore(app, {
+        experimentalForceLongPolling: true
+      });
       this.auth = getAuth(app);
 
       // Route Auth and Firestore traffic to the local emulators during local development/testing
       if (window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost") {
-        connectAuthEmulator(this.auth, "http://127.0.0.1:9099", { disableWarnings: true });
-        connectFirestoreEmulator(this.db, "127.0.0.1", 8080); // <-- ADDED THIS LINE
+        const host = window.location.hostname;
+        connectAuthEmulator(this.auth, `http://${host}:9099`, { disableWarnings: true });
+        connectFirestoreEmulator(this.db, host, 8080);
       }
     }
   }
