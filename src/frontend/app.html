@@ -2,11 +2,11 @@
 <html lang="en">
 
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Nexus | Dispatch Control Tower</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nexus | Dispatch Control Tower</title>
 
-  <script type="importmap">
+    <script type="importmap">
       {
         "imports": {
           "firebase/app": "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js",
@@ -17,207 +17,212 @@
       }
   </script>
 
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="css/style.css?v=ForceSafariToLoad1" />
+    <link rel="stylesheet" href="css/style.css?v=ForceSafariToLoad1" />
 </head>
 
 <body class="light-theme-enforced">
 
-  <div id="app-shell" class="saas-layout">
-    <aside class="saas-sidebar">
-      <div class="brand">
-        <div class="brand-logo">N</div>
-        <span class="brand-text">NEXUS OPS</span>
-      </div>
-
-      <nav class="saas-nav">
-        <p class="nav-label">Planning</p>
-        <a href="#" class="nav-item active">Live Dispatch</a>
-        <a href="#" class="nav-item">Fleet Config</a>
-
-        <p class="nav-label" style="margin-top: 24px;">Intelligence</p>
-        <a href="#" class="nav-item">Model Analytics</a>
-        <a href="#" class="nav-item">Settings</a>
-      </nav>
-
-      <div class="sidebar-footer">
-        <a href="index.html" class="nav-item"
-          style="color: var(--text-muted); margin-bottom: 12px; font-size: 12px;">&larr; Back to Home</a>
-        <div class="user-badge" id="user-email">guest@nexus.local</div>
-        <button id="btn-logout" class="btn-text">Sign Out</button>
-      </div>
-    </aside>
-
-    <main class="saas-main">
-
-      <header class="saas-header">
-        <div class="header-left">
-          <h1 class="page-title">Route Optimization</h1>
-          <span class="status-pill status-ready" id="status">System Ready</span>
-        </div>
-
-        <div class="header-right">
-          <!-- Hidden mode-toggle for compatibility with App.js -->
-          <input type="checkbox" id="mode-toggle" class="hidden" />
-          <select id="dataset-select" class="saas-select">
-            <option value="demo">Solomon RC101 (Demo)</option>
-            <option value="custom">Custom Import...</option>
-          </select>
-          <div class="fleet-toggles">
-            <label>Vehicles: <input type="number" id="vehicles-slider" value="4" class="saas-input-small" /></label>
-            <span id="vehicles-value" class="hidden"></span>
-            <label>Capacity: <input type="number" id="capacity-slider" value="120" class="saas-input-small" /></label>
-            <span id="capacity-value" class="hidden"></span>
-          </div>
-          <button id="run-model" class="btn-primary">Execute DDQN Solver</button>
-        </div>
-      </header>
-
-      <section class="kpi-row">
-        <div class="kpi-card">
-          <div class="kpi-title">Algorithm Gap (DDQN vs ALNS)</div>
-          <div class="kpi-value highlight-emerald" id="kpi-gap">-0.00%</div>
-          <div class="kpi-sub">Closer to BKS is better</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-title">Total Distance (km)</div>
-          <div class="kpi-split">
-            <div><span class="kpi-label">DDQN</span><strong id="kpi-dist-ddqn">0.00</strong></div>
-            <div><span class="kpi-label">ALNS</span><strong id="kpi-dist-alns">0.00</strong></div>
-          </div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-title">Vehicles Dispatched</div>
-          <div class="kpi-split">
-            <div><span class="kpi-label">DDQN</span><strong id="kpi-veh-ddqn">0</strong></div>
-            <div><span class="kpi-label">ALNS</span><strong id="kpi-veh-alns">0</strong></div>
-          </div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-title">Compute Time</div>
-          <div class="kpi-split">
-            <div><span class="kpi-label">DDQN</span><strong id="kpi-time-ddqn">0.0s</strong></div>
-            <div><span class="kpi-label">ALNS</span><strong id="kpi-time-alns">0.0s</strong></div>
-          </div>
-        </div>
-      </section>
-
-      <section class="workspace-full" style="position: relative;">
-
-        <!-- Slide-out Manifest Drawer (over the map) -->
-        <div id="manifest-drawer" class="manifest-drawer">
-          <div class="drawer-header">
-            <h3>Manifest (Waypoints)</h3>
-            <div class="drawer-header-actions">
-              <button id="add-row" class="btn-secondary btn-sm">+ Add Stop</button>
-              <button id="btn-close-drawer" class="drawer-close-btn" title="Close">&times;</button>
+    <div id="app-shell" class="saas-layout">
+        <aside class="saas-sidebar">
+            <div class="brand">
+                <div class="brand-logo">N</div>
+                <span class="brand-text">NEXUS OPS</span>
             </div>
-          </div>
-          <div class="table-container">
-            <table class="saas-table">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Location</th>
-                  <th class="num">Demand</th>
-                  <th class="num">Ready</th>
-                  <th class="num">Due</th>
-                  <th class="num">Service</th>
-                </tr>
-              </thead>
-              <tbody id="customer-rows">
-              </tbody>
-            </table>
-          </div>
-        </div>
 
-        <!-- Toggle Drawer Button (floating on map) -->
-        <button id="btn-toggle-drawer" class="drawer-toggle-btn" title="Toggle Manifest">
-          <span class="drawer-toggle-icon">☰</span>
-          <span class="drawer-toggle-label">Manifest</span>
-        </button>
+            <nav class="saas-nav">
+                <p class="nav-label">Planning</p>
+                <a href="#" class="nav-item active">Live Dispatch</a>
+                <a href="#" class="nav-item">Fleet Config</a>
 
-        <!-- Full-width Map Pane -->
-        <div class="pane pane-map-full" style="position: relative;">
-          <div class="pane-header">
-            <h3>Geospatial View</h3>
-            <div class="map-toggles">
-              <label><input type="radio" name="map_view" value="ddqn" checked /> DDQN</label>
-              <label><input type="radio" name="map_view" value="alns" /> ALNS Base</label>
+                <p class="nav-label" style="margin-top: 24px;">Intelligence</p>
+                <a href="#" class="nav-item">Model Analytics</a>
+                <a href="#" class="nav-item">Settings</a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <a href="index.html" class="nav-item"
+                    style="color: var(--text-muted); margin-bottom: 12px; font-size: 12px;">&larr; Back to Home</a>
+                <div class="user-badge" id="user-email">guest@nexus.local</div>
+                <button id="btn-logout" class="btn-text">Sign Out</button>
             </div>
-          </div>
-          <div style="flex: 1; display: flex; flex-direction: column; position: relative; min-height: 0;">
-            <div id="map-container" class="map-view" style="flex: 1;"></div>
-            
-            <!-- Simulation Control Bar -->
-            <div id="sim-control-panel" class="sim-control-bar hidden">
-              <button id="btn-sim-play" class="btn-sim-play">▶ Play</button>
-              <span id="sim-time-display" class="sim-time-text">Time: 00:00m</span>
-              <div class="sim-slider-container">
-                <input type="range" id="sim-slider" class="sim-slider" min="0" max="100" value="0" />
-              </div>
-              <select id="sim-speed" class="sim-speed-select">
-                <option value="1">1x Speed</option>
-                <option value="2">2x Speed</option>
-                <option value="10" selected>10x Speed</option>
-                <option value="50">50x Speed</option>
-              </select>
-            </div>
-          </div>
-          
-          <!-- Vehicle Status Panel -->
-          <div id="sim-vehicle-panel" class="sim-vehicle-panel hidden">
-          </div>
-        </div>
+        </aside>
 
-      </section>
-    </main>
-  </div>
+        <main class="saas-main">
 
-  <!-- Loading Overlay -->
-  <div id="loading" class="loading-overlay hidden">
-    <div id="loading-card" class="loading-card">
-      <div class="loading-card-header">
-        <h2 id="loading-title" class="loading-title">AI is optimizing routes...</h2>
-        <div class="loading-card-actions">
-          <button id="loading-minimize" class="loading-action-btn" title="Minimize">─</button>
-          <button id="loading-cancel" class="loading-action-btn loading-cancel-btn" title="Cancel">✕</button>
-        </div>
-      </div>
-      <p id="loading-subtitle" class="loading-subtitle">Sending request to the backend solver...</p>
-      <p id="loading-phase" class="loading-phase">Queueing job...</p>
-      <div class="loading-track">
-        <div id="loading-track-fill" class="loading-track-fill"></div>
-        <div id="loading-truck" class="loading-truck">🚚</div>
-      </div>
-      <div id="loading-percent" class="loading-percent">0%</div>
-      <div class="loading-stats">
-        <div><span class="loading-stat-label">Elapsed</span><span id="loading-elapsed" class="loading-stat-value">0s</span></div>
-        <div><span class="loading-stat-label">Backend</span><span id="loading-backend" class="loading-stat-value">queued</span></div>
-        <div><span class="loading-stat-label">Compute</span><span id="loading-device" class="loading-stat-value">—</span></div>
-      </div>
+            <header class="saas-header">
+                <div class="header-left">
+                    <h1 class="page-title">Route Optimization</h1>
+                    <span class="status-pill status-ready" id="status">System Ready</span>
+                </div>
+
+                <div class="header-right">
+                    <!-- Hidden mode-toggle for compatibility with App.js -->
+                    <input type="checkbox" id="mode-toggle" class="hidden" />
+                    <select id="dataset-select" class="saas-select">
+                        <option value="demo">Solomon RC101 (Demo)</option>
+                        <option value="custom">Custom Import...</option>
+                    </select>
+                    <div class="fleet-toggles">
+                        <label>Vehicles: <input type="number" id="vehicles-slider" value="4"
+                                class="saas-input-small" /></label>
+                        <span id="vehicles-value" class="hidden"></span>
+                        <label>Capacity: <input type="number" id="capacity-slider" value="120"
+                                class="saas-input-small" /></label>
+                        <span id="capacity-value" class="hidden"></span>
+                    </div>
+                    <button id="run-model" class="btn-primary">Execute DDQN Solver</button>
+                </div>
+            </header>
+
+            <section class="kpi-row">
+                <div class="kpi-card">
+                    <div class="kpi-title">Algorithm Gap (DDQN vs ALNS)</div>
+                    <div class="kpi-value highlight-emerald" id="kpi-gap">-0.00%</div>
+                    <div class="kpi-sub">Closer to BKS is better</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-title">Total Distance (km)</div>
+                    <div class="kpi-split">
+                        <div><span class="kpi-label">DDQN</span><strong id="kpi-dist-ddqn">0.00</strong></div>
+                        <div><span class="kpi-label">ALNS</span><strong id="kpi-dist-alns">0.00</strong></div>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-title">Vehicles Dispatched</div>
+                    <div class="kpi-split">
+                        <div><span class="kpi-label">DDQN</span><strong id="kpi-veh-ddqn">0</strong></div>
+                        <div><span class="kpi-label">ALNS</span><strong id="kpi-veh-alns">0</strong></div>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-title">Compute Time</div>
+                    <div class="kpi-split">
+                        <div><span class="kpi-label">DDQN</span><strong id="kpi-time-ddqn">0.0s</strong></div>
+                        <div><span class="kpi-label">ALNS</span><strong id="kpi-time-alns">0.0s</strong></div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="workspace-full" style="position: relative;">
+
+                <!-- Slide-out Manifest Drawer (over the map) -->
+                <div id="manifest-drawer" class="manifest-drawer">
+                    <div class="drawer-header">
+                        <h3>Manifest (Waypoints)</h3>
+                        <div class="drawer-header-actions">
+                            <button id="add-row" class="btn-secondary btn-sm">+ Add Stop</button>
+                            <button id="btn-close-drawer" class="drawer-close-btn" title="Close">&times;</button>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table class="saas-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Location</th>
+                                    <th class="num">Demand</th>
+                                    <th class="num">Ready</th>
+                                    <th class="num">Due</th>
+                                    <th class="num">Service</th>
+                                </tr>
+                            </thead>
+                            <tbody id="customer-rows">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Toggle Drawer Button (floating on map) -->
+                <button id="btn-toggle-drawer" class="drawer-toggle-btn" title="Toggle Manifest">
+                    <span class="drawer-toggle-icon">☰</span>
+                    <span class="drawer-toggle-label">Manifest</span>
+                </button>
+
+                <!-- Full-width Map Pane -->
+                <div class="pane pane-map-full" style="position: relative;">
+                    <div class="pane-header">
+                        <h3>Geospatial View</h3>
+                        <div class="map-toggles">
+                            <label><input type="radio" name="map_view" value="ddqn" checked /> DDQN</label>
+                            <label><input type="radio" name="map_view" value="alns" /> ALNS Base</label>
+                        </div>
+                    </div>
+                    <div style="flex: 1; display: flex; flex-direction: column; position: relative; min-height: 0;">
+                        <div id="map-container" class="map-view" style="flex: 1;"></div>
+
+                        <!-- Simulation Control Bar -->
+                        <div id="sim-control-panel" class="sim-control-bar hidden">
+                            <button id="btn-sim-play" class="btn-sim-play">▶ Play</button>
+                            <span id="sim-time-display" class="sim-time-text">Time: 00:00m</span>
+                            <div class="sim-slider-container">
+                                <input type="range" id="sim-slider" class="sim-slider" min="0" max="100" value="0" />
+                            </div>
+                            <select id="sim-speed" class="sim-speed-select">
+                                <option value="1">1x Speed</option>
+                                <option value="2">2x Speed</option>
+                                <option value="10" selected>10x Speed</option>
+                                <option value="50">50x Speed</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Vehicle Status Panel -->
+                    <div id="sim-vehicle-panel" class="sim-vehicle-panel hidden">
+                    </div>
+                </div>
+
+            </section>
+        </main>
     </div>
-  </div>
 
-  <!-- Loading Launcher (minimized floating button) -->
-  <div id="loading-launcher" class="loading-launcher hidden">
-    <span class="loading-launcher-text">Optimizing...</span>
-  </div>
+    <!-- Loading Overlay -->
+    <div id="loading" class="loading-overlay hidden">
+        <div id="loading-card" class="loading-card">
+            <div class="loading-card-header">
+                <h2 id="loading-title" class="loading-title">AI is optimizing routes...</h2>
+                <div class="loading-card-actions">
+                    <button id="loading-minimize" class="loading-action-btn" title="Minimize">─</button>
+                    <button id="loading-cancel" class="loading-action-btn loading-cancel-btn" title="Cancel">✕</button>
+                </div>
+            </div>
+            <p id="loading-subtitle" class="loading-subtitle">Sending request to the backend solver...</p>
+            <p id="loading-phase" class="loading-phase">Queueing job...</p>
+            <div class="loading-track">
+                <div id="loading-track-fill" class="loading-track-fill"></div>
+                <div id="loading-truck" class="loading-truck">🚚</div>
+            </div>
+            <div id="loading-percent" class="loading-percent">0%</div>
+            <div class="loading-stats">
+                <div><span class="loading-stat-label">Elapsed</span><span id="loading-elapsed"
+                        class="loading-stat-value">0s</span></div>
+                <div><span class="loading-stat-label">Backend</span><span id="loading-backend"
+                        class="loading-stat-value">queued</span></div>
+                <div><span class="loading-stat-label">Compute</span><span id="loading-device"
+                        class="loading-stat-value">—</span></div>
+            </div>
+        </div>
+    </div>
 
-  <!-- Connection Status -->
-  <div id="connection-pill" class="connection-pill hidden"></div>
+    <!-- Loading Launcher (minimized floating button) -->
+    <div id="loading-launcher" class="loading-launcher hidden">
+        <span class="loading-launcher-text">Optimizing...</span>
+    </div>
 
-  <!-- Toast Notifications -->
-  <div id="toast-root" class="toast-root"></div>
+    <!-- Connection Status -->
+    <div id="connection-pill" class="connection-pill hidden"></div>
 
-  <script type="module" src="js/observability.js?v=ForceSafariToLoad1"></script>
-  <script type="module" src="js/main.js?v=ForceSafariToLoad1"></script>
+    <!-- Toast Notifications -->
+    <div id="toast-root" class="toast-root"></div>
+
+    <script type="module" src="js/observability.js?v=ForceSafariToLoad1"></script>
+    <script type="module" src="js/main.js?v=ForceSafariToLoad1"></script>
 </body>
 
 </html>
