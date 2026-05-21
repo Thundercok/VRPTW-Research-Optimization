@@ -8,25 +8,6 @@ from typing import Dict, Tuple
 # BKS table
 # ---------------------------------------------------------------------------
 BKS: Dict[str, Dict[str, float]] = {
-    # RC1
-    "RC101": {"nv": 14, "td": 1696.94},
-    "RC102": {"nv": 12, "td": 1554.75},
-    "RC103": {"nv": 11, "td": 1261.67},
-    "RC104": {"nv": 10, "td": 1135.48},
-    "RC105": {"nv": 13, "td": 1629.44},
-    "RC106": {"nv": 11, "td": 1424.73},
-    "RC107": {"nv": 11, "td": 1230.48},
-    "RC108": {"nv": 10, "td": 1139.82},
-    # RC2
-    "RC201": {"nv": 4,  "td": 1406.94},
-    "RC202": {"nv": 3,  "td": 1365.64},
-    "RC203": {"nv": 3,  "td": 1049.62},
-    "RC204": {"nv": 3,  "td": 798.46},
-    "RC205": {"nv": 4,  "td": 1297.65},
-    "RC206": {"nv": 3,  "td": 1146.32},
-    "RC207": {"nv": 3,  "td": 1061.14},
-    "RC208": {"nv": 3,  "td": 828.14},
-    # C1
     "C101": {"nv": 10, "td": 828.94},
     "C102": {"nv": 10, "td": 828.94},
     "C103": {"nv": 10, "td": 828.06},
@@ -47,13 +28,44 @@ BKS: Dict[str, Dict[str, float]] = {
     "C208": {"nv": 3, "td": 588.32},
     # R1
     "R101": {"nv": 19, "td": 1650.80},
-    "R102": {"nv": 17, "td": 1486.86},
-    "R103": {"nv": 13, "td": 1292.67},
+    "R102": {"nv": 17, "td": 1486.12},
+    "R103": {"nv": 13, "td": 1292.68},
     "R104": {"nv": 9,  "td": 1007.31},
     "R105": {"nv": 14, "td": 1377.11},
-    # R2
+    "R106": {"nv": 12, "td": 1252.03},
+    "R107": {"nv": 10, "td": 1104.66},
+    "R108": {"nv": 9, "td": 960.88},
+    "R109": {"nv": 11, "td": 1194.73},
+    "R110": {"nv": 10, "td": 1118.84},
+    "R111": {"nv": 10, "td": 1096.72},
+    "R112": {"nv": 9, "td": 982.14},
     "R201": {"nv": 4, "td": 1252.37},
     "R202": {"nv": 3, "td": 1191.70},
+    "R203": {"nv": 3, "td": 939.50},
+    "R204": {"nv": 2, "td": 825.52},
+    "R205": {"nv": 3, "td": 994.43},
+    "R206": {"nv": 3, "td": 906.14},
+    "R207": {"nv": 2, "td": 890.61},
+    "R208": {"nv": 2, "td": 726.82},
+    "R209": {"nv": 3, "td": 909.16},
+    "R210": {"nv": 3, "td": 939.37},
+    "R211": {"nv": 2, "td": 885.71},
+    "RC101": {"nv": 14, "td": 1696.94},
+    "RC102": {"nv": 12, "td": 1554.75},
+    "RC103": {"nv": 11, "td": 1261.67},
+    "RC104": {"nv": 10, "td": 1135.48},
+    "RC105": {"nv": 13, "td": 1629.44},
+    "RC106": {"nv": 11, "td": 1424.73},
+    "RC107": {"nv": 11, "td": 1230.48},
+    "RC108": {"nv": 10, "td": 1139.82},
+    "RC201": {"nv": 4, "td": 1406.94},
+    "RC202": {"nv": 3, "td": 1365.65},
+    "RC203": {"nv": 3, "td": 1049.62},
+    "RC204": {"nv": 3, "td": 798.46},
+    "RC205": {"nv": 4, "td": 1297.65},
+    "RC206": {"nv": 3, "td": 1146.32},
+    "RC207": {"nv": 3, "td": 1061.14},
+    "RC208": {"nv": 3, "td": 828.14},
 }
 
 ALGO_ORTOOLS               = "OR-Tools"
@@ -107,13 +119,10 @@ def normalize_algorithm_frame(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def default_data_path() -> str:
-    """Resolve the Solomon data directory relative to this package, not CWD."""
-    _pkg_dir  = os.path.dirname(os.path.abspath(__file__))
-    _docs_dir = os.path.dirname(_pkg_dir)
-    local     = os.path.join(_docs_dir, "data", "Solomon")
-    if os.path.isdir(local):
-        return local
     candidates = [
+        "./data/Solomon",
+        os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data", "Solomon"),
+        os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "docs", "data", "Solomon"),
         "/workspace/data/Solomon",
         "/root/data/Solomon",
         "/kaggle/input/vrptw-benchmark-datasets/data/Solomon",
@@ -123,7 +132,7 @@ def default_data_path() -> str:
     for path in candidates:
         if os.path.isdir(path):
             return path
-    return local  # fall back — caller will get a clear error from load_datasets
+    return candidates[0]
 
 
 def default_output_dir() -> str:
@@ -158,7 +167,7 @@ class Config:
     weight_decay:        float = 0.10
     segment_size:        int   = 100
     max_wall_hours:      float = 9.5
-    n_runs:              int   = 3
+    n_runs:              int   = 5
     seed:                int   = 42
 
     # ── plateau controller ─────────────────────────────────────────────────
@@ -280,4 +289,3 @@ MODES: Tuple[ModeSpec, ...] = (
 
 MODE_DEFAULT, MODE_INTENSIFY, MODE_DIVERSIFY = 0, 1, 2
 MODE_TW_RESCUE, MODE_POOL_RECOMBINE, MODE_ROUTE_REDUCE = 3, 4, 5
-

@@ -15,7 +15,7 @@ from typing import Any
 import numpy as np
 
 _ROOT = Path(__file__).resolve().parents[3]
-for candidate in (_ROOT, _ROOT / "docs"):
+for candidate in (_ROOT / "src", _ROOT):
     if candidate.exists():
         sys.path.insert(0, str(candidate))
 from models.schemas import Point  # noqa: E402

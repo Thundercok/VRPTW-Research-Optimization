@@ -13,7 +13,7 @@ from .core import Inst, Plan
 from .generators import SyntheticVRPTWGenerator
 from .solvers import ALNSSolver, HybridFixedSolver, HybridRuleSolver, HybridDDQNSolver, run_ortools
 from .operators import op_shaw, op_regret_2
-from .rl import EliteArchive, DEVICE
+from .rl import EliteArchive, WelfordRewardNormalizer, DEVICE
 
 try:
     from safetensors.torch import load_file as _st_load, save_file as _st_save
@@ -326,6 +326,7 @@ def train_domain_randomization(cfg: Config, seed: int = 42) -> Dict:
     distributions = ("C", "R", "RC")
     rng     = random.Random(seed)
     weights: Optional[Dict] = None
+    shared_norm = WelfordRewardNormalizer(clip_sigma=8.0, warmup=256)
     print(f"Domain-randomization curriculum: {total_epochs} epochs × {batch_size} instances/epoch")
 
     for epoch in range(total_epochs):
@@ -344,7 +345,7 @@ def train_domain_randomization(cfg: Config, seed: int = 42) -> Dict:
             solver = HybridDDQNSolver(inst, cfg)
             if weights is not None:
                 solver.load_weights(weights)
-            plan, _ = solver.solve(seed=seed + epoch * 1_000 + idx)
+            plan, _ = solver.solve(seed=seed + epoch * 1_000 + idx, shared_norm=shared_norm)
             weights  = solver.clone_weights()
             print(f"    [{idx+1:>2}/{batch_size}] {inst.name}: "
                   f"n={inst.n}  nv={plan.nv}  cost={plan.cost:.1f}  feasible={plan.feasible}")
@@ -400,4 +401,3 @@ def smoke_test(inst: Inst, seed: int = 42) -> Dict[str, Tuple[float, float]]:
               f"BKS TD {gap_str} NV {nv_str} ({elapsed:.1f}s)")
         results[algo_name] = (float(td_gap) if td_gap is not None else 0.0, elapsed)
     return results
-

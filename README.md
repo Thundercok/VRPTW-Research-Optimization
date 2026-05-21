@@ -48,10 +48,10 @@ This project benchmarks a family of **Adaptive Large Neighbourhood Search (ALNS)
 
 ```
 VRPTW-Research-Optimization/
-├── docs/                         # Research solver (standalone Python package)
-│   ├── vrptw/                    # ← the vrptw package (run everything from here)
+├── src/
+│   ├── vrptw/                    # Research solver package
 │   │   ├── __init__.py           # Public API exports
-│   │   ├── __main__.py           # Entry point: python3 -m vrptw
+│   │   ├── __main__.py           # Entry point: PYTHONPATH=src python3 -m vrptw
 │   │   ├── config.py             # Config dataclass, BKS table, algo labels
 │   │   ├── core.py               # Inst, Plan, Numba-JIT cost/feasibility
 │   │   ├── generators.py         # SyntheticVRPTWGenerator, load_datasets
@@ -62,6 +62,9 @@ VRPTW-Research-Optimization/
 │   │   ├── rl.py                 # QNet, ThompsonBandit, DDQN controllers, LAC, EliteArchive
 │   │   ├── solvers.py            # ALNSSolver, HybridFixedSolver, HybridRuleSolver, HybridDDQNSolver
 │   │   └── benchmark.py          # run_instance, run_benchmark, smoke_test, train_transfer_model
+│   ├── backend/                  # FastAPI app
+│   └── frontend/                 # Browser UI
+├── docs/                         # Research notes, scripts, generated logs, model assets
 │   ├── data/
 │   │   └── Solomon/              # 56 Solomon .txt files (rc101–rc208, r1xx, c1xx, etc.) ✓ already present
 │   ├── logs/                     # Benchmark CSVs, run logs
@@ -146,7 +149,7 @@ Create a file, e.g. `docs/run_benchmark.py`:
 
 ```python
 import sys, os
-sys.path.insert(0, os.path.dirname(__file__))   # ensure vrptw package is on path
+sys.path.insert(0, os.path.abspath("src"))      # ensure vrptw package is on path
 
 from vrptw import (
     Config, load_datasets,
@@ -359,7 +362,7 @@ By default `DEMO_AUTH_BYPASS=true` in `.env` — you can use the app immediately
 
 ## 8. Configuration Reference
 
-All options are fields of the `Config` dataclass in `docs/vrptw/config.py`. The most important ones:
+All options are fields of the `Config` dataclass in `src/vrptw/config.py`. The most important ones:
 
 ```python
 from vrptw import Config

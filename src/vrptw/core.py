@@ -1,4 +1,12 @@
 from __future__ import annotations
+import os
+
+_N_PARALLEL = min(3, max(1, (os.cpu_count() or 1) // 2))
+_NUMBA_THREADS = max(1, (os.cpu_count() or 1) // _N_PARALLEL)
+os.environ.setdefault("NUMBA_NUM_THREADS", str(_NUMBA_THREADS))
+os.environ.setdefault("OMP_NUM_THREADS", str(_NUMBA_THREADS))
+os.environ.setdefault("MKL_NUM_THREADS", str(_NUMBA_THREADS))
+
 import numpy as np
 from typing import List, Dict, Optional, Tuple
 from numba import njit
@@ -176,4 +184,3 @@ def _fleet_fill(plan: Plan) -> float:
         [sum(plan.inst.demands[n] for n in r) / max(plan.inst.capacity, 1)
          for r in plan.routes]
     ))
-

@@ -226,10 +226,11 @@ import threading
 import os
 from pydantic import BaseModel
 
-# Ensure workspace root is in sys.path for importing vrptw package
+# Ensure src is in sys.path for importing the vrptw package.
 _ROOT_PATH = Path(__file__).resolve().parents[4]
-if str(_ROOT_PATH) not in sys.path:
-    sys.path.insert(0, str(_ROOT_PATH))
+_SRC_PATH = _ROOT_PATH / "src"
+if str(_SRC_PATH) not in sys.path:
+    sys.path.insert(0, str(_SRC_PATH))
 
 import vrptw
 

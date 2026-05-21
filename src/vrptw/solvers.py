@@ -12,7 +12,18 @@ from .heuristics import build_greedy
 from .operators import DESTROY, REPAIR, accept, accept_with_nv_ceiling, destroy_size, N_D, N_R
 from .local_search import local_search, _iterative_route_elimination
 from .pool import RoutePool, recombine_with_route_pool
-from .rl import PrioritizedReplayBuffer, ThompsonBandit, EliteArchive, PlateauController, OperatorController, LearnedAcceptanceCriterion, DEVICE
+from .rl import (
+    PrioritizedReplayBuffer,
+    ThompsonBandit,
+    EliteArchive,
+    PlateauController,
+    OperatorController,
+    LearnedAcceptanceCriterion,
+    LSBudgetController,
+    UCBActionAugmenter,
+    WelfordRewardNormalizer,
+    DEVICE,
+)
 
 try:
     from ortools.constraint_solver import routing_enums_pb2, pywrapcp as _pywrapcp
@@ -74,6 +85,9 @@ class HybridDDQNSolver:
         self.ctrl       = PlateauController(cfg)
         self.op_ctrl    = OperatorController(cfg)
         self.lac        = LearnedAcceptanceCriterion(cfg)
+        self.ls_budget  = LSBudgetController(ls_time_frac=0.30)
+        self.ucb_aug    = UCBActionAugmenter(n_actions=N_D * N_R)
+        self.reward_norm = WelfordRewardNormalizer(clip_sigma=8.0, warmup=128)
         self.mode_bandits: List[ThompsonBandit] = [ThompsonBandit(N_D, N_R) for _ in MODES]
         self.op_counts: Dict[Tuple[int, int], int] = {}
         self._segment_recombine_used = False
@@ -86,6 +100,11 @@ class HybridDDQNSolver:
             for k, v in sd.items():
                 weights[f"{prefix}.{k}"] = v.clone().cpu()
         weights.update(self.lac.state_dict())
+        weights["ucb.mu"] = torch.tensor(self.ucb_aug._mu, dtype=torch.float32)
+        weights["ucb.cnt"] = torch.tensor(self.ucb_aug._cnt, dtype=torch.float32)
+        weights["ucb.m2"] = torch.tensor(self.ucb_aug._m2, dtype=torch.float32)
+        for k, v in self.reward_norm.state_dict().items():
+            weights[f"reward_norm.{k}"] = torch.tensor(float(v))
         return weights
 
     def load_weights(self, weights: Dict) -> None:
@@ -117,15 +136,28 @@ class HybridDDQNSolver:
         if lac_weights:
             self.lac.load_state_dict(lac_weights)
 
-    def _potential(self, plan: Plan) -> float:
-        bks = BKS.get(plan.inst.name)
-        if not bks:
-            return 0.0
-        gap_pct = float(np.clip(
-            (plan.cost - bks["td"]) / max(bks["td"], 1.0) * 100.0, -25.0, 25.0
-        ))
-        return float(-self.cfg.potential_nv_scale * max(plan.nv - bks["nv"], 0)
-                     - self.cfg.potential_cost_scale * gap_pct)
+        if "ucb.mu" in weights:
+            self.ucb_aug._mu = weights["ucb.mu"].numpy().astype(np.float64)
+            self.ucb_aug._cnt = weights["ucb.cnt"].numpy().astype(np.float64)
+            self.ucb_aug._m2 = weights["ucb.m2"].numpy().astype(np.float64)
+            self.ucb_aug._N = float(self.ucb_aug._cnt.sum())
+
+        norm_d = {k.split(".", 1)[1]: float(weights[k]) for k in weights if k.startswith("reward_norm.")}
+        if norm_d:
+            self.reward_norm.load_state_dict(norm_d)
+
+    def _fleet_pressure(self, plan: Plan, best_nv: float) -> float:
+        nv_excess = (plan.nv - best_nv) / max(self._init_nv, 1.0)
+        return float(1.0 / (1.0 + math.exp(-8.0 * nv_excess)))
+
+    def _adaptive_potential(self, plan: Plan, best_nv: float, best_td: float) -> float:
+        lam = self._fleet_pressure(plan, best_nv)
+        nv_penalty_norm = max(plan.nv - best_nv, 0.0) / max(self._init_nv, 1.0)
+        td_gap = float(np.clip((plan.cost - best_td) / max(best_td, 1.0) * 100.0, -25.0, 25.0))
+        return float(
+            -lam * self.cfg.potential_nv_scale * nv_penalty_norm
+            - (1 - lam) * self.cfg.potential_cost_scale * td_gap
+        )
 
     def _state(self, cur, best, no_imp, temp, imp_rate, progress, pool) -> np.ndarray:
         rb, lb = _plan_spread(cur, self.inst)
@@ -161,42 +193,54 @@ class HybridDDQNSolver:
 
     def _segment_reward(self, best_before, best_after, cur_before, cur_after,
                         accepted_moves, action) -> float:
+        lam = self._fleet_pressure(cur_after, best_before.nv)
         base = -0.20 - 0.04 * MODES[action].ls_passes
         if MODES[action].use_recombine:
             base -= 0.06
-        best_nv_gain   = best_before.nv - best_after.nv
-        cur_nv_gain    = cur_before.nv  - cur_after.nv
+        denom = max(self._init_nv, 1.0)
+        best_nv_gain = (best_before.nv - best_after.nv) / denom
+        cur_nv_gain = (cur_before.nv - cur_after.nv) / denom
         best_cost_gain = max((best_before.cost - best_after.cost) / max(best_before.cost, 1) * 100, 0.0)
-        cur_cost_gain  = max((cur_before.cost  - cur_after.cost)  / max(cur_before.cost,  1) * 100, 0.0)
-        if best_nv_gain > 0:
-            base += 8.0 * best_nv_gain + 1.2 * best_cost_gain
-        elif cur_nv_gain > 0:
-            base += 5.0 * cur_nv_gain  + 0.6 * cur_cost_gain
-        else:
-            base += 0.35 * best_cost_gain + 0.15 * cur_cost_gain
+        cur_cost_gain = max((cur_before.cost - cur_after.cost) / max(cur_before.cost, 1) * 100, 0.0)
+        nv_component = lam * (
+            8.0 * best_nv_gain * denom + 1.2 * best_cost_gain + 5.0 * cur_nv_gain * denom + 0.6 * cur_cost_gain
+        )
+        td_component = (1.0 - lam) * (
+            3.0 * best_nv_gain * denom + 3.5 * best_cost_gain + 2.0 * cur_nv_gain * denom + 1.8 * cur_cost_gain
+        )
+        base += nv_component + td_component
         if accepted_moves <= max(1, self.cfg.segment_size // 10):
             base -= 0.15
-        shaped = self.cfg.ctrl_gamma * self._potential(cur_after) - self._potential(cur_before)
+        shaped = (
+            self.cfg.ctrl_gamma * self._adaptive_potential(cur_after, best_before.nv, best_before.cost)
+            - self._adaptive_potential(cur_before, best_before.nv, best_before.cost)
+        )
         return float(self.cfg.segment_reward_scale * base + shaped)
 
     def _iteration_reward(self, cur_before, best_before, cur_after, best_after, accepted) -> float:
+        lam = self._fleet_pressure(cur_after, best_before.nv)
         if not accepted:
             base = -0.08
         else:
             base = 0.05
-            best_nv_gain   = best_before.nv - best_after.nv
-            cur_nv_gain    = cur_before.nv  - cur_after.nv
+            denom = max(self._init_nv, 1.0)
+            best_nv_gain = (best_before.nv - best_after.nv) / denom
+            cur_nv_gain = (cur_before.nv - cur_after.nv) / denom
             best_cost_gain = max((best_before.cost - best_after.cost) / max(best_before.cost, 1) * 100, 0.0)
-            cur_cost_gain  = max((cur_before.cost  - cur_after.cost)  / max(cur_before.cost,  1) * 100, 0.0)
-            if best_nv_gain > 0:
-                base += 3.0 * best_nv_gain + 0.4 * best_cost_gain
-            elif cur_nv_gain > 0:
-                base += 2.0 * cur_nv_gain  + 0.2 * cur_cost_gain
-            else:
-                base += 0.12 * best_cost_gain + 0.05 * cur_cost_gain
+            cur_cost_gain = max((cur_before.cost - cur_after.cost) / max(cur_before.cost, 1) * 100, 0.0)
+            nv_component = lam * (
+                3.0 * best_nv_gain * denom + 0.40 * best_cost_gain + 2.0 * cur_nv_gain * denom + 0.20 * cur_cost_gain
+            )
+            td_component = (1.0 - lam) * (
+                0.50 * best_nv_gain * denom + 1.80 * best_cost_gain + 0.30 * cur_nv_gain * denom + 0.90 * cur_cost_gain
+            )
+            base += nv_component + td_component
             if cur_after.nv > cur_before.nv:
-                base -= 0.5 * (cur_after.nv - cur_before.nv)
-        shaped = self.cfg.op_gamma * self._potential(cur_after) - self._potential(cur_before)
+                base -= 0.5 * ((cur_after.nv - cur_before.nv) / denom) * denom
+        shaped = (
+            self.cfg.op_gamma * self._adaptive_potential(cur_after, best_before.nv, best_before.cost)
+            - self._adaptive_potential(cur_before, best_before.nv, best_before.cost)
+        )
         return float(self.cfg.iteration_reward_scale * base + shaped)
 
     def _route_reduce_trigger(self, cur: Plan, no_imp: int) -> bool:
@@ -276,11 +320,18 @@ class HybridDDQNSolver:
         return best
 
     def solve(self, seed: Optional[int] = None, frozen: bool = False,
-              init: Optional[Plan] = None) -> Tuple[Plan, List[float]]:
+              init: Optional[Plan] = None,
+              shared_norm: Optional[WelfordRewardNormalizer] = None) -> Tuple[Plan, List[float]]:
         if seed is not None:
             random.seed(seed); np.random.seed(seed); torch.manual_seed(seed)
         cfg = self.cfg
         self.ctrl.reset(); self.op_ctrl.reset()
+        self.ls_budget.initialize(cfg)
+        self.ucb_aug.reset()
+        norm = shared_norm if shared_norm is not None else self.reward_norm
+        if shared_norm is None:
+            self.reward_norm = WelfordRewardNormalizer(clip_sigma=8.0, warmup=128)
+            norm = self.reward_norm
         if getattr(self, "use_op_rl", True):
             self.lac = LearnedAcceptanceCriterion(cfg)
         self.mode_bandits = [ThompsonBandit(N_D, N_R) for _ in MODES]
@@ -325,7 +376,8 @@ class HybridDDQNSolver:
                 op_state = self._op_state(cur, best, action, it, temp, no_imp, pool, imp_rate)
                 if getattr(self, "use_op_rl", True):
                     op_action, di, ri = self.op_ctrl.act(
-                        op_state, biased_dw, biased_rw, mode_bandit, frozen=frozen)
+                        op_state, biased_dw, biased_rw, mode_bandit, frozen=frozen,
+                        ucb_aug=self.ucb_aug if not frozen else None)
                 else:
                     di, ri    = mode_bandit.select(
                         prior=self.op_ctrl._prior(biased_dw, biased_rw),
@@ -372,6 +424,17 @@ class HybridDDQNSolver:
                 improved = False
                 if accepted:
                     accepted_moves += 1
+                    is_new_best = cand.dominates(best)
+                    if not frozen and self.ls_budget.should_trigger(action, True, is_new_best, MODES):
+                        t_ls = time.time()
+                        cost_pre = cand.cost
+                        nv_cap = (
+                            best.nv
+                            if action in (MODE_INTENSIFY, MODE_TW_RESCUE, MODE_POOL_RECOMBINE, MODE_ROUTE_REDUCE)
+                            else None
+                        )
+                        cand = local_search(cand, max_passes=MODES[action].ls_passes, nv_ceiling=nv_cap)
+                        self.ls_budget.record(time.time() - t_ls, cost_pre, cand.cost)
                     improved = cand.dominates(cur)
                     pool.add_plan(cand)
                     if cand.nv <= best.nv and cand.dominates(best):
@@ -398,10 +461,12 @@ class HybridDDQNSolver:
                     cur_after, best_after, action, it + 1, temp, no_imp, pool, next_imp)
                 done = 1.0 if no_imp >= cfg.early_stop_patience else 0.0
                 if not frozen and getattr(self, "use_op_rl", True):
+                    iter_rew_raw = self._iteration_reward(cur_before, best_before, cur_after, best_after, accepted)
+                    iter_rew_norm = norm.normalize(iter_rew_raw)
+                    self.ucb_aug.update(op_action, iter_rew_raw)
                     self.op_ctrl.observe(
                         op_state, op_action,
-                        self._iteration_reward(cur_before, best_before,
-                                               cur_after, best_after, accepted),
+                        iter_rew_norm,
                         next_state, done,
                     )
                     if (it + 1) % 4 == 0:
@@ -588,4 +653,3 @@ def run_ortools(inst: Inst, cfg: Config) -> Tuple[Optional[Plan], float]:
         print(f"  [OR-Tools] infeasible ({elapsed:.1f}s)")
         return None, elapsed
     return plan, elapsed
-

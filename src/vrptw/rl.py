@@ -1,6 +1,7 @@
 from __future__ import annotations
 import random
 import math
+import os
 import numpy as np
 from collections import deque
 from typing import List, Dict, Tuple, Optional, Deque
@@ -13,6 +14,7 @@ from .config import Config, MODES
 from .operators import N_D, N_R, N_ACTIONS
 
 DEVICE = torch.device("cpu")
+torch.set_num_threads(max(1, int(os.environ.get("NUMBA_NUM_THREADS", "1")) // 2))
 
 class PrioritizedReplayBuffer:
     """
@@ -157,6 +159,121 @@ class EliteArchive:
 
 
 # ---------------------------------------------------------------------------
+# LS Budget, UCB, & Welford Reward Normalizer
+# ---------------------------------------------------------------------------
+class WelfordRewardNormalizer:
+    def __init__(self, clip_sigma: float = 8.0, warmup: int = 128, eps: float = 1e-8):
+        self.clip = clip_sigma
+        self.warmup = warmup
+        self.eps = eps
+        self._n = 0
+        self._mean = 0.0
+        self._M2 = 0.0
+
+    def observe(self, r: float) -> None:
+        self._n += 1
+        delta = r - self._mean
+        self._mean += delta / self._n
+        self._M2 += delta * (r - self._mean)
+
+    @property
+    def std(self) -> float:
+        if self._n < 2:
+            return 1.0
+        return math.sqrt(max(self._M2 / (self._n - 1), self.eps ** 2))
+
+    def normalize(self, r: float) -> float:
+        self.observe(r)
+        if self._n < self.warmup:
+            return r
+        z = (r - self._mean) / (self.std + self.eps)
+        return float(np.clip(z, -self.clip, self.clip))
+
+    def state_dict(self) -> dict:
+        return {"n": self._n, "mean": self._mean, "M2": self._M2}
+
+    def load_state_dict(self, d: dict) -> None:
+        self._n = int(d["n"])
+        self._mean = float(d["mean"])
+        self._M2 = float(d["M2"])
+
+
+class LSBudgetController:
+    def __init__(self, ls_time_frac: float = 0.30, ema_alpha: float = 0.15):
+        self.ls_time_frac = ls_time_frac
+        self.ema_alpha = ema_alpha
+        self._budget_total = float("inf")
+        self._budget_used = 0.0
+        self._yield_ema = 0.05
+        self._n_calls = 0
+
+    def initialize(self, cfg: Config) -> None:
+        est_total_s = cfg.hybrid_iterations * 0.025
+        self._budget_total = est_total_s * self.ls_time_frac
+        self._budget_used = 0.0
+        self._yield_ema = 0.05
+
+    def should_trigger(self, action: int, accepted: bool, is_new_best: bool, modes) -> bool:
+        if self._budget_used >= self._budget_total:
+            return False
+        if is_new_best:
+            return True
+        if modes[action].ls_passes == 0:
+            return False
+        if not accepted:
+            return False
+        if self._yield_ema > 0.0:
+            return True
+        return random.random() < 0.10
+
+    def record(self, time_s: float, cost_before: float, cost_after: float) -> None:
+        improvement_pct = max(0.0, (cost_before - cost_after) / max(cost_before, 1.0) * 100.0)
+        time_cost = time_s / max(self._budget_total * 0.02, 1e-9)
+        self._yield_ema = self.ema_alpha * (improvement_pct - time_cost) + (1.0 - self.ema_alpha) * self._yield_ema
+        self._budget_used += time_s
+        self._n_calls += 1
+
+
+class UCBActionAugmenter:
+    def __init__(self, n_actions: int = 40, c_ucb: float = 1.0, gamma: float = 0.993, alpha_blend: float = 0.35):
+        self.n = n_actions
+        self.c = c_ucb
+        self.gamma = gamma
+        self.alpha = alpha_blend
+        self._cnt = np.ones(n_actions, dtype=np.float64) * 0.5
+        self._mu = np.zeros(n_actions, dtype=np.float64)
+        self._m2 = np.ones(n_actions, dtype=np.float64) * 0.5
+        self._N = float(n_actions) * 0.5
+
+    def reset(self) -> None:
+        self._cnt[:] = 0.5
+        self._mu[:] = 0.0
+        self._m2[:] = 0.5
+        self._N = float(self.n) * 0.5
+
+    def update(self, action: int, reward: float) -> None:
+        self._cnt *= self.gamma
+        self._mu *= self.gamma
+        self._m2 *= self.gamma
+        self._N = self._cnt.sum()
+        self._cnt[action] += 1.0
+        delta = reward - self._mu[action]
+        self._mu[action] += delta / self._cnt[action]
+        delta2 = reward - self._mu[action]
+        self._m2[action] += delta * delta2
+
+    def augment_qvalues(self, q: np.ndarray) -> np.ndarray:
+        variance = self._m2 / np.maximum(self._cnt - 1.0, 1.0)
+        std = np.sqrt(np.maximum(variance, 0.0))
+        log_n = math.log(max(self._N, math.e))
+        conf = self.c * std * np.sqrt(log_n / np.maximum(self._cnt, 1e-9))
+        scores = self._mu + conf
+        centered = scores - scores.mean()
+        scale = max(scores.std(), 1e-6)
+        return q + self.alpha * (centered / scale)
+
+
+# ---------------------------------------------------------------------------
 # DDQN controllers  (now using PrioritizedReplayBuffer)
 # ---------------------------------------------------------------------------
 class PlateauController:
@@ -203,8 +320,9 @@ class PlateauController:
         self.opt.zero_grad(); loss.backward()
         nn.utils.clip_grad_norm_(self.q.parameters(), 1.0)
         self.opt.step()
-        if self.step % self.cfg.ctrl_target_freq == 0:
-            self.q_t.load_state_dict(self.q.state_dict())
+        tau = 0.005
+        for target_param, local_param in zip(self.q_t.parameters(), self.q.parameters()):
+            target_param.data.copy_(tau * local_param.data + (1.0 - tau) * target_param.data)
         self.eps = max(self.cfg.ctrl_eps_end, self.eps * self.cfg.ctrl_eps_decay)
 
 
@@ -232,7 +350,7 @@ class OperatorController:
         probs /= max(probs.sum(), 1e-9)
         return int(np.random.choice(N_ACTIONS, p=probs))
 
-    def act(self, state, dw, rw, bandit, frozen=False) -> Tuple[int, int, int]:
+    def act(self, state, dw, rw, bandit, frozen=False, ucb_aug=None) -> Tuple[int, int, int]:
         prior = self._prior(dw, rw)
         if not frozen and len(self.buf) < self.cfg.op_warmup:
             di, ri = bandit.select(prior=prior, prior_strength=self.cfg.bandit_prior_strength)
@@ -245,6 +363,8 @@ class OperatorController:
                 q = self.q(torch.tensor(state).unsqueeze(0).to(DEVICE))[0].cpu().numpy()
             q      = (q + self.cfg.op_prior_strength * np.log(prior.reshape(-1) + 1e-8)
                         + self.cfg.op_bandit_strength * bandit.mean().reshape(-1))
+            if ucb_aug is not None:
+                q = ucb_aug.augment_qvalues(q)
             action = int(q.argmax())
             di, ri = divmod(action, N_R)
         return int(action), int(di), int(ri)
@@ -273,8 +393,9 @@ class OperatorController:
         self.opt.zero_grad(); loss.backward()
         nn.utils.clip_grad_norm_(self.q.parameters(), 1.0)
         self.opt.step()
-        if self.step % self.cfg.op_target_freq == 0:
-            self.q_t.load_state_dict(self.q.state_dict())
+        tau = 0.005
+        for target_param, local_param in zip(self.q_t.parameters(), self.q.parameters()):
+            target_param.data.copy_(tau * local_param.data + (1.0 - tau) * target_param.data)
         self.eps = max(self.cfg.op_eps_end, self.eps * self.cfg.op_eps_decay)
 
 
@@ -349,4 +470,3 @@ class LearnedAcceptanceCriterion:
                 updates[bare] = v.to(DEVICE)
         sd.update(updates)
         self.net.load_state_dict(sd)
-
