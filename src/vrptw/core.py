@@ -39,7 +39,10 @@ class Inst:
         self.tw_width = self.due_times - self.ready_times
         self.max_tw_width = float(self.tw_width[1:].max() + 1e-9)
         mean_tw = float(self.tw_width[1:].mean())
-        self.tw_tight_frac = sum(1 for i in range(1, self.n + 1) if self.tw_width[i] < 0.5 * mean_tw) / max(self.n, 1)
+        mean_tw = float(self.tw_width[1:].mean())
+        self.tw_tight_frac = sum(1 for i in range(1, self.n + 1) if self.tw_width[i] < 0.2 * self.horizon) / max(
+            self.n, 1
+        )
 
 
 @njit(cache=True)
@@ -195,4 +198,6 @@ def _plan_spread(plan: Plan, inst: Inst) -> Tuple[float, float]:
 def _fleet_fill(plan: Plan) -> float:
     if not plan.routes:
         return 0.0
-    return float(np.mean([sum(plan.inst.demands[n] for n in r) / max(plan.inst.capacity, 1) for r in plan.routes]))
+    capacity = max(plan.inst.capacity, 1)
+    fills = [plan.inst.demands[np.array(r, np.int64)].sum() / capacity for r in plan.routes]
+    return float(np.mean(fills))

@@ -63,6 +63,61 @@ def cmd_solve(args):
     for i, route in enumerate(plan.routes, 1):
         print(f"  Route #{i}: Depot -> {' -> '.join(map(str, route))} -> Depot")
 
+def cmd_benchmark(args):
+    from .benchmark import run_benchmark, print_summary_table
+    from .generators import load_datasets
+    from .config import Config, canonical_algo_label, default_data_path, default_output_dir
+    
+    cfg = Config(
+        data_path=args.data_path or default_data_path(),
+        output_dir=args.output_dir or default_output_dir(),
+        n_runs=args.runs,
+        alns_iterations=args.iters,
+        hybrid_iterations=args.iters,
+        early_stop_patience=args.early_stop,
+        polish_iterations=args.polish,
+        seed=args.seed,
+    )
+    
+    print(f"Loading datasets from: {cfg.data_path}")
+    datasets = load_datasets(cfg.data_path)
+    
+    # Combine all instances
+    all_insts = []
+    for group in ("c1", "c2", "r1", "r2", "rc1", "rc2"):
+        if group in datasets:
+            all_insts.extend(datasets[group])
+            
+    # Filter by requested instances if provided
+    if args.instances:
+        req_lower = {inst.lower() for inst in args.instances}
+        all_insts = [inst for inst in all_insts if inst.name.lower() in req_lower]
+        print(f"Filtered to {len(all_insts)} requested instances: {[i.name for i in all_insts]}")
+    else:
+        print(f"Loaded {len(all_insts)} instances total.")
+        
+    if not all_insts:
+        print("Error: No matching instances found. Check data-path and instance filters.")
+        sys.exit(1)
+        
+    # Handle algorithms
+    algorithms = [canonical_algo_label(a) for a in args.algo]
+    
+    os.makedirs(cfg.output_dir, exist_ok=True)
+    
+    print(f"Running benchmarks for algorithms: {algorithms}")
+    df = run_benchmark(
+        instances=all_insts,
+        algorithms=algorithms,
+        cfg=cfg,
+        result_path=os.path.join(cfg.output_dir, "benchmark_clean.csv"),
+        checkpoint_path=os.path.join(cfg.output_dir, "benchmark_checkpoint.csv"),
+    )
+    
+    print("\n\n═══ BENCHMARK SUMMARY ═══")
+    print_summary_table(df)
+    print(f"\nFull results saved to: {os.path.join(cfg.output_dir, 'benchmark_clean.csv')}")
+
 def main():
     parser = argparse.ArgumentParser(description="VRPTW Optimization Research Suite CLI")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -86,9 +141,20 @@ def main():
     p_solve.add_argument("--seed", type=int, default=42, help="Random seed")
     p_solve.set_defaults(func=cmd_solve)
     
-    # Benchmark forward help command
-    p_bench = subparsers.add_parser("benchmark", help="Instructions for running full benchmark suite")
-    p_bench.set_defaults(func=lambda args: print("To run benchmarks, please use the runner script:\n  python3 docs/run_benchmark.py --help"))
+    # Benchmark command
+    p_bench = subparsers.add_parser("benchmark", help="Run benchmark suite on Solomon instances")
+    p_bench.add_argument("--instances", nargs="+", default=[], help="List of specific instance names to run")
+    p_bench.add_argument("--algo", "--algorithms", nargs="+", dest="algo",
+                         default=["ALNS-Base", "Hybrid-Fixed", "Hybrid-Rule", "Hybrid-DDQN"],
+                         help="Algorithms to include in benchmark")
+    p_bench.add_argument("--runs", type=int, default=3, help="Number of runs per algorithm/instance combo")
+    p_bench.add_argument("--iters", type=int, default=1200, help="Solver iteration limit")
+    p_bench.add_argument("--early-stop", type=int, default=250, help="Early stop patience")
+    p_bench.add_argument("--polish", type=int, default=80, help="Polish iterations")
+    p_bench.add_argument("--seed", type=int, default=42, help="Random seed")
+    p_bench.add_argument("--data-path", type=str, default=None, help="Path to Solomon datasets")
+    p_bench.add_argument("--output-dir", type=str, default=None, help="Directory to save logs/results")
+    p_bench.set_defaults(func=cmd_benchmark)
     
     args = parser.parse_args()
     args.func(args)

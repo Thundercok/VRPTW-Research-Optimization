@@ -218,12 +218,12 @@ def op_cross_route_shaw(plan: Plan, size: int) -> Tuple[Plan, List[int]]:
     max_dist = inst.max_dist + 1e-9
     max_tw = max(inst.due_times - inst.ready_times) + 1e-9
     while len(removed) < size:
+        ref_node = random.choice(removed)  # ← once per outer iteration
+        ref_route = node_to_route.get(ref_node, -1)
         candidates = []
         for n in nodes:
             if n in rs:
                 continue
-            ref_node = random.choice(removed)
-            ref_route = node_to_route.get(ref_node, -1)
             cross_route_bonus = -0.2 if node_to_route.get(n, -2) != ref_route else 0.2
             rel = (
                 0.5 * inst.dist[ref_node, n] / max_dist

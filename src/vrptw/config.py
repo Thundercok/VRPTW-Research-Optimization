@@ -111,7 +111,16 @@ LEGACY_ALGO_LABELS = {
 
 
 def canonical_algo_label(label: str) -> str:
-    return LEGACY_ALGO_LABELS.get(label, label)
+    if label in LEGACY_ALGO_LABELS:
+        return LEGACY_ALGO_LABELS[label]
+    normalized = label.lower().replace("_", "-")
+    for k, v in LEGACY_ALGO_LABELS.items():
+        if k.lower().replace("_", "-") == normalized:
+            return v
+    for val in ALGO_ORDER:
+        if val.lower().replace("_", "-") == normalized:
+            return val
+    return label
 
 
 def normalize_algorithm_frame(df: pd.DataFrame) -> pd.DataFrame:
@@ -194,11 +203,10 @@ class Config:
     ctrl_eps_decay: float = 0.9997
     ctrl_start: int = 24
     plateau_start: int = 72
-    ctrl_start_floor: int = 10  # ← add here
+    ctrl_start_floor: int = 10  # minimum non-improvement threshold floor to trigger plateau controller
     nv_increase_penalty: float = 15.0
     rl_recombine_min_routes: int = 24
     ctrl_tau: float = 0.005  # soft target update rate for PlateauController
-    op_tau: float = 0.005  # soft target update rate for OperatorController
     per_beta_steps: int = 50_000  # steps over which beta anneals 0.4 → 1.0
     # ── operator controller ────────────────────────────────────────────────
     op_state_dim: int = 15
@@ -214,6 +222,7 @@ class Config:
     op_warmup: int = 256
     op_prior_strength: float = 0.55
     op_bandit_strength: float = 0.20
+    op_tau: float = 0.005  # soft target update rate for OperatorController
 
     bandit_decay: float = 0.95
     bandit_prior_strength: float = 0.18
@@ -253,7 +262,7 @@ class Config:
     lac_horizon: int = 80
     lac_train_freq: int = 20
     lac_buf_size: int = 5000
-    lac_batch: int = 64
+    lac_batch: int = 64  # batch size for training the learned acceptance criterion
     # ── domain randomization ──────────────────────────────────────────────
     domain_randomization_epochs: int = 20
     domain_randomization_batch: int = 15
@@ -275,6 +284,16 @@ class Config:
             raise ValueError(f"max_wall_hours must be > 0, got {self.max_wall_hours}")
         if self.n_runs < 1:
             raise ValueError(f"n_runs must be >= 1, got {self.n_runs}")
+        if self.ctrl_tau <= 0.0 or self.ctrl_tau >= 1.0:
+            raise ValueError(f"ctrl_tau must be > 0 and < 1, got {self.ctrl_tau}")
+        if self.op_tau <= 0.0 or self.op_tau >= 1.0:
+            raise ValueError(f"op_tau must be > 0 and < 1, got {self.op_tau}")
+        if self.per_beta_steps <= 0:
+            raise ValueError(f"per_beta_steps must be > 0, got {self.per_beta_steps}")
+        if self.lac_batch < 16:
+            raise ValueError(f"lac_batch must be >= 16, got {self.lac_batch}")
+        if self.ctrl_start_floor < 1:
+            raise ValueError(f"ctrl_start_floor must be >= 1, got {self.ctrl_start_floor}")
 
 
 # ---------------------------------------------------------------------------

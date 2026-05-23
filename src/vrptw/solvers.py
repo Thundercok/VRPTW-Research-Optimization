@@ -606,7 +606,7 @@ class HybridRuleSolver(HybridDDQNSolver):
     use_op_rl = False
 
     def _select_action(self, state_before, cur, best, no_imp, progress, pool, frozen) -> Tuple[int, bool]:
-        del state_before, frozen
+        del state_before, best, frozen
         if self._route_reduce_trigger(cur, no_imp):
             return MODE_ROUTE_REDUCE, False
         pool_ready = len(pool._routes) >= max(self.cfg.rl_recombine_min_routes, max(12, cur.nv * 2))
@@ -616,7 +616,7 @@ class HybridRuleSolver(HybridDDQNSolver):
             return MODE_POOL_RECOMBINE, False
         if self.inst.tw_tight_frac >= 0.18 and slack < 0.16 and no_imp >= max(8, self.cfg.ctrl_start // 2):
             return MODE_TW_RESCUE, False
-        if no_imp >= max(12, self.cfg.ctrl_start // 2):
+        if no_imp >= max(self.cfg.ctrl_start_floor, self.cfg.ctrl_start // 2):
             return (MODE_DIVERSIFY if progress < 0.45 else MODE_INTENSIFY), False
         return MODE_DEFAULT, False
 

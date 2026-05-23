@@ -11,8 +11,6 @@ import numpy as np
 import pandas as pd
 import torch
 
-from backend.services import solver_service
-
 from .config import (
     ALGO_ALNS_BASE,
     ALGO_HYBRID_DDQN,
@@ -100,11 +98,6 @@ def run_instance(
         plan, history = HybridDDQNSolver(inst, cfg).solve(seed=seed, init=init_plan)
     elif algo in (ALGO_HYBRID_DDQN_TRANSFER, ALGO_HYBRID_DDQN_TRANSFER_RC2, ALGO_HYBRID_DDQN_TRANSFER_DR):
         solver = HybridDDQNSolver(inst, cfg)
-        for seed in seeds:
-            solver.solve(seed=seed)
-
-        cross_seed_best = solver.archive.best(inst.name)
-        print(solver.archive.summary())
         if transfer_weights is not None:
             solver.load_weights(transfer_weights)
         plan, history = solver.solve(seed=seed, frozen=True, init=init_plan)
@@ -470,3 +463,12 @@ def smoke_test(inst: Inst, seed: int = 42) -> Dict[str, Tuple[float, float]]:
         print(f"{algo_name:<24} nv={plan.nv:>3} cost={plan.cost:>8.1f} BKS TD {gap_str} NV {nv_str} ({elapsed:.1f}s)")
         results[algo_name] = (float(td_gap) if td_gap is not None else 0.0, elapsed)
     return results
+
+
+def _fts_debug(inst):
+    max_fts_bonus = (0.15 + 0.45 * inst.tw_tight_frac + 0.25 * 1.0) * 1.0 * inst.max_dist
+    print(
+        f"{inst.name}: max_dist={inst.max_dist:.1f}  "
+        f"tw_tight_frac={inst.tw_tight_frac:.3f}  "
+        f"max_fts_bonus={max_fts_bonus:.1f}"
+    )
