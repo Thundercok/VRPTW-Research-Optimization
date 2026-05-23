@@ -1120,7 +1120,16 @@ export class App {
     }
     this.updateDatasetPickerVisibility();
     if (this.state.mode === 'sample') {
-      this.loadAvailableDatasets().then(() => this.loadSolomonDataset('demo'));
+      this.loadAvailableDatasets().then(async () => {
+        await this.loadSolomonDataset('demo');
+        // Auto-execute optimization in demo mode for an immersive onboarding experience
+        if (this.state.customers.length > 1 && !this.state.lastResult) {
+          this.setStatus('Auto-optimizing demo fleet...', 'ok');
+          this.toast('Demo Pipeline', 'Running full optimization pipeline automatically.', 'ok');
+          await new Promise(r => setTimeout(r, 800));
+          this.submitJob();
+        }
+      });
     }
     this.bootstrapAnalysis();
     this.updateConnectionPill();
@@ -1562,7 +1571,7 @@ export class App {
     this.renderAnalysisKpis(filteredInstances, preferred, selectedInstance);
     this.renderConvergence(this.el.analysisConvergenceChart, data?.alns?.history, data?.rl_alns?.history, selectedInstance, String(data?.meta?.instance || ''));
     this.renderPolicyHeatmap(data?.op_matrix, data?.destroy_ops, data?.repair_ops);
-    this.renderLeaderboard(filteredInstances);
+    this.renderLeaderboard(summaryRows, selectedInstance);
     this.renderTransferRows(transferRows, selectedInstance);
 
     if (!this.el.analysisModal?.classList.contains('hidden')) {
@@ -1812,27 +1821,59 @@ export class App {
     `;
   }
 
-  renderLeaderboard(instances) {
+  renderLeaderboard(summaryRows, selectedInstance = 'ALL') {
     if (!this.el.analysisLeaderboardBody) return;
     this.el.analysisLeaderboardBody.innerHTML = '';
 
-    instances.forEach(([instance, pair]) => {
-      const alns = pair?.alns;
-      const ddqn = pair?.ddqn;
-      if (!alns || !ddqn) return;
+    const filtered = selectedInstance === 'ALL'
+      ? summaryRows
+      : summaryRows.filter((r) => String(r?.instance || '') === selectedInstance);
 
-      const gapWinner = Number(ddqn.gap_pct) < Number(alns.gap_pct) ? 'DDQN' : Number(ddqn.gap_pct) > Number(alns.gap_pct) ? 'ALNS' : 'Tie';
-      const speedWinner = Number(ddqn.time_s) < Number(alns.time_s) ? 'DDQN' : Number(ddqn.time_s) > Number(alns.time_s) ? 'ALNS' : 'Tie';
-      const stableWinner = Number(ddqn.td_cv) < Number(alns.td_cv) ? 'DDQN' : Number(ddqn.td_cv) > Number(alns.td_cv) ? 'ALNS' : 'Tie';
+    // Group by instance, then sort each group by gap_pct ascending
+    const byInstance = new Map();
+    filtered.forEach((row) => {
+      const inst = String(row?.instance || '').trim();
+      if (!inst) return;
+      if (!byInstance.has(inst)) byInstance.set(inst, []);
+      byInstance.get(inst).push(row);
+    });
 
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${this.escapeHtml(String(instance))}</td>
-        <td>${this.renderPill(gapWinner)}</td>
-        <td>${this.renderPill(speedWinner)}</td>
-        <td>${this.renderPill(stableWinner)}</td>
-      `;
-      this.el.analysisLeaderboardBody.appendChild(tr);
+    const ALGO_COLORS = {
+      'DDQN-ALNS': '#059669',
+      'ALNS': '#2563eb',
+      'OR-TOOLS': '#7c3aed',
+      'HYBRID-FIXED': '#d97706',
+      'HYBRID-RULE': '#ea6c00',
+      'HYBRID-DDQN-TRANSFER-DR': '#0891b2',
+    };
+    const MEDALS = ['🥇', '🥈', '🥉'];
+
+    const sortedInstances = Array.from(byInstance.keys()).sort((a, b) => a.localeCompare(b));
+    sortedInstances.forEach((inst) => {
+      const algos = byInstance.get(inst).sort((a, b) => Number(a.gap_pct) - Number(b.gap_pct));
+      algos.forEach((row, rank) => {
+        const tr = document.createElement('tr');
+        const algoName = String(row.algo || '').toUpperCase();
+        const color = ALGO_COLORS[algoName] || '#6b7280';
+        const medal = rank < 3 ? MEDALS[rank] : `#${rank + 1}`;
+        const gap = Number(row.gap_pct);
+        const gapClass = gap <= 0 ? 'color: #059669; font-weight: 600' : gap < 3 ? 'color: #d97706' : 'color: #dc2626';
+        const stability = Number(row.td_cv);
+        const stabText = Number.isFinite(stability) ? stability.toFixed(2) + '%' : '—';
+
+        tr.innerHTML = `
+          <td>${rank === 0 ? this.escapeHtml(inst) : '<span style="color:#aaa">↳</span>'}</td>
+          <td><span class="algo-tag" style="background:${color}15; color:${color}; border:1px solid ${color}40; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:600">${this.escapeHtml(String(row.algo || ''))}</span></td>
+          <td class="num" style="font-family:var(--font-data)">${Number(row.td || 0).toFixed(2)}</td>
+          <td class="num" style="font-family:var(--font-data)">${Number(row.nv || 0).toFixed(1)}</td>
+          <td class="num" style="font-family:var(--font-data); ${gapClass}">${gap >= 0 ? '+' : ''}${gap.toFixed(2)}%</td>
+          <td class="num" style="font-family:var(--font-data)">${Number(row.time_s || 0).toFixed(1)}s</td>
+          <td class="num" style="font-family:var(--font-data)">${stabText}</td>
+          <td style="text-align:center; font-size:14px">${medal}</td>
+        `;
+        if (rank === 0) tr.style.background = `${color}08`;
+        this.el.analysisLeaderboardBody.appendChild(tr);
+      });
     });
   }
 
@@ -1840,17 +1881,31 @@ export class App {
     if (!this.el.analysisTransferBody) return;
     this.el.analysisTransferBody.innerHTML = '';
 
-    rows
-      .filter((row) => selectedInstance === 'ALL' || String(row?.instance || '') === selectedInstance)
-      .forEach((row) => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
+    const filtered = rows.filter((row) =>
+      selectedInstance === 'ALL' || String(row?.instance || '') === selectedInstance
+    );
+
+    filtered.forEach((row) => {
+      const gap = Number(row.gap_pct || 0);
+      const gapClass = gap <= 0 ? 'color: #059669; font-weight: 600' : gap < 3 ? 'color: #d97706' : 'color: #dc2626';
+      const inflated = row.nv_inflated;
+      const statusHtml = inflated
+        ? '<span class="analysis-pill bad" style="font-size:10px">Over-fleet</span>'
+        : '<span class="analysis-pill good" style="font-size:10px">Optimal</span>';
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
         <td>${this.escapeHtml(String(row.instance || '-'))}</td>
-        <td>${Number(row.gap_pct || 0).toFixed(2)}%</td>
-        <td>${Number(row.nv || 0).toFixed(1)}</td>
+        <td>${this.escapeHtml(String(row.dataset || '-'))}</td>
+        <td><span style="font-weight:600; font-size:11px">${this.escapeHtml(String(row.algo || '-'))}</span></td>
+        <td class="num" style="font-family:var(--font-data)">${Number(row.td || 0).toFixed(2)}</td>
+        <td class="num" style="font-family:var(--font-data)">${Number(row.nv || 0).toFixed(1)}</td>
+        <td class="num" style="font-family:var(--font-data); ${gapClass}">${gap >= 0 ? '+' : ''}${gap.toFixed(2)}%</td>
+        <td class="num" style="font-family:var(--font-data)">${Number(row.time_s || 0).toFixed(1)}s</td>
+        <td>${statusHtml}</td>
       `;
-        this.el.analysisTransferBody.appendChild(tr);
-      });
+      this.el.analysisTransferBody.appendChild(tr);
+    });
   }
 
   renderPill(label) {

@@ -281,23 +281,26 @@
                             </div>
                         </div>
 
-                        <div class="saas-card table-card">
-                            <h3>Performance Comparison Leaderboard</h3>
+                        <div class="saas-card table-card xl-card">
+                            <h3>Multi-Algorithm Performance Leaderboard</h3>
+                            <p class="card-desc">Head-to-head comparison across all solver variants per Solomon instance. Ranked by BKS gap.</p>
                             <div class="table-wrap">
                                 <table class="saas-table">
                                     <thead>
                                         <tr>
                                             <th>Instance</th>
-                                            <th class="num">BKS Dist</th>
-                                            <th class="num">DDQN Dist</th>
-                                            <th class="num">ALNS Dist</th>
-                                            <th class="num">Gap (%)</th>
-                                            <th>Winner</th>
+                                            <th>Algorithm</th>
+                                            <th class="num">Distance</th>
+                                            <th class="num">Vehicles</th>
+                                            <th class="num">BKS Gap</th>
+                                            <th class="num">Runtime (s)</th>
+                                            <th class="num">Stability</th>
+                                            <th>Rank</th>
                                         </tr>
                                     </thead>
                                     <tbody id="analysis-leaderboard-body">
                                         <tr>
-                                            <td colspan="6" class="text-center text-muted" style="padding:24px;">No leaderboard data loaded.</td>
+                                            <td colspan="8" class="text-center text-muted" style="padding:24px;">No leaderboard data loaded.</td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -306,22 +309,24 @@
 
                         <div class="saas-card table-card xl-card">
                             <h3>DRL Cross-Domain Transfer Performance</h3>
+                            <p class="card-desc">Transfer-learning results. Models trained on one Solomon class applied to another.</p>
                             <div class="table-wrap">
                                 <table class="saas-table">
                                     <thead>
                                         <tr>
-                                            <th>Source Domain</th>
-                                            <th>Target Domain</th>
-                                            <th>Target Instance</th>
-                                            <th class="num">Zero-Shot Gap</th>
-                                            <th class="num">Fine-Tuned Gap</th>
-                                            <th class="num">Wall Time</th>
-                                            <th>Sample Status</th>
+                                            <th>Instance</th>
+                                            <th>Dataset</th>
+                                            <th>Algorithm</th>
+                                            <th class="num">Distance</th>
+                                            <th class="num">Vehicles</th>
+                                            <th class="num">Gap (%)</th>
+                                            <th class="num">Runtime (s)</th>
+                                            <th>Status</th>
                                         </tr>
                                     </thead>
                                     <tbody id="analysis-transfer-body">
                                         <tr>
-                                            <td colspan="7" class="text-center text-muted" style="padding:24px;">No cross-domain data loaded.</td>
+                                            <td colspan="8" class="text-center text-muted" style="padding:24px;">No transfer data loaded.</td>
                                         </tr>
                                     </tbody>
                                 </table>

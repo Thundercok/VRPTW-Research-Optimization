@@ -1,3 +1,4 @@
+from backend.services import solver_service
 from __future__ import annotations
 import time
 import random
@@ -68,6 +69,11 @@ def run_instance(inst: Inst, algo: str, cfg: Config, seed: int,
     elif algo in (ALGO_HYBRID_DDQN_TRANSFER, ALGO_HYBRID_DDQN_TRANSFER_RC2,
                   ALGO_HYBRID_DDQN_TRANSFER_DR):
         solver = HybridDDQNSolver(inst, cfg)
+        for seed in seeds:
+            solver.solve(seed=seed)
+
+        cross_seed_best = solver.archive.best(inst.name)
+        print(solver.archive.summary())
         if transfer_weights is not None:
             solver.load_weights(transfer_weights)
         plan, history = solver.solve(seed=seed, frozen=True, init=init_plan)

@@ -159,10 +159,10 @@ def op_route_eliminate(plan: Plan, size: int) -> Tuple[Plan, List[int]]:
     removed: List[int] = []
     drop_ids: set = set()
     for idx, route in ranked:
+        if len(removed) >= size:
+            break
         removed.extend(route)
         drop_ids.add(idx)
-        if len(removed) >= max(2, size // 2):
-            break
     plan.routes = [r for i, r in enumerate(plan.routes) if i not in drop_ids]
     return _invalidate(plan), removed
 

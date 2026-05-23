@@ -80,18 +80,19 @@ class HybridDDQNSolver:
     use_op_rl = True
 
     def __init__(self, inst: Inst, cfg: Config):
-        self.inst       = inst
-        self.cfg        = cfg
-        self.ctrl       = PlateauController(cfg)
-        self.op_ctrl    = OperatorController(cfg)
-        self.lac        = LearnedAcceptanceCriterion(cfg)
-        self.ls_budget  = LSBudgetController(ls_time_frac=0.30)
-        self.ucb_aug    = UCBActionAugmenter(n_actions=N_D * N_R)
+        self.inst        = inst
+        self.cfg         = cfg
+        self.ctrl        = PlateauController(cfg)
+        self.op_ctrl     = OperatorController(cfg)
+        self.lac         = LearnedAcceptanceCriterion(cfg)
+        self.ls_budget   = LSBudgetController(ls_time_frac=0.30)
+        self.ucb_aug     = UCBActionAugmenter(n_actions=N_D * N_R)
         self.reward_norm = WelfordRewardNormalizer(clip_sigma=8.0, warmup=128)
         self.mode_bandits: List[ThompsonBandit] = [ThompsonBandit(N_D, N_R) for _ in MODES]
-        self.op_counts: Dict[Tuple[int, int], int] = {}
+        self.op_counts:   Dict[Tuple[int, int], int] = {}
         self._segment_recombine_used = False
-        self._init_nv = 1
+        self._init_nv    = 1
+        self.archive     = EliteArchive(k=5)          # cross-run best tracker  
 
     def clone_weights(self) -> Dict:
         weights: Dict[str, torch.Tensor] = {}
@@ -252,30 +253,19 @@ class HybridDDQNSolver:
             return self.ctrl.act(state_before), (not frozen)
         return MODE_DEFAULT, False
 
-    def _refine_candidate(self, cand, action, pool, cur, best, no_imp, iter_idx) -> Plan:
-        del cur
-        mode    = MODES[action]
-        refined = cand
-        # ── LS gate: 20-iteration cadence + only on feasible non-NV-inflating cands ──
-        _do_ls  = (mode.ls_passes > 0
-                   and iter_idx % 20 == 0
-                   and refined.feasible
-                   and refined.nv <= best.nv)
-        if _do_ls:
-            nv_cap  = (best.nv
-                       if action in (MODE_INTENSIFY, MODE_TW_RESCUE,
-                                     MODE_POOL_RECOMBINE, MODE_ROUTE_REDUCE)
-                       else None)
-            refined = local_search(refined, max_passes=mode.ls_passes, nv_ceiling=nv_cap)
-        if (mode.use_recombine and not self._segment_recombine_used
-                and no_imp >= max(self.cfg.ctrl_start, self.cfg.plateau_start // 2)
-                and len(pool._routes) >= self.cfg.rl_recombine_min_routes):
-            self._segment_recombine_used = True
-            nv_cap    = min(best.nv, refined.nv)
-            recombined= recombine_with_route_pool(refined, pool, self.cfg, nv_ceiling=nv_cap)
-            if recombined.dominates(refined):
-                refined = local_search(recombined, max_passes=1, nv_ceiling=recombined.nv)
-        return refined
+def _refine_candidate(self, cand, action, pool, cur, best, no_imp, iter_idx) -> Plan:
+    del cur, iter_idx
+    mode    = MODES[action]
+    refined = cand
+    if (mode.use_recombine and not self._segment_recombine_used
+            and no_imp >= max(self.cfg.ctrl_start, self.cfg.plateau_start // 2)
+            and len(pool._routes) >= self.cfg.rl_recombine_min_routes):
+        self._segment_recombine_used = True
+        nv_cap    = min(best.nv, refined.nv)
+        recombined= recombine_with_route_pool(refined, pool, self.cfg, nv_ceiling=nv_cap)
+        if recombined.dominates(refined):
+            refined = local_search(recombined, max_passes=1, nv_ceiling=recombined.nv)
+    return refined
 
     def _fixed_nv_polish(self, start: Plan, pool: RoutePool,
                          inherited_bandit: Optional[ThompsonBandit] = None) -> Plan:
@@ -528,14 +518,13 @@ class HybridDDQNSolver:
                 history.append(best.cost)
 
         # Post-search NV reduction pass (especially effective on RC2)
-        bks = BKS.get(self.inst.name)
-        if bks is not None and best.nv > bks["nv"]:
-            eliminated = _iterative_route_elimination(best, self.inst)
-            if eliminated.dominates(best):
-                best = eliminated
-                history.append(best.cost)
+        eliminated = _iterative_route_elimination(best, self.inst)
+        if eliminated.dominates(best):
+            best = eliminated
+            history.append(best.cost)
 
         best.algo = self.algo_name
+        self.archive.update(best)
         return best, history
 
 
