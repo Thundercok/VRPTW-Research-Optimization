@@ -1,20 +1,24 @@
 from __future__ import annotations
-import random
+
 import math
 import os
-import numpy as np
+import random
 from collections import deque
-from typing import List, Dict, Tuple, Optional, Deque
+from typing import Deque, Dict, List, Optional, Tuple
+
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+
+from .config import MODES, Config
 from .core import Plan
-from .config import Config, MODES
-from .operators import N_D, N_R, N_ACTIONS
+from .operators import N_ACTIONS, N_D, N_R
 
 DEVICE = torch.device("cpu")
 torch.set_num_threads(max(1, int(os.environ.get("NUMBA_NUM_THREADS", "1")) // 2))
+
 
 class PrioritizedReplayBuffer:
     """
@@ -22,17 +26,24 @@ class PrioritizedReplayBuffer:
     alpha=0.6: prioritization strength.
     beta anneals 0.4→1.0 over training to correct IS bias.
     """
-    def __init__(self, capacity: int, alpha: float = 0.6,
-                 beta_start: float = 0.4, beta_end: float = 1.0):
-        self.capacity:      int            = capacity
-        self.alpha:         float          = float(alpha)
-        self.beta:          float          = beta_start
-        self.beta_end:      float          = beta_end   
-        self.beta_inc:      float          = (beta_end - beta_start) / 200_000
-        self.buf:           List           = []
-        self.pos:           int = 0
+
+    def __init__(
+        self,
+        capacity: int,
+        alpha: float = 0.6,
+        beta_start: float = 0.4,
+        beta_end: float = 1.0,
+        expected_steps: int = 50_000,
+    ):
+        self.capacity: int = capacity
+        self.alpha: float = float(alpha)
+        self.beta: float = beta_start
+        self.beta_end: float = beta_end
+        self.beta_inc: float = (beta_end - beta_start) / max(expected_steps, 1)
+        self.buf: List = []
+        self.pos: int = 0
         self.priorities: np.ndarray = np.zeros(capacity, dtype=np.float32)
-        self.max_pri   = 1.0
+        self.max_pri = 1.0
 
     def push(self, *transition) -> None:
         if len(self.buf) < self.capacity:
@@ -43,19 +54,25 @@ class PrioritizedReplayBuffer:
         self.pos = (self.pos + 1) % self.capacity
 
     def sample(self, batch_size: int):
-        n     = len(self.buf)
+        n = len(self.buf)
         probs = self.priorities[:n] ** self.alpha
         probs /= probs.sum()
-        idxs  = np.random.choice(n, batch_size, p=probs, replace=False)
-        ws    = (n * probs[idxs]) ** -self.beta
-        ws   /= ws.max()
-        self.beta = float(min(self.beta_end, self.beta + self.beta_inc))        
+        idxs = np.random.choice(n, batch_size, p=probs, replace=True)
+        ws = (n * probs[idxs]) ** -self.beta
+        ws /= ws.max()
+        self.beta = float(min(self.beta_end, self.beta + self.beta_inc))
         s, a, r, ns, d = zip(*[self.buf[i] for i in idxs])
         return (
-            np.array(s,  np.float32), np.array(a,  np.int64),
-            np.array(r,  np.float32), np.array(ns, np.float32),
-            np.array(d,  np.float32),
-        ), idxs, torch.tensor(ws, dtype=torch.float32).to(DEVICE)
+            (
+                np.array(s, np.float32),
+                np.array(a, np.int64),
+                np.array(r, np.float32),
+                np.array(ns, np.float32),
+                np.array(d, np.float32),
+            ),
+            idxs,
+            torch.tensor(ws, dtype=torch.float32).to(DEVICE),
+        )
 
     def update_priorities(self, idxs, td_errors: np.ndarray) -> None:
         for i, err in zip(idxs, td_errors):
@@ -73,13 +90,17 @@ class PrioritizedReplayBuffer:
 class QNet(nn.Module):
     def __init__(self, state_dim: int, action_dim: int, hidden_dim: int):
         super().__init__()
-        hid2      = max(hidden_dim // 2, 32)
-        self.trunk= nn.Sequential(
-            nn.Linear(state_dim, hidden_dim), nn.LayerNorm(hidden_dim), nn.ReLU(),
-            nn.Linear(hidden_dim, hidden_dim), nn.LayerNorm(hidden_dim), nn.ReLU(),
+        hid2 = max(hidden_dim // 2, 32)
+        self.trunk = nn.Sequential(
+            nn.Linear(state_dim, hidden_dim),
+            nn.LayerNorm(hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.LayerNorm(hidden_dim),
+            nn.ReLU(),
         )
         self.value_head = nn.Sequential(nn.Linear(hidden_dim, hid2), nn.ReLU(), nn.Linear(hid2, 1))
-        self.adv_head   = nn.Sequential(nn.Linear(hidden_dim, hid2), nn.ReLU(), nn.Linear(hid2, action_dim))
+        self.adv_head = nn.Sequential(nn.Linear(hidden_dim, hid2), nn.ReLU(), nn.Linear(hid2, action_dim))
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         h = self.trunk(x)
@@ -94,24 +115,30 @@ class QNet(nn.Module):
 class ThompsonBandit:
     def __init__(self, n_d: int, n_r: int):
         self.alpha = np.ones((n_d, n_r), dtype=np.float64)
-        self.beta  = np.ones((n_d, n_r), dtype=np.float64)
+        self.beta = np.ones((n_d, n_r), dtype=np.float64)
 
     def mean(self) -> np.ndarray:
         return self.alpha / (self.alpha + self.beta)
 
-    def select(self, prior: Optional[np.ndarray] = None,
-               prior_strength: float = 0.0) -> Tuple[int, int]:
-        samples = np.random.beta(self.alpha, self.beta)
-        if prior is not None:
-            p       = np.asarray(prior, dtype=np.float64)
-            p      /= max(p.sum(), 1e-9)
-            samples = samples + prior_strength * p
+    def select(
+        self,
+        prior: Optional[np.ndarray] = None,  # ← indented back in
+        prior_strength: float = 0.0,
+    ) -> Tuple[int, int]:
+        if prior is not None and prior_strength > 0.0:
+            p = np.asarray(prior, dtype=np.float64)
+            p /= max(p.sum(), 1e-9)
+            alpha = self.alpha + prior_strength * p * self.alpha.sum()
+            beta = self.beta + prior_strength * p * self.beta.sum()
+            samples = np.random.beta(np.maximum(alpha, 1e-9), np.maximum(beta, 1e-9))
+        else:
+            samples = np.random.beta(self.alpha, self.beta)
         idx = np.unravel_index(int(samples.argmax()), samples.shape)
         return int(idx[0]), int(idx[1])
 
     def update(self, di: int, ri: int, score: float, sigma1: int) -> None:
-        success           = float(np.clip(score / max(sigma1, 1), 0.0, 1.0))
-        self.alpha[di, ri]+= success
+        success = float(np.clip(score / max(sigma1, 1), 0.0, 1.0))
+        self.alpha[di, ri] += success
         self.beta[di, ri] += 1.0 - success
 
     def decay(self, rate: float = 0.95) -> None:
@@ -121,9 +148,9 @@ class ThompsonBandit:
         np.add(self.beta, 1.0, out=self.beta)
 
     def clone(self) -> "ThompsonBandit":
-        b       = ThompsonBandit(self.alpha.shape[0], self.alpha.shape[1])
+        b = ThompsonBandit(self.alpha.shape[0], self.alpha.shape[1])
         b.alpha = self.alpha.copy()
-        b.beta  = self.beta.copy()
+        b.beta = self.beta.copy()
         return b
 
 
@@ -138,11 +165,11 @@ class EliteArchive:
     def update(self, plan: Plan) -> None:
         if not plan.feasible:
             return
-        key    = plan.inst.name
+        key = plan.inst.name
         bucket = self._plans.setdefault(key, [])
         bucket.append(plan.copy())
         bucket.sort(key=lambda p: (p.nv, p.cost))
-        self._plans[key] = bucket[:self.k]
+        self._plans[key] = bucket[: self.k]
 
     def best(self, inst_name: str) -> Optional[Plan]:
         bucket = self._plans.get(inst_name, [])
@@ -151,7 +178,7 @@ class EliteArchive:
     def summary(self) -> str:
         lines = []
         for name, bucket in sorted(self._plans.items()):
-            p       = bucket[0]
+            p = bucket[0]
             td_gap, _ = p.gap()
             gap_str = f"{td_gap:+.2f}%" if td_gap is not None else "--"
             lines.append(f"  {name}: nv={p.nv} cost={p.cost:.1f} gap={gap_str}")
@@ -180,18 +207,18 @@ class WelfordRewardNormalizer:
     def std(self) -> float:
         if self._n < 2:
             return 1.0
-        return math.sqrt(max(self._M2 / (self._n - 1), self.eps ** 2))
+        return math.sqrt(max(self._M2 / (self._n - 1), self.eps**2))
 
     def normalize(self, r: float) -> float:
         self.observe(r)
         if self._n < self.warmup:
-            return None          # caller must check before pushing to buffer
+            return None  # caller must check before pushing to buffer
         z = (r - self._mean) / (self.std + self.eps)
         return float(np.clip(z, -self.clip, self.clip))
 
     def state_dict(self) -> dict:
         return {"n": self._n, "mean": self._mean, "M2": self._M2}
-    
+
     def load_state_dict(self, d: dict) -> None:
         self._n = int(d["n"])
         self._mean = float(d["mean"])
@@ -252,15 +279,20 @@ class UCBActionAugmenter:
         self._N = float(self.n) * 0.5
 
     def update(self, action: int, reward: float) -> None:
+        # exponential decay on counts only — keeps forgetting semantics clean
         self._cnt *= self.gamma
-        self._mu *= self.gamma
-        self._m2 *= self.gamma
         self._N = self._cnt.sum()
+        # update selected arm with decayed Welford
         self._cnt[action] += 1.0
         delta = reward - self._mu[action]
         self._mu[action] += delta / self._cnt[action]
         delta2 = reward - self._mu[action]
         self._m2[action] += delta * delta2
+        # decay non-selected arms toward global mean (not toward 0)
+        global_mean = float(self._mu[self._cnt > 0.6].mean()) if (self._cnt > 0.6).any() else 0.0
+        mask = np.ones(self.n, dtype=bool)
+        mask[action] = False
+        self._mu[mask] = self._mu[mask] * self.gamma + global_mean * (1.0 - self.gamma)
 
     def augment_qvalues(self, q: np.ndarray) -> np.ndarray:
         variance = self._m2 / np.maximum(self._cnt - 1.0, 1.0)
@@ -279,13 +311,13 @@ class UCBActionAugmenter:
 class PlateauController:
     def __init__(self, cfg: Config):
         self.cfg = cfg
-        self.q   = QNet(cfg.ctrl_state_dim, len(MODES), cfg.ctrl_hidden).to(DEVICE)
+        self.q = QNet(cfg.ctrl_state_dim, len(MODES), cfg.ctrl_hidden).to(DEVICE)
         self.q_t = QNet(cfg.ctrl_state_dim, len(MODES), cfg.ctrl_hidden).to(DEVICE)
         self.q_t.load_state_dict(self.q.state_dict())
         self.opt = optim.Adam(self.q.parameters(), lr=cfg.ctrl_lr)
-        self.buf = PrioritizedReplayBuffer(cfg.ctrl_buffer)
+        self.buf = PrioritizedReplayBuffer(cfg.ctrl_buffer, expected_steps=cfg.per_beta_steps)
         self.eps = cfg.ctrl_eps_start
-        self.step= 0
+        self.step = 0
 
     def reset(self) -> None:
         self.eps = self.cfg.ctrl_eps_start
@@ -304,23 +336,24 @@ class PlateauController:
         if len(self.buf) < self.cfg.ctrl_batch:
             return
         (s, a, r, ns, d), idxs, is_w = self.buf.sample(self.cfg.ctrl_batch)
-        s  = torch.tensor(s).to(DEVICE)
-        a  = torch.tensor(a, dtype=torch.long).to(DEVICE)
-        r  = torch.tensor(r).to(DEVICE)
+        s = torch.tensor(s).to(DEVICE)
+        a = torch.tensor(a, dtype=torch.long).to(DEVICE)
+        r = torch.tensor(r).to(DEVICE)
         ns = torch.tensor(ns).to(DEVICE)
-        d  = torch.tensor(d).to(DEVICE)
+        d = torch.tensor(d).to(DEVICE)
         qp = self.q(s).gather(1, a.unsqueeze(1)).squeeze(1)
         with torch.no_grad():
             best_a = self.q(ns).argmax(1).unsqueeze(1)
-            qn     = self.q_t(ns).gather(1, best_a).squeeze(1)
+            qn = self.q_t(ns).gather(1, best_a).squeeze(1)
             target = r + self.cfg.ctrl_gamma * qn * (1 - d)
         td_errors = (qp - target).detach().cpu().numpy()
         self.buf.update_priorities(idxs, td_errors)
         loss = (is_w * F.smooth_l1_loss(qp, target, reduction="none")).mean()
-        self.opt.zero_grad(); loss.backward()
+        self.opt.zero_grad()
+        loss.backward()
         nn.utils.clip_grad_norm_(self.q.parameters(), 1.0)
         self.opt.step()
-        tau = 0.005
+        tau = self.cfg.op_tau
         for target_param, local_param in zip(self.q_t.parameters(), self.q.parameters()):
             target_param.data.copy_(tau * local_param.data + (1.0 - tau) * target_param.data)
         self.eps = max(self.cfg.ctrl_eps_end, self.eps * self.cfg.ctrl_eps_decay)
@@ -329,24 +362,26 @@ class PlateauController:
 class OperatorController:
     def __init__(self, cfg: Config):
         self.cfg = cfg
-        self.q   = QNet(cfg.op_state_dim, N_ACTIONS, cfg.op_hidden).to(DEVICE)
+        self.q = QNet(cfg.op_state_dim, N_ACTIONS, cfg.op_hidden).to(DEVICE)
         self.q_t = QNet(cfg.op_state_dim, N_ACTIONS, cfg.op_hidden).to(DEVICE)
         self.q_t.load_state_dict(self.q.state_dict())
         self.opt = optim.Adam(self.q.parameters(), lr=cfg.op_lr)
-        self.buf = PrioritizedReplayBuffer(cfg.op_buffer)
+        self.buf = PrioritizedReplayBuffer(cfg.op_buffer, expected_steps=cfg.per_beta_steps)
         self.eps = cfg.op_eps_start
-        self.step= 0
+        self.step = 0
 
     def reset(self) -> None:
         self.eps = self.cfg.op_eps_start
 
     def _prior(self, dw: np.ndarray, rw: np.ndarray) -> np.ndarray:
-        dw = np.asarray(dw, np.float32); dw /= max(dw.sum(), 1e-9)
-        rw = np.asarray(rw, np.float32); rw /= max(rw.sum(), 1e-9)
+        dw = np.asarray(dw, np.float32)
+        dw /= max(dw.sum(), 1e-9)
+        rw = np.asarray(rw, np.float32)
+        rw /= max(rw.sum(), 1e-9)
         return np.outer(dw, rw)
 
     def _sample_prior(self, prior: np.ndarray, bandit: ThompsonBandit) -> int:
-        probs  = prior.reshape(-1) * bandit.mean().reshape(-1)
+        probs = prior.reshape(-1) * bandit.mean().reshape(-1)
         probs /= max(probs.sum(), 1e-9)
         return int(np.random.choice(N_ACTIONS, p=probs))
 
@@ -361,8 +396,11 @@ class OperatorController:
         else:
             with torch.no_grad():
                 q = self.q(torch.tensor(state).unsqueeze(0).to(DEVICE))[0].cpu().numpy()
-            q      = (q + self.cfg.op_prior_strength * np.log(prior.reshape(-1) + 1e-8)
-                        + self.cfg.op_bandit_strength * bandit.mean().reshape(-1))
+            q = (
+                q
+                + self.cfg.op_prior_strength * np.log(prior.reshape(-1) + 1e-8)
+                + self.cfg.op_bandit_strength * bandit.mean().reshape(-1)
+            )
             if ucb_aug is not None:
                 q = ucb_aug.augment_qvalues(q)
             action = int(q.argmax())
@@ -377,23 +415,24 @@ class OperatorController:
         if len(self.buf) < self.cfg.op_batch:
             return
         (s, a, r, ns, d), idxs, is_w = self.buf.sample(self.cfg.op_batch)
-        s  = torch.tensor(s).to(DEVICE)
-        a  = torch.tensor(a, dtype=torch.long).to(DEVICE)
-        r  = torch.tensor(r).to(DEVICE)
+        s = torch.tensor(s).to(DEVICE)
+        a = torch.tensor(a, dtype=torch.long).to(DEVICE)
+        r = torch.tensor(r).to(DEVICE)
         ns = torch.tensor(ns).to(DEVICE)
-        d  = torch.tensor(d).to(DEVICE)
+        d = torch.tensor(d).to(DEVICE)
         qp = self.q(s).gather(1, a.unsqueeze(1)).squeeze(1)
         with torch.no_grad():
             best_a = self.q(ns).argmax(1).unsqueeze(1)
-            qn     = self.q_t(ns).gather(1, best_a).squeeze(1)
+            qn = self.q_t(ns).gather(1, best_a).squeeze(1)
             target = r + self.cfg.op_gamma * qn * (1 - d)
         td_errors = (qp - target).detach().cpu().numpy()
         self.buf.update_priorities(idxs, td_errors)
         loss = (is_w * F.smooth_l1_loss(qp, target, reduction="none")).mean()
-        self.opt.zero_grad(); loss.backward()
+        self.opt.zero_grad()
+        loss.backward()
         nn.utils.clip_grad_norm_(self.q.parameters(), 1.0)
         self.opt.step()
-        tau = 0.005
+        tau = self.cfg.ctrl_tau
         for target_param, local_param in zip(self.q_t.parameters(), self.q.parameters()):
             target_param.data.copy_(tau * local_param.data + (1.0 - tau) * target_param.data)
         self.eps = max(self.cfg.op_eps_end, self.eps * self.cfg.op_eps_decay)
@@ -404,27 +443,49 @@ class OperatorController:
 # ---------------------------------------------------------------------------
 class LearnedAcceptanceCriterion:
     def __init__(self, cfg: Config):
-        self.cfg  = cfg
-        self.net  = nn.Sequential(
-            nn.Linear(cfg.lac_state_dim, cfg.lac_hidden), nn.ReLU(),
-            nn.Linear(cfg.lac_hidden, cfg.lac_hidden // 2), nn.ReLU(),
-            nn.Linear(cfg.lac_hidden // 2, 1), nn.Sigmoid(),
+        self.cfg = cfg
+        self.net = nn.Sequential(
+            nn.Linear(cfg.lac_state_dim, cfg.lac_hidden),
+            nn.ReLU(),
+            nn.Linear(cfg.lac_hidden, cfg.lac_hidden // 2),
+            nn.ReLU(),
+            nn.Linear(cfg.lac_hidden // 2, 1),
+            nn.Sigmoid(),
         ).to(DEVICE)
-        self.opt  = optim.Adam(self.net.parameters(), lr=cfg.lac_lr)
+        self.opt = optim.Adam(self.net.parameters(), lr=cfg.lac_lr)
         self.step = 0
-        self._pending:   deque = deque()
+        self._pending: deque = deque()
         self._train_buf: deque = deque(maxlen=cfg.lac_buf_size)
 
-    def features(self, cost_delta, cur_cost, temp, temp_init, no_imp, patience,
-                 nv_diff, progress, tw_tight_frac, fleet_fill, avg_slack_val) -> np.ndarray:
+    def features(
+        self,
+        cost_delta,
+        cur_cost,
+        temp,
+        temp_init,
+        no_imp,
+        patience,
+        nv_diff,
+        progress,
+        tw_tight_frac,
+        fleet_fill,
+        avg_slack_val,
+    ) -> np.ndarray:
         metro = math.exp(-max(cost_delta, 0.0) / max(temp, 1e-6))
-        return np.array([
-            cost_delta / max(abs(cur_cost), 1.0),
-            temp / max(temp_init, 1e-6),
-            no_imp / max(patience, 1),
-            float(np.clip(nv_diff, -2, 2)),
-            progress, tw_tight_frac, fleet_fill, avg_slack_val, metro,
-        ], dtype=np.float32)
+        return np.array(
+            [
+                cost_delta / max(abs(cur_cost), 1.0),
+                temp / max(temp_init, 1e-6),
+                no_imp / max(patience, 1),
+                float(np.clip(nv_diff, -2, 2)),
+                progress,
+                tw_tight_frac,
+                fleet_fill,
+                avg_slack_val,
+                metro,
+            ],
+            dtype=np.float32,
+        )
 
     def decide(self, feats: np.ndarray, cur_best_cost: float) -> Tuple[bool, float]:
         self.step += 1
@@ -442,29 +503,32 @@ class LearnedAcceptanceCriterion:
             feats, best_at_t, _ = self._pending.popleft()
             label = 1.0 if current_best_cost < best_at_t - 1e-6 else 0.0
             self._train_buf.append((feats, label))
-        if self.step % self.cfg.lac_train_freq == 0 and len(self._train_buf) >= 64:
+        if self.step % self.cfg.lac_train_freq == 0 and len(self._train_buf) >= self.cfg.lac_batch:
             self._train()
 
     def _train(self) -> None:
-        batch = random.sample(self._train_buf, min(64, len(self._train_buf)))
+        batch = random.sample(self._train_buf, min(self.cfg.lac_batch, len(self._train_buf)))
         feats, labels = zip(*batch)
         x = torch.tensor(np.array(feats), dtype=torch.float32).to(DEVICE)
         y = torch.tensor(labels, dtype=torch.float32).to(DEVICE)
         n_neg = max((y == 0).sum().item(), 1)
         n_pos = max((y == 1).sum().item(), 1)
-        sample_weights = torch.where(y == 1,
+        sample_weights = torch.where(
+            y == 1,
             torch.full_like(y, n_neg / n_pos),
             torch.ones_like(y),
         )
         pred = self.net(x).squeeze(1)
         loss = F.binary_cross_entropy(pred, y, weight=sample_weights)
-        self.opt.zero_grad(); loss.backward(); self.opt.step()   
+        self.opt.zero_grad()
+        loss.backward()
+        self.opt.step()
 
     def state_dict(self) -> Dict:
         return {f"lac.{k}": v.clone().cpu() for k, v in self.net.state_dict().items()}
 
     def load_state_dict(self, weights: Dict) -> None:
-        sd      = self.net.state_dict()
+        sd = self.net.state_dict()
         updates = {}
         for k, v in weights.items():
             bare = k[4:] if k.startswith("lac.") else k
