@@ -25,8 +25,15 @@ def op_worst(plan: Plan, size: int) -> Tuple[Plan, List[int]]:
             nxt  = route[idx + 1] if idx < len(route) - 1 else 0
             gains.append((inst.dist[prev, node] + inst.dist[node, nxt] - inst.dist[prev, nxt], node))
     gains.sort(reverse=True)
-    removed = [n for _, n in gains[:size]]
-    rs      = set(removed)
+    # ALNS power-law randomized selection to introduce search diversity
+    p = 3.0
+    removed: List[int] = []
+    rs = set()
+    while len(removed) < size and gains:
+        idx = int((random.random() ** p) * len(gains))
+        _, node = gains.pop(idx)
+        removed.append(node)
+        rs.add(node)
     plan.routes = [[n for n in r if n not in rs] for r in plan.routes]
     plan.routes = [r for r in plan.routes if r]
     return _invalidate(plan), removed
@@ -43,16 +50,23 @@ def op_shaw(plan: Plan, size: int) -> Tuple[Plan, List[int]]:
     max_dist  = inst.max_dist + 1e-9
     max_tw    = max(inst.due_times - inst.ready_times) + 1e-9
     while len(removed) < size:
+        # Dynamically select a reference node from the already removed set
+        ref_node = random.choice(removed)
         candidates = [
-            (n, 0.5 * inst.dist[seed_node, n] / max_dist
-               + 0.4 * abs(inst.ready_times[seed_node] - inst.ready_times[n]) / max_tw
-               + 0.1 * abs(inst.demands[seed_node] - inst.demands[n]) / inst.capacity)
+            (n, 0.5 * inst.dist[ref_node, n] / max_dist
+               + 0.4 * abs(inst.ready_times[ref_node] - inst.ready_times[n]) / max_tw
+               + 0.1 * abs(inst.demands[ref_node] - inst.demands[n]) / inst.capacity)
             for n in nodes if n not in rs
         ]
         if not candidates:
             break
-        removed.append(min(candidates, key=lambda x: x[1])[0])
-        rs.add(removed[-1])
+        candidates.sort(key=lambda x: x[1])
+        # Use power law selection (p = 3.0) to select similar nodes with high probability
+        p = 3.0
+        idx = int((random.random() ** p) * len(candidates))
+        chosen = candidates[idx][0]
+        removed.append(chosen)
+        rs.add(chosen)
     plan.routes = [[n for n in r if n not in rs] for r in plan.routes]
     plan.routes = [r for r in plan.routes if r]
     return _invalidate(plan), removed
@@ -103,7 +117,11 @@ def op_route_portion_removal(plan: Plan, size: int) -> Tuple[Plan, List[int]]:
             tw_width= inst.due_times[node] - inst.ready_times[node]
             urgency = 1.0 - min(tw_width / max(inst.max_tw_width, 1.0), 1.0)
             strain.append((arc / max_dist + 0.35 * urgency, pos))
-        pivot = max(strain, key=lambda x: x[0])[1]
+        # Use randomized selection for the pivot to prevent determinism
+        strain.sort(reverse=True, key=lambda x: x[0])
+        p = 2.0
+        idx = int((random.random() ** p) * len(strain))
+        pivot = strain[idx][1]
         start = int(np.clip(pivot - seg_len // 2, 0, len(route) - seg_len))
         segment = route[start:start + seg_len]
         removed.extend(segment)
@@ -119,7 +137,9 @@ def op_tw_urgent(plan: Plan, size: int) -> Tuple[Plan, List[int]]:
     nodes = [n for r in plan.routes for n in r]
     if not nodes:
         return plan, []
-    removed = sorted(nodes, key=lambda n: inst.due_times[n] - inst.ready_times[n])[:size]
+    # Add random noise to the time window width to vary the selection of tight windows
+    candidates = sorted(nodes, key=lambda n: (inst.due_times[n] - inst.ready_times[n]) * (1.0 + random.random() * 0.3))
+    removed = candidates[:size]
     rs      = set(removed)
     plan.routes = [[n for n in r if n not in rs] for r in plan.routes]
     plan.routes = [r for r in plan.routes if r]
@@ -130,9 +150,11 @@ def op_route_eliminate(plan: Plan, size: int) -> Tuple[Plan, List[int]]:
     if len(plan.routes) <= 1:
         return op_random(plan, size)
     inst   = plan.inst
+    # Add small random noise to route length and load fraction to vary route choices
     ranked = sorted(
         enumerate(plan.routes),
-        key=lambda x: (len(x[1]), sum(inst.demands[n] for n in x[1]) / max(inst.capacity, 1)),
+        key=lambda x: (len(x[1]) + random.random() * 0.8,
+                       sum(inst.demands[n] for n in x[1]) / max(inst.capacity, 1) + random.random() * 0.1),
     )
     removed: List[int] = []
     drop_ids: set = set()
@@ -145,7 +167,7 @@ def op_route_eliminate(plan: Plan, size: int) -> Tuple[Plan, List[int]]:
     return _invalidate(plan), removed
 
 
-def op_route_proximity_eliminate(plan: Plan, size: int) -> Tuple[Plan, List[int]]:
+def op_route_dispersion_eliminate(plan: Plan, size: int) -> Tuple[Plan, List[int]]:
     if len(plan.routes) <= 1:
         return op_random(plan, size)
     inst      = plan.inst
@@ -160,7 +182,9 @@ def op_route_proximity_eliminate(plan: Plan, size: int) -> Tuple[Plan, List[int]
         centroid = coords.mean(axis=0)
         spatial  = float(np.sqrt(((coords - centroid) ** 2).sum(axis=1)).mean()) / max_dist
         temporal = _route_duration_no_return(route, inst) / avg_dur
-        scored.append((1.5 * spatial + 0.5 * temporal, idx))
+        # Add random noise to increase variety
+        noise = random.random() * 0.25
+        scored.append((1.5 * spatial + 0.5 * temporal + noise, idx))
     removed: List[int] = []
     drop_ids: set = set()
     for _, idx in sorted(scored, reverse=True):
@@ -179,7 +203,6 @@ def op_cross_route_shaw(plan: Plan, size: int) -> Tuple[Plan, List[int]]:
         return plan, []
     node_to_route= {n: ri for ri, route in enumerate(plan.routes) for n in route}
     seed_node    = random.choice(nodes)
-    seed_route   = node_to_route.get(seed_node, -1)
     removed      = [seed_node]
     rs           = {seed_node}
     max_dist     = inst.max_dist + 1e-9
@@ -189,17 +212,22 @@ def op_cross_route_shaw(plan: Plan, size: int) -> Tuple[Plan, List[int]]:
         for n in nodes:
             if n in rs:
                 continue
-            route_bias = -1.0 if node_to_route.get(n, -2) != seed_route else 1.0
+            ref_node = random.choice(removed)
+            ref_route = node_to_route.get(ref_node, -1)
+            route_bias = -1.0 if node_to_route.get(n, -2) != ref_route else 1.0
             rel = (
-                0.5 * inst.dist[seed_node, n] / max_dist
-                + 0.4 * abs(inst.ready_times[seed_node] - inst.ready_times[n]) / max_tw
-                + 0.1 * abs(inst.demands[seed_node] - inst.demands[n]) / inst.capacity
+                0.5 * inst.dist[ref_node, n] / max_dist
+                + 0.4 * abs(inst.ready_times[ref_node] - inst.ready_times[n]) / max_tw
+                + 0.1 * abs(inst.demands[ref_node] - inst.demands[n]) / inst.capacity
                 + 0.2 * route_bias
             )
             candidates.append((n, rel))
         if not candidates:
             break
-        nxt = min(candidates, key=lambda x: x[1])[0]
+        candidates.sort(key=lambda x: x[1])
+        p = 3.0
+        idx = int((random.random() ** p) * len(candidates))
+        nxt = candidates[idx][0]
         removed.append(nxt)
         rs.add(nxt)
     plan.routes = [[n for n in r if n not in rs] for r in plan.routes]
@@ -209,7 +237,7 @@ def op_cross_route_shaw(plan: Plan, size: int) -> Tuple[Plan, List[int]]:
 
 DESTROY = [
     op_random, op_worst, op_shaw, op_route_portion_removal,
-    op_tw_urgent, op_route_eliminate, op_route_proximity_eliminate, op_cross_route_shaw,
+    op_tw_urgent, op_route_eliminate, op_route_dispersion_eliminate, op_cross_route_shaw,
 ]
 
 

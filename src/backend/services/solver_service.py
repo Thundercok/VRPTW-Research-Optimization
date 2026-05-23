@@ -321,6 +321,102 @@ def _run_alns(payload: JobRequest) -> dict[str, Any]:
     return runtime.plan_to_payload(plan, payload.customers, elapsed)
 
 
+def _load_weights_for_solver(solver: Any, algo: str) -> None:
+    import os
+    import vrptw
+    from safetensors.torch import load_file
+
+    label = "rc1" if "rc1" in algo else "dr"
+    candidates = []
+    output_dir = _ROOT / "logs"
+
+    if label == "dr":
+        candidates = [
+            _DR_TRANSFER_PATH,
+            _DOCS_DR_TRANSFER_PATH,
+            output_dir / "rl_alns_dr_v15.safetensors",
+            output_dir / "rl_alns_dr_v15.pt",
+            _ROOT / "rl_alns_dr_v15.safetensors",
+        ]
+    else:
+        candidates = [
+            _DEFAULT_TRANSFER_PATH,
+            _DOCS_TRANSFER_PATH,
+            _LEGACY_TRANSFER_PATH,
+        ]
+
+    for cand in candidates:
+        path_str = str(cand)
+        if os.path.exists(path_str):
+            try:
+                state = load_file(path_str)
+                if hasattr(solver, "load_weights"):
+                    solver.load_weights(state)
+                else:
+                    aligned_q, _ = _align_action_head(state, solver.ctrl.q)
+                    aligned_qt, _ = _align_action_head(state, solver.ctrl.q_t)
+                    solver.ctrl.q.load_state_dict(aligned_q, strict=True)
+                    solver.ctrl.q_t.load_state_dict(aligned_qt, strict=True)
+                logger.info("Loaded transfer weights for %s from %s", algo, path_str)
+                return
+            except Exception as e:
+                logger.error("Failed loading weight candidate %s for %s: %s", path_str, algo, e)
+
+
+def _run_algo_generic(payload: JobRequest, algo: str) -> dict[str, Any]:
+    runtime = _load_solver_runtime()
+    config = _get_web_config()
+    import vrptw
+
+    inst = runtime.build_inst(payload.customers, capacity=payload.fleet.capacity, name=algo)
+
+    if algo == "ortools":
+        plan, elapsed = vrptw.run_ortools(inst, config)
+        if plan is None:
+            raise ValueError("OR-Tools failed to find a feasible solution")
+        return runtime.plan_to_payload(plan, payload.customers, elapsed)
+
+    elif algo == "alns_base":
+        solver = vrptw.ALNSSolver(inst, config)
+        start = time.time()
+        plan, _ = solver.solve(seed=config.seed)
+        elapsed = time.time() - start
+        return runtime.plan_to_payload(plan, payload.customers, elapsed)
+
+    elif algo == "hybrid_fixed":
+        solver = vrptw.HybridFixedSolver(inst, config)
+        start = time.time()
+        plan, _ = solver.solve(seed=config.seed)
+        elapsed = time.time() - start
+        return runtime.plan_to_payload(plan, payload.customers, elapsed)
+
+    elif algo == "hybrid_ddqn":
+        solver = vrptw.HybridDDQNSolver(inst, config)
+        start = time.time()
+        plan, _ = solver.solve(seed=config.seed)
+        elapsed = time.time() - start
+        return runtime.plan_to_payload(plan, payload.customers, elapsed)
+
+    elif algo == "hybrid_ddqn_transfer_rc1":
+        solver = vrptw.HybridDDQNSolver(inst, config)
+        _load_weights_for_solver(solver, algo)
+        start = time.time()
+        plan, _ = solver.solve(seed=config.seed)
+        elapsed = time.time() - start
+        return runtime.plan_to_payload(plan, payload.customers, elapsed)
+
+    elif algo == "hybrid_ddqn_transfer_dr":
+        solver = vrptw.HybridDDQNSolver(inst, config)
+        _load_weights_for_solver(solver, algo)
+        start = time.time()
+        plan, _ = solver.solve(seed=config.seed)
+        elapsed = time.time() - start
+        return runtime.plan_to_payload(plan, payload.customers, elapsed)
+
+    else:
+        raise ValueError(f"Unknown algorithm specified: {algo}")
+
+
 def _validate(payload: JobRequest) -> None:
     points = payload.customers
     if len(points) < 2:
@@ -352,7 +448,22 @@ async def solve_model(payload: JobRequest, matrix: list[list[float]] | None = No
     runtime.torch.set_num_threads(max(1, (os.cpu_count() or 4) // 2))
 
     loop = asyncio.get_running_loop()
-    ddqn_task = loop.run_in_executor(None, _run_ddqn_alns, payload)
-    alns_task = loop.run_in_executor(None, _run_alns, payload)
-    ddqn_result, alns_result = await asyncio.gather(ddqn_task, alns_task)
-    return {"ddqn": ddqn_result, "alns": alns_result}
+    algos = ["ddqn", "alns", "ortools", "hybrid_fixed", "hybrid_ddqn", "hybrid_ddqn_transfer_rc1", "hybrid_ddqn_transfer_dr"]
+    
+    tasks = {}
+    for algo in algos:
+        if algo == "ddqn":
+            tasks[algo] = loop.run_in_executor(None, _run_ddqn_alns, payload)
+        elif algo == "alns":
+            tasks[algo] = loop.run_in_executor(None, _run_alns, payload)
+        else:
+            tasks[algo] = loop.run_in_executor(None, _run_algo_generic, payload, algo)
+
+    results = {}
+    for algo, task in tasks.items():
+        try:
+            results[algo] = await task
+        except Exception as e:
+            logger.error("Failed running algorithm pipeline %s: %s", algo, e)
+
+    return results

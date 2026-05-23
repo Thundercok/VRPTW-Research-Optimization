@@ -9,7 +9,7 @@ from api.dependencies import require_user
 from core.config import demo_auth_bypass_enabled
 from core.firebase import is_firebase_enabled
 from core.rate_limit import GEOCODE_LIMIT, JOBS_LIMIT, limiter
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile, File
 from models.schemas import JobRequest, MatrixRequest
 from services.geocode_service import geocode_address, reverse_geocode_address
 from services.job_service import job_service
@@ -20,7 +20,7 @@ from services.solver_service import device_summary, transfer_weights_summary
 router = APIRouter(tags=["ops"])
 
 _ROOT_PATH = Path(__file__).resolve().parents[4]
-_LOGS_PATH = _ROOT_PATH / "logs"
+_LOGS_PATH = _ROOT_PATH / "docs" / "logs"
 
 
 def _parse_result_version(folder_name: str) -> str | None:
@@ -101,6 +101,143 @@ async def solomon_dataset(
         ) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post("/solomon/import-csv")
+async def import_csv_file(
+    file: UploadFile = File(...),
+    _: dict[str, str] = Depends(require_user),
+) -> dict[str, Any]:
+    content = await file.read()
+    try:
+        text = content.decode("utf-8")
+    except UnicodeDecodeError:
+        try:
+            text = content.decode("latin1")
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail="Invalid file encoding.") from exc
+
+    import csv
+    import io
+    import unicodedata
+
+    def normalize_header(h: str) -> str:
+        s = str(h or "").strip().lower()
+        s = "".join(c for c in unicodedata.normalize("NFD", s) if not unicodedata.combining(c))
+        return "".join(c for c in s if c.isalnum())
+
+    def find_col_index(headers: list[str], aliases: list[str]) -> int:
+        norm_aliases = [normalize_header(a) for a in aliases]
+        for idx, h in enumerate(headers):
+            if normalize_header(h) in norm_aliases:
+                return idx
+        return -1
+
+    text_io = io.StringIO(text)
+    sample = text[:2048]
+    delimiter = ","
+    if "\t" in sample:
+        delimiter = "\t"
+    elif ";" in sample:
+        delimiter = ";"
+
+    reader = csv.reader(text_io, delimiter=delimiter)
+    rows = [r for r in reader if r]
+
+    if not rows:
+        raise HTTPException(status_code=400, detail="Empty CSV file.")
+
+    headers = [str(cell).strip() for cell in rows[0]]
+    has_header = False
+
+    name_idx = find_col_index(headers, ["name", "customer name", "customer", "client", "store", "shop"])
+    addr_idx = find_col_index(headers, ["address", "addr", "location", "customer address", "full address"])
+    lat_idx = find_col_index(headers, ["lat", "latitude", "y", "geo lat"])
+    lng_idx = find_col_index(headers, ["lng", "lon", "long", "longitude", "x", "geo lng", "geo lon"])
+    demand_idx = find_col_index(headers, ["demand", "qty", "quantity", "load", "order size", "weight"])
+    ready_idx = find_col_index(headers, ["ready", "readytime", "open", "tw start", "twstart", "earliest", "start"])
+    due_idx = find_col_index(headers, ["due", "duedate", "duetime", "close", "tw end", "twend", "latest", "end", "deadline"])
+    service_idx = find_col_index(headers, ["service", "servicetime", "svc", "dwell", "stoptime"])
+
+    if (lat_idx >= 0 or lng_idx >= 0 or addr_idx >= 0) and (name_idx >= 0 or demand_idx >= 0):
+        has_header = True
+        data_rows = rows[1:]
+    else:
+        name_idx, addr_idx, lat_idx, lng_idx, demand_idx, ready_idx, due_idx, service_idx = 0, 1, 2, 3, 4, 5, 6, 7
+        data_rows = rows
+
+    customers = []
+    for idx, row in enumerate(data_rows):
+        row_len = len(row)
+        def val_at(col_idx: int, default: str = "") -> str:
+            if 0 <= col_idx < row_len:
+                return str(row[col_idx]).strip()
+            return default
+
+        name = val_at(name_idx) or f"Cust-{idx + 1}"
+        address = val_at(addr_idx)
+        lat_str = val_at(lat_idx)
+        lng_str = val_at(lng_idx)
+        demand_str = val_at(demand_idx, "10")
+        ready_str = val_at(ready_idx, "0")
+        due_str = val_at(due_idx, "1000")
+        service_str = val_at(service_idx, "10")
+
+        try:
+            lat = float(lat_str) if lat_str else None
+            lng = float(lng_str) if lng_str else None
+        except ValueError:
+            lat, lng = None, None
+
+        if (lat is None or lng is None) and address:
+            try:
+                geo = await geocode_address(address, limit=1)
+                if geo.get("items"):
+                    lat = float(geo["items"][0]["lat"])
+                    lng = float(geo["items"][0]["lng"])
+            except Exception:
+                pass
+
+        if lat is None or lng is None:
+            continue
+
+        try:
+            demand = int(float(demand_str))
+        except ValueError:
+            demand = 10
+
+        try:
+            ready = float(ready_str)
+        except ValueError:
+            ready = 0.0
+
+        try:
+            due = float(due_str)
+        except ValueError:
+            due = 1000.0
+
+        try:
+            service = float(service_str)
+        except ValueError:
+            service = 10.0
+
+        is_depot = idx == 0 and demand == 0
+        customers.append({
+            "id": idx,
+            "name": name,
+            "address": address or f"Point {idx}",
+            "lat": lat,
+            "lng": lng,
+            "demand": 0 if is_depot else demand,
+            "ready": ready,
+            "due": due,
+            "service": service,
+            "isDepot": is_depot,
+            "priority": "Normal",
+            "skill": "None"
+        })
+
+    return {"customers": customers}
 
 
 @router.get("/analysis/versions")

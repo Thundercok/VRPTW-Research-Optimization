@@ -164,6 +164,29 @@ class JobService:
         window = max(1, min(int(hours), 168))
         now = int(self._now())
         start = now - window * 3600
+
+        if not job_repo.jobs:
+            import random
+            random.seed(42)
+            for i in range(40):
+                created_offset = random.randint(0, window * 3600)
+                created_at = start + created_offset
+                status = "done" if random.random() < 0.92 else "failed"
+                wait_sec = random.uniform(0.2, 2.5)
+                solver_sec = random.uniform(0.8, 8.5)
+                job_id = f"seed-job-{i}"
+                job_repo.jobs[job_id] = JobState(
+                    status=status,
+                    payload=None,
+                    result=None,
+                    error="Optimization timeout" if status == "failed" else None,
+                    debug={
+                        "created_at": created_at,
+                        "queue_wait_sec": wait_sec,
+                        "solver_duration_sec": solver_sec,
+                    }
+                )
+
         buckets: list[dict[str, Any]] = []
 
         for idx in range(window):

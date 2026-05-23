@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Nexus | Dispatch Control Tower</title>
+    <title>NAMI | Dispatch Control Tower</title>
 
     <script type="importmap">
       {
@@ -25,6 +25,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <link rel="stylesheet" href="css/style.css?v=ForceSafariToLoad1" />
+    <link rel="stylesheet" href="css/app.css?v=ForceSafariToLoad1" />
 </head>
 
 <body class="light-theme-enforced">
@@ -33,23 +34,23 @@
         <aside class="saas-sidebar">
             <div class="brand">
                 <div class="brand-logo">N</div>
-                <span class="brand-text">NEXUS OPS</span>
+                <span class="brand-text">NAMI OPS</span>
             </div>
 
             <nav class="saas-nav">
                 <p class="nav-label">Planning</p>
-                <a href="#" class="nav-item active">Live Dispatch</a>
-                <a href="#" class="nav-item">Fleet Config</a>
+                <a href="#" class="nav-item active" data-view="dispatch">Live Dispatch</a>
+                <a href="#" class="nav-item" data-view="fleet">Fleet Config</a>
 
                 <p class="nav-label" style="margin-top: 24px;">Intelligence</p>
-                <a href="#" class="nav-item">Model Analytics</a>
-                <a href="#" class="nav-item">Settings</a>
+                <a href="#" class="nav-item" data-view="analytics">Model Analytics</a>
+                <a href="#" class="nav-item" data-view="settings">Settings</a>
             </nav>
 
             <div class="sidebar-footer">
                 <a href="index.html" class="nav-item"
                     style="color: var(--text-muted); margin-bottom: 12px; font-size: 12px;">&larr; Back to Home</a>
-                <div class="user-badge" id="user-email">guest@nexus.local</div>
+                <div class="user-badge" id="user-email">guest@nami.local</div>
                 <button id="btn-logout" class="btn-text">Sign Out</button>
             </div>
         </aside>
@@ -81,104 +82,306 @@
                 </div>
             </header>
 
-            <section class="kpi-row">
-                <div class="kpi-card">
-                    <div class="kpi-title">Algorithm Gap (DDQN vs ALNS)</div>
-                    <div class="kpi-value highlight-emerald" id="kpi-gap">-0.00%</div>
-                    <div class="kpi-sub">Closer to BKS is better</div>
-                </div>
-                <div class="kpi-card">
-                    <div class="kpi-title">Total Distance (km)</div>
-                    <div class="kpi-split">
-                        <div><span class="kpi-label">DDQN</span><strong id="kpi-dist-ddqn">0.00</strong></div>
-                        <div><span class="kpi-label">ALNS</span><strong id="kpi-dist-alns">0.00</strong></div>
+            <!-- Live Dispatch Panel -->
+            <div id="view-dispatch" class="view-panel">
+                <section class="kpi-row">
+                    <div class="kpi-card">
+                        <div class="kpi-title">Algorithm Gap (DDQN vs ALNS)</div>
+                        <div class="kpi-value highlight-emerald" id="kpi-gap">-0.00%</div>
+                        <div class="kpi-sub">Closer to BKS is better</div>
                     </div>
-                </div>
-                <div class="kpi-card">
-                    <div class="kpi-title">Vehicles Dispatched</div>
-                    <div class="kpi-split">
-                        <div><span class="kpi-label">DDQN</span><strong id="kpi-veh-ddqn">0</strong></div>
-                        <div><span class="kpi-label">ALNS</span><strong id="kpi-veh-alns">0</strong></div>
-                    </div>
-                </div>
-                <div class="kpi-card">
-                    <div class="kpi-title">Compute Time</div>
-                    <div class="kpi-split">
-                        <div><span class="kpi-label">DDQN</span><strong id="kpi-time-ddqn">0.0s</strong></div>
-                        <div><span class="kpi-label">ALNS</span><strong id="kpi-time-alns">0.0s</strong></div>
-                    </div>
-                </div>
-            </section>
-
-            <section class="workspace-full" style="position: relative;">
-
-                <!-- Slide-out Manifest Drawer (over the map) -->
-                <div id="manifest-drawer" class="manifest-drawer">
-                    <div class="drawer-header">
-                        <h3>Manifest (Waypoints)</h3>
-                        <div class="drawer-header-actions">
-                            <button id="add-row" class="btn-secondary btn-sm">+ Add Stop</button>
-                            <button id="btn-close-drawer" class="drawer-close-btn" title="Close">&times;</button>
+                    <div class="kpi-card">
+                        <div class="kpi-title">Total Distance (km)</div>
+                        <div class="kpi-split">
+                            <div><span class="kpi-label">DDQN</span><strong id="kpi-dist-ddqn">0.00</strong></div>
+                            <div><span class="kpi-label">ALNS</span><strong id="kpi-dist-alns">0.00</strong></div>
                         </div>
                     </div>
-                    <div class="table-container">
-                        <table class="saas-table">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Location</th>
-                                    <th class="num">Demand</th>
-                                    <th class="num">Ready</th>
-                                    <th class="num">Due</th>
-                                    <th class="num">Service</th>
-                                </tr>
-                            </thead>
-                            <tbody id="customer-rows">
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Toggle Drawer Button (floating on map) -->
-                <button id="btn-toggle-drawer" class="drawer-toggle-btn" title="Toggle Manifest">
-                    <span class="drawer-toggle-icon">☰</span>
-                    <span class="drawer-toggle-label">Manifest</span>
-                </button>
-
-                <!-- Full-width Map Pane -->
-                <div class="pane pane-map-full" style="position: relative;">
-                    <div class="pane-header">
-                        <h3>Geospatial View</h3>
-                        <div class="map-toggles">
-                            <label><input type="radio" name="map_view" value="ddqn" checked /> DDQN</label>
-                            <label><input type="radio" name="map_view" value="alns" /> ALNS Base</label>
+                    <div class="kpi-card">
+                        <div class="kpi-title">Vehicles Dispatched</div>
+                        <div class="kpi-split">
+                            <div><span class="kpi-label">DDQN</span><strong id="kpi-veh-ddqn">0</strong></div>
+                            <div><span class="kpi-label">ALNS</span><strong id="kpi-veh-alns">0</strong></div>
                         </div>
                     </div>
-                    <div style="flex: 1; display: flex; flex-direction: column; position: relative; min-height: 0;">
-                        <div id="map-container" class="map-view" style="flex: 1;"></div>
+                    <div class="kpi-card">
+                        <div class="kpi-title">Compute Time</div>
+                        <div class="kpi-split">
+                            <div><span class="kpi-label">DDQN</span><strong id="kpi-time-ddqn">0.0s</strong></div>
+                            <div><span class="kpi-label">ALNS</span><strong id="kpi-time-alns">0.0s</strong></div>
+                        </div>
+                    </div>
+                </section>
 
-                        <!-- Simulation Control Bar -->
-                        <div id="sim-control-panel" class="sim-control-bar hidden">
-                            <button id="btn-sim-play" class="btn-sim-play">▶ Play</button>
-                            <span id="sim-time-display" class="sim-time-text">Time: 00:00m</span>
-                            <div class="sim-slider-container">
-                                <input type="range" id="sim-slider" class="sim-slider" min="0" max="100" value="0" />
+                <section class="workspace-full" style="position: relative;">
+
+                    <!-- Slide-out Manifest Drawer (over the map) -->
+                    <div id="manifest-drawer" class="manifest-drawer">
+                        <div class="drawer-header">
+                            <h3>Manifest (Waypoints)</h3>
+                            <div class="drawer-header-actions">
+                                <button id="add-row" class="btn-secondary btn-sm">+ Add Stop</button>
+                                <button id="btn-close-drawer" class="drawer-close-btn" title="Close">&times;</button>
                             </div>
-                            <select id="sim-speed" class="sim-speed-select">
-                                <option value="1">1x Speed</option>
-                                <option value="2">2x Speed</option>
-                                <option value="10" selected>10x Speed</option>
-                                <option value="50">50x Speed</option>
-                            </select>
+                        </div>
+                        <div class="table-container">
+                            <table class="saas-table">
+                                <thead>
+                                    <tr>
+                                        <th class="table-pick-header" style="width: 28px;"></th>
+                                        <th style="width: 40px;">ID</th>
+                                        <th>Name</th>
+                                        <th>Address</th>
+                                        <th>Lat</th>
+                                        <th>Lng</th>
+                                        <th class="num">Demand</th>
+                                        <th class="num">Ready</th>
+                                        <th class="num">Due</th>
+                                        <th class="num">Service</th>
+                                        <th style="width: 90px;">Priority</th>
+                                        <th style="width: 100px;">Req. Skill</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="customer-rows">
+                                </tbody>
+                            </table>
                         </div>
                     </div>
 
-                    <!-- Vehicle Status Panel -->
-                    <div id="sim-vehicle-panel" class="sim-vehicle-panel hidden">
+                    <!-- Full-width Map Pane -->
+                    <div class="pane pane-map-full" style="position: relative;">
+                        <div class="pane-header">
+                            <div class="pane-header-left" style="display: flex; align-items: center; gap: 12px;">
+                                <button id="btn-toggle-drawer" class="drawer-toggle-btn" title="Toggle Manifest">
+                                    <span class="drawer-toggle-icon">☰</span>
+                                    <span class="drawer-toggle-label">Manifest</span>
+                                </button>
+                                <h3>Geospatial View</h3>
+                            </div>
+                            <div class="map-toggles">
+                                <label><input type="radio" name="map_view" value="ddqn" checked /> DDQN</label>
+                                <label><input type="radio" name="map_view" value="alns" /> ALNS Base</label>
+                            </div>
+                        </div>
+                        <div style="flex: 1; display: flex; flex-direction: column; position: relative; min-height: 0;">
+                            <div id="map-container" class="map-view" style="flex: 1;"></div>
+
+                            <!-- Simulation Control Bar -->
+                            <div id="sim-control-panel" class="sim-control-bar hidden">
+                                <button id="btn-sim-play" class="btn-sim-play">▶ Play</button>
+                                <span id="sim-time-display" class="sim-time-text">Time: 00:00m</span>
+                                <div class="sim-slider-container">
+                                    <input type="range" id="sim-slider" class="sim-slider" min="0" max="100" value="0" />
+                                </div>
+                                <select id="sim-speed" class="sim-speed-select">
+                                    <option value="1">1x Speed</option>
+                                    <option value="2" selected>2x Speed</option>
+                                    <option value="5">5x Speed</option>
+                                    <option value="10">10x Speed</option>
+                                    <option value="50">50x Speed</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Vehicle Status Panel -->
+                        <div id="sim-vehicle-panel" class="sim-vehicle-panel hidden">
+                        </div>
+
+                        <!-- Floating Mobile Driver App Emulator Button & Mockup -->
+                        <button id="btn-toggle-driver-app" class="hidden" style="position: absolute; bottom: 85px; right: 20px; z-index: 1000; background: var(--primary); color: white; border: none; padding: 10px 18px; border-radius: 30px; font-size: 11px; font-weight: 700; box-shadow: var(--shadow-md); cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s; border: 1px solid rgba(255,255,255,0.1);">
+                            <span>📱 Driver App Companion</span>
+                            <span id="driver-app-notif" style="background: var(--danger); color: white; font-size: 8px; font-weight: 800; border-radius: 50%; width: 14px; height: 14px; display: none; align-items: center; justify-content: center; line-height: 1;">1</span>
+                        </button>
+
+                        <div id="driver-app-emulator" class="hidden" style="position: absolute; bottom: 135px; right: 20px; width: 310px; height: 490px; background: #18181b; border-radius: 38px; padding: 10px; box-shadow: var(--shadow-lg); z-index: 1001; border: 4px solid #3f3f46; display: flex; flex-direction: column; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);">
+                            <!-- Phone Notch & Status -->
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 18px 2px; font-size: 9px; font-weight: 700; color: #a1a1aa; position: relative;">
+                                <span>9:41 AM</span>
+                                <div style="width: 50px; height: 10px; background: #000; border-radius: 5px; position: absolute; left: 50%; transform: translateX(-50%); top: 4px;"></div>
+                                <div style="display: flex; gap: 4px; align-items: center;">
+                                    <span>📶</span>
+                                    <span>🔋</span>
+                                </div>
+                            </div>
+                            <!-- Phone Screen -->
+                            <div style="flex: 1; background: #f4f4f5; border-radius: 28px; overflow: hidden; display: flex; flex-direction: column; border: 1px solid #27272a; position: relative;">
+                                <!-- App Header -->
+                                <div style="background: var(--primary); color: white; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; box-shadow: var(--shadow-sm);">
+                                    <strong style="font-size: 11px; tracking: -0.2px;">NAMI Driver View</strong>
+                                    <select id="driver-app-select" style="background: rgba(255,255,255,0.18); color: white; border: none; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 600; outline: none; width: 120px; cursor: pointer;">
+                                        <option value="" style="color: #000;">Select Driver...</option>
+                                    </select>
+                                </div>
+                                <!-- App Content Area -->
+                                <div id="driver-app-content" style="flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px;">
+                                    <div style="text-align: center; margin-top: 100px; padding: 0 16px;">
+                                        <div style="font-size: 32px; margin-bottom: 12px;">🚚</div>
+                                        <h4 style="margin: 0 0 6px; font-size: 13px; color: #27272a;">Driver Companion Emulator</h4>
+                                        <p style="margin: 0; font-size: 10px; color: #71717a; line-height: 1.4;">Select an active driver above to simulate mobile deliveries, log signatures, and track live routes.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </section>
+            </div>
+
+            <!-- Fleet Config Panel -->
+            <div id="view-fleet" class="view-panel hidden">
+                <!-- FleetController renders the customizable vehicles table here -->
+            </div>
+
+            <!-- Model Analytics Panel -->
+            <div id="view-analytics" class="view-panel hidden">
+                <div class="analytics-view-container">
+                    <div class="analytics-view-header">
+                        <div>
+                            <h2>Model Diagnostics & Performance Analysis</h2>
+                            <p class="section-desc">Analyze training history, convergence profiles, transfer weights, and operator heatmaps. Compare the DRL solver with ALNS base models.</p>
+                        </div>
+                        <div class="analytics-actions-row">
+                            <select id="analysis-version" class="saas-select" title="Select Training Version">
+                                <option value="">Loading versions...</option>
+                            </select>
+                            <select id="analysis-instance" class="saas-select" title="Filter by Instance">
+                                <option value="ALL">ALL INSTANCES</option>
+                            </select>
+                            <button id="analysis-open-popup" class="btn-primary">Deep Diagnostics</button>
+                        </div>
+                    </div>
+
+                    <div class="analytics-status-bar">
+                        <span id="analysis-last-updated" class="status-timestamp">No analysis loaded</span>
+                        <span id="analysis-status" class="status-badge">Idle</span>
+                    </div>
+
+                    <div class="analytics-grid">
+                        <div class="saas-card chart-card">
+                            <h3>Optimization Convergence Path</h3>
+                            <p class="card-desc">Comparison of objective function minimization history (BKS distance gap %) over solver iterations.</p>
+                            <div id="analysis-convergence-chart" class="analysis-chart-box">
+                                <div class="chart-placeholder">Select a version to render convergence path...</div>
+                            </div>
+                        </div>
+
+                        <div class="saas-card chart-card">
+                            <h3>Hourly Operational Dispatch Volume</h3>
+                            <p class="card-desc">Job execution load logs showing total tasks submitted, completed, and failed over time.</p>
+                            <div id="analysis-activity-chart" class="analysis-chart-box">
+                                <div class="chart-placeholder">Select a version to render activity chart...</div>
+                            </div>
+                        </div>
+
+                        <div class="saas-card matrix-card">
+                            <h3>DRL Operator Execution Heatmap</h3>
+                            <p class="card-desc">Distribution of action-selection policies. Shows selection frequency of local search moves.</p>
+                            <div id="analysis-policy-grid" class="analysis-heatmap-box">
+                                <div class="chart-placeholder">Select a version to render operator matrix...</div>
+                            </div>
+                        </div>
+
+                        <div class="saas-card table-card">
+                            <h3>Performance Comparison Leaderboard</h3>
+                            <div class="table-wrap">
+                                <table class="saas-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Instance</th>
+                                            <th class="num">BKS Dist</th>
+                                            <th class="num">DDQN Dist</th>
+                                            <th class="num">ALNS Dist</th>
+                                            <th class="num">Gap (%)</th>
+                                            <th>Winner</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="analysis-leaderboard-body">
+                                        <tr>
+                                            <td colspan="6" class="text-center text-muted" style="padding:24px;">No leaderboard data loaded.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="saas-card table-card xl-card">
+                            <h3>DRL Cross-Domain Transfer Performance</h3>
+                            <div class="table-wrap">
+                                <table class="saas-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Source Domain</th>
+                                            <th>Target Domain</th>
+                                            <th>Target Instance</th>
+                                            <th class="num">Zero-Shot Gap</th>
+                                            <th class="num">Fine-Tuned Gap</th>
+                                            <th class="num">Wall Time</th>
+                                            <th>Sample Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="analysis-transfer-body">
+                                        <tr>
+                                            <td colspan="7" class="text-center text-muted" style="padding:24px;">No cross-domain data loaded.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 </div>
+            </div>
 
-            </section>
+            <!-- Deep Diagnostics Modal Popup -->
+            <div id="analysis-modal" class="modal-overlay hidden">
+                <div class="modal-card analysis-modal-card">
+                    <div class="modal-header">
+                        <div>
+                            <h2>Cross-Domain Diagnostic Report</h2>
+                            <p id="analysis-modal-subtitle" class="text-muted">Version diagnostics details</p>
+                        </div>
+                        <button id="analysis-modal-close" class="modal-close-btn">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div id="analysis-modal-meta" class="analysis-meta-summary">
+                            <!-- Meta items rendered dynamically -->
+                        </div>
+                        <div class="modal-split-charts">
+                            <div class="saas-card">
+                                <h3>Iteration Convergence Details</h3>
+                                <div id="analysis-modal-convergence" class="analysis-chart-box"></div>
+                            </div>
+                            <div class="saas-card">
+                                <h3>Generalization Transfer Curve</h3>
+                                <div id="analysis-modal-transfer-plot" class="analysis-chart-box"></div>
+                            </div>
+                        </div>
+                        <div class="saas-card" style="margin-top:16px;">
+                            <h3>Model Generalization Transfer Table</h3>
+                            <div class="table-wrap">
+                                <table class="saas-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Run ID</th>
+                                            <th>Instance</th>
+                                            <th>RL Seed</th>
+                                            <th class="num">BKS Dist</th>
+                                            <th class="num">Transfer Dist</th>
+                                            <th class="num">Gap vs BKS</th>
+                                            <th>Speedup</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="analysis-modal-transfer-body"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings Panel -->
+            <div id="view-settings" class="view-panel hidden">
+                <!-- SettingsController renders configurations here -->
+            </div>
         </main>
     </div>
 

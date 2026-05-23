@@ -185,13 +185,13 @@ class WelfordRewardNormalizer:
     def normalize(self, r: float) -> float:
         self.observe(r)
         if self._n < self.warmup:
-            return r
+            return None          # caller must check before pushing to buffer
         z = (r - self._mean) / (self.std + self.eps)
         return float(np.clip(z, -self.clip, self.clip))
 
     def state_dict(self) -> dict:
         return {"n": self._n, "mean": self._mean, "M2": self._M2}
-
+    
     def load_state_dict(self, d: dict) -> None:
         self._n = int(d["n"])
         self._mean = float(d["mean"])
@@ -450,13 +450,15 @@ class LearnedAcceptanceCriterion:
         feats, labels = zip(*batch)
         x = torch.tensor(np.array(feats), dtype=torch.float32).to(DEVICE)
         y = torch.tensor(labels, dtype=torch.float32).to(DEVICE)
-        pos_weight = torch.tensor(
-            [max((y == 0).sum().item(), 1) / max((y == 1).sum().item(), 1)],
-            dtype=torch.float32,
-        ).to(DEVICE)
+        n_neg = max((y == 0).sum().item(), 1)
+        n_pos = max((y == 1).sum().item(), 1)
+        sample_weights = torch.where(y == 1,
+            torch.full_like(y, n_neg / n_pos),
+            torch.ones_like(y),
+        )
         pred = self.net(x).squeeze(1)
-        loss = F.binary_cross_entropy(pred, y, weight=pos_weight.expand_as(y))
-        self.opt.zero_grad(); loss.backward(); self.opt.step()
+        loss = F.binary_cross_entropy(pred, y, weight=sample_weights)
+        self.opt.zero_grad(); loss.backward(); self.opt.step()   
 
     def state_dict(self) -> Dict:
         return {f"lac.{k}": v.clone().cpu() for k, v in self.net.state_dict().items()}

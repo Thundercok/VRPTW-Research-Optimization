@@ -1,0 +1,327 @@
+/* ===================================================================
+   VRPTW Research Optimization - Authentication Styles
+   =================================================================== */
+
+body {
+  overflow: auto;
+  background: var(--bg-base);
+}
+
+.auth-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  background: var(--bg-base);
+  /* Subtle dot grid */
+  background-image: radial-gradient(circle, #d1d9ec 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  padding: 36px 32px 32px;
+  box-shadow: var(--shadow-lg);
+  position: relative;
+}
+
+/* Thin blue top accent */
+.auth-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--primary), #60a5fa);
+  border-radius: var(--r-xl) var(--r-xl) 0 0;
+}
+
+.tag {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--primary);
+  margin-bottom: 6px;
+  font-family: var(--font-main);
+}
+
+.auth-headline {
+  margin-bottom: 16px;
+}
+
+.auth-headline h1 {
+  font-family: var(--font-main);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-main);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.auth-icons {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 17px;
+}
+
+/* SVG illustration container & animations */
+.auth-visual {
+  margin: 0 0 22px;
+  border-radius: var(--r);
+  overflow: hidden;
+  background: var(--bg-base);
+  border: 1px solid var(--border);
+  padding: 14px 16px 10px;
+}
+
+.auth-visual svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.route-path {
+  animation: dash-flow 4s linear infinite;
+}
+
+@keyframes dash-flow {
+  to {
+    stroke-dashoffset: -64;
+  }
+}
+
+.route-node {
+  animation: node-pulse 2s ease-in-out infinite alternate;
+}
+
+.route-node-2 {
+  animation-delay: 0.4s;
+}
+
+.route-node-3 {
+  animation-delay: 0.8s;
+}
+
+@keyframes node-pulse {
+  from {
+    r: 5;
+    opacity: .7;
+  }
+  to {
+    r: 9;
+    opacity: 1;
+  }
+}
+
+/* View transitions */
+.auth-views {
+  position: relative;
+}
+
+.auth-form {
+  display: none;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.auth-form.active {
+  display: flex;
+}
+
+/* Labels */
+.auth-form label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: -6px;
+  /* tighten gap to input */
+  font-family: var(--font-main);
+}
+
+/* Inputs */
+.auth-form input[type="email"],
+.auth-form input[type="password"],
+.auth-form input[type="text"] {
+  width: 100%;
+  padding: 10px 13px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  font-size: 13.5px;
+  font-family: var(--font-main);
+  color: var(--text-main);
+  background: var(--bg-base);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+
+.auth-form input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  background: var(--bg-surface);
+}
+
+.auth-form input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+/* Primary button */
+.auth-card .btn {
+  width: 100%;
+  padding: 11px;
+  border: none;
+  border-radius: var(--r-sm);
+  font-size: 13.5px;
+  font-weight: 600;
+  font-family: var(--font-main);
+  cursor: pointer;
+  transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
+  background: var(--primary);
+  color: #fff;
+  box-shadow: 0 1px 4px rgba(37, 99, 235, 0.28);
+}
+
+.auth-card .btn:hover {
+  background: var(--primary-hover);
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
+  transform: translateY(-1px);
+}
+
+.auth-card .btn:active {
+  transform: none;
+}
+
+.auth-card .btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Ghost button */
+.auth-card .btn.ghost {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border-strong);
+  box-shadow: none;
+}
+
+.auth-card .btn.ghost:hover {
+  background: var(--primary-soft);
+  color: var(--primary);
+  border-color: var(--primary);
+  transform: none;
+  box-shadow: none;
+}
+
+/* Hint text */
+.hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  font-family: var(--font-main);
+}
+
+.auth-hint {
+  min-height: 16px;
+}
+
+/* Links row */
+.auth-links {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: var(--font-main);
+  padding: 0;
+}
+
+.link-btn:hover {
+  text-decoration: underline;
+}
+
+/* Divider */
+.auth-divider {
+  text-align: center;
+  position: relative;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-family: var(--font-main);
+  margin: 8px 0;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: calc(50% - 20px);
+  height: 1px;
+  background: var(--border);
+}
+
+.auth-divider::before {
+  left: 0;
+}
+
+.auth-divider::after {
+  right: 0;
+}
+
+/* Guest block */
+.auth-guest {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.guest-btn {
+  width: 100%;
+}
+
+/* OTP row */
+.otp-row {
+  display: flex;
+  gap: 8px;
+}
+
+.otp-row input {
+  flex: 1;
+}
+
+.otp-row .btn {
+  width: auto;
+  min-width: 100px;
+}
+
+.otp-countdown {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  font-family: var(--font-data);
+}
+
+/* Inline action row */
+.inline-row {
+  display: flex;
+  gap: 8px;
+}
+
+.inline-row .btn {
+  flex: 1;
+}

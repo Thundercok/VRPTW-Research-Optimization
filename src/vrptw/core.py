@@ -44,9 +44,7 @@ def _route_cost(route: np.ndarray, dist: np.ndarray) -> float:
 
 
 @njit(cache=True)
-def _route_ok(route: np.ndarray, demands: np.ndarray, capacity: float,
-              ready: np.ndarray, due: np.ndarray,
-              service: np.ndarray, dist: np.ndarray) -> bool:
+def _route_ok(route, demands, capacity, ready, due, service, dist) -> bool:
     load = 0.0
     for node in route:
         load += demands[node]
@@ -61,7 +59,7 @@ def _route_ok(route: np.ndarray, demands: np.ndarray, capacity: float,
             return False
         t   += service[node]
         prev = node
-    return True
+    return t + dist[prev, 0] <= due[0]   # depot return within horizon
 
 
 class Plan:
@@ -161,7 +159,7 @@ def _avg_slack(plan: Plan) -> float:
         for node in route:
             t += inst.dist[prev, node]
             t  = max(t, inst.ready_times[node])
-            slack_sum += inst.due_times[node] - t
+            slack_sum += max(0.0, inst.due_times[node] - t)
             t   += inst.service_times[node]
             prev = node
             count += 1

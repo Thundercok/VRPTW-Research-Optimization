@@ -5,6 +5,10 @@ import { getDemoLang, setDemoLang, toggleDemoLang } from './demoLang.js';
 import { MapController } from './MapController.js';
 import { SimulationController } from './SimulationController.js';
 import { TelemetryService } from './TelemetryService.js';
+import { solveDemo } from './DemoEngine.js';
+import { FleetController } from './FleetController.js';
+import { SettingsController } from './SettingsController.js';
+
 
 const APP_COPY = {
   en: {
@@ -169,6 +173,8 @@ export class App {
     this.el = this.bindElements();
     this.mapController = new MapController(this);
     this.simulationController = new SimulationController(this);
+    this.fleetController = new FleetController(this);
+    this.settingsController = new SettingsController(this);
     this.telemetry = new TelemetryService(db, this.mapController);
     this.loadingAnim = {
       active: false,
@@ -576,6 +582,12 @@ export class App {
     if (this.state.adminFeedback) {
       this.renderAdminFeedback(this.state.adminFeedback);
     }
+
+    if (this.state.currentView) {
+      this.switchView(this.state.currentView);
+    }
+    this.fleetController?.render();
+    this.settingsController?.render();
   }
 
   routeAuthScreenFromURL() {
@@ -1007,6 +1019,69 @@ export class App {
         drawer.classList.remove('open');
       });
     }
+
+    // View-switching and Sub-Controllers init
+    this.setupViewSwitching();
+    this.fleetController.init();
+    this.settingsController.init();
+  }
+
+  setupViewSwitching() {
+    const navItems = document.querySelectorAll('.saas-nav .nav-item');
+    navItems.forEach(item => {
+      const viewName = item.getAttribute('data-view');
+      if (!viewName) return;
+      item.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.switchView(viewName);
+      });
+    });
+    this.state.currentView = 'dispatch';
+  }
+
+  switchView(viewName) {
+    this.state.currentView = viewName;
+
+    // 1. Navigation items state
+    const navItems = document.querySelectorAll('.saas-nav .nav-item');
+    navItems.forEach(item => {
+      const itemView = item.getAttribute('data-view');
+      item.classList.toggle('active', itemView === viewName);
+    });
+
+    // 2. Toggle panels
+    const viewPanels = document.querySelectorAll('.view-panel');
+    viewPanels.forEach(panel => {
+      const panelId = panel.id;
+      const isTarget = panelId === `view-${viewName}`;
+      panel.classList.toggle('hidden', !isTarget);
+    });
+
+    // 3. Header visual adjustments
+    const pageTitleEl = document.querySelector('.saas-header .page-title');
+    const headerRightEl = document.querySelector('.saas-header .header-right');
+
+    if (viewName === 'dispatch') {
+      if (pageTitleEl) pageTitleEl.textContent = this.lang === 'vn' ? 'Tối ưu hóa Tuyến đường' : 'Route Optimization';
+      if (headerRightEl) headerRightEl.classList.remove('hidden');
+      if (this.mapController) {
+        setTimeout(() => this.mapController.invalidate(), 100);
+      }
+    } else {
+      if (headerRightEl) headerRightEl.classList.add('hidden');
+      if (viewName === 'fleet') {
+        if (pageTitleEl) pageTitleEl.textContent = this.lang === 'vn' ? 'Cấu hình Đội xe' : 'Fleet Configuration';
+        this.fleetController.render();
+      } else if (viewName === 'analytics') {
+        if (pageTitleEl) pageTitleEl.textContent = this.lang === 'vn' ? 'Phân tích Mô hình & AI' : 'Model Analytics & AI Diagnostics';
+        if (!this.state.analysisData) {
+          this.bootstrapAnalysis(true);
+        }
+      } else if (viewName === 'settings') {
+        if (pageTitleEl) pageTitleEl.textContent = this.lang === 'vn' ? 'Cài đặt Hệ thống' : 'System Settings';
+        this.settingsController.render();
+      }
+    }
   }
 
   enterApp() {
@@ -1298,7 +1373,9 @@ export class App {
         ready: Number.isFinite(Number(c.ready)) ? Number(c.ready) : 0,
         due: Number.isFinite(Number(c.due)) ? Number(c.due) : 1000,
         service: Number.isFinite(Number(c.service)) ? Number(c.service) : 10,
-        isDepot: Boolean(c.isDepot)
+        isDepot: Boolean(c.isDepot),
+        priority: c.priority || (idx === 0 ? 'Normal' : ['Normal', 'High', 'Low'][idx % 3]),
+        skill: c.skill || (idx === 0 ? 'None' : idx % 5 === 1 ? 'Refrigerated' : idx % 5 === 2 ? 'Hazmat' : 'None')
       }));
 
       // Sync the dataset dropdown if available
@@ -2111,6 +2188,29 @@ export class App {
       return;
     }
 
+    if (field === 'priority') {
+      const allowed = ['Low', 'Normal', 'High'];
+      const formatted = nextValue.charAt(0).toUpperCase() + nextValue.slice(1).toLowerCase();
+      if (!allowed.includes(formatted)) {
+        this.toast('Invalid Priority', 'Priority must be Low, Normal, or High.', 'error');
+        this.renderCustomers();
+        return;
+      }
+      customer.priority = formatted;
+      this.renderCustomers();
+      this.setStatus('Customer priority updated.', 'ok');
+      return;
+    }
+
+    if (field === 'skill') {
+      const allowed = ['None', 'Refrigerated', 'Hazmat'];
+      const matched = allowed.find(a => a.toLowerCase() === nextValue.toLowerCase()) || 'None';
+      customer.skill = matched;
+      this.renderCustomers();
+      this.setStatus('Customer skill requirement updated.', 'ok');
+      return;
+    }
+
     this.renderCustomers();
   }
 
@@ -2774,17 +2874,63 @@ export class App {
     const [file] = event.target.files ?? [];
     if (!file) return;
     try {
-      if (typeof XLSX === 'undefined') throw new Error('SheetJS is not loaded yet');
-      const buffer = await file.arrayBuffer();
-      const workbook = XLSX.read(buffer, { type: 'array' });
-      const firstSheet = workbook.SheetNames[0];
-      const sheet = workbook.Sheets[firstSheet];
-      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-      const text = rows.map((cols) => cols.map((cell) => String(cell ?? '')).join('\t')).join('\n');
-      await this.importCustomersFromText(text, 'excel file');
+      const nameLower = file.name.toLowerCase();
+      if (nameLower.endsWith('.csv')) {
+        this.setStatus('Uploading and parsing CSV on the server...', 'info');
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const headers = {};
+        if (this.state.token) headers.Authorization = `Bearer ${this.state.token}`;
+        
+        const response = await fetch(`${API_BASE}/solomon/import-csv`, {
+          method: 'POST',
+          headers,
+          body: formData
+        });
+        
+        if (!response.ok) {
+          const errData = await response.json().catch(() => null);
+          throw new Error(errData?.detail || `HTTP ${response.status}`);
+        }
+        
+        const data = await response.json();
+        const incoming = Array.isArray(data?.customers) ? data.customers : [];
+        if (!incoming.length) {
+          throw new Error('No valid customer rows found in uploaded CSV.');
+        }
+        
+        incoming.forEach((c) => {
+          this.pushCustomer({
+            name: c.name,
+            address: c.address,
+            lat: c.lat,
+            lng: c.lng,
+            demand: c.demand,
+            ready: c.ready,
+            due: c.due,
+            service: c.service,
+            isDepot: c.isDepot,
+            priority: c.priority || 'Normal',
+            skill: c.skill || 'None'
+          });
+        });
+        
+        this.setStatus(`Successfully imported ${incoming.length} customers from CSV file.`, 'ok');
+        this.toast('Import Successful', `Loaded ${incoming.length} rows from CSV.`, 'ok');
+      } else {
+        if (typeof XLSX === 'undefined') throw new Error('SheetJS is not loaded yet');
+        const buffer = await file.arrayBuffer();
+        const workbook = XLSX.read(buffer, { type: 'array' });
+        const firstSheet = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[firstSheet];
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+        const text = rows.map((cols) => cols.map((cell) => String(cell ?? '')).join('\t')).join('\n');
+        await this.importCustomersFromText(text, 'excel file');
+      }
     } catch (error) {
       this.toast('Import Failed', error.message, 'error');
-      this.setStatus(`Unable to read Excel file: ${error.message}`, 'error');
+      this.setStatus(`Unable to read file: ${error.message}`, 'error');
     } finally {
       if (this.el.excelInput) this.el.excelInput.value = '';
     }
@@ -3393,6 +3539,8 @@ export class App {
         { field: 'ready', value: fmtTime(c.ready, 0), editable: true },
         { field: 'due', value: fmtTime(c.due, 1000), editable: true },
         { field: 'service', value: fmtTime(c.service, c.isDepot ? 0 : 10), editable: true },
+        { field: 'priority', value: c.priority || 'Normal', editable: true },
+        { field: 'skill', value: c.skill || 'None', editable: true }
       ];
 
       values.forEach(({ field, value, editable }) => {
@@ -3415,6 +3563,29 @@ export class App {
           badge.textContent = 'DEPOT';
 
           td.appendChild(label);
+          td.appendChild(badge);
+        } else if (field === 'priority' && !c.isDepot) {
+          td.textContent = '';
+          const badge = document.createElement('span');
+          badge.className = 'priority-badge';
+          badge.textContent = value;
+          if (value === 'High') {
+            badge.style = 'background: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid rgba(239,68,68,0.2); font-weight: 700; padding: 2px 6px; border-radius: 4px; font-size: 10px; display: inline-block; text-align: center; width: 55px;';
+          } else if (value === 'Low') {
+            badge.style = 'background: rgba(107, 114, 128, 0.1); color: var(--text-muted); border: 1px solid rgba(107,114,128,0.2); font-weight: 500; padding: 2px 6px; border-radius: 4px; font-size: 10px; display: inline-block; text-align: center; width: 55px;';
+          } else {
+            badge.style = 'background: rgba(59, 130, 246, 0.1); color: var(--primary); border: 1px solid rgba(59,130,246,0.2); font-weight: 600; padding: 2px 6px; border-radius: 4px; font-size: 10px; display: inline-block; text-align: center; width: 55px;';
+          }
+          td.appendChild(badge);
+        } else if (field === 'skill' && !c.isDepot) {
+          td.textContent = '';
+          const badge = document.createElement('span');
+          badge.textContent = value;
+          if (value !== 'None') {
+            badge.style = 'background: rgba(16, 185, 129, 0.1); color: var(--success); border: 1px solid rgba(16,185,129,0.2); font-weight: 600; padding: 2px 6px; border-radius: 4px; font-size: 10px; display: inline-block;';
+          } else {
+            badge.style = 'color: var(--text-muted); font-size: 10px;';
+          }
           td.appendChild(badge);
         } else {
           td.textContent = value;
@@ -3497,6 +3668,28 @@ export class App {
       if (this.runSession.cancelled || error?.name === 'AbortError') {
         return;
       }
+
+      // ── Client-side fallback for demo/guest mode ──────────────────
+      // If the backend is down or returns 503, solve entirely in-browser
+      // so the demo experience remains seamless.
+      const isGuest = this.state.role === 'guest' || this.state.token === 'demo-guest';
+      if (isGuest) {
+        try {
+          this.setStatus('Backend unavailable — running client-side solver...', 'warn');
+          this.toast('Local Solver', 'Backend is offline. Running in-browser ALNS solver.', 'ok');
+          const demoResult = solveDemo(this.state.customers, this.state.vehicles, this.state.capacity, this.state.fleet);
+          this.state.lastResult = demoResult;
+          this.paintResult();
+          await this.completeLoading();
+          this.setStatus('Client-side optimization complete.', 'ok');
+          this.toast('Model Completed', 'Results rendered using the in-browser solver.', 'ok');
+          this.showEmptyStates();
+          return;
+        } catch (fallbackErr) {
+          console.error('Client-side solver also failed:', fallbackErr);
+        }
+      }
+
       const raw = this.parseApiError(error);
       const adjusted = this.autoAdjustVehiclesForInfeasible(raw);
       const friendly = this.formatRunError(raw);
@@ -3577,12 +3770,71 @@ export class App {
 
     this.mapController.clearRoutes();
     const routeCapacity = Number(this.state.lastRunFleet?.capacity ?? this.state.capacity);
-    this.mapController.renderAlgoRoutes(result.ddqn, true, '#0b8a65', routeCapacity);
-    this.mapController.renderAlgoRoutes(result.alns, false, '#2563eb', routeCapacity);
-    this.mapController.renderAlnsOnlySegments(result.ddqn, result.alns);
+
+    const colors = {
+      ddqn: '#0b8a65',
+      alns: '#2563eb',
+      ortools: '#e11d48',
+      hybrid_fixed: '#d97706',
+      hybrid_ddqn: '#7c3aed',
+      hybrid_ddqn_transfer_rc1: '#0284c7',
+      hybrid_ddqn_transfer_dr: '#4f46e5',
+      hybrid: '#0b8a65'
+    };
+
+    for (const algoName in result) {
+      const color = colors[algoName] || '#6b7280';
+      this.mapController.renderAlgoRoutes(result[algoName], algoName, color, routeCapacity);
+    }
+
+    if (result.ddqn && result.alns) {
+      this.mapController.renderAlnsOnlySegments(result.ddqn, result.alns);
+    }
+
     this.mapController.initSimulation(result);
 
-    // Calculate maximum completion time
+    // Dynamic map view radios in the DOM
+    const toggleContainer = document.querySelector('.map-toggles');
+    if (toggleContainer) {
+      const labels = {
+        ddqn: 'Hybrid DDQN (Transfer)',
+        alns: 'ALNS Base',
+        ortools: 'OR-Tools',
+        hybrid_fixed: 'Hybrid Fixed',
+        hybrid_ddqn: 'Hybrid DDQN (Random)',
+        hybrid_ddqn_transfer_rc1: 'Hybrid DDQN (RC1)',
+        hybrid_ddqn_transfer_dr: 'Hybrid DDQN (DR)'
+      };
+
+      let html = '';
+      const currentSelected = this.mapController.currentView || 'ddqn';
+
+      Object.keys(result).forEach((algoName) => {
+        const isChecked = algoName === currentSelected ? 'checked' : '';
+        const label = labels[algoName] || algoName;
+        html += `<label style="margin-right: 12px; display: inline-flex; align-items: center; gap: 4px; font-weight: 500; cursor: pointer; color: var(--text-main); font-size: 11px;">
+          <input type="radio" name="map_view" value="${algoName}" ${isChecked} /> ${label}
+        </label>`;
+      });
+      toggleContainer.innerHTML = html;
+
+      const radios = toggleContainer.querySelectorAll('input[name="map_view"]');
+      radios.forEach((radio) => {
+        radio.addEventListener('change', (e) => {
+          this.mapController.switchView(e.target.value);
+        });
+      });
+    }
+
+    const initialView = result.ddqn ? 'ddqn' : Object.keys(result)[0];
+    this.mapController.switchView(initialView);
+
+    this.mapController.fetchRoadGeometries(result).then(() => {
+      this.setStatus('Road geometry loaded — routes now follow actual roads.', 'ok');
+    }).catch((err) => {
+      console.warn('OSRM road geometry fetch failed, keeping straight-line routes:', err);
+    });
+
     let maxTime = 120;
     const findMax = (algo) => {
       if (algo && algo.routes) {
@@ -3596,9 +3848,98 @@ export class App {
         });
       }
     };
-    findMax(result.ddqn);
-    findMax(result.alns);
+    for (const algoName in result) {
+      findMax(result[algoName]);
+    }
     this.simulationController.start(maxTime);
+
+    this.updateComparisonMetrics(initialView);
+    this.showEmptyStates();
+  }
+
+  updateKpiCards(activeAlgo) {
+    const result = this.state.lastResult;
+    if (!result) return;
+
+    const controlAlgo = 'alns';
+    const testAlgo = activeAlgo;
+
+    const testResult = result[testAlgo];
+    const controlResult = result[controlAlgo];
+
+    if (!testResult || !controlResult) return;
+
+    const labels = {
+      ddqn: 'Hybrid DDQN (Transfer)',
+      alns: 'ALNS Base',
+      ortools: 'OR-Tools',
+      hybrid_fixed: 'Hybrid Fixed',
+      hybrid_ddqn: 'Hybrid DDQN (Random)',
+      hybrid_ddqn_transfer_rc1: 'Hybrid DDQN (RC1)',
+      hybrid_ddqn_transfer_dr: 'Hybrid DDQN (DR)'
+    };
+    const testLabel = labels[testAlgo] || testAlgo;
+
+    document.querySelectorAll('.kpi-card').forEach((card) => {
+      const labelsList = card.querySelectorAll('.kpi-label');
+      if (labelsList.length >= 2) {
+        labelsList[0].textContent = testLabel;
+        labelsList[1].textContent = 'ALNS Base';
+      }
+    });
+
+    const testDist = Number(testResult.total_distance_km || 0);
+    const controlDist = Number(controlResult.total_distance_km || 0);
+    const gapVal = controlDist > 0 ? ((testDist - controlDist) / controlDist) * 100 : 0;
+
+    const kpiGap = document.getElementById('kpi-gap');
+    if (kpiGap) {
+      kpiGap.textContent = `${gapVal >= 0 ? '+' : ''}${gapVal.toFixed(2)}%`;
+      if (gapVal < 0) {
+        kpiGap.className = 'kpi-value highlight-emerald';
+      } else if (gapVal > 0) {
+        kpiGap.className = 'kpi-value highlight-rose';
+      } else {
+        kpiGap.className = 'kpi-value highlight-blue';
+      }
+    }
+
+    const gapTitle = document.querySelector('.kpi-card:nth-child(1) .kpi-title');
+    if (gapTitle) {
+      gapTitle.textContent = `Gap vs ALNS Base`;
+    }
+
+    const distTest = document.getElementById('kpi-dist-ddqn');
+    const distControl = document.getElementById('kpi-dist-alns');
+    if (distTest) distTest.textContent = testDist.toFixed(2);
+    if (distControl) distControl.textContent = controlDist.toFixed(2);
+
+    const vehTest = document.getElementById('kpi-veh-ddqn');
+    const vehControl = document.getElementById('kpi-veh-alns');
+    if (vehTest) vehTest.textContent = testResult.vehicles_used ?? 0;
+    if (vehControl) vehControl.textContent = controlResult.vehicles_used ?? 0;
+
+    const timeTest = document.getElementById('kpi-time-ddqn');
+    const timeControl = document.getElementById('kpi-time-alns');
+    if (timeTest) timeTest.textContent = `${Number(testResult.runtime_sec || 0).toFixed(2)}s`;
+    if (timeControl) timeControl.textContent = `${Number(controlResult.runtime_sec || 0).toFixed(2)}s`;
+  }
+
+  updateComparisonMetrics(view) {
+    const result = this.state.lastResult;
+    if (!result) return;
+
+    const controlAlgo = 'alns';
+    const testAlgo = view;
+
+    const testResult = result[testAlgo];
+    const controlResult = result[controlAlgo];
+
+    if (!testResult || !controlResult) return;
+
+    const routeCapacity = Number(this.state.lastRunFleet?.capacity ?? this.state.capacity);
+
+    this.updateKpiCards(view);
 
     this.updateCompareMetric({
       card: this.el.metricRuntimeCard,
@@ -3607,8 +3948,8 @@ export class App {
       deltaNode: this.el.metricRuntimeDelta,
       barDdqn: this.el.metricRuntimeBarDdqn,
       barAlns: this.el.metricRuntimeBarAlns,
-      ddqn: result.ddqn.runtime_sec,
-      alns: result.alns.runtime_sec,
+      ddqn: testResult.runtime_sec,
+      alns: controlResult.runtime_sec,
       unit: 's',
       decimals: 2,
       lowerIsBetter: true
@@ -3621,8 +3962,8 @@ export class App {
       deltaNode: this.el.metricDistanceDelta,
       barDdqn: this.el.metricDistanceBarDdqn,
       barAlns: this.el.metricDistanceBarAlns,
-      ddqn: result.ddqn.total_distance_km,
-      alns: result.alns.total_distance_km,
+      ddqn: testResult.total_distance_km,
+      alns: controlResult.total_distance_km,
       unit: 'km',
       decimals: 2,
       lowerIsBetter: true
@@ -3635,16 +3976,14 @@ export class App {
       deltaNode: this.el.metricVehiclesDelta,
       barDdqn: this.el.metricVehiclesBarDdqn,
       barAlns: this.el.metricVehiclesBarAlns,
-      ddqn: result.ddqn.vehicles_used,
-      alns: result.alns.vehicles_used,
+      ddqn: testResult.vehicles_used,
+      alns: controlResult.vehicles_used,
       unit: '',
       decimals: 0,
       lowerIsBetter: true
     });
 
-    this.updateLoadInsight(result.ddqn, result.alns, routeCapacity);
-
-    this.showEmptyStates();
+    this.updateLoadInsight(testResult, controlResult, routeCapacity);
   }
 
   resetResultOutputs() {

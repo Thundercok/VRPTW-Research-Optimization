@@ -44,14 +44,29 @@ def _to_lat_lng(x: float, y: float) -> tuple[float, float]:
 # not need to be retuned. Distance and time use the same unit (~1 km <-> 1 unit).
 _DEMO_FLEET = {"vehicles": 4, "capacity": 80}
 _DEMO_NAMES = [
-    "Saigon Central Depot", "Ben Thanh Market", "Notre-Dame Cathedral",
+    "Đại học Tôn Đức Thắng", "Ben Thanh Market", "Notre-Dame Cathedral",
     "Tan Dinh Market", "Independence Palace", "Pham Ngu Lao Hostel",
     "Cho Lon Wholesale", "Phu My Hung Office", "An Phu Logistics Park",
     "Thao Dien Studios", "Phu Nhuan Pharmacy", "Tan Binh Cargo", "Go Vap Warehouse",
 ]
+_DEMO_ADDRESSES = [
+    "19 Nguyễn Hữu Thọ, Tân Hưng, Quận 7, Hồ Chí Minh",
+    "Chợ Bến Thành, Lê Lợi, Bến Thành, Quận 1, Hồ Chí Minh",
+    "01 Công xã Paris, Bến Nghé, Quận 1, Hồ Chí Minh",
+    "Chợ Tân Định, 336 Hai Bà Trưng, Tân Định, Quận 1, Hồ Chí Minh",
+    "Dinh Độc Lập, 135 Nam Kỳ Khởi Nghĩa, Bến Nghé, Quận 1, Hồ Chí Minh",
+    "Đường Phạm Ngũ Lão, Quận 1, Hồ Chí Minh",
+    "Chợ Lớn, Trang Tử, Phường 2, Quận 6, Hồ Chí Minh",
+    "Khu đô thị Phú Mỹ Hưng, Tân Phong, Quận 7, Hồ Chí Minh",
+    "Khu dân cư An Phú, Quận 2, Hồ Chí Minh",
+    "Phường Thảo Điền, Quận 2, Hồ Chí Minh",
+    "Phan Xích Long, Phường 2, Phú Nhuận, Hồ Chí Minh",
+    "Phường 2, Quận Tân Bình, Hồ Chí Minh",
+    "Phường 10, Quận Gò Vấp, Hồ Chí Minh",
+]
 _DEMO_RAW: list[tuple[float, float, int, int, int, int]] = [
     # (lat, lng, demand, ready, due, service)
-    (10.7769, 106.7009, 0, 0, 240, 0),     # Depot 0
+    (10.7330, 106.7025, 0, 0, 240, 0),     # Ton Duc Thang University Depot
     (10.7723, 106.6985, 8, 0, 90, 10),
     (10.7798, 106.6991, 6, 30, 120, 10),
     (10.7886, 106.6904, 9, 20, 110, 10),
@@ -69,7 +84,7 @@ _DEMO_RAW: list[tuple[float, float, int, int, int, int]] = [
 
 _C1_DEMO_RAW: list[tuple[float, float, int, int, int, int]] = [
     # Clustered demo
-    (10.7769, 106.7009, 0, 0, 240, 0),
+    (10.7330, 106.7025, 0, 0, 240, 0),
     (10.7723, 106.6985, 8, 0, 90, 10),
     (10.7798, 106.6991, 6, 30, 120, 10),
     (10.7765, 106.6951, 7, 40, 140, 10),
@@ -87,7 +102,7 @@ _C1_DEMO_RAW: list[tuple[float, float, int, int, int, int]] = [
 
 _R1_DEMO_RAW: list[tuple[float, float, int, int, int, int]] = [
     # Random demo
-    (10.7769, 106.7009, 0, 0, 240, 0),
+    (10.7330, 106.7025, 0, 0, 240, 0),
     (10.7530, 106.6510, 12, 60, 180, 15),
     (10.7886, 106.6904, 9, 20, 110, 10),
     (10.7281, 106.7191, 10, 70, 200, 12),
@@ -114,7 +129,7 @@ def _builtin_variant(name: str) -> dict[str, Any]:
             {
                 "id": idx,
                 "name": _DEMO_NAMES[idx] if idx < len(_DEMO_NAMES) else f"DEMO-{idx}",
-                "address": _DEMO_NAMES[idx] if idx < len(_DEMO_NAMES) else f"Demo customer {idx}",
+                "address": _DEMO_ADDRESSES[idx] if idx < len(_DEMO_ADDRESSES) else f"Demo customer {idx}",
                 "lat": lat,
                 "lng": lng,
                 "demand": demand,

@@ -392,6 +392,7 @@ class HybridDDQNSolver:
                 cand = REPAIR[ri](dest, removed)
                 cand = self._refine_candidate(cand, action, pool, cur, best, no_imp, it)
 
+                lac_decided = False
                 allow_nv_increase = (action == MODE_DIVERSIFY)
                 if not cand.feasible:
                     accepted = False
@@ -413,11 +414,12 @@ class HybridDDQNSolver:
                             fleet_fill=_fleet_fill(cur), avg_slack_val=_avg_slack(cur),
                         )
                         accepted, _ = self.lac.decide(lac_feats, best.cost)
+                        lac_decided = True
                     else:
                         accepted = random.random() < math.exp(
                             -(cand.cost - cur.cost) / max(temp, 1e-6))
 
-                if cfg.lac_enabled and getattr(self, "use_op_rl", True) and not frozen:
+                if lac_decided:
                     self.lac.observe(best.cost)
 
                 score    = 0
@@ -464,11 +466,12 @@ class HybridDDQNSolver:
                     iter_rew_raw = self._iteration_reward(cur_before, best_before, cur_after, best_after, accepted)
                     iter_rew_norm = norm.normalize(iter_rew_raw)
                     self.ucb_aug.update(op_action, iter_rew_raw)
-                    self.op_ctrl.observe(
-                        op_state, op_action,
-                        iter_rew_norm,
-                        next_state, done,
-                    )
+                    if iter_rew_norm is not None:
+                        self.op_ctrl.observe(
+                            op_state, op_action,
+                            iter_rew_norm,
+                            next_state, done,
+                        )
                     if (it + 1) % 4 == 0:
                         self.op_ctrl.train_step()
                 temp *= cfg.temp_decay * mode.temp_decay_scale

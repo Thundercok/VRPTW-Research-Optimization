@@ -36,16 +36,18 @@ function buildDistMatrix(points) {
 
 // ── Nearest-neighbour init ────────────────────────────────────────────────────
 
-function nearestNeighbour(n, dist, demands, vehicles, capacity) {
+function nearestNeighbour(n, dist, demands, vehicles, capacity, capacities = null) {
   const unvisited = new Set(Array.from({ length: n - 1 }, (_, i) => i + 1));
   const routes = [];
   while (unvisited.size > 0 && routes.length < vehicles) {
+    const routeIndex = routes.length;
+    const vehCapacity = capacities ? (capacities[routeIndex] ?? capacity) : capacity;
     const route = [];
     let load = 0, cur = 0;
     while (unvisited.size > 0) {
       let bestC = -1, bestD = Infinity;
       for (const c of unvisited) {
-        if (load + demands[c] <= capacity && dist[cur][c] < bestD) {
+        if (load + demands[c] <= vehCapacity && dist[cur][c] < bestD) {
           bestD = dist[cur][c]; bestC = c;
         }
       }
@@ -118,13 +120,14 @@ function bestInsert(c, route, dist) {
   return { cost: bestD, pos: bestP };
 }
 
-function greedyInsert(routes, removed, dist, demands, capacity, vehicles) {
+function greedyInsert(routes, removed, dist, demands, capacity, vehicles, capacities = null) {
   routes = routes.map(r => [...r]);
   for (const c of removed) {
     let bestD = Infinity, bestRI = -1, bestP = -1;
     for (let ri = 0; ri < routes.length; ri++) {
       const load = routes[ri].reduce((s, x) => s + demands[x], 0);
-      if (load + demands[c] > capacity) continue;
+      const vehCapacity = capacities ? (capacities[ri] ?? capacity) : capacity;
+      if (load + demands[c] > vehCapacity) continue;
       const { cost, pos } = bestInsert(c, routes[ri], dist);
       if (cost < bestD) { bestD = cost; bestRI = ri; bestP = pos; }
     }
@@ -133,8 +136,11 @@ function greedyInsert(routes, removed, dist, demands, capacity, vehicles) {
     } else if (routes.length < vehicles) {
       routes.push([c]);
     } else {
-      const least = routes.reduce((mi, r, i) =>
-        r.reduce((s, x) => s + demands[x], 0) < routes[mi].reduce((s, x) => s + demands[x], 0) ? i : mi, 0);
+      const least = routes.reduce((mi, r, i) => {
+        const loadA = r.reduce((s, x) => s + demands[x], 0);
+        const loadB = routes[mi].reduce((s, x) => s + demands[x], 0);
+        return loadA < loadB ? i : mi;
+      }, 0);
       routes[least].push(c);
     }
   }
@@ -143,7 +149,7 @@ function greedyInsert(routes, removed, dist, demands, capacity, vehicles) {
 
 // ── ALNS micro-solver ──────────────────────────────────────────────────────────
 
-function runALNS(initial, dist, demands, capacity, vehicles, iterations) {
+function runALNS(initial, dist, demands, capacity, vehicles, iterations, capacities = null) {
   let routes = initial.map(r => [...r]);
   let cost = totalCost(routes, dist);
   let bestRoutes = routes.map(r => [...r]);
@@ -160,7 +166,7 @@ function runALNS(initial, dist, demands, capacity, vehicles, iterations) {
       ? randomRemoval(routes, k, rng)
       : worstRemoval(routes, k, dist);
 
-    const repaired = greedyInsert(destroyed, removed, dist, demands, capacity, vehicles);
+    const repaired = greedyInsert(destroyed, removed, dist, demands, capacity, vehicles, capacities);
     const newCost = totalCost(repaired, dist);
     const delta = newCost - cost;
 
@@ -175,7 +181,7 @@ function runALNS(initial, dist, demands, capacity, vehicles, iterations) {
 
 // ── Output formatter ──────────────────────────────────────────────────────────
 
-function toOutput(routes, dist, points, runtimeSec) {
+function toOutput(routes, dist, points, runtimeSec, activeFleet = null) {
   let totalDistance = 0;
   const routesOut = routes
     .filter(r => r.length > 0)
@@ -184,12 +190,56 @@ function toOutput(routes, dist, points, runtimeSec) {
       const path = chain.map(idx => [points[idx].lat, points[idx].lng]);
       const d = chain.slice(0, -1).reduce((s, a, k) => s + dist[a][chain[k + 1]], 0);
       totalDistance += d;
+
+      const vehInfo = activeFleet ? activeFleet[i] : null;
+      const vehicleId = vehInfo ? vehInfo.id : (i + 1);
+      const vehSpeed = vehInfo ? (Number(vehInfo.speed) || 1.0) : 1.0;
+
+      // Build schedule so the simulation controller can animate vehicles.
+      // Travel time ≈ distance (km) scaled to minutes at ~60 km/h → 1 km ≈ 1 min.
+      const schedule = [];
+      let currentTime = 0;
+      let prev = 0;
+      for (const node of route) {
+        const travel = dist[prev][node] / vehSpeed; // adjusted for speed
+        const arrival = currentTime + travel;
+        const ready = Number(points[node].ready) || 0;
+        const serviceStart = Math.max(arrival, ready);
+        const wait = Math.max(0, ready - arrival);
+        const serviceDur = Number(points[node].service) || 10;
+        const departure = serviceStart + serviceDur;
+        schedule.push({
+          customer_id: points[node].id ?? node,
+          name: points[node].name || `Stop-${node}`,
+          arrival: Math.round(arrival * 100) / 100,
+          wait: Math.round(wait * 100) / 100,
+          service_start: Math.round(serviceStart * 100) / 100,
+          service_duration: Math.round(serviceDur * 100) / 100,
+          departure: Math.round(departure * 100) / 100,
+        });
+        currentTime = departure;
+        prev = node;
+      }
+      // Return to depot
+      const returnTravel = dist[prev][0] / vehSpeed; // adjusted for speed
+      const returnArrival = currentTime + returnTravel;
+      schedule.push({
+        customer_id: 0,
+        name: points[0].name || 'Depot',
+        arrival: Math.round(returnArrival * 100) / 100,
+        wait: 0,
+        service_start: Math.round(returnArrival * 100) / 100,
+        service_duration: 0,
+        departure: Math.round(returnArrival * 100) / 100,
+      });
+
       return {
-        vehicle_id: i + 1,
+        vehicle_id: vehicleId,
         distance_km: Math.round(d * 10000) / 10000,
         load: route.reduce((s, c) => s + (points[c].demand || 0), 0),
         path,
         stops: route.map(c => points[c].id ?? c),
+        schedule,
       };
     });
   return {
@@ -207,26 +257,31 @@ function toOutput(routes, dist, points, runtimeSec) {
  * @param {Array} customers  - Array of {lat, lng, demand, id?, isDepot?}
  * @param {number} vehicles
  * @param {number} capacity
+ * @param {Array|null} fleet
  * @returns {{ ddqn: Object, alns: Object }}
  */
-export function solveDemo(customers, vehicles, capacity) {
+export function solveDemo(customers, vehicles, capacity, fleet = null) {
   const n = customers.length;
   const demands = customers.map(c => Number(c.demand) || 0);
   const dist = buildDistMatrix(customers);
 
+  const activeFleet = fleet ? fleet.filter(v => v.status === 'Active') : null;
+  const numVehicles = activeFleet ? activeFleet.length : vehicles;
+  const capacities = activeFleet ? activeFleet.map(v => Number(v.capacity) || capacity) : null;
+
   // ALNS baseline proxy: nearest-neighbour
-  const nnRoutes = nearestNeighbour(n, dist, demands, vehicles, capacity);
-  const alnsResult = toOutput(nnRoutes, dist, customers, 0);
+  const nnRoutes = nearestNeighbour(n, dist, demands, numVehicles, capacity, capacities);
+  const alnsResult = toOutput(nnRoutes, dist, customers, 0, activeFleet);
 
   // Hybrid++ proxy: ALNS with fewer iterations
   const midIters = Math.min(200, Math.max(75, n * 4));
-  const { routes: hybridRoutes } = runALNS(nnRoutes.map(r => [...r]), dist, demands, capacity, vehicles, midIters);
-  const hybridResult = toOutput(hybridRoutes, dist, customers, 0);
+  const { routes: hybridRoutes } = runALNS(nnRoutes.map(r => [...r]), dist, demands, capacity, numVehicles, midIters, capacities);
+  const hybridResult = toOutput(hybridRoutes, dist, customers, 0, activeFleet);
 
   // DDQN-ALNS proxy: run full adaptive large-neighbourhood search to get superior result
   const iters = Math.min(400, Math.max(150, n * 8));
-  const { routes: ddqnRoutes } = runALNS(nnRoutes.map(r => [...r]), dist, demands, capacity, vehicles, iters);
-  const ddqnResult = toOutput(ddqnRoutes, dist, customers, 0);
+  const { routes: ddqnRoutes } = runALNS(nnRoutes.map(r => [...r]), dist, demands, capacity, numVehicles, iters, capacities);
+  const ddqnResult = toOutput(ddqnRoutes, dist, customers, 0, activeFleet);
 
   // --- Enforce Research Narrative (Stagger metrics so DDQN wins) ---
   const baseD = ddqnResult.total_distance_km;
@@ -248,10 +303,10 @@ export function solveDemo(customers, vehicles, capacity) {
 // ── Demo admin / activity telemetry ──────────────────────────────────────────
 
 const DEMO_USERS = [
-  { email: 'admin@nexus.local', role: 'admin', status: 'online' },
-  { email: 'operator1@nexus.local', role: 'operator', status: 'online' },
-  { email: 'operator2@nexus.local', role: 'operator', status: 'offline' },
-  { email: 'viewer@nexus.local', role: 'viewer', status: 'offline' },
+  { email: 'admin@nami.local', role: 'admin', status: 'online' },
+  { email: 'operator1@nami.local', role: 'operator', status: 'online' },
+  { email: 'operator2@nami.local', role: 'operator', status: 'offline' },
+  { email: 'viewer@nami.local', role: 'viewer', status: 'offline' },
 ];
 
 const DEMO_ACTIVITY_HOURS = 24;
