@@ -158,10 +158,10 @@ jobs:
           cache-dependency-glob: "uv.lock"
 
       - name: Install Python dependencies
-        run: uv sync --all-groups
+        run: uv sync --all-groups --all-extras
 
       - name: Install Playwright Browsers
-        run: uv run playwright install --with-deps chromium
+        run: uv run python -m playwright install --with-deps chromium
 
       - name: Run E2E tests
         run: make test-e2e
