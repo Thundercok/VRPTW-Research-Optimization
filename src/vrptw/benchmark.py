@@ -303,7 +303,7 @@ def print_summary_table(df: pd.DataFrame) -> None:
 
     # NV-inflation warning
     if "NV_inflated" in df.columns:
-        flagged = df[df["NV_inflated"]][["Instance", "Algorithm", "Gap%", "NV_mean"]]
+        flagged = df[df["NV_inflated"] == True][["Instance", "Algorithm", "Gap%", "NV_mean"]]
         for _, r in flagged.iterrows():
             print(
                 f"  ⚠️  {r['Instance']} {r['Algorithm']}: Gap%={r['Gap%']:+.1f}% "

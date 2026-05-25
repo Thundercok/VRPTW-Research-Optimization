@@ -64,6 +64,5 @@ __all__ = [
     "print_summary_table", "run_benchmark", "run_instance", "run_ortools",
     "smoke_test", "train_domain_randomization",
     "train_transfer_model", "train_transfer_model_within_rc2",
-    "_iterative_route_elimination", "_save_weights", "_load_weights",
-    "MODES", "ModeSpec"
+    "_iterative_route_elimination", "_save_weights", "_load_weights"
 ]
