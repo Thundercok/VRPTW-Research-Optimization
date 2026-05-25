@@ -1,13 +1,16 @@
 from __future__ import annotations
+
 from dataclasses import dataclass
-from typing import List, Dict, Tuple, Optional
+
 import numpy as np
-from .core import Inst, Plan, _check_route
+
 from .config import Config
-from .heuristics import _route_cost_list, _route_load, _route_avg_slack, _insert_customer
+from .core import Inst, Plan, _check_route
+from .heuristics import _insert_customer, _route_avg_slack, _route_cost_list, _route_load
 
 try:
-    from scipy.optimize import Bounds, LinearConstraint, milp as _scipy_milp
+    from scipy.optimize import Bounds, LinearConstraint
+    from scipy.optimize import milp as _scipy_milp
     milp = _scipy_milp
     MILP_OK = True
 except Exception:
@@ -16,7 +19,7 @@ except Exception:
 
 @dataclass(frozen=True)
 class RouteRecord:
-    nodes: Tuple[int, ...]
+    nodes: tuple[int, ...]
     cost:  float
     load:  float
     slack: float
@@ -26,9 +29,9 @@ class RoutePool:
     def __init__(self, inst: Inst, cfg: Config):
         self.inst = inst
         self.cfg  = cfg
-        self._routes: Dict[Tuple[int, ...], RouteRecord] = {}
+        self._routes: dict[tuple[int, ...], RouteRecord] = {}
 
-    def _priority(self, rec: RouteRecord) -> Tuple[float, ...]:
+    def _priority(self, rec: RouteRecord) -> tuple[float, ...]:
         lr  = rec.load / max(self.inst.capacity, 1)
         cps = rec.cost / max(len(rec.nodes), 1)
         return (-len(rec.nodes), cps, -lr, -rec.slack)
@@ -37,8 +40,8 @@ class RoutePool:
         limit = self.cfg.route_pool_limit
         if len(self._routes) <= limit:
             return
-        usage: Dict[int, int] = {}
-        kept:  Dict[Tuple[int, ...], RouteRecord] = {}
+        usage: dict[int, int] = {}
+        kept:  dict[tuple[int, ...], RouteRecord] = {}
         ranked = sorted(self._routes.values(), key=self._priority)
         for rec in ranked:
             if len(kept) >= limit:
@@ -56,7 +59,7 @@ class RoutePool:
                     break
         self._routes = kept
 
-    def add_route(self, route: List[int]) -> None:
+    def add_route(self, route: list[int]) -> None:
         if not route or not _check_route(route, self.inst):
             return
         key = tuple(route)
@@ -74,7 +77,7 @@ class RoutePool:
         for r in plan.routes:
             self.add_route(r)
 
-    def records(self, incumbent: Optional[Plan] = None) -> List[RouteRecord]:
+    def records(self, incumbent: Plan | None = None) -> list[RouteRecord]:
         recs = dict(self._routes)
         if incumbent is not None:
             for r in incumbent.routes:
@@ -92,8 +95,8 @@ def _sp_vehicle_penalty(inst: Inst, cfg: Config) -> float:
     return cfg.sp_vehicle_penalty_scale * max(inst.max_dist, 1.0) * max(inst.n, 1)
 
 
-def _milp_recombine(route_records: List[RouteRecord], inst: Inst, cfg: Config,
-                    nv_ceiling: Optional[int] = None) -> Optional[Plan]:
+def _milp_recombine(route_records: list[RouteRecord], inst: Inst, cfg: Config,
+                    nv_ceiling: int | None = None) -> Plan | None:
     if not MILP_OK or not route_records:
         return None
     n_routes = len(route_records)
@@ -122,10 +125,10 @@ def _milp_recombine(route_records: List[RouteRecord], inst: Inst, cfg: Config,
     return plan if plan.feasible else None
 
 
-def _greedy_recombine(route_records: List[RouteRecord], incumbent: Plan,
-                      nv_ceiling: Optional[int] = None) -> Plan:
+def _greedy_recombine(route_records: list[RouteRecord], incumbent: Plan,
+                      nv_ceiling: int | None = None) -> Plan:
     uncovered = set(range(1, incumbent.inst.n + 1))
-    selected: List[List[int]] = []
+    selected: list[list[int]] = []
     used: set = set()
     while uncovered:
         best_rec, best_score = None, -float("inf")
@@ -152,7 +155,7 @@ def _greedy_recombine(route_records: List[RouteRecord], incumbent: Plan,
 
 
 def recombine_with_route_pool(incumbent: Plan, pool: RoutePool, cfg: Config,
-                              nv_ceiling: Optional[int] = None) -> Plan:
+                              nv_ceiling: int | None = None) -> Plan:
     pool.add_plan(incumbent)
     recs = pool.records(incumbent)
     if not recs:

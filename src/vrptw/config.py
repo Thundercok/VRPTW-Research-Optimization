@@ -2,14 +2,13 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
-from typing import Dict, Tuple
 
 import pandas as pd
 
 # ---------------------------------------------------------------------------
 # BKS table
 # ---------------------------------------------------------------------------
-BKS: Dict[str, Dict[str, float]] = {
+BKS: dict[str, dict[str, float]] = {
     "C101": {"nv": 10, "td": 828.94},
     "C102": {"nv": 10, "td": 828.94},
     "C103": {"nv": 10, "td": 828.06},
@@ -305,13 +304,13 @@ class ModeSpec:
     destroy_scale: float
     temp_boost: float
     temp_decay_scale: float
-    destroy_bias: Tuple[float, ...]  # length == N_D = 8
-    repair_bias: Tuple[float, ...]  # length == N_R = 5
+    destroy_bias: tuple[float, ...]  # length == N_D = 8
+    repair_bias: tuple[float, ...]  # length == N_R = 5
     ls_passes: int
     use_recombine: bool
 
 
-MODES: Tuple[ModeSpec, ...] = (
+MODES: tuple[ModeSpec, ...] = (
     ModeSpec(
         "default", 1.00, 1.00, 1.000, (1.0, 1.0, 1.0, 1.0, 1.0, 0.8, 0.8, 1.0), (1.0, 1.0, 1.0, 1.0, 1.1), 0, False
     ),

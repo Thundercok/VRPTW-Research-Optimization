@@ -1,16 +1,19 @@
 from __future__ import annotations
-import math
-import numpy as np
-from typing import Dict, List, Optional
+
 import glob
+import math
 import os
+
+import numpy as np
+
 from .core import Inst
+
 
 class SyntheticVRPTWGenerator:
     _DISTRIBUTIONS = {"C", "R", "RC"}
 
     def __init__(self, n_nodes: int, distribution: str = "RC",
-                 seed: Optional[int] = None, capacity: Optional[float] = None):
+                 seed: int | None = None, capacity: float | None = None):
         if n_nodes < 1:
             raise ValueError("n_nodes must be >= 1.")
         distribution = distribution.upper()
@@ -45,7 +48,7 @@ class SyntheticVRPTWGenerator:
             self.rng.shuffle(customers, axis=0)
         return np.vstack([np.array([[50.0, 50.0]]), customers])
 
-    def _generate_raw(self, name: Optional[str] = None) -> Dict:
+    def _generate_raw(self, name: str | None = None) -> dict:
         coords  = self._coords()
         demands = self.rng.integers(1, 31, size=self.n_nodes).astype(float)
         if self.capacity is None:
@@ -109,7 +112,7 @@ class SyntheticVRPTWGenerator:
         self._assert_feasible(raw)
         return raw
 
-    def _assert_feasible(self, raw: Dict) -> None:
+    def _assert_feasible(self, raw: dict) -> None:
         data    = raw["data"]
         depot   = data[0, 1:3]
         horizon = data[0, 5]
@@ -122,7 +125,7 @@ class SyntheticVRPTWGenerator:
             if d + s + travel > horizon + 1e-7:
                 raise ValueError(f"Node {node_id} cannot return before horizon.")
 
-    def generate_raw(self, name: Optional[str] = None, max_retries: int = 12) -> Dict:
+    def generate_raw(self, name: str | None = None, max_retries: int = 12) -> dict:
         for _ in range(max_retries):
             try:
                 return self._generate_raw(name=name)
@@ -130,20 +133,20 @@ class SyntheticVRPTWGenerator:
                 self.rng = np.random.default_rng(int(self.rng.integers(10_000_000)))
         raise RuntimeError(f"No feasible instance after {max_retries} retries.")
 
-    def generate(self, name: Optional[str] = None, max_retries: int = 12) -> Inst:
+    def generate(self, name: str | None = None, max_retries: int = 12) -> Inst:
         return Inst(self.generate_raw(name=name, max_retries=max_retries))
 
 
 # ---------------------------------------------------------------------------
 # Data loading
 # ---------------------------------------------------------------------------
-def load_datasets(base_path: str) -> Dict[str, List[Inst]]:
-    datasets: Dict[str, List[Inst]] = {}
+def load_datasets(base_path: str) -> dict[str, list[Inst]]:
+    datasets: dict[str, list[Inst]] = {}
     for group in ("c1", "c2", "r1", "r2", "rc1", "rc2"):
         pat_lower = os.path.join(base_path, f"{group.lower()}*.txt")
         pat_upper = os.path.join(base_path, f"{group.upper()}*.txt")
         files = sorted(list(set(glob.glob(pat_lower) + glob.glob(pat_upper))))
-        insts: List[Inst] = []
+        insts: list[Inst] = []
         for path in files:
             with open(path, encoding="utf-8") as fh:
                 lines = fh.readlines()

@@ -9,7 +9,7 @@ from api.dependencies import require_user
 from core.config import demo_auth_bypass_enabled
 from core.firebase import is_firebase_enabled
 from core.rate_limit import GEOCODE_LIMIT, JOBS_LIMIT, limiter
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile, File
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
 from models.schemas import JobRequest, MatrixRequest
 from services.geocode_service import geocode_address, reverse_geocode_address
 from services.job_service import job_service
@@ -148,7 +148,6 @@ async def import_csv_file(
         raise HTTPException(status_code=400, detail="Empty CSV file.")
 
     headers = [str(cell).strip() for cell in rows[0]]
-    has_header = False
 
     name_idx = find_col_index(headers, ["name", "customer name", "customer", "client", "store", "shop"])
     addr_idx = find_col_index(headers, ["address", "addr", "location", "customer address", "full address"])
@@ -160,7 +159,6 @@ async def import_csv_file(
     service_idx = find_col_index(headers, ["service", "servicetime", "svc", "dwell", "stoptime"])
 
     if (lat_idx >= 0 or lng_idx >= 0 or addr_idx >= 0) and (name_idx >= 0 or demand_idx >= 0):
-        has_header = True
         data_rows = rows[1:]
     else:
         name_idx, addr_idx, lat_idx, lng_idx, demand_idx, ready_idx, due_idx, service_idx = 0, 1, 2, 3, 4, 5, 6, 7
@@ -169,7 +167,7 @@ async def import_csv_file(
     customers = []
     for idx, row in enumerate(data_rows):
         row_len = len(row)
-        def val_at(col_idx: int, default: str = "") -> str:
+        def val_at(col_idx: int, default: str = "", row=row, row_len=row_len) -> str:
             if 0 <= col_idx < row_len:
                 return str(row[col_idx]).strip()
             return default
@@ -358,10 +356,11 @@ async def get_job_debug(job_id: str, _: dict[str, str] = Depends(require_user)) 
 
 
 # ── BENCHMARK, TRAINING, & SMOKE TEST ENDPOINTS ──────────────────────────────────
-import sys
-import threading
-import os
-from pydantic import BaseModel
+import os  # noqa: E402
+import sys  # noqa: E402
+import threading  # noqa: E402
+
+from pydantic import BaseModel  # noqa: E402
 
 # Ensure src is in sys.path for importing the vrptw package.
 _ROOT_PATH = Path(__file__).resolve().parents[4]
@@ -369,7 +368,8 @@ _SRC_PATH = _ROOT_PATH / "src"
 if str(_SRC_PATH) not in sys.path:
     sys.path.insert(0, str(_SRC_PATH))
 
-import vrptw
+import vrptw  # noqa: E402
+
 
 class BenchmarkSubmitRequest(BaseModel):
     dataset: str
@@ -423,7 +423,7 @@ class LogCapture:
     def flush(self):
         self.stdout.flush()
 
-def load_weights_for_algo(algo: str, cfg: vrptw.Config) -> Optional[dict]:
+def load_weights_for_algo(algo: str, cfg: vrptw.Config) -> dict | None:
     import os
     if algo == "hybrid_ddqn_transfer_rc1":
         label = "rc1"
@@ -468,10 +468,11 @@ def load_weights_for_algo(algo: str, cfg: vrptw.Config) -> Optional[dict]:
     return None
 
 def run_benchmark_thread(dataset_key: str, algorithms: list[str], n_runs: int, max_wall_hours: float):
-    import time
-    import numpy as np
-    from concurrent.futures import ProcessPoolExecutor
     import multiprocessing as mp
+    import time
+    from concurrent.futures import ProcessPoolExecutor
+
+    import numpy as np
 
     global task_manager
     try:
@@ -556,7 +557,7 @@ def run_benchmark_thread(dataset_key: str, algorithms: list[str], n_runs: int, m
                 with ProcessPoolExecutor(max_workers=_n_workers, mp_context=ctx) as ex:
                     run_results = list(ex.map(vrptw._benchmark_worker, worker_args))
 
-                for i, (res, plan) in enumerate(run_results):
+                for res, plan in run_results:
                     if plan is not None:
                         archive.update(plan)
                     time_v.append(res["time"])

@@ -1,10 +1,11 @@
 from __future__ import annotations
+
 import numpy as np
-from typing import List, Tuple, Optional
-from .core import Inst, Plan, _route_ok, _route_cost, _check_route, _route_duration_no_return
+
+from .core import Inst, Plan, _check_route, _route_cost
 
 
-def _best_insert_position(node: int, route: List[int], inst: Inst) -> Tuple[float, Optional[int]]:
+def _best_insert_position(node: int, route: list[int], inst: Inst) -> tuple[float, int | None]:
     best_cost, best_pos = float("inf"), None
     for pos in range(len(route) + 1):
         prev = route[pos - 1] if pos > 0       else 0
@@ -28,17 +29,17 @@ def _insert_customer(plan: Plan, node: int, inst: Inst) -> None:
     plan.invalidate()
 
 
-def _route_cost_list(route: List[int], inst: Inst) -> float:
+def _route_cost_list(route: list[int], inst: Inst) -> float:
     if not route:
         return 0.0
     return float(_route_cost(np.array(route, np.int64), inst.dist))
 
 
-def _route_load(route: List[int], inst: Inst) -> float:
+def _route_load(route: list[int], inst: Inst) -> float:
     return float(sum(inst.demands[n] for n in route))
 
 
-def _route_avg_slack(route: List[int], inst: Inst) -> float:
+def _route_avg_slack(route: list[int], inst: Inst) -> float:
     if not route:
         return 0.0
     slack, t, prev = 0.0, 0.0, 0
@@ -99,7 +100,7 @@ def build_greedy(inst: Inst, algo: str = "") -> Plan:
         return best_cost, best_pos
 
     unrouted = list(range(1, inst.n + 1))
-    routes: List[List[int]] = []
+    routes: list[list[int]] = []
     while unrouted:
         seed = max(unrouted, key=lambda n: inst.dist[0, n])
         if max(inst.dist[0, seed], inst.ready_times[seed]) > inst.due_times[seed]:
@@ -133,9 +134,9 @@ def build_greedy(inst: Inst, algo: str = "") -> Plan:
 
     customers   = sorted(range(1, inst.n + 1), key=lambda n: (inst.due_times[n], inst.ready_times[n]))
     unrouted_set= set(customers)
-    fallback: List[List[int]] = []
+    fallback: list[list[int]] = []
     while unrouted_set:
-        route_fb: List[int] = []
+        route_fb: list[int] = []
         node, load, t = 0, 0.0, 0.0
         while unrouted_set:
             feasible = [

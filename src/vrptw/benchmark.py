@@ -4,8 +4,8 @@ import multiprocessing as mp
 import os
 import random
 import time
+from collections.abc import Iterable
 from concurrent.futures import ProcessPoolExecutor
-from typing import Dict, Iterable, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -28,7 +28,7 @@ from .config import (
 from .core import Inst, Plan
 from .generators import SyntheticVRPTWGenerator
 from .operators import op_regret_2, op_shaw
-from .rl import DEVICE, EliteArchive, WelfordRewardNormalizer
+from .rl import EliteArchive, WelfordRewardNormalizer
 from .solvers import ALNSSolver, HybridDDQNSolver, HybridFixedSolver, HybridRuleSolver, run_ortools
 
 try:
@@ -41,7 +41,7 @@ except Exception:
     _st_load = _st_save = None
 
 
-def _save_weights(weights: Dict, stem: str) -> None:
+def _save_weights(weights: dict, stem: str) -> None:
     if SAFETENSORS_OK and _st_save is not None:
         path = stem + ".safetensors"
         _st_save(weights, path)
@@ -51,7 +51,7 @@ def _save_weights(weights: Dict, stem: str) -> None:
     print(f"Weights saved → {path}")
 
 
-def _load_weights(stem: str) -> Optional[Dict]:
+def _load_weights(stem: str) -> dict | None:
     for suffix, loader in (
         (".safetensors", _st_load if SAFETENSORS_OK else None),
         (".pt", lambda f: torch.load(f, map_location="cpu")),
@@ -68,12 +68,12 @@ def run_instance(
     algo: str,
     cfg: Config,
     seed: int,
-    transfer_weights: Optional[Dict] = None,
-    init_plan: Optional[Plan] = None,
-) -> Tuple[Dict, Optional[Plan]]:
+    transfer_weights: dict | None = None,
+    init_plan: Plan | None = None,
+) -> tuple[dict, Plan | None]:
     start = time.time()
     algo = canonical_algo_label(algo)
-    plan: Optional[Plan] = None
+    plan: Plan | None = None
     if algo == ALGO_ORTOOLS:
         plan, elapsed = run_ortools(inst, cfg)
         if plan is None:
@@ -120,12 +120,12 @@ def run_instance(
 # ---------------------------------------------------------------------------
 # Top-level worker  — must be module-level for ProcessPoolExecutor pickling
 # ---------------------------------------------------------------------------
-def _benchmark_worker(packed: Tuple) -> Tuple[Dict, Optional[Plan]]:
+def _benchmark_worker(packed: tuple) -> tuple[dict, Plan | None]:
     inst, algo, cfg, seed, transfer_weights, init_plan = packed
     return run_instance(inst, algo, cfg, seed, transfer_weights, init_plan)
 
 
-def _diversified_init(run_idx: int, inst: Inst, archive: EliteArchive, cfg: Config) -> Optional[Plan]:
+def _diversified_init(run_idx: int, inst: Inst, archive: EliteArchive, cfg: Config) -> Plan | None:
     """
     run 0 → archive best       (exploitation of known-good solution)
     run 1 → shaw-perturbed     (exploration from good neighbourhood)
@@ -151,12 +151,12 @@ def _diversified_init(run_idx: int, inst: Inst, archive: EliteArchive, cfg: Conf
 # ---------------------------------------------------------------------------
 def run_benchmark(
     instances: Iterable[Inst],
-    algorithms: List[str],
+    algorithms: list[str],
     cfg: Config,
-    result_path: Optional[str] = None,
-    transfer_weights: Optional[Dict] = None,
-    archive: Optional[EliteArchive] = None,
-    checkpoint_path: Optional[str] = None,
+    result_path: str | None = None,
+    transfer_weights: dict | None = None,
+    archive: EliteArchive | None = None,
+    checkpoint_path: str | None = None,
 ) -> pd.DataFrame:
     cfg.validate()
     instances = list(instances)
@@ -165,7 +165,7 @@ def run_benchmark(
     if archive is None:
         archive = EliteArchive(k=cfg.elite_archive_k)
 
-    rows: List[Dict] = []
+    rows: list[dict] = []
     completed: set = set()
     if os.path.exists(ckpt_path):
         try:
@@ -303,7 +303,7 @@ def print_summary_table(df: pd.DataFrame) -> None:
 
     # NV-inflation warning
     if "NV_inflated" in df.columns:
-        flagged = df[df["NV_inflated"] == True][["Instance", "Algorithm", "Gap%", "NV_mean"]]
+        flagged = df[df["NV_inflated"]][["Instance", "Algorithm", "Gap%", "NV_mean"]]
         for _, r in flagged.iterrows():
             print(
                 f"  ⚠️  {r['Instance']} {r['Algorithm']}: Gap%={r['Gap%']:+.1f}% "
@@ -345,7 +345,7 @@ def print_summary_table(df: pd.DataFrame) -> None:
 # ---------------------------------------------------------------------------
 # Transfer / domain randomization
 # ---------------------------------------------------------------------------
-def train_transfer_model(instances: List[Inst], cfg: Config, seed: int = 42, label: str = "RC1") -> Dict:
+def train_transfer_model(instances: list[Inst], cfg: Config, seed: int = 42, label: str = "RC1") -> dict:
     print(f"Training transfer model on {label} ({len(instances)} instances)...")
     if not instances:
         raise ValueError("No source instances provided.")
@@ -368,7 +368,7 @@ def train_transfer_model(instances: List[Inst], cfg: Config, seed: int = 42, lab
     return weights
 
 
-def train_domain_randomization(cfg: Config, seed: int = 42) -> Dict:
+def train_domain_randomization(cfg: Config, seed: int = 42) -> dict:
     """
     3-phase curriculum:
       Phase 1 (0-40%):   Easy   — 20-40 nodes
@@ -379,7 +379,7 @@ def train_domain_randomization(cfg: Config, seed: int = 42) -> Dict:
     batch_size = int(cfg.domain_randomization_batch)
     distributions = ("C", "R", "RC")
     rng = random.Random(seed)
-    weights: Optional[Dict] = None
+    weights: dict | None = None
     shared_norm = WelfordRewardNormalizer(clip_sigma=8.0, warmup=256)
     print(f"Domain-randomization curriculum: {total_epochs} epochs × {batch_size} instances/epoch")
 
@@ -392,7 +392,7 @@ def train_domain_randomization(cfg: Config, seed: int = 42) -> Dict:
         else:
             phase, n_min, n_max = "Chaos ", 20, 100
         print(f"  Epoch {epoch + 1:>2}/{total_epochs}  [{phase}  N={n_min}-{n_max}]")
-        batch: List[Inst] = []
+        batch: list[Inst] = []
         for idx in range(batch_size):
             n_nodes = rng.randint(n_min, n_max)
             dist = distributions[(epoch + idx) % len(distributions)]
@@ -417,13 +417,13 @@ def train_domain_randomization(cfg: Config, seed: int = 42) -> Dict:
     return weights
 
 
-def train_transfer_model_within_rc2(rc2_instances: List[Inst], cfg: Config, seed: int = 42) -> Dict:
+def train_transfer_model_within_rc2(rc2_instances: list[Inst], cfg: Config, seed: int = 42) -> dict:
     source = rc2_instances[: cfg.rc2_transfer_split]
     print(f"RC2-within transfer: train on {[i.name for i in source]}")
     return train_transfer_model(source, cfg, seed=seed, label="RC2-src")
 
 
-def load_transfer_model(cfg: Config, label: str = "rc1") -> Optional[Dict]:
+def load_transfer_model(cfg: Config, label: str = "rc1") -> dict | None:
     stem = os.path.join(cfg.output_dir, f"rl_alns_transfer_{label}_v15")
     return _load_weights(stem)
 
@@ -431,7 +431,7 @@ def load_transfer_model(cfg: Config, label: str = "rc1") -> Optional[Dict]:
 # ---------------------------------------------------------------------------
 # Smoke test  — per-algo timing for accurate wall estimate
 # ---------------------------------------------------------------------------
-def smoke_test(inst: Inst, seed: int = 42) -> Dict[str, Tuple[float, float]]:
+def smoke_test(inst: Inst, seed: int = 42) -> dict[str, tuple[float, float]]:
     """
     Returns {algo_name: (gap_pct, elapsed_s)} for the 4 main solvers.
     Uses short iterations so it completes in < 5 min on any hardware.
@@ -444,7 +444,7 @@ def smoke_test(inst: Inst, seed: int = 42) -> Dict[str, Tuple[float, float]]:
         polish_patience=30,
         n_runs=1,
     )
-    results: Dict[str, Tuple[float, float]] = {}
+    results: dict[str, tuple[float, float]] = {}
     for algo_name, solver_cls in (
         (ALGO_ALNS_BASE, ALNSSolver),
         (ALGO_HYBRID_FIXED, HybridFixedSolver),

@@ -4,7 +4,6 @@ import math
 import os
 import random
 from collections import deque
-from typing import Deque, Dict, List, Optional, Tuple
 
 import numpy as np
 import torch
@@ -14,7 +13,7 @@ import torch.optim as optim
 
 from .config import MODES, Config
 from .core import Plan
-from .operators import N_ACTIONS, N_D, N_R
+from .operators import N_ACTIONS, N_R
 
 DEVICE = torch.device("cpu")
 torch.set_num_threads(max(1, int(os.environ.get("NUMBA_NUM_THREADS", "1")) // 2))
@@ -40,7 +39,7 @@ class PrioritizedReplayBuffer:
         self.beta: float = beta_start
         self.beta_end: float = beta_end
         self.beta_inc: float = (beta_end - beta_start) / max(expected_steps, 1)
-        self.buf: List = []
+        self.buf: list = []
         self.pos: int = 0
         self.priorities: np.ndarray = np.zeros(capacity, dtype=np.float32)
         self.max_pri = 1.0
@@ -122,9 +121,9 @@ class ThompsonBandit:
 
     def select(
         self,
-        prior: Optional[np.ndarray] = None,  # ← indented back in
+        prior: np.ndarray | None = None,  # ← indented back in
         prior_strength: float = 0.0,
-    ) -> Tuple[int, int]:
+    ) -> tuple[int, int]:
         if prior is not None and prior_strength > 0.0:
             p = np.asarray(prior, dtype=np.float64)
             p /= max(p.sum(), 1e-9)
@@ -147,7 +146,7 @@ class ThompsonBandit:
         np.multiply(self.beta - 1.0, rate, out=self.beta)
         np.add(self.beta, 1.0, out=self.beta)
 
-    def clone(self) -> "ThompsonBandit":
+    def clone(self) -> ThompsonBandit:
         b = ThompsonBandit(self.alpha.shape[0], self.alpha.shape[1])
         b.alpha = self.alpha.copy()
         b.beta = self.beta.copy()
@@ -160,7 +159,7 @@ class ThompsonBandit:
 class EliteArchive:
     def __init__(self, k: int = 5):
         self.k = k
-        self._plans: Dict[str, List[Plan]] = {}
+        self._plans: dict[str, list[Plan]] = {}
 
     def update(self, plan: Plan) -> None:
         if not plan.feasible:
@@ -171,7 +170,7 @@ class EliteArchive:
         bucket.sort(key=lambda p: (p.nv, p.cost))
         self._plans[key] = bucket[: self.k]
 
-    def best(self, inst_name: str) -> Optional[Plan]:
+    def best(self, inst_name: str) -> Plan | None:
         bucket = self._plans.get(inst_name, [])
         return bucket[0].copy() if bucket else None
 
@@ -385,7 +384,7 @@ class OperatorController:
         probs /= max(probs.sum(), 1e-9)
         return int(np.random.choice(N_ACTIONS, p=probs))
 
-    def act(self, state, dw, rw, bandit, frozen=False, ucb_aug=None) -> Tuple[int, int, int]:
+    def act(self, state, dw, rw, bandit, frozen=False, ucb_aug=None) -> tuple[int, int, int]:
         prior = self._prior(dw, rw)
         if not frozen and len(self.buf) < self.cfg.op_warmup:
             di, ri = bandit.select(prior=prior, prior_strength=self.cfg.bandit_prior_strength)
@@ -487,7 +486,7 @@ class LearnedAcceptanceCriterion:
             dtype=np.float32,
         )
 
-    def decide(self, feats: np.ndarray, cur_best_cost: float) -> Tuple[bool, float]:
+    def decide(self, feats: np.ndarray, cur_best_cost: float) -> tuple[bool, float]:
         self.step += 1
         self._pending.append((feats.copy(), cur_best_cost, self.step))
         metro_p = float(feats[-1])
@@ -524,10 +523,10 @@ class LearnedAcceptanceCriterion:
         loss.backward()
         self.opt.step()
 
-    def state_dict(self) -> Dict:
+    def state_dict(self) -> dict:
         return {f"lac.{k}": v.clone().cpu() for k, v in self.net.state_dict().items()}
 
-    def load_state_dict(self, weights: Dict) -> None:
+    def load_state_dict(self, weights: dict) -> None:
         sd = self.net.state_dict()
         updates = {}
         for k, v in weights.items():

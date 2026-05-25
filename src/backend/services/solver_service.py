@@ -323,8 +323,9 @@ def _run_alns(payload: JobRequest) -> dict[str, Any]:
 
 def _load_weights_for_solver(solver: Any, algo: str) -> None:
     import os
-    import vrptw
+
     from safetensors.torch import load_file
+
 
     label = "rc1" if "rc1" in algo else "dr"
     candidates = []
@@ -449,7 +450,7 @@ async def solve_model(payload: JobRequest, matrix: list[list[float]] | None = No
 
     loop = asyncio.get_running_loop()
     algos = ["ddqn", "alns", "ortools", "hybrid_fixed", "hybrid_ddqn", "hybrid_ddqn_transfer_rc1", "hybrid_ddqn_transfer_dr"]
-    
+
     tasks = {}
     for algo in algos:
         if algo == "ddqn":

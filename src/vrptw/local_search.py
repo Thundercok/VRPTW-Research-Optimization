@@ -1,10 +1,12 @@
 from __future__ import annotations
-from typing import List, Tuple, Optional
-import numpy as np
-from .core import Inst, Plan, _check_route
-from .heuristics import _route_cost_list, _route_load, _best_insert_position
 
-def _two_opt_best(route: List[int], inst: Inst) -> List[int]:
+import numpy as np
+
+from .core import Inst, Plan, _check_route
+from .heuristics import _best_insert_position, _route_cost_list, _route_load
+
+
+def _two_opt_best(route: list[int], inst: Inst) -> list[int]:
     if len(route) < 4:
         return route[:]
     best, best_cost = route[:], _route_cost_list(route, inst)
@@ -19,7 +21,7 @@ def _two_opt_best(route: List[int], inst: Inst) -> List[int]:
     return best
 
 
-def _best_relocate(plan: Plan, nv_ceiling: Optional[int] = None):
+def _best_relocate(plan: Plan, nv_ceiling: int | None = None):
     inst = plan.inst
     best_delta, best_move = -1e-9, None
     for si, source_route in enumerate(plan.routes):
@@ -48,7 +50,7 @@ def _best_relocate(plan: Plan, nv_ceiling: Optional[int] = None):
     return best_move
 
 
-def _apply_relocate(plan: Plan, move: Tuple[int, int, int, int]) -> Plan:
+def _apply_relocate(plan: Plan, move: tuple[int, int, int, int]) -> Plan:
     si, sp, di, ip = move
     routes = [r[:] for r in plan.routes]
     node   = routes[si].pop(sp)
@@ -81,21 +83,21 @@ def _best_swap(plan: Plan):
     return best_move
 
 
-def _apply_swap(plan: Plan, move: Tuple[int, int, int, int]) -> Plan:
+def _apply_swap(plan: Plan, move: tuple[int, int, int, int]) -> Plan:
     si, sp, di, dp = move
     routes = [r[:] for r in plan.routes]
     routes[si][sp], routes[di][dp] = routes[di][dp], routes[si][sp]
     return Plan(routes, plan.inst, plan.algo)
 
 
-def _cross_exchange(plan: Plan, nv_ceiling: Optional[int] = None) -> Optional[Plan]:
+def _cross_exchange(plan: Plan, nv_ceiling: int | None = None) -> Plan | None:
     inst = plan.inst
     if nv_ceiling is not None and plan.nv > nv_ceiling:
         return None
     max_dist       = max(inst.max_dist, 1.0)
     granular_radius= max(10.0, 0.18 * max_dist)
     best_delta     = -1e-9
-    best_routes: Optional[List[List[int]]] = None
+    best_routes: list[list[int]] | None = None
 
     def interval_overlap(a0, a1, b0, b1):
         return min(a1, b1) >= max(a0, b0)
@@ -158,7 +160,7 @@ def _cross_exchange(plan: Plan, nv_ceiling: Optional[int] = None) -> Optional[Pl
     return Plan(best_routes, inst, plan.algo) if best_routes is not None else None
 
 
-def _try_route_compact(plan: Plan, nv_ceiling: Optional[int] = None) -> Optional[Plan]:
+def _try_route_compact(plan: Plan, nv_ceiling: int | None = None) -> Plan | None:
     if len(plan.routes) <= 1:
         return None
     inst   = plan.inst
@@ -194,7 +196,7 @@ def _try_route_compact(plan: Plan, nv_ceiling: Optional[int] = None) -> Optional
 
 
 def local_search(plan: Plan, max_passes: int = 1,
-                 nv_ceiling: Optional[int] = None,
+                 nv_ceiling: int | None = None,
                  max_ls_moves: int = 5) -> Plan:
     """
     max_ls_moves caps the relocate/swap/cross/compact while-True loop per pass.

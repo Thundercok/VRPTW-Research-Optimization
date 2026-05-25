@@ -4,7 +4,6 @@ import math
 import random
 import time
 from collections import deque
-from typing import Deque, Dict, List, Optional, Tuple
 
 import numpy as np
 import torch
@@ -15,7 +14,6 @@ from .config import (
     ALGO_HYBRID_FIXED,
     ALGO_HYBRID_RULE,
     ALGO_ORTOOLS,
-    BKS,
     MODE_DEFAULT,
     MODE_DIVERSIFY,
     MODE_INTENSIFY,
@@ -37,15 +35,12 @@ from .rl import (
     LSBudgetController,
     OperatorController,
     PlateauController,
-    PrioritizedReplayBuffer,
     ThompsonBandit,
     UCBActionAugmenter,
     WelfordRewardNormalizer,
 )
 
 try:
-    from ortools.constraint_solver import pywrapcp as _pywrapcp
-    from ortools.constraint_solver import routing_enums_pb2
 
     ORTOOLS_OK = True
 except Exception:
@@ -58,7 +53,7 @@ class ALNSSolver:
         self.cfg = cfg
         self.bandit = ThompsonBandit(N_D, N_R)
 
-    def solve(self, seed: Optional[int] = None, init: Optional[Plan] = None) -> Tuple[Plan, List[float]]:
+    def solve(self, seed: int | None = None, init: Plan | None = None) -> tuple[Plan, list[float]]:
         if seed is not None:
             random.seed(seed)
             np.random.seed(seed)
@@ -109,13 +104,13 @@ class HybridDDQNSolver:
         self.ls_budget = LSBudgetController(ls_time_frac=0.30)
         self.ucb_aug = UCBActionAugmenter(n_actions=N_D * N_R)
         self.reward_norm = WelfordRewardNormalizer(clip_sigma=8.0, warmup=128)
-        self.mode_bandits: List[ThompsonBandit] = [ThompsonBandit(N_D, N_R) for _ in MODES]
+        self.mode_bandits: list[ThompsonBandit] = [ThompsonBandit(N_D, N_R) for _ in MODES]
         self._segment_recombine_used = False
         self._init_nv = 1
         self.archive = EliteArchive(k=cfg.elite_archive_k)
 
-    def clone_weights(self) -> Dict:
-        weights: Dict[str, torch.Tensor] = {}
+    def clone_weights(self) -> dict:
+        weights: dict[str, torch.Tensor] = {}
         for prefix, sd in (("plateau", self.ctrl.q.state_dict()), ("operator", self.op_ctrl.q.state_dict())):
             for k, v in sd.items():
                 weights[f"{prefix}.{k}"] = v.clone().cpu()
@@ -127,11 +122,11 @@ class HybridDDQNSolver:
             weights[f"reward_norm.{k}"] = torch.tensor(float(v))
         return weights
 
-    def load_weights(self, weights: Dict) -> None:
+    def load_weights(self, weights: dict) -> None:
         plateau_sd = self.ctrl.q.state_dict()
         operator_sd = self.op_ctrl.q.state_dict()
-        p_up: Dict[str, torch.Tensor] = {}
-        o_up: Dict[str, torch.Tensor] = {}
+        p_up: dict[str, torch.Tensor] = {}
+        o_up: dict[str, torch.Tensor] = {}
         legacy = not any(k.startswith(("plateau.", "operator.")) for k in weights)
         if legacy:
             import warnings
@@ -286,7 +281,7 @@ class HybridDDQNSolver:
     def _route_reduce_trigger(self, cur: Plan, no_imp: int) -> bool:
         return no_imp >= self.cfg.plateau_start and _fleet_fill(cur) < max(0.52, 0.80 - 0.25 * self.inst.tw_tight_frac)
 
-    def _select_action(self, state_before, cur, best, no_imp, progress, pool, frozen) -> Tuple[int, bool]:
+    def _select_action(self, state_before, cur, best, no_imp, progress, pool, frozen) -> tuple[int, bool]:
         if no_imp >= max(self.cfg.ctrl_start_floor, self.cfg.ctrl_start // 2):
             return self.ctrl.act(state_before), (not frozen)
         return MODE_DEFAULT, False
@@ -308,7 +303,7 @@ class HybridDDQNSolver:
                 refined = local_search(recombined, max_passes=1, nv_ceiling=recombined.nv)
         return refined
 
-    def _fixed_nv_polish(self, start: Plan, pool: RoutePool, inherited_bandit: Optional[ThompsonBandit] = None) -> Plan:
+    def _fixed_nv_polish(self, start: Plan, pool: RoutePool, inherited_bandit: ThompsonBandit | None = None) -> Plan:
         cfg = self.cfg
         target_nv = start.nv
         # Inherit operator statistics from main search instead of cold-starting
@@ -350,11 +345,11 @@ class HybridDDQNSolver:
 
     def solve(
         self,
-        seed: Optional[int] = None,
+        seed: int | None = None,
         frozen: bool = False,
-        init: Optional[Plan] = None,
-        shared_norm: Optional[WelfordRewardNormalizer] = None,
-    ) -> Tuple[Plan, List[float]]:
+        init: Plan | None = None,
+        shared_norm: WelfordRewardNormalizer | None = None,
+    ) -> tuple[Plan, list[float]]:
         if seed is not None:
             random.seed(seed)
             np.random.seed(seed)
@@ -379,8 +374,8 @@ class HybridDDQNSolver:
         temp = cfg.temp_control * cur.cost / math.log(2)
         all_dw = np.ones((len(MODES), N_D), dtype=np.float32)
         all_rw = np.ones((len(MODES), N_R), dtype=np.float32)
-        history: List[float] = [best.cost]
-        recent_improvements: Deque[int] = deque(maxlen=cfg.segment_size)
+        history: list[float] = [best.cost]
+        recent_improvements: deque[int] = deque(maxlen=cfg.segment_size)
         no_imp = 0
         n_segments = math.ceil(cfg.hybrid_iterations / cfg.segment_size)
 
@@ -605,7 +600,7 @@ class HybridRuleSolver(HybridDDQNSolver):
     algo_name = ALGO_HYBRID_RULE
     use_op_rl = False
 
-    def _select_action(self, state_before, cur, best, no_imp, progress, pool, frozen) -> Tuple[int, bool]:
+    def _select_action(self, state_before, cur, best, no_imp, progress, pool, frozen) -> tuple[int, bool]:
         del state_before, best, frozen
         if self._route_reduce_trigger(cur, no_imp):
             return MODE_ROUTE_REDUCE, False
@@ -631,7 +626,7 @@ ScheduledHybridSolver = HybridRuleSolver
 RLALNSSolver = HybridDDQNSolver
 
 
-def run_ortools(inst: Inst, cfg: Config) -> Tuple[Optional[Plan], float]:
+def run_ortools(inst: Inst, cfg: Config) -> tuple[Plan | None, float]:
     if not ORTOOLS_OK:
         print("  [OR-Tools] not installed — skipping")
         return None, 0.0
@@ -677,9 +672,9 @@ def run_ortools(inst: Inst, cfg: Config) -> Tuple[Optional[Plan], float]:
     if not solution:
         print(f"  [OR-Tools] no solution ({elapsed:.1f}s)")
         return None, elapsed
-    routes: List[List[int]] = []
+    routes: list[list[int]] = []
     for v in range(n_vehicles):
-        route: List[int] = []
+        route: list[int] = []
         idx = routing.Start(v)
         while not routing.IsEnd(idx):
             node = manager.IndexToNode(idx)

@@ -8,16 +8,15 @@ os.environ.setdefault("NUMBA_NUM_THREADS", str(_NUMBA_THREADS))
 os.environ.setdefault("OMP_NUM_THREADS", str(_NUMBA_THREADS))
 os.environ.setdefault("MKL_NUM_THREADS", str(_NUMBA_THREADS))
 
-from typing import Dict, List, Optional, Tuple
 
-import numpy as np
-from numba import njit
+import numpy as np  # noqa: E402
+from numba import njit  # noqa: E402
 
-from .config import BKS
+from .config import BKS  # noqa: E402
 
 
 class Inst:
-    def __init__(self, raw: Dict):
+    def __init__(self, raw: dict):
         self.name = raw["name"]
         data = raw["data"]
         self.capacity = raw["capacity"]
@@ -38,8 +37,6 @@ class Inst:
         self.max_dist = float(self.dist.max())
         self.tw_width = self.due_times - self.ready_times
         self.max_tw_width = float(self.tw_width[1:].max() + 1e-9)
-        mean_tw = float(self.tw_width[1:].mean())
-        mean_tw = float(self.tw_width[1:].mean())
         self.tw_tight_frac = sum(1 for i in range(1, self.n + 1) if self.tw_width[i] < 0.2 * self.horizon) / max(
             self.n, 1
         )
@@ -74,11 +71,11 @@ def _route_ok(route, demands, capacity, ready, due, service, dist) -> bool:
 class Plan:
     __slots__ = ("routes", "inst", "_cost", "_ok", "algo")
 
-    def __init__(self, routes: List[List[int]], inst: Inst, algo: str = ""):
+    def __init__(self, routes: list[list[int]], inst: Inst, algo: str = ""):
         self.routes = [r for r in routes if r]
         self.inst = inst
-        self._cost: Optional[float] = None
-        self._ok: Optional[bool] = None
+        self._cost: float | None = None
+        self._ok: bool | None = None
         self.algo = algo
 
     @property
@@ -123,16 +120,16 @@ class Plan:
                 prev = node
         return on_time / max(total, 1)
 
-    def gap(self) -> Tuple[Optional[float], Optional[int]]:
+    def gap(self) -> tuple[float | None, int | None]:
         bks = BKS.get(self.inst.name)
         if not bks:
             return None, None
         return (self.cost - bks["td"]) / bks["td"] * 100, int(self.nv) - int(bks["nv"])
 
-    def dominates(self, other: "Plan") -> bool:
+    def dominates(self, other: Plan) -> bool:
         return self.nv < other.nv or (self.nv == other.nv and self.cost < other.cost - 1e-6)
 
-    def copy(self) -> "Plan":
+    def copy(self) -> Plan:
         return Plan([r[:] for r in self.routes], self.inst, self.algo)
 
     def invalidate(self) -> None:
@@ -145,7 +142,7 @@ def _invalidate(plan: Plan) -> Plan:
     return plan
 
 
-def _route_duration_no_return(route: List[int], inst: "Inst") -> float:
+def _route_duration_no_return(route: list[int], inst: Inst) -> float:
     """Calculate duration of a route without returning to depot."""
     if not route:
         return 0.0
@@ -157,7 +154,7 @@ def _route_duration_no_return(route: List[int], inst: "Inst") -> float:
     return float(t)
 
 
-def _check_route(route: List[int], inst: "Inst") -> bool:
+def _check_route(route: list[int], inst: Inst) -> bool:
     """Check capacity + time-window feasibility (delegates to numba ``_route_ok``)."""
     return bool(
         _route_ok(
@@ -187,7 +184,7 @@ def _avg_slack(plan: Plan) -> float:
     return (slack_sum / count) / max(inst.horizon, 1) if count else 0.0
 
 
-def _plan_spread(plan: Plan, inst: Inst) -> Tuple[float, float]:
+def _plan_spread(plan: Plan, inst: Inst) -> tuple[float, float]:
     lengths = [len(r) for r in plan.routes] or [0]
     loads = [sum(inst.demands[n] for n in r) for r in plan.routes] or [0]
     rb = min(float(np.std(lengths)) / max(float(np.mean(lengths)), 1.0), 1.0) if len(lengths) > 1 else 0.0

@@ -2,16 +2,15 @@ from __future__ import annotations
 
 import math
 import random
-from typing import List, Optional, Tuple
 
 import numpy as np
 
 from .config import MODES, Config
-from .core import Inst, Plan, _check_route, _invalidate, _route_duration_no_return, _route_ok
+from .core import Inst, Plan, _invalidate, _route_duration_no_return
 from .heuristics import _best_insert_position, _insert_customer
 
 
-def op_random(plan: Plan, size: int) -> Tuple[Plan, List[int]]:
+def op_random(plan: Plan, size: int) -> tuple[Plan, list[int]]:
     nodes = [n for r in plan.routes for n in r]
     removed = random.sample(nodes, min(size, len(nodes)))
     rs = set(removed)
@@ -20,9 +19,9 @@ def op_random(plan: Plan, size: int) -> Tuple[Plan, List[int]]:
     return _invalidate(plan), removed
 
 
-def op_worst(plan: Plan, size: int) -> Tuple[Plan, List[int]]:
+def op_worst(plan: Plan, size: int) -> tuple[Plan, list[int]]:
     inst = plan.inst
-    gains: List[Tuple[float, int]] = []
+    gains: list[tuple[float, int]] = []
     for route in plan.routes:
         for idx, node in enumerate(route):
             prev = route[idx - 1] if idx > 0 else 0
@@ -31,7 +30,7 @@ def op_worst(plan: Plan, size: int) -> Tuple[Plan, List[int]]:
     gains.sort(reverse=True)
     # ALNS power-law randomized selection to introduce search diversity
     p = 3.0
-    removed: List[int] = []
+    removed: list[int] = []
     rs = set()
     while len(removed) < size and gains:
         idx = int((random.random() ** p) * len(gains))
@@ -43,7 +42,7 @@ def op_worst(plan: Plan, size: int) -> Tuple[Plan, List[int]]:
     return _invalidate(plan), removed
 
 
-def op_shaw(plan: Plan, size: int) -> Tuple[Plan, List[int]]:
+def op_shaw(plan: Plan, size: int) -> tuple[Plan, list[int]]:
     inst = plan.inst
     nodes = [n for r in plan.routes for n in r]
     if not nodes:
@@ -80,12 +79,12 @@ def op_shaw(plan: Plan, size: int) -> Tuple[Plan, List[int]]:
     return _invalidate(plan), removed
 
 
-def op_route_portion_removal(plan: Plan, size: int) -> Tuple[Plan, List[int]]:
+def op_route_portion_removal(plan: Plan, size: int) -> tuple[Plan, list[int]]:
     if len(plan.routes) <= 1:
         return op_shaw(plan, size)
     inst = plan.inst
     target = min(max(3, size), sum(len(r) for r in plan.routes))
-    removed: List[int] = []
+    removed: list[int] = []
     routes = [r[:] for r in plan.routes]
     while len(removed) < target:
         nonempty = [r for r in routes if r]
@@ -95,7 +94,7 @@ def op_route_portion_removal(plan: Plan, size: int) -> Tuple[Plan, List[int]]:
         avg_dur = max(float(np.mean(durations)), 1e-9)
         max_len = max(len(r) for r in nonempty)
         max_dist = max(inst.max_dist, 1.0)
-        scored: List[Tuple[float, int]] = []
+        scored: list[tuple[float, int]] = []
         for ridx, route in enumerate(routes):
             if len(route) < 2:
                 continue
@@ -117,7 +116,7 @@ def op_route_portion_removal(plan: Plan, size: int) -> Tuple[Plan, List[int]]:
         if upper < 1:
             break
         seg_len = random.randint(min(lower, upper), upper)
-        strain: List[Tuple[float, int]] = []
+        strain: list[tuple[float, int]] = []
         for pos, node in enumerate(route):
             prev = route[pos - 1] if pos > 0 else 0
             nxt = route[pos + 1] if pos < len(route) - 1 else 0
@@ -140,7 +139,7 @@ def op_route_portion_removal(plan: Plan, size: int) -> Tuple[Plan, List[int]]:
     return _invalidate(plan), removed
 
 
-def op_tw_urgent(plan: Plan, size: int) -> Tuple[Plan, List[int]]:
+def op_tw_urgent(plan: Plan, size: int) -> tuple[Plan, list[int]]:
     inst = plan.inst
     nodes = [n for r in plan.routes for n in r]
     if not nodes:
@@ -154,7 +153,7 @@ def op_tw_urgent(plan: Plan, size: int) -> Tuple[Plan, List[int]]:
     return _invalidate(plan), removed
 
 
-def op_route_eliminate(plan: Plan, size: int) -> Tuple[Plan, List[int]]:
+def op_route_eliminate(plan: Plan, size: int) -> tuple[Plan, list[int]]:
     if len(plan.routes) <= 1:
         return op_random(plan, size)
     inst = plan.inst
@@ -166,7 +165,7 @@ def op_route_eliminate(plan: Plan, size: int) -> Tuple[Plan, List[int]]:
             sum(inst.demands[n] for n in x[1]) / max(inst.capacity, 1) + random.random() * 0.1,
         ),
     )
-    removed: List[int] = []
+    removed: list[int] = []
     drop_ids: set = set()
     for idx, route in ranked:
         if len(removed) >= size:
@@ -177,14 +176,14 @@ def op_route_eliminate(plan: Plan, size: int) -> Tuple[Plan, List[int]]:
     return _invalidate(plan), removed
 
 
-def op_route_dispersion_eliminate(plan: Plan, size: int) -> Tuple[Plan, List[int]]:
+def op_route_dispersion_eliminate(plan: Plan, size: int) -> tuple[Plan, list[int]]:
     if len(plan.routes) <= 1:
         return op_random(plan, size)
     inst = plan.inst
     durations = [_route_duration_no_return(r, inst) for r in plan.routes if r]
     avg_dur = max(float(np.mean(durations)), 1e-9)
     max_dist = max(inst.max_dist, 1.0)
-    scored: List[Tuple[float, int]] = []
+    scored: list[tuple[float, int]] = []
     for idx, route in enumerate(plan.routes):
         if not route:
             continue
@@ -195,7 +194,7 @@ def op_route_dispersion_eliminate(plan: Plan, size: int) -> Tuple[Plan, List[int
         # Add random noise to increase variety
         noise = random.random() * 0.25
         scored.append((1.5 * spatial + 0.5 * temporal + noise, idx))
-    removed: List[int] = []
+    removed: list[int] = []
     drop_ids: set = set()
     for _, idx in sorted(scored, reverse=True):
         removed.extend(plan.routes[idx])
@@ -206,7 +205,7 @@ def op_route_dispersion_eliminate(plan: Plan, size: int) -> Tuple[Plan, List[int
     return _invalidate(plan), removed
 
 
-def op_cross_route_shaw(plan: Plan, size: int) -> Tuple[Plan, List[int]]:
+def op_cross_route_shaw(plan: Plan, size: int) -> tuple[Plan, list[int]]:
     inst = plan.inst
     nodes = [n for r in plan.routes for n in r]
     if not nodes:
@@ -257,14 +256,14 @@ DESTROY = [
 ]
 
 
-def op_greedy(plan: Plan, removed: List[int]) -> Plan:
+def op_greedy(plan: Plan, removed: list[int]) -> Plan:
     inst = plan.inst
     for node in sorted(removed, key=lambda n: inst.due_times[n]):
         _insert_customer(plan, node, inst)
     return Plan(plan.routes, inst, plan.algo)
 
 
-def _regret(plan: Plan, removed: List[int], k: int) -> Plan:
+def _regret(plan: Plan, removed: list[int], k: int) -> Plan:
     inst = plan.inst
     remaining: set = set(removed)
     while remaining:
@@ -300,23 +299,23 @@ def _regret(plan: Plan, removed: List[int], k: int) -> Plan:
     return Plan(plan.routes, inst, plan.algo)
 
 
-def op_regret_2(plan: Plan, removed: List[int]) -> Plan:
+def op_regret_2(plan: Plan, removed: list[int]) -> Plan:
     return _regret(plan, removed, 2)
 
 
-def op_regret_3(plan: Plan, removed: List[int]) -> Plan:
+def op_regret_3(plan: Plan, removed: list[int]) -> Plan:
     return _regret(plan, removed, 3)
 
 
-def op_tw_greedy(plan: Plan, removed: List[int]) -> Plan:
+def op_tw_greedy(plan: Plan, removed: list[int]) -> Plan:
     inst = plan.inst
     for node in sorted(removed, key=lambda n: inst.due_times[n] - inst.ready_times[n]):
         _insert_customer(plan, node, inst)
     return Plan(plan.routes, inst, plan.algo)
 
 
-def _route_arrivals_wait(route: List[int], inst: Inst) -> Tuple[List[float], float]:
-    arrivals: List[float] = []
+def _route_arrivals_wait(route: list[int], inst: Inst) -> tuple[list[float], float]:
+    arrivals: list[float] = []
     total_wait = 0.0
     t, prev = 0.0, 0
     for node in route:
@@ -330,7 +329,7 @@ def _route_arrivals_wait(route: List[int], inst: Inst) -> Tuple[List[float], flo
     return arrivals, float(total_wait)
 
 
-def _route_forward_time_slacks(route: List[int], inst: Inst) -> List[float]:
+def _route_forward_time_slacks(route: list[int], inst: Inst) -> list[float]:
     if not route:
         return []
     arrivals, _ = _route_arrivals_wait(route, inst)
@@ -346,7 +345,7 @@ def _route_forward_time_slacks(route: List[int], inst: Inst) -> List[float]:
     return [max(0.0, latest[idx] - arrivals[idx]) for idx in range(len(route))]
 
 
-def _fts_best_insert_position(node: int, route: List[int], inst: Inst) -> Tuple[float, Optional[int]]:
+def _fts_best_insert_position(node: int, route: list[int], inst: Inst) -> tuple[float, int | None]:
     best_cost, best_pos = float("inf"), None
     horizon = max(inst.horizon, 1.0)
     max_dist = max(inst.max_dist, 1.0)
@@ -394,7 +393,7 @@ def _fts_best_insert_position(node: int, route: List[int], inst: Inst) -> Tuple[
     return best_cost, best_pos
 
 
-def op_fts_greedy(plan: Plan, removed: List[int]) -> Plan:
+def op_fts_greedy(plan: Plan, removed: list[int]) -> Plan:
     inst = plan.inst
     urgent_first = sorted(
         removed,
