@@ -4,6 +4,7 @@ httpx>=0.28
 pydantic>=2.11
 firebase-admin>=7.0
 python-dotenv>=1.0
+python-multipart>=0.0.7
 
 # Security + observability
 passlib[argon2]>=1.7.4
