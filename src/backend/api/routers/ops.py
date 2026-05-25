@@ -10,9 +10,8 @@ import time
 from concurrent.futures import ProcessPoolExecutor
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-import numpy as np
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
 from pydantic import BaseModel
 
@@ -21,6 +20,9 @@ _ROOT_PATH = Path(__file__).resolve().parents[4]
 _SRC_PATH = _ROOT_PATH / "src"
 if str(_SRC_PATH) not in sys.path:
     sys.path.insert(0, str(_SRC_PATH))
+
+if TYPE_CHECKING:
+    import vrptw
 
 from api.dependencies import require_user
 from core.config import demo_auth_bypass_enabled
@@ -32,8 +34,6 @@ from services.job_service import job_service
 from services.matrix_service import calculate_matrix
 from services.solomon_service import list_solomon_datasets, load_solomon_dataset
 from services.solver_service import device_summary, transfer_weights_summary
-
-import vrptw
 
 router = APIRouter(tags=["ops"])
 
@@ -428,6 +428,7 @@ class LogCapture:
         self.stdout.flush()
 
 def load_weights_for_algo(algo: str, cfg: vrptw.Config) -> dict | None:
+    import vrptw
     if algo == "hybrid_ddqn_transfer_rc1":
         label = "rc1"
     elif algo == "hybrid_ddqn_transfer_rc2":
@@ -471,6 +472,9 @@ def load_weights_for_algo(algo: str, cfg: vrptw.Config) -> dict | None:
     return None
 
 def run_benchmark_thread(dataset_key: str, algorithms: list[str], n_runs: int, max_wall_hours: float):
+    import numpy as np
+
+    import vrptw
     global task_manager
     try:
         cfg = vrptw.Config()
@@ -602,6 +606,7 @@ def run_benchmark_thread(dataset_key: str, algorithms: list[str], n_runs: int, m
             task_manager.benchmark_state["error"] = str(e)
 
 def run_training_thread(train_type: str, dataset_key: str | None = None, epochs: int = 1):
+    import vrptw
     global task_manager
     try:
         cfg = vrptw.Config()
@@ -680,6 +685,7 @@ def run_training_thread(train_type: str, dataset_key: str | None = None, epochs:
             task_manager.training_state["error"] = str(e)
 
 def run_smoke_test_thread():
+    import vrptw
     global task_manager
     try:
         cfg = vrptw.Config()
