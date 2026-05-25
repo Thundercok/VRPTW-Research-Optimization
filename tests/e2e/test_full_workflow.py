@@ -1,6 +1,7 @@
-from playwright.sync_api import Page, expect
 from pathlib import Path
+
 import pytest
+from playwright.sync_api import Page, expect
 
 SCREENSHOTS = Path("tests/e2e/screenshots")
 SCREENSHOTS.mkdir(parents=True, exist_ok=True)
@@ -62,13 +63,13 @@ def test_record_full_app_workflow(authed_page: Page):
     # --- Step 4: Dispatch Simulation Playback & Drawer ---
     print("[E2E] Verifying simulation player and playing route simulation...")
     expect(page.locator("#sim-control-panel")).to_be_visible(timeout=10000)
-    
+
     # Toggle waypoints manifest drawer
     print("[E2E] Toggling manifest drawer...")
     page.click("#btn-toggle-drawer")
     page.wait_for_timeout(500)
     shot(page, "05_drawer_open")
-    
+
     page.click("#btn-close-drawer")
     page.wait_for_timeout(500)
 

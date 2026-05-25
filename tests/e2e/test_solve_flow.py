@@ -1,5 +1,6 @@
-from playwright.sync_api import Page, APIRequestContext, expect
 from pathlib import Path
+
+from playwright.sync_api import APIRequestContext, Page, expect
 
 SCREENSHOTS = Path("tests/e2e/screenshots")
 SCREENSHOTS.mkdir(parents=True, exist_ok=True)

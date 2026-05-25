@@ -1,8 +1,9 @@
 import os
+
 import pytest
 import requests
-from playwright.sync_api import Page, APIRequestContext
 from dotenv import load_dotenv
+from playwright.sync_api import APIRequestContext, Page
 
 load_dotenv(".env.test")
 HOSTING_BASE   = "http://127.0.0.1:5050"      # Firebase Hosting emulator (SPA)
