@@ -71,6 +71,6 @@ test-e2e: dist
 		uv run pytest tests/e2e/ -v -s; \
 	EXIT_CODE=$$?; \
 	echo "Killing emulators and backend..."; \
-	pkill -f "firebase.*emulators" 2>/dev/null || true; \
-	pkill -f "uvicorn.*main:app" 2>/dev/null || true; \
+	pkill -f "[f]irebase.*emulators" 2>/dev/null || true; \
+	pkill -f "[u]vicorn.*main:app" 2>/dev/null || true; \
 	exit $$EXIT_CODE
