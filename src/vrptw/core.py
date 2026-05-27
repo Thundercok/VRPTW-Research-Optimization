@@ -37,9 +37,10 @@ class Inst:
         self.max_dist = float(self.dist.max())
         self.tw_width = self.due_times - self.ready_times
         self.max_tw_width = float(self.tw_width[1:].max() + 1e-9)
-        mean_tw = float(self.tw_width[1:].mean())
+        avg_cross_time = self.max_dist
         self.tw_tight_frac = sum(
-            1 for i in range(1, self.n + 1) if self.tw_width[i] < 0.5 * mean_tw
+            1 for i in range(1, self.n + 1)
+            if self.tw_width[i] < 0.5 * avg_cross_time
         ) / max(self.n, 1)
 
 
