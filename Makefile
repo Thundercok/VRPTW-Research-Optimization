@@ -48,10 +48,17 @@ test-e2e: dist
 	@echo "Waiting for Auth Emulator on port 9099..."
 	@for i in $$(seq 1 30); do \
 		nc -z 127.0.0.1 9099 2>/dev/null && echo "  Auth Emulator ready." && break; \
-		echo "  Waiting... ($$i/30)"; \
+		echo "  Waiting for Auth... ($$i/30)"; \
 		sleep 1; \
 	done
 	@nc -z 127.0.0.1 9099 2>/dev/null || (echo "ERROR: Auth Emulator never came up on port 9099" && exit 1)
+	@echo "Waiting for Hosting Emulator on port 5050..."
+	@for i in $$(seq 1 30); do \
+		nc -z 127.0.0.1 5050 2>/dev/null && echo "  Hosting Emulator ready." && break; \
+		echo "  Waiting for Hosting... ($$i/30)"; \
+		sleep 1; \
+	done
+	@nc -z 127.0.0.1 5050 2>/dev/null || (echo "ERROR: Hosting Emulator never came up on port 5050" && exit 1)
 	@echo "Seeding test user into Auth Emulator..."
 	@curl -s -X POST \
 		"http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signUp?key=fake-api-key" \

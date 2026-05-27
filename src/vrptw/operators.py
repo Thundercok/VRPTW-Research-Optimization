@@ -197,10 +197,10 @@ def op_route_dispersion_eliminate(plan: Plan, size: int) -> tuple[Plan, list[int
     removed: list[int] = []
     drop_ids: set = set()
     for _, idx in sorted(scored, reverse=True):
-        removed.extend(plan.routes[idx])
-        drop_ids.add(idx)
         if len(removed) >= size:
             break
+        removed.extend(plan.routes[idx])
+        drop_ids.add(idx)
     plan.routes = [r for i, r in enumerate(plan.routes) if i not in drop_ids]
     return _invalidate(plan), removed
 

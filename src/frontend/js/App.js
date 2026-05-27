@@ -8,6 +8,7 @@ import { TelemetryService } from './TelemetryService.js';
 import { solveDemo } from './DemoEngine.js';
 import { FleetController } from './FleetController.js';
 import { SettingsController } from './SettingsController.js';
+import { GanttController } from './GanttController.js';
 
 
 const APP_COPY = {
@@ -175,6 +176,7 @@ export class App {
     this.simulationController = new SimulationController(this);
     this.fleetController = new FleetController(this);
     this.settingsController = new SettingsController(this);
+    this.ganttController = new GanttController(this);
     this.telemetry = new TelemetryService(db, this.mapController);
     this.loadingAnim = {
       active: false,
@@ -1097,6 +1099,7 @@ export class App {
     if (!this.mapController.ddqnMap) {
       this.mapController.init();
       this.simulationController.init();
+      this.ganttController.init();
       this.wireWorkspaceEvents();
       this.renderCustomers();
       this.mapController.renderMarkers();
@@ -3907,6 +3910,7 @@ export class App {
       findMax(result[algoName]);
     }
     this.simulationController.start(maxTime);
+    this.ganttController?.render(result, initialView);
 
     this.updateComparisonMetrics(initialView);
     this.showEmptyStates();
@@ -4045,6 +4049,7 @@ export class App {
     this.state.lastResult = null;
     this.mapController.clearRoutes();
     this.simulationController.showPanels(false);
+    this.ganttController?.render(null);
 
     const setText = (node, value) => {
       if (node) node.textContent = value;

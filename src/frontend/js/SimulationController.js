@@ -192,6 +192,14 @@ export class SimulationController {
 
     // Update companion app view
     this.updateDriverAppScreen();
+
+    // Update Gantt chart cursor and active algorithm selection
+    if (this.app.ganttController) {
+      if (this.app.ganttController.activeAlgo !== activeAlgo) {
+        this.app.ganttController.render(result, activeAlgo);
+      }
+      this.app.ganttController.setSimTime(this.t_sim);
+    }
   }
 
   updateStatusPanel(algoResult, isDdqnOrAlgoName) {

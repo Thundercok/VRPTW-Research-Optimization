@@ -79,6 +79,11 @@ async def lifespan(_: FastAPI):
         worker_task.cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await worker_task
+        try:
+            from services.solver_service import shutdown_executor
+            shutdown_executor()
+        except Exception as exc:
+            logger.warning("Failed to shutdown solver executor: %s", exc)
 
 
 class NoCacheHTMLMiddleware(BaseHTTPMiddleware):

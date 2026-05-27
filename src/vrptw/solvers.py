@@ -41,9 +41,9 @@ from .rl import (
 )
 
 try:
-
+    import ortools
     ORTOOLS_OK = True
-except Exception:
+except ImportError:
     ORTOOLS_OK = False
 
 

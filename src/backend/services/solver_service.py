@@ -79,6 +79,7 @@ def _get_web_config() -> Any:
             polish_iterations=100,
             polish_patience=60,
             n_runs=1,
+            ortools_time_limit=10.0,
         )
     return _WEB_CONFIG
 
@@ -89,6 +90,57 @@ class _LazyWebConfig:
 
 
 WEB_CONFIG = _LazyWebConfig()
+
+
+from concurrent.futures import ProcessPoolExecutor
+
+_PROCESS_POOL: ProcessPoolExecutor | None = None
+
+
+def get_process_pool() -> ProcessPoolExecutor:
+    global _PROCESS_POOL
+    if _PROCESS_POOL is None:
+        import multiprocessing as mp
+
+        ctx = mp.get_context("spawn")
+        max_workers = min(7, max(1, os.cpu_count() or 4))
+        logger.info("Initializing ProcessPoolExecutor with %d workers", max_workers)
+        _PROCESS_POOL = ProcessPoolExecutor(max_workers=max_workers, mp_context=ctx)
+    return _PROCESS_POOL
+
+
+def shutdown_executor() -> None:
+    global _PROCESS_POOL
+    if _PROCESS_POOL is not None:
+        logger.info("Shutting down ProcessPoolExecutor")
+        _PROCESS_POOL.shutdown(wait=True)
+        _PROCESS_POOL = None
+
+
+def _run_solver_in_process(algo: str, payload_dict: dict[str, Any]) -> dict[str, Any]:
+    """Execute a solver in a subprocess. This bypasses the Python GIL.
+
+    Note that the arguments and return values must be pickleable.
+    """
+    import sys
+    from pathlib import Path
+
+    _ROOT = Path(__file__).resolve().parents[3]
+    for candidate in (_ROOT / "src", _ROOT):
+        if candidate.exists() and str(candidate) not in sys.path:
+            sys.path.insert(0, str(candidate))
+
+    from models.schemas import JobRequest
+    from services.solver_service import _run_ddqn_alns, _run_alns, _run_algo_generic
+
+    payload = JobRequest(**payload_dict)
+
+    if algo == "ddqn":
+        return _run_ddqn_alns(payload)
+    elif algo == "alns":
+        return _run_alns(payload)
+    else:
+        return _run_algo_generic(payload, algo)
 
 
 def device_summary() -> dict[str, Any]:
@@ -293,7 +345,7 @@ def _run_ddqn_alns(payload: JobRequest) -> dict[str, Any]:
     _load_transfer_weights(solver)
     solver.ctrl.eps = config.ctrl_eps_end
     start = time.time()
-    plan, _ = solver.solve(seed=config.seed)
+    plan, _ = solver.solve(seed=config.seed, frozen=True)
     elapsed = time.time() - start
 
     if plan.nv > payload.fleet.vehicles:
@@ -394,7 +446,7 @@ def _run_algo_generic(payload: JobRequest, algo: str) -> dict[str, Any]:
     elif algo == "hybrid_ddqn":
         solver = vrptw.HybridDDQNSolver(inst, config)
         start = time.time()
-        plan, _ = solver.solve(seed=config.seed)
+        plan, _ = solver.solve(seed=config.seed, frozen=True)
         elapsed = time.time() - start
         return runtime.plan_to_payload(plan, payload.customers, elapsed)
 
@@ -402,7 +454,7 @@ def _run_algo_generic(payload: JobRequest, algo: str) -> dict[str, Any]:
         solver = vrptw.HybridDDQNSolver(inst, config)
         _load_weights_for_solver(solver, algo)
         start = time.time()
-        plan, _ = solver.solve(seed=config.seed)
+        plan, _ = solver.solve(seed=config.seed, frozen=True)
         elapsed = time.time() - start
         return runtime.plan_to_payload(plan, payload.customers, elapsed)
 
@@ -410,7 +462,7 @@ def _run_algo_generic(payload: JobRequest, algo: str) -> dict[str, Any]:
         solver = vrptw.HybridDDQNSolver(inst, config)
         _load_weights_for_solver(solver, algo)
         start = time.time()
-        plan, _ = solver.solve(seed=config.seed)
+        plan, _ = solver.solve(seed=config.seed, frozen=True)
         elapsed = time.time() - start
         return runtime.plan_to_payload(plan, payload.customers, elapsed)
 
@@ -449,16 +501,18 @@ async def solve_model(payload: JobRequest, matrix: list[list[float]] | None = No
     runtime.torch.set_num_threads(max(1, (os.cpu_count() or 4) // 2))
 
     loop = asyncio.get_running_loop()
+    pool = get_process_pool()
+
+    if hasattr(payload, "model_dump"):
+        payload_dict = payload.model_dump()
+    else:
+        payload_dict = payload.dict()
+
     algos = ["ddqn", "alns", "ortools", "hybrid_fixed", "hybrid_ddqn", "hybrid_ddqn_transfer_rc1", "hybrid_ddqn_transfer_dr"]
 
     tasks = {}
     for algo in algos:
-        if algo == "ddqn":
-            tasks[algo] = loop.run_in_executor(None, _run_ddqn_alns, payload)
-        elif algo == "alns":
-            tasks[algo] = loop.run_in_executor(None, _run_alns, payload)
-        else:
-            tasks[algo] = loop.run_in_executor(None, _run_algo_generic, payload, algo)
+        tasks[algo] = loop.run_in_executor(pool, _run_solver_in_process, algo, payload_dict)
 
     results = {}
     for algo, task in tasks.items():
