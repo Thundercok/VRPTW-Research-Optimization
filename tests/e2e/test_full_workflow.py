@@ -120,6 +120,11 @@ def test_record_full_app_workflow(page: Page):
     page.wait_for_timeout(500)
     shot(page, "10_simulation_paused")
 
+    # Reset simulation clock to 0 using the exposed window.app instance
+    print("[E2E] Resetting simulation clock to 0...")
+    page.evaluate("() => { if(window.app && window.app.simulationController) { window.app.simulationController.scrub(0); } }")
+    page.wait_for_timeout(500)
+
     # --- Step 7: Driver App Companion Emulator Interaction ---
     print("[E2E] Opening Driver App Companion emulator...")
     page.click("#btn-toggle-driver-app")
@@ -135,13 +140,13 @@ def test_record_full_app_workflow(page: Page):
 
     # Click "Trigger Arrival Now" to arrive at the first stop
     print("[E2E] Triggering stop arrival...")
-    page.click(".btn-arrive-stop")
+    page.locator("#driver-app-content .btn-arrive-stop").first.click()
     page.wait_for_timeout(1000)
     shot(page, "13_stop_arrived")
 
     # Click "Complete Delivery" to open the Proof of Delivery modal
     print("[E2E] Completing stop delivery...")
-    page.click(".btn-complete-stop")
+    page.locator("#driver-app-content .btn-complete-stop").first.click()
     page.wait_for_selector("#pod-proof-modal", state="visible", timeout=5000)
     page.wait_for_timeout(1500)
     shot(page, "14_proof_of_delivery_modal")
@@ -152,6 +157,12 @@ def test_record_full_app_workflow(page: Page):
     page.wait_for_selector("#pod-proof-modal", state="hidden", timeout=5000)
     page.wait_for_timeout(500)
     shot(page, "15_pod_modal_closed")
+
+    # Resume simulation to let it run the remaining stops
+    print("[E2E] Resuming simulation playback...")
+    page.click("#btn-sim-play")
+    page.wait_for_timeout(2000)
+    shot(page, "15b_simulation_resumed")
 
     # --- Step 8: Toggle Manifest Waypoints Drawer ---
     print("[E2E] Toggling manifest drawer...")

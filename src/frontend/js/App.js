@@ -152,6 +152,7 @@ const APP_COPY = {
 
 export class App {
   constructor() {
+    window.app = this;
     this.state = createInitialState();
     this.lang = getDemoLang();
     this.tableInputVisible = false;
