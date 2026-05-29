@@ -1,0 +1,736 @@
+Domain-randomization curriculum: 40 epochs × 20 instances/epoch
+  Epoch  1/40  [Easy    N=20-40]
+    [ 1/20] SYN-C-040-634301: n=40  nv=5  cost=558.4  feasible=True
+    [ 2/20] SYN-R-023-536204: n=23  nv=4  cost=651.3  feasible=True
+    [ 3/20] SYN-RC-020-815237: n=20  nv=4  cost=548.5  feasible=True
+    [ 4/20] SYN-C-028-854823: n=28  nv=3  cost=316.9  feasible=True
+    [ 5/20] SYN-R-027-977944: n=27  nv=4  cost=687.7  feasible=True
+    [ 6/20] SYN-RC-027-148575: n=27  nv=3  cost=787.1  feasible=True
+    [ 7/20] SYN-C-024-276554: n=24  nv=4  cost=279.2  feasible=True
+    [ 8/20] SYN-R-023-680576: n=23  nv=4  cost=668.0  feasible=True
+    [ 9/20] SYN-RC-037-290726: n=37  nv=6  cost=873.7  feasible=True
+    [10/20] SYN-C-022-329727: n=22  nv=4  cost=347.0  feasible=True
+    [11/20] SYN-R-038-537444: n=38  nv=6  cost=927.5  feasible=True
+    [12/20] SYN-RC-033-324339: n=33  nv=5  cost=692.4  feasible=True
+    [13/20] SYN-C-021-863003: n=21  nv=3  cost=483.8  feasible=True
+    [14/20] SYN-R-020-517056: n=20  nv=4  cost=667.5  feasible=True
+    [15/20] SYN-RC-022-537990: n=22  nv=3  cost=546.9  feasible=True
+    [16/20] SYN-C-026-645757: n=26  nv=3  cost=300.0  feasible=True
+    [17/20] SYN-R-027-154758: n=27  nv=5  cost=759.6  feasible=True
+    [18/20] SYN-RC-036-581147: n=36  nv=7  cost=834.5  feasible=True
+    [19/20] SYN-C-039-461397: n=39  nv=5  cost=643.1  feasible=True
+    [20/20] SYN-R-020-711552: n=20  nv=3  cost=519.6  feasible=True
+  Epoch  2/40  [Easy    N=20-40]
+    [ 1/20] SYN-R-037-750984: n=37  nv=7  cost=940.3  feasible=True
+    [ 2/20] SYN-RC-026-874336: n=26  nv=4  cost=691.0  feasible=True
+    [ 3/20] SYN-C-040-015127: n=40  nv=6  cost=443.7  feasible=True
+    [ 4/20] SYN-R-037-916945: n=37  nv=5  cost=927.0  feasible=True
+    [ 5/20] SYN-RC-033-623646: n=33  nv=4  cost=738.4  feasible=True
+    [ 6/20] SYN-C-027-988888: n=27  nv=4  cost=386.6  feasible=True
+    [ 7/20] SYN-R-034-598268: n=34  nv=6  cost=935.8  feasible=True
+    [ 8/20] SYN-RC-038-278634: n=38  nv=4  cost=666.7  feasible=True
+    [ 9/20] SYN-C-028-714601: n=28  nv=4  cost=374.3  feasible=True
+    [10/20] SYN-R-020-817828: n=20  nv=4  cost=595.4  feasible=True
+    [11/20] SYN-RC-025-307636: n=25  nv=5  cost=624.9  feasible=True
+    [12/20] SYN-C-033-819182: n=33  nv=4  cost=524.7  feasible=True
+    [13/20] SYN-R-030-127565: n=30  nv=4  cost=751.2  feasible=True
+    [14/20] SYN-RC-028-046149: n=28  nv=4  cost=612.0  feasible=True
+    [15/20] SYN-C-024-844991: n=24  nv=4  cost=377.6  feasible=True
+    [16/20] SYN-R-026-585939: n=26  nv=5  cost=747.2  feasible=True
+    [17/20] SYN-RC-030-114548: n=30  nv=4  cost=660.0  feasible=True
+    [18/20] SYN-C-023-437346: n=23  nv=3  cost=291.7  feasible=True
+    [19/20] SYN-R-022-584782: n=22  nv=3  cost=512.7  feasible=True
+    [20/20] SYN-RC-032-765181: n=32  nv=5  cost=664.0  feasible=True
+  Epoch  3/40  [Easy    N=20-40]
+    [ 1/20] SYN-RC-023-716327: n=23  nv=3  cost=521.9  feasible=True
+    [ 2/20] SYN-C-031-178093: n=31  nv=3  cost=417.9  feasible=True
+    [ 3/20] SYN-R-031-575973: n=31  nv=4  cost=780.7  feasible=True
+    [ 4/20] SYN-RC-039-915236: n=39  nv=4  cost=761.1  feasible=True
+    [ 5/20] SYN-C-028-928480: n=28  nv=4  cost=389.1  feasible=True
+    [ 6/20] SYN-R-021-730078: n=21  nv=3  cost=531.2  feasible=True
+    [ 7/20] SYN-RC-034-663931: n=34  nv=4  cost=826.4  feasible=True
+    [ 8/20] SYN-C-037-251198: n=37  nv=4  cost=472.1  feasible=True
+    [ 9/20] SYN-R-023-805692: n=23  nv=3  cost=738.4  feasible=True
+    [10/20] SYN-RC-032-471086: n=32  nv=5  cost=743.0  feasible=True
+    [11/20] SYN-C-022-252397: n=22  nv=3  cost=336.5  feasible=True
+    [12/20] SYN-R-037-752860: n=37  nv=6  cost=875.4  feasible=True
+    [13/20] SYN-RC-029-081344: n=29  nv=4  cost=703.5  feasible=True
+    [14/20] SYN-C-040-556600: n=40  nv=5  cost=582.1  feasible=True
+    [15/20] SYN-R-039-395238: n=39  nv=5  cost=908.7  feasible=True
+    [16/20] SYN-RC-031-549036: n=31  nv=3  cost=644.0  feasible=True
+    [17/20] SYN-C-038-247242: n=38  nv=6  cost=497.5  feasible=True
+    [18/20] SYN-R-026-736062: n=26  nv=5  cost=640.7  feasible=True
+    [19/20] SYN-RC-022-363084: n=22  nv=3  cost=655.1  feasible=True
+    [20/20] SYN-C-021-030427: n=21  nv=3  cost=291.1  feasible=True
+  Epoch  4/40  [Easy    N=20-40]
+    [ 1/20] SYN-C-027-716539: n=27  nv=3  cost=330.7  feasible=True
+    [ 2/20] SYN-R-029-997865: n=29  nv=3  cost=608.0  feasible=True
+    [ 3/20] SYN-RC-022-413017: n=22  nv=3  cost=477.8  feasible=True
+    [ 4/20] SYN-C-027-933397: n=27  nv=4  cost=508.2  feasible=True
+    [ 5/20] SYN-R-023-235396: n=23  nv=4  cost=770.2  feasible=True
+    [ 6/20] SYN-RC-032-423810: n=32  nv=4  cost=621.7  feasible=True
+    [ 7/20] SYN-C-028-828611: n=28  nv=5  cost=411.2  feasible=True
+    [ 8/20] SYN-R-034-537625: n=34  nv=5  cost=734.5  feasible=True
+    [ 9/20] SYN-RC-040-992318: n=40  nv=7  cost=800.8  feasible=True
+    [10/20] SYN-C-031-051465: n=31  nv=4  cost=383.4  feasible=True
+    [11/20] SYN-R-025-174765: n=25  nv=4  cost=709.8  feasible=True
+    [12/20] SYN-RC-031-969110: n=31  nv=4  cost=725.5  feasible=True
+    [13/20] SYN-C-031-985627: n=31  nv=3  cost=544.8  feasible=True
+    [14/20] SYN-R-026-905082: n=26  nv=4  cost=707.8  feasible=True
+    [15/20] SYN-RC-028-464512: n=28  nv=4  cost=605.4  feasible=True
+    [16/20] SYN-C-040-434681: n=40  nv=5  cost=573.7  feasible=True
+    [17/20] SYN-R-022-239634: n=22  nv=3  cost=718.4  feasible=True
+    [18/20] SYN-RC-039-110311: n=39  nv=6  cost=830.7  feasible=True
+    [19/20] SYN-C-040-457469: n=40  nv=6  cost=519.8  feasible=True
+    [20/20] SYN-R-025-390509: n=25  nv=6  cost=686.5  feasible=True
+  Epoch  5/40  [Easy    N=20-40]
+    [ 1/20] SYN-R-037-171698: n=37  nv=5  cost=946.3  feasible=True
+    [ 2/20] SYN-RC-027-263377: n=27  nv=3  cost=613.6  feasible=True
+    [ 3/20] SYN-C-025-400048: n=25  nv=3  cost=404.2  feasible=True
+    [ 4/20] SYN-R-034-932388: n=34  nv=4  cost=799.1  feasible=True
+    [ 5/20] SYN-RC-032-800419: n=32  nv=3  cost=668.6  feasible=True
+    [ 6/20] SYN-C-028-848096: n=28  nv=3  cost=428.4  feasible=True
+    [ 7/20] SYN-R-040-957852: n=40  nv=4  cost=930.3  feasible=True
+    [ 8/20] SYN-RC-037-970564: n=37  nv=5  cost=778.2  feasible=True
+    [ 9/20] SYN-C-027-949962: n=27  nv=4  cost=484.3  feasible=True
+    [10/20] SYN-R-030-623452: n=30  nv=4  cost=602.5  feasible=True
+    [11/20] SYN-RC-021-297506: n=21  nv=3  cost=413.4  feasible=True
+    [12/20] SYN-C-027-506054: n=27  nv=4  cost=366.2  feasible=True
+    [13/20] SYN-R-021-954803: n=21  nv=3  cost=669.7  feasible=True
+    [14/20] SYN-RC-030-469444: n=30  nv=4  cost=595.9  feasible=True
+    [15/20] SYN-C-032-111079: n=32  nv=5  cost=419.1  feasible=True
+    [16/20] SYN-R-028-170693: n=28  nv=5  cost=846.9  feasible=True
+    [17/20] SYN-RC-022-774840: n=22  nv=3  cost=536.0  feasible=True
+    [18/20] SYN-C-026-589763: n=26  nv=4  cost=355.0  feasible=True
+    [19/20] SYN-R-038-490534: n=38  nv=5  cost=900.3  feasible=True
+    [20/20] SYN-RC-030-033022: n=30  nv=3  cost=708.0  feasible=True
+  Epoch  6/40  [Easy    N=20-40]
+    [ 1/20] SYN-RC-026-692579: n=26  nv=4  cost=541.7  feasible=True
+    [ 2/20] SYN-C-040-561222: n=40  nv=5  cost=659.7  feasible=True
+    [ 3/20] SYN-R-035-176560: n=35  nv=4  cost=723.1  feasible=True
+    [ 4/20] SYN-RC-032-376853: n=32  nv=4  cost=642.4  feasible=True
+    [ 5/20] SYN-C-040-223749: n=40  nv=5  cost=424.4  feasible=True
+    [ 6/20] SYN-R-034-036030: n=34  nv=5  cost=872.7  feasible=True
+    [ 7/20] SYN-RC-024-790412: n=24  nv=4  cost=689.3  feasible=True
+    [ 8/20] SYN-C-028-716533: n=28  nv=4  cost=384.6  feasible=True
+    [ 9/20] SYN-R-024-016921: n=24  nv=3  cost=613.3  feasible=True
+    [10/20] SYN-RC-027-339087: n=27  nv=3  cost=681.4  feasible=True
+    [11/20] SYN-C-037-075087: n=37  nv=5  cost=481.3  feasible=True
+    [12/20] SYN-R-037-814184: n=37  nv=5  cost=886.4  feasible=True
+    [13/20] SYN-RC-028-574169: n=28  nv=4  cost=579.9  feasible=True
+    [14/20] SYN-C-038-601116: n=38  nv=4  cost=611.0  feasible=True
+    [15/20] SYN-R-033-006136: n=33  nv=5  cost=704.7  feasible=True
+    [16/20] SYN-RC-038-356145: n=38  nv=6  cost=736.2  feasible=True
+    [17/20] SYN-C-032-822271: n=32  nv=4  cost=482.8  feasible=True
+    [18/20] SYN-R-031-177653: n=31  nv=4  cost=932.3  feasible=True
+    [19/20] SYN-RC-027-995244: n=27  nv=4  cost=660.3  feasible=True
+    [20/20] SYN-C-024-402811: n=24  nv=3  cost=319.4  feasible=True
+  Epoch  7/40  [Easy    N=20-40]
+    [ 1/20] SYN-C-036-190282: n=36  nv=4  cost=523.3  feasible=True
+    [ 2/20] SYN-R-035-208102: n=35  nv=4  cost=721.6  feasible=True
+    [ 3/20] SYN-RC-022-469351: n=22  nv=4  cost=554.8  feasible=True
+    [ 4/20] SYN-C-021-611899: n=21  nv=3  cost=320.2  feasible=True
+    [ 5/20] SYN-R-023-227593: n=23  nv=4  cost=706.8  feasible=True
+    [ 6/20] SYN-RC-024-647994: n=24  nv=4  cost=561.5  feasible=True
+    [ 7/20] SYN-C-040-086160: n=40  nv=5  cost=584.8  feasible=True
+    [ 8/20] SYN-R-025-505074: n=25  nv=3  cost=659.6  feasible=True
+    [ 9/20] SYN-RC-033-111633: n=33  nv=4  cost=625.7  feasible=True
+    [10/20] SYN-C-039-149674: n=39  nv=5  cost=590.4  feasible=True
+    [11/20] SYN-R-022-708816: n=22  nv=3  cost=729.8  feasible=True
+    [12/20] SYN-RC-032-549571: n=32  nv=4  cost=611.4  feasible=True
+    [13/20] SYN-C-032-097805: n=32  nv=5  cost=450.5  feasible=True
+    [14/20] SYN-R-039-545524: n=39  nv=5  cost=870.8  feasible=True
+    [15/20] SYN-RC-034-150166: n=34  nv=4  cost=705.0  feasible=True
+    [16/20] SYN-C-036-326458: n=36  nv=4  cost=417.0  feasible=True
+    [17/20] SYN-R-028-085758: n=28  nv=3  cost=666.5  feasible=True
+    [18/20] SYN-RC-037-007392: n=37  nv=5  cost=783.2  feasible=True
+    [19/20] SYN-C-020-552665: n=20  nv=3  cost=335.6  feasible=True
+    [20/20] SYN-R-023-070353: n=23  nv=6  cost=806.4  feasible=True
+  Epoch  8/40  [Easy    N=20-40]
+    [ 1/20] SYN-R-037-480831: n=37  nv=6  cost=791.0  feasible=True
+    [ 2/20] SYN-RC-028-206516: n=28  nv=3  cost=738.4  feasible=True
+    [ 3/20] SYN-C-040-411930: n=40  nv=6  cost=691.9  feasible=True
+    [ 4/20] SYN-R-030-414484: n=30  nv=5  cost=877.2  feasible=True
+    [ 5/20] SYN-RC-023-601411: n=23  nv=4  cost=459.8  feasible=True
+    [ 6/20] SYN-C-029-268013: n=29  nv=4  cost=367.4  feasible=True
+    [ 7/20] SYN-R-033-584688: n=33  nv=4  cost=757.7  feasible=True
+    [ 8/20] SYN-RC-025-566379: n=25  nv=3  cost=662.3  feasible=True
+    [ 9/20] SYN-C-034-245388: n=34  nv=4  cost=462.5  feasible=True
+    [10/20] SYN-R-020-718844: n=20  nv=4  cost=604.5  feasible=True
+    [11/20] SYN-RC-028-880243: n=28  nv=6  cost=704.4  feasible=True
+    [12/20] SYN-C-036-460738: n=36  nv=5  cost=593.4  feasible=True
+    [13/20] SYN-R-025-956264: n=25  nv=4  cost=762.2  feasible=True
+    [14/20] SYN-RC-036-314003: n=36  nv=4  cost=780.2  feasible=True
+    [15/20] SYN-C-023-760032: n=23  nv=4  cost=395.2  feasible=True
+    [16/20] SYN-R-040-191116: n=40  nv=7  cost=1078.3  feasible=True
+    [17/20] SYN-RC-029-867568: n=29  nv=5  cost=730.8  feasible=True
+    [18/20] SYN-C-040-864318: n=40  nv=7  cost=666.6  feasible=True
+    [19/20] SYN-R-036-808263: n=36  nv=4  cost=863.2  feasible=True
+    [20/20] SYN-RC-039-124448: n=39  nv=5  cost=710.4  feasible=True
+  Epoch  9/40  [Easy    N=20-40]
+    [ 1/20] SYN-RC-026-831271: n=26  nv=4  cost=618.8  feasible=True
+    [ 2/20] SYN-C-024-535667: n=24  nv=4  cost=387.3  feasible=True
+    [ 3/20] SYN-R-031-378359: n=31  nv=4  cost=696.1  feasible=True
+    [ 4/20] SYN-RC-025-328599: n=25  nv=3  cost=493.6  feasible=True
+    [ 5/20] SYN-C-037-174900: n=37  nv=4  cost=580.3  feasible=True
+    [ 6/20] SYN-R-036-355354: n=36  nv=5  cost=946.2  feasible=True
+    [ 7/20] SYN-RC-020-948073: n=20  nv=4  cost=525.2  feasible=True
+    [ 8/20] SYN-C-039-238285: n=39  nv=4  cost=504.3  feasible=True
+    [ 9/20] SYN-R-030-907279: n=30  nv=5  cost=727.6  feasible=True
+    [10/20] SYN-RC-035-778100: n=35  nv=4  cost=804.1  feasible=True
+    [11/20] SYN-C-020-365133: n=20  nv=3  cost=356.2  feasible=True
+    [12/20] SYN-R-023-346050: n=23  nv=4  cost=675.4  feasible=True
+    [13/20] SYN-RC-031-971630: n=31  nv=5  cost=682.8  feasible=True
+    [14/20] SYN-C-029-502917: n=29  nv=3  cost=385.5  feasible=True
+    [15/20] SYN-R-027-402584: n=27  nv=5  cost=760.2  feasible=True
+    [16/20] SYN-RC-021-316327: n=21  nv=3  cost=474.8  feasible=True
+    [17/20] SYN-C-027-684235: n=27  nv=3  cost=347.5  feasible=True
+    [18/20] SYN-R-038-073138: n=38  nv=5  cost=928.8  feasible=True
+    [19/20] SYN-RC-022-783519: n=22  nv=4  cost=511.6  feasible=True
+    [20/20] SYN-C-022-284947: n=22  nv=3  cost=316.4  feasible=True
+  Epoch 10/40  [Easy    N=20-40]
+    [ 1/20] SYN-C-035-768643: n=35  nv=4  cost=466.0  feasible=True
+    [ 2/20] SYN-R-022-290411: n=22  nv=3  cost=611.3  feasible=True
+    [ 3/20] SYN-RC-037-052045: n=37  nv=4  cost=736.3  feasible=True
+    [ 4/20] SYN-C-024-975765: n=24  nv=4  cost=390.4  feasible=True
+    [ 5/20] SYN-R-024-820040: n=24  nv=5  cost=592.0  feasible=True
+    [ 6/20] SYN-RC-035-175230: n=35  nv=4  cost=805.2  feasible=True
+    [ 7/20] SYN-C-037-743979: n=37  nv=5  cost=542.3  feasible=True
+    [ 8/20] SYN-R-025-546084: n=25  nv=4  cost=694.9  feasible=True
+    [ 9/20] SYN-RC-028-498868: n=28  nv=4  cost=601.1  feasible=True
+    [10/20] SYN-C-036-861611: n=36  nv=6  cost=627.0  feasible=True
+    [11/20] SYN-R-039-236160: n=39  nv=6  cost=928.6  feasible=True
+    [12/20] SYN-RC-033-526930: n=33  nv=5  cost=672.2  feasible=True
+    [13/20] SYN-C-026-295909: n=26  nv=4  cost=345.1  feasible=True
+    [14/20] SYN-R-037-979739: n=37  nv=5  cost=993.2  feasible=True
+    [15/20] SYN-RC-026-927480: n=26  nv=4  cost=617.4  feasible=True
+    [16/20] SYN-C-029-790463: n=29  nv=3  cost=370.8  feasible=True
+    [17/20] SYN-R-032-393184: n=32  nv=5  cost=854.0  feasible=True
+    [18/20] SYN-RC-040-194129: n=40  nv=5  cost=824.8  feasible=True
+    [19/20] SYN-C-031-908136: n=31  nv=5  cost=554.5  feasible=True
+    [20/20] SYN-R-034-723670: n=34  nv=4  cost=839.2  feasible=True
+  Epoch 11/40  [Easy    N=20-40]
+    [ 1/20] SYN-R-036-771633: n=36  nv=5  cost=819.8  feasible=True
+    [ 2/20] SYN-RC-034-752226: n=34  nv=4  cost=800.4  feasible=True
+    [ 3/20] SYN-C-023-564909: n=23  nv=3  cost=381.1  feasible=True
+    [ 4/20] SYN-R-027-016859: n=27  nv=3  cost=717.3  feasible=True
+    [ 5/20] SYN-RC-027-770072: n=27  nv=4  cost=675.0  feasible=True
+    [ 6/20] SYN-C-022-905411: n=22  nv=3  cost=435.6  feasible=True
+    [ 7/20] SYN-R-030-765097: n=30  nv=5  cost=781.7  feasible=True
+    [ 8/20] SYN-RC-020-900646: n=20  nv=3  cost=557.6  feasible=True
+    [ 9/20] SYN-C-038-907422: n=38  nv=4  cost=445.8  feasible=True
+    [10/20] SYN-R-037-221965: n=37  nv=5  cost=798.9  feasible=True
+    [11/20] SYN-RC-027-185215: n=27  nv=5  cost=618.2  feasible=True
+    [12/20] SYN-C-038-300922: n=38  nv=4  cost=506.2  feasible=True
+    [13/20] SYN-R-027-205226: n=27  nv=4  cost=725.1  feasible=True
+    [14/20] SYN-RC-020-334857: n=20  nv=3  cost=529.2  feasible=True
+    [15/20] SYN-C-022-955499: n=22  nv=3  cost=398.4  feasible=True
+    [16/20] SYN-R-040-472508: n=40  nv=6  cost=888.1  feasible=True
+    [17/20] SYN-RC-021-036824: n=21  nv=3  cost=489.6  feasible=True
+    [18/20] SYN-C-027-002779: n=27  nv=4  cost=419.0  feasible=True
+    [19/20] SYN-R-022-160974: n=22  nv=3  cost=563.8  feasible=True
+    [20/20] SYN-RC-021-600382: n=21  nv=4  cost=549.7  feasible=True
+  Epoch 12/40  [Easy    N=20-40]
+    [ 1/20] SYN-RC-030-052368: n=30  nv=6  cost=704.1  feasible=True
+    [ 2/20] SYN-C-022-396575: n=22  nv=3  cost=410.9  feasible=True
+    [ 3/20] SYN-R-036-796353: n=36  nv=4  cost=832.7  feasible=True
+    [ 4/20] SYN-RC-027-615406: n=27  nv=4  cost=642.0  feasible=True
+    [ 5/20] SYN-C-028-184063: n=28  nv=4  cost=356.5  feasible=True
+    [ 6/20] SYN-R-035-185212: n=35  nv=5  cost=782.4  feasible=True
+    [ 7/20] SYN-RC-026-267636: n=26  nv=3  cost=575.0  feasible=True
+    [ 8/20] SYN-C-037-249372: n=37  nv=4  cost=474.8  feasible=True
+    [ 9/20] SYN-R-024-203452: n=24  nv=3  cost=621.3  feasible=True
+    [10/20] SYN-RC-038-237070: n=38  nv=6  cost=678.0  feasible=True
+    [11/20] SYN-C-038-600262: n=38  nv=4  cost=495.8  feasible=True
+    [12/20] SYN-R-035-786498: n=35  nv=6  cost=854.6  feasible=True
+    [13/20] SYN-RC-027-453674: n=27  nv=4  cost=702.8  feasible=True
+    [14/20] SYN-C-035-602897: n=35  nv=5  cost=437.6  feasible=True
+    [15/20] SYN-R-033-524488: n=33  nv=7  cost=964.3  feasible=True
+    [16/20] SYN-RC-026-549200: n=26  nv=3  cost=641.0  feasible=True
+    [17/20] SYN-C-023-225407: n=23  nv=3  cost=383.6  feasible=True
+    [18/20] SYN-R-023-035123: n=23  nv=4  cost=589.6  feasible=True
+    [19/20] SYN-RC-033-412762: n=33  nv=6  cost=728.2  feasible=True
+    [20/20] SYN-C-031-140070: n=31  nv=4  cost=474.4  feasible=True
+  Epoch 13/40  [Easy    N=20-40]
+    [ 1/20] SYN-C-033-085892: n=33  nv=5  cost=478.4  feasible=True
+    [ 2/20] SYN-R-033-011819: n=33  nv=4  cost=794.7  feasible=True
+    [ 3/20] SYN-RC-034-072373: n=34  nv=4  cost=673.8  feasible=True
+    [ 4/20] SYN-C-021-483858: n=21  nv=4  cost=411.3  feasible=True
+    [ 5/20] SYN-R-040-978250: n=40  nv=6  cost=806.3  feasible=True
+    [ 6/20] SYN-RC-040-368849: n=40  nv=6  cost=758.6  feasible=True
+    [ 7/20] SYN-C-023-038094: n=23  nv=2  cost=301.1  feasible=True
+    [ 8/20] SYN-R-021-848209: n=21  nv=4  cost=675.3  feasible=True
+    [ 9/20] SYN-RC-032-022381: n=32  nv=5  cost=748.4  feasible=True
+    [10/20] SYN-C-030-628948: n=30  nv=5  cost=585.8  feasible=True
+    [11/20] SYN-R-023-762926: n=23  nv=5  cost=788.8  feasible=True
+    [12/20] SYN-RC-027-853198: n=27  nv=4  cost=560.1  feasible=True
+    [13/20] SYN-C-026-093561: n=26  nv=3  cost=333.1  feasible=True
+    [14/20] SYN-R-026-561473: n=26  nv=6  cost=718.4  feasible=True
+    [15/20] SYN-RC-037-212177: n=37  nv=7  cost=841.6  feasible=True
+    [16/20] SYN-C-034-947237: n=34  nv=3  cost=621.6  feasible=True
+    [17/20] SYN-R-024-980709: n=24  nv=5  cost=642.3  feasible=True
+    [18/20] SYN-RC-033-069507: n=33  nv=3  cost=848.7  feasible=True
+    [19/20] SYN-C-025-078200: n=25  nv=4  cost=450.5  feasible=True
+    [20/20] SYN-R-028-360980: n=28  nv=4  cost=726.6  feasible=True
+  Epoch 14/40  [Easy    N=20-40]
+    [ 1/20] SYN-R-034-660280: n=34  nv=5  cost=861.0  feasible=True
+    [ 2/20] SYN-RC-027-370244: n=27  nv=4  cost=641.3  feasible=True
+    [ 3/20] SYN-C-022-175270: n=22  nv=4  cost=438.5  feasible=True
+    [ 4/20] SYN-R-034-122995: n=34  nv=4  cost=860.2  feasible=True
+    [ 5/20] SYN-RC-037-645084: n=37  nv=5  cost=729.8  feasible=True
+    [ 6/20] SYN-C-023-307939: n=23  nv=3  cost=376.2  feasible=True
+    [ 7/20] SYN-R-021-474883: n=21  nv=4  cost=571.2  feasible=True
+    [ 8/20] SYN-RC-040-299087: n=40  nv=7  cost=804.9  feasible=True
+    [ 9/20] SYN-C-037-677615: n=37  nv=5  cost=420.9  feasible=True
+    [10/20] SYN-R-020-417243: n=20  nv=4  cost=689.9  feasible=True
+    [11/20] SYN-RC-022-684201: n=22  nv=4  cost=575.2  feasible=True
+    [12/20] SYN-C-027-386846: n=27  nv=4  cost=457.0  feasible=True
+    [13/20] SYN-R-025-576595: n=25  nv=4  cost=766.5  feasible=True
+    [14/20] SYN-RC-033-172109: n=33  nv=4  cost=593.0  feasible=True
+    [15/20] SYN-C-035-950610: n=35  nv=5  cost=477.5  feasible=True
+    [16/20] SYN-R-035-186503: n=35  nv=6  cost=844.6  feasible=True
+    [17/20] SYN-RC-026-323390: n=26  nv=4  cost=671.5  feasible=True
+    [18/20] SYN-C-032-078290: n=32  nv=4  cost=438.4  feasible=True
+    [19/20] SYN-R-021-486830: n=21  nv=3  cost=544.6  feasible=True
+    [20/20] SYN-RC-025-652404: n=25  nv=3  cost=548.1  feasible=True
+  Epoch 15/40  [Easy    N=20-40]
+    [ 1/20] SYN-RC-032-266383: n=32  nv=5  cost=839.2  feasible=True
+    [ 2/20] SYN-C-020-171603: n=20  nv=3  cost=407.7  feasible=True
+    [ 3/20] SYN-R-032-865413: n=32  nv=5  cost=774.3  feasible=True
+    [ 4/20] SYN-RC-028-150740: n=28  nv=4  cost=616.8  feasible=True
+    [ 5/20] SYN-C-034-408412: n=34  nv=4  cost=428.7  feasible=True
+    [ 6/20] SYN-R-029-747830: n=29  nv=5  cost=861.3  feasible=True
+    [ 7/20] SYN-RC-033-527546: n=33  nv=5  cost=685.0  feasible=True
+    [ 8/20] SYN-C-037-932529: n=37  nv=4  cost=437.1  feasible=True
+    [ 9/20] SYN-R-035-268056: n=35  nv=6  cost=892.1  feasible=True
+    [10/20] SYN-RC-024-839752: n=24  nv=4  cost=488.2  feasible=True
+    [11/20] SYN-C-026-427740: n=26  nv=4  cost=514.9  feasible=True
+    [12/20] SYN-R-029-845881: n=29  nv=5  cost=757.9  feasible=True
+    [13/20] SYN-RC-026-828085: n=26  nv=4  cost=593.2  feasible=True
+    [14/20] SYN-C-021-479612: n=21  nv=3  cost=351.4  feasible=True
+    [15/20] SYN-R-038-460006: n=38  nv=5  cost=922.4  feasible=True
+    [16/20] SYN-RC-037-413923: n=37  nv=6  cost=788.5  feasible=True
+    [17/20] SYN-C-021-045600: n=21  nv=4  cost=336.4  feasible=True
+    [18/20] SYN-R-030-527718: n=30  nv=4  cost=759.1  feasible=True
+    [19/20] SYN-RC-021-938215: n=21  nv=3  cost=689.3  feasible=True
+    [20/20] SYN-C-021-641401: n=21  nv=3  cost=429.2  feasible=True
+  Epoch 16/40  [Easy    N=20-40]
+    [ 1/20] SYN-C-038-592684: n=38  nv=5  cost=456.8  feasible=True
+    [ 2/20] SYN-R-035-812937: n=35  nv=5  cost=850.6  feasible=True
+    [ 3/20] SYN-RC-036-742038: n=36  nv=4  cost=749.4  feasible=True
+    [ 4/20] SYN-C-036-835198: n=36  nv=5  cost=539.2  feasible=True
+    [ 5/20] SYN-R-025-665000: n=25  nv=4  cost=683.9  feasible=True
+    [ 6/20] SYN-RC-021-969277: n=21  nv=4  cost=625.6  feasible=True
+    [ 7/20] SYN-C-036-144564: n=36  nv=4  cost=494.8  feasible=True
+    [ 8/20] SYN-R-022-056745: n=22  nv=4  cost=729.6  feasible=True
+    [ 9/20] SYN-RC-025-656861: n=25  nv=3  cost=650.7  feasible=True
+    [10/20] SYN-C-022-128018: n=22  nv=4  cost=354.1  feasible=True
+    [11/20] SYN-R-039-018632: n=39  nv=5  cost=853.1  feasible=True
+    [12/20] SYN-RC-022-545822: n=22  nv=2  cost=612.1  feasible=True
+    [13/20] SYN-C-027-131018: n=27  nv=3  cost=407.0  feasible=True
+    [14/20] SYN-R-032-866689: n=32  nv=5  cost=783.1  feasible=True
+    [15/20] SYN-RC-023-414645: n=23  nv=4  cost=572.2  feasible=True
+    [16/20] SYN-C-038-433286: n=38  nv=6  cost=456.7  feasible=True
+    [17/20] SYN-R-027-230499: n=27  nv=5  cost=767.2  feasible=True
+    [18/20] SYN-RC-038-302541: n=38  nv=6  cost=765.6  feasible=True
+    [19/20] SYN-C-039-069251: n=39  nv=6  cost=514.2  feasible=True
+    [20/20] SYN-R-021-436539: n=21  nv=4  cost=669.4  feasible=True
+  Epoch 17/40  [Target  N=40-80]
+    [ 1/20] SYN-R-079-266767: n=79  nv=12  cost=1525.2  feasible=True
+    [ 2/20] SYN-RC-045-808712: n=45  nv=7  cost=849.6  feasible=True
+    [ 3/20] SYN-C-066-117341: n=66  nv=7  cost=730.5  feasible=True
+    [ 4/20] SYN-R-077-973583: n=77  nv=11  cost=1454.5  feasible=True
+    [ 5/20] SYN-RC-076-903677: n=76  nv=12  cost=1515.9  feasible=True
+    [ 6/20] SYN-C-073-480637: n=73  nv=8  cost=678.1  feasible=True
+    [ 7/20] SYN-R-060-773110: n=60  nv=7  cost=1229.5  feasible=True
+    [ 8/20] SYN-RC-056-484588: n=56  nv=8  cost=987.5  feasible=True
+    [ 9/20] SYN-C-053-725122: n=53  nv=9  cost=647.7  feasible=True
+    [10/20] SYN-R-060-336965: n=60  nv=7  cost=1143.3  feasible=True
+    [11/20] SYN-RC-055-834106: n=55  nv=5  cost=1043.8  feasible=True
+    [12/20] SYN-C-056-318589: n=56  nv=7  cost=625.2  feasible=True
+    [13/20] SYN-R-065-003015: n=65  nv=7  cost=1216.0  feasible=True
+    [14/20] SYN-RC-048-447903: n=48  nv=5  cost=897.0  feasible=True
+    [15/20] SYN-C-059-408973: n=59  nv=6  cost=711.3  feasible=True
+    [16/20] SYN-R-069-475355: n=69  nv=8  cost=1207.0  feasible=True
+    [17/20] SYN-RC-060-972124: n=60  nv=7  cost=1009.6  feasible=True
+    [18/20] SYN-C-044-861445: n=44  nv=5  cost=600.8  feasible=True
+    [19/20] SYN-R-040-347798: n=40  nv=6  cost=889.0  feasible=True
+    [20/20] SYN-RC-069-200395: n=69  nv=9  cost=1010.4  feasible=True
+  Epoch 18/40  [Target  N=40-80]
+    [ 1/20] SYN-RC-079-492538: n=79  nv=9  cost=1201.5  feasible=True
+    [ 2/20] SYN-C-076-805557: n=76  nv=8  cost=926.6  feasible=True
+    [ 3/20] SYN-R-046-276247: n=46  nv=7  cost=975.4  feasible=True
+    [ 4/20] SYN-RC-044-529275: n=44  nv=5  cost=885.1  feasible=True
+    [ 5/20] SYN-C-074-565991: n=74  nv=6  cost=657.0  feasible=True
+    [ 6/20] SYN-R-053-857472: n=53  nv=7  cost=1214.4  feasible=True
+    [ 7/20] SYN-RC-072-814367: n=72  nv=10  cost=1243.0  feasible=True
+    [ 8/20] SYN-C-056-803698: n=56  nv=7  cost=815.1  feasible=True
+    [ 9/20] SYN-R-048-527628: n=48  nv=7  cost=1066.0  feasible=True
+    [10/20] SYN-RC-062-930306: n=62  nv=6  cost=855.3  feasible=True
+    [11/20] SYN-C-044-463699: n=44  nv=6  cost=516.3  feasible=True
+    [12/20] SYN-R-055-169844: n=55  nv=8  cost=1261.2  feasible=True
+    [13/20] SYN-RC-063-941913: n=63  nv=9  cost=1227.2  feasible=True
+    [14/20] SYN-C-058-962357: n=58  nv=7  cost=708.8  feasible=True
+    [15/20] SYN-R-050-238509: n=50  nv=7  cost=1079.4  feasible=True
+    [16/20] SYN-RC-068-504425: n=68  nv=8  cost=1183.3  feasible=True
+    [17/20] SYN-C-074-822192: n=74  nv=8  cost=751.1  feasible=True
+    [18/20] SYN-R-059-771439: n=59  nv=7  cost=1156.3  feasible=True
+    [19/20] SYN-RC-079-555647: n=79  nv=12  cost=1334.2  feasible=True
+    [20/20] SYN-C-073-567983: n=73  nv=7  cost=878.0  feasible=True
+  Epoch 19/40  [Target  N=40-80]
+    [ 1/20] SYN-C-040-136911: n=40  nv=5  cost=423.6  feasible=True
+    [ 2/20] SYN-R-075-393184: n=75  nv=9  cost=1343.2  feasible=True
+    [ 3/20] SYN-RC-059-520629: n=59  nv=6  cost=998.4  feasible=True
+    [ 4/20] SYN-C-046-277427: n=46  nv=4  cost=533.7  feasible=True
+    [ 5/20] SYN-R-048-309875: n=48  nv=6  cost=978.5  feasible=True
+    [ 6/20] SYN-RC-056-287412: n=56  nv=7  cost=1020.0  feasible=True
+    [ 7/20] SYN-C-047-769928: n=47  nv=5  cost=676.2  feasible=True
+    [ 8/20] SYN-R-046-678544: n=46  nv=7  cost=1053.8  feasible=True
+    [ 9/20] SYN-RC-075-105547: n=75  nv=8  cost=1215.5  feasible=True
+    [10/20] SYN-C-049-887543: n=49  nv=7  cost=701.7  feasible=True
+    [11/20] SYN-R-057-379876: n=57  nv=8  cost=1157.1  feasible=True
+    [12/20] SYN-RC-058-760903: n=58  nv=5  cost=1004.2  feasible=True
+    [13/20] SYN-C-078-463069: n=78  nv=10  cost=881.6  feasible=True
+    [14/20] SYN-R-053-073312: n=53  nv=8  cost=1035.7  feasible=True
+    [15/20] SYN-RC-061-542645: n=61  nv=7  cost=1021.1  feasible=True
+    [16/20] SYN-C-053-838587: n=53  nv=5  cost=559.6  feasible=True
+    [17/20] SYN-R-080-173410: n=80  nv=10  cost=1389.1  feasible=True
+    [18/20] SYN-RC-056-892595: n=56  nv=8  cost=1004.6  feasible=True
+    [19/20] SYN-C-072-656605: n=72  nv=8  cost=651.5  feasible=True
+    [20/20] SYN-R-071-888614: n=71  nv=7  cost=1363.1  feasible=True
+  Epoch 20/40  [Target  N=40-80]
+    [ 1/20] SYN-R-056-249384: n=56  nv=9  cost=1335.4  feasible=True
+    [ 2/20] SYN-RC-043-647847: n=43  nv=7  cost=886.1  feasible=True
+    [ 3/20] SYN-C-045-751031: n=45  nv=5  cost=610.6  feasible=True
+    [ 4/20] SYN-R-080-110485: n=80  nv=10  cost=1473.0  feasible=True
+    [ 5/20] SYN-RC-067-609167: n=67  nv=8  cost=1152.3  feasible=True
+    [ 6/20] SYN-C-057-382674: n=57  nv=6  cost=622.4  feasible=True
+    [ 7/20] SYN-R-042-257588: n=42  nv=6  cost=931.1  feasible=True
+    [ 8/20] SYN-RC-040-524511: n=40  nv=4  cost=784.6  feasible=True
+    [ 9/20] SYN-C-061-464903: n=61  nv=6  cost=737.7  feasible=True
+    [10/20] SYN-R-048-219152: n=48  nv=7  cost=1053.8  feasible=True
+    [11/20] SYN-RC-080-578490: n=80  nv=12  cost=1457.4  feasible=True
+    [12/20] SYN-C-056-321411: n=56  nv=7  cost=597.1  feasible=True
+    [13/20] SYN-R-050-520111: n=50  nv=8  cost=1111.3  feasible=True
+    [14/20] SYN-RC-068-938218: n=68  nv=9  cost=1097.7  feasible=True
+    [15/20] SYN-C-075-601869: n=75  nv=10  cost=1044.5  feasible=True
+    [16/20] SYN-R-067-089707: n=67  nv=9  cost=1395.7  feasible=True
+    [17/20] SYN-RC-075-024579: n=75  nv=10  cost=1319.1  feasible=True
+    [18/20] SYN-C-040-848801: n=40  nv=5  cost=474.9  feasible=True
+    [19/20] SYN-R-047-870455: n=47  nv=5  cost=986.4  feasible=True
+    [20/20] SYN-RC-044-410946: n=44  nv=7  cost=818.9  feasible=True
+  Epoch 21/40  [Target  N=40-80]
+    [ 1/20] SYN-RC-049-407922: n=49  nv=5  cost=920.0  feasible=True
+    [ 2/20] SYN-C-074-228931: n=74  nv=8  cost=877.1  feasible=True
+    [ 3/20] SYN-R-042-932730: n=42  nv=6  cost=1051.7  feasible=True
+    [ 4/20] SYN-RC-063-137563: n=63  nv=8  cost=1052.1  feasible=True
+    [ 5/20] SYN-C-077-969873: n=77  nv=8  cost=849.0  feasible=True
+    [ 6/20] SYN-R-075-951929: n=75  nv=9  cost=1425.3  feasible=True
+    [ 7/20] SYN-RC-049-784058: n=49  nv=6  cost=1018.5  feasible=True
+    [ 8/20] SYN-C-067-071843: n=67  nv=7  cost=692.8  feasible=True
+    [ 9/20] SYN-R-048-857820: n=48  nv=7  cost=1139.4  feasible=True
+    [10/20] SYN-RC-042-298954: n=42  nv=6  cost=865.8  feasible=True
+    [11/20] SYN-C-059-399365: n=59  nv=6  cost=807.9  feasible=True
+    [12/20] SYN-R-063-400050: n=63  nv=8  cost=1233.3  feasible=True
+    [13/20] SYN-RC-042-598915: n=42  nv=6  cost=830.2  feasible=True
+    [14/20] SYN-C-062-701887: n=62  nv=8  cost=791.4  feasible=True
+    [15/20] SYN-R-053-664632: n=53  nv=8  cost=1192.4  feasible=True
+    [16/20] SYN-RC-055-044068: n=55  nv=7  cost=1027.9  feasible=True
+    [17/20] SYN-C-046-278193: n=46  nv=6  cost=593.1  feasible=True
+    [18/20] SYN-R-062-930808: n=62  nv=7  cost=1167.8  feasible=True
+    [19/20] SYN-RC-075-287818: n=75  nv=8  cost=1231.2  feasible=True
+    [20/20] SYN-C-066-665615: n=66  nv=7  cost=612.1  feasible=True
+  Epoch 22/40  [Target  N=40-80]
+    [ 1/20] SYN-C-079-063774: n=79  nv=8  cost=862.0  feasible=True
+    [ 2/20] SYN-R-049-445070: n=49  nv=8  cost=1128.1  feasible=True
+    [ 3/20] SYN-RC-055-709383: n=55  nv=7  cost=1008.0  feasible=True
+    [ 4/20] SYN-C-050-695806: n=50  nv=6  cost=647.8  feasible=True
+    [ 5/20] SYN-R-051-325092: n=51  nv=8  cost=1122.2  feasible=True
+    [ 6/20] SYN-RC-066-940658: n=66  nv=6  cost=1158.2  feasible=True
+    [ 7/20] SYN-C-041-871741: n=41  nv=5  cost=622.6  feasible=True
+    [ 8/20] SYN-R-051-260250: n=51  nv=8  cost=1118.4  feasible=True
+    [ 9/20] SYN-RC-061-945231: n=61  nv=9  cost=1170.3  feasible=True
+    [10/20] SYN-C-066-024144: n=66  nv=6  cost=715.7  feasible=True
+    [11/20] SYN-R-055-218856: n=55  nv=6  cost=1063.1  feasible=True
+    [12/20] SYN-RC-057-195091: n=57  nv=7  cost=1058.7  feasible=True
+    [13/20] SYN-C-050-759251: n=50  nv=6  cost=635.5  feasible=True
+    [14/20] SYN-R-046-783635: n=46  nv=5  cost=921.5  feasible=True
+    [15/20] SYN-RC-064-591031: n=64  nv=8  cost=1105.7  feasible=True
+    [16/20] SYN-C-042-412211: n=42  nv=7  cost=600.5  feasible=True
+    [17/20] SYN-R-070-816172: n=70  nv=8  cost=1379.2  feasible=True
+    [18/20] SYN-RC-054-574766: n=54  nv=8  cost=1208.5  feasible=True
+    [19/20] SYN-C-052-154746: n=52  nv=6  cost=669.9  feasible=True
+    [20/20] SYN-R-069-648891: n=69  nv=11  cost=1455.5  feasible=True
+  Epoch 23/40  [Target  N=40-80]
+    [ 1/20] SYN-R-062-205023: n=62  nv=9  cost=1322.9  feasible=True
+    [ 2/20] SYN-RC-059-482842: n=59  nv=6  cost=960.3  feasible=True
+    [ 3/20] SYN-C-054-125824: n=54  nv=6  cost=720.9  feasible=True
+    [ 4/20] SYN-R-054-269908: n=54  nv=6  cost=1120.6  feasible=True
+    [ 5/20] SYN-RC-041-230051: n=41  nv=6  cost=769.4  feasible=True
+    [ 6/20] SYN-C-052-120822: n=52  nv=8  cost=708.5  feasible=True
+    [ 7/20] SYN-R-065-768964: n=65  nv=9  cost=1361.4  feasible=True
+    [ 8/20] SYN-RC-061-955682: n=61  nv=8  cost=1050.2  feasible=True
+    [ 9/20] SYN-C-057-505816: n=57  nv=8  cost=773.4  feasible=True
+    [10/20] SYN-R-044-638001: n=44  nv=4  cost=884.3  feasible=True
+    [11/20] SYN-RC-057-301361: n=57  nv=6  cost=855.4  feasible=True
+    [12/20] SYN-C-062-495353: n=62  nv=9  cost=864.5  feasible=True
+    [13/20] SYN-R-072-180058: n=72  nv=10  cost=1395.2  feasible=True
+    [14/20] SYN-RC-065-613397: n=65  nv=6  cost=1020.6  feasible=True
+    [15/20] SYN-C-074-935374: n=74  nv=10  cost=915.6  feasible=True
+    [16/20] SYN-R-061-356233: n=61  nv=7  cost=1130.1  feasible=True
+    [17/20] SYN-RC-041-128674: n=41  nv=5  cost=690.8  feasible=True
+    [18/20] SYN-C-047-981351: n=47  nv=5  cost=629.5  feasible=True
+    [19/20] SYN-R-056-024869: n=56  nv=7  cost=1150.0  feasible=True
+    [20/20] SYN-RC-051-799938: n=51  nv=6  cost=1005.8  feasible=True
+  Epoch 24/40  [Target  N=40-80]
+    [ 1/20] SYN-RC-077-908278: n=77  nv=9  cost=1058.7  feasible=True
+    [ 2/20] SYN-C-056-209103: n=56  nv=9  cost=800.1  feasible=True
+    [ 3/20] SYN-R-042-150485: n=42  nv=6  cost=1109.1  feasible=True
+    [ 4/20] SYN-RC-046-578085: n=46  nv=6  cost=749.8  feasible=True
+    [ 5/20] SYN-C-078-546807: n=78  nv=7  cost=920.3  feasible=True
+    [ 6/20] SYN-R-067-755518: n=67  nv=7  cost=1336.1  feasible=True
+    [ 7/20] SYN-RC-062-260596: n=62  nv=7  cost=1075.4  feasible=True
+    [ 8/20] SYN-C-060-639908: n=60  nv=8  cost=707.2  feasible=True
+    [ 9/20] SYN-R-067-247419: n=67  nv=7  cost=1249.5  feasible=True
+    [10/20] SYN-RC-078-628426: n=78  nv=8  cost=1146.7  feasible=True
+    [11/20] SYN-C-072-056366: n=72  nv=9  cost=722.8  feasible=True
+    [12/20] SYN-R-047-128927: n=47  nv=5  cost=1109.2  feasible=True
+    [13/20] SYN-RC-064-078139: n=64  nv=10  cost=1112.7  feasible=True
+    [14/20] SYN-C-076-178178: n=76  nv=6  cost=958.4  feasible=True
+    [15/20] SYN-R-052-953179: n=52  nv=7  cost=982.1  feasible=True
+    [16/20] SYN-RC-056-701116: n=56  nv=5  cost=989.2  feasible=True
+    [17/20] SYN-C-042-138304: n=42  nv=5  cost=459.1  feasible=True
+    [18/20] SYN-R-067-998970: n=67  nv=7  cost=1194.6  feasible=True
+    [19/20] SYN-RC-040-896575: n=40  nv=6  cost=963.6  feasible=True
+    [20/20] SYN-C-073-673712: n=73  nv=7  cost=763.5  feasible=True
+  Epoch 25/40  [Target  N=40-80]
+    [ 1/20] SYN-C-074-961790: n=74  nv=11  cost=773.3  feasible=True
+    [ 2/20] SYN-R-052-919579: n=52  nv=6  cost=1191.3  feasible=True
+    [ 3/20] SYN-RC-063-911520: n=63  nv=8  cost=961.1  feasible=True
+    [ 4/20] SYN-C-067-314594: n=67  nv=9  cost=580.0  feasible=True
+    [ 5/20] SYN-R-044-014628: n=44  nv=6  cost=1002.1  feasible=True
+    [ 6/20] SYN-RC-061-956675: n=61  nv=6  cost=1038.4  feasible=True
+    [ 7/20] SYN-C-079-641424: n=79  nv=8  cost=667.3  feasible=True
+    [ 8/20] SYN-R-060-408358: n=60  nv=7  cost=1209.0  feasible=True
+    [ 9/20] SYN-RC-047-659380: n=47  nv=6  cost=912.2  feasible=True
+    [10/20] SYN-C-059-100244: n=59  nv=8  cost=695.8  feasible=True
+    [11/20] SYN-R-072-791370: n=72  nv=7  cost=1317.8  feasible=True
+    [12/20] SYN-RC-059-855232: n=59  nv=6  cost=1142.5  feasible=True
+    [13/20] SYN-C-066-938363: n=66  nv=7  cost=697.7  feasible=True
+    [14/20] SYN-R-060-233900: n=60  nv=7  cost=1044.2  feasible=True
+    [15/20] SYN-RC-065-105728: n=65  nv=8  cost=1047.2  feasible=True
+    [16/20] SYN-C-058-199962: n=58  nv=7  cost=673.5  feasible=True
+    [17/20] SYN-R-075-655993: n=75  nv=10  cost=1426.9  feasible=True
+    [18/20] SYN-RC-048-323505: n=48  nv=7  cost=874.1  feasible=True
+    [19/20] SYN-C-052-410917: n=52  nv=7  cost=598.7  feasible=True
+    [20/20] SYN-R-066-442491: n=66  nv=7  cost=1263.5  feasible=True
+  Epoch 26/40  [Target  N=40-80]
+    [ 1/20] SYN-R-064-208058: n=64  nv=6  cost=1184.1  feasible=True
+    [ 2/20] SYN-RC-051-564444: n=51  nv=7  cost=857.4  feasible=True
+    [ 3/20] SYN-C-079-990175: n=79  nv=8  cost=965.6  feasible=True
+    [ 4/20] SYN-R-076-425071: n=76  nv=9  cost=1488.9  feasible=True
+    [ 5/20] SYN-RC-059-692642: n=59  nv=10  cost=1184.1  feasible=True
+    [ 6/20] SYN-C-065-217512: n=65  nv=7  cost=808.6  feasible=True
+    [ 7/20] SYN-R-075-301162: n=75  nv=9  cost=1334.9  feasible=True
+    [ 8/20] SYN-RC-040-875783: n=40  nv=6  cost=793.9  feasible=True
+    [ 9/20] SYN-C-059-290875: n=59  nv=5  cost=804.1  feasible=True
+    [10/20] SYN-R-058-863942: n=58  nv=8  cost=1265.8  feasible=True
+    [11/20] SYN-RC-053-771865: n=53  nv=7  cost=907.3  feasible=True
+    [12/20] SYN-C-067-754823: n=67  nv=9  cost=814.5  feasible=True
+    [13/20] SYN-R-077-586100: n=77  nv=8  cost=1306.0  feasible=True
+    [14/20] SYN-RC-078-193511: n=78  nv=9  cost=1322.5  feasible=True
+    [15/20] SYN-C-060-445608: n=60  nv=8  cost=734.8  feasible=True
+    [16/20] SYN-R-069-244819: n=69  nv=7  cost=1169.8  feasible=True
+    [17/20] SYN-RC-068-674809: n=68  nv=8  cost=1124.7  feasible=True
+    [18/20] SYN-C-068-226509: n=68  nv=8  cost=900.4  feasible=True
+    [19/20] SYN-R-053-185855: n=53  nv=5  cost=1136.7  feasible=True
+    [20/20] SYN-RC-072-038393: n=72  nv=9  cost=1130.6  feasible=True
+  Epoch 27/40  [Target  N=40-80]
+    [ 1/20] SYN-RC-070-651254: n=70  nv=7  cost=1244.7  feasible=True
+    [ 2/20] SYN-C-050-958179: n=50  nv=7  cost=661.9  feasible=True
+    [ 3/20] SYN-R-045-511351: n=45  nv=5  cost=1098.5  feasible=True
+    [ 4/20] SYN-RC-058-541721: n=58  nv=8  cost=989.4  feasible=True
+    [ 5/20] SYN-C-072-844585: n=72  nv=10  cost=775.2  feasible=True
+    [ 6/20] SYN-R-080-056205: n=80  nv=10  cost=1449.5  feasible=True
+    [ 7/20] SYN-RC-079-703037: n=79  nv=8  cost=1224.2  feasible=True
+    [ 8/20] SYN-C-061-502202: n=61  nv=6  cost=771.0  feasible=True
+    [ 9/20] SYN-R-045-226390: n=45  nv=6  cost=1132.3  feasible=True
+    [10/20] SYN-RC-055-361343: n=55  nv=7  cost=931.6  feasible=True
+    [11/20] SYN-C-059-945346: n=59  nv=7  cost=898.9  feasible=True
+    [12/20] SYN-R-054-757318: n=54  nv=8  cost=1165.5  feasible=True
+    [13/20] SYN-RC-052-497487: n=52  nv=5  cost=1072.7  feasible=True
+    [14/20] SYN-C-049-107913: n=49  nv=6  cost=769.0  feasible=True
+    [15/20] SYN-R-041-050190: n=41  nv=4  cost=811.2  feasible=True
+    [16/20] SYN-RC-042-536910: n=42  nv=5  cost=734.2  feasible=True
+    [17/20] SYN-C-055-689153: n=55  nv=9  cost=724.1  feasible=True
+    [18/20] SYN-R-070-717001: n=70  nv=7  cost=1226.3  feasible=True
+    [19/20] SYN-RC-079-363947: n=79  nv=12  cost=1325.4  feasible=True
+    [20/20] SYN-C-044-715467: n=44  nv=5  cost=528.9  feasible=True
+  Epoch 28/40  [Target  N=40-80]
+    [ 1/20] SYN-C-069-221921: n=69  nv=9  cost=704.4  feasible=True
+    [ 2/20] SYN-R-066-577246: n=66  nv=9  cost=1271.0  feasible=True
+    [ 3/20] SYN-RC-080-395985: n=80  nv=7  cost=1344.1  feasible=True
+    [ 4/20] SYN-C-076-872790: n=76  nv=8  cost=690.5  feasible=True
+    [ 5/20] SYN-R-052-992689: n=52  nv=7  cost=1117.5  feasible=True
+    [ 6/20] SYN-RC-064-981994: n=64  nv=8  cost=1003.0  feasible=True
+    [ 7/20] SYN-C-071-535776: n=71  nv=8  cost=731.8  feasible=True
+    [ 8/20] SYN-R-065-571521: n=65  nv=6  cost=1299.0  feasible=True
+    [ 9/20] SYN-RC-055-866811: n=55  nv=10  cost=1164.3  feasible=True
+    [10/20] SYN-C-049-333491: n=49  nv=6  cost=634.7  feasible=True
+    [11/20] SYN-R-040-705189: n=40  nv=6  cost=875.9  feasible=True
+    [12/20] SYN-RC-046-300069: n=46  nv=6  cost=848.8  feasible=True
+    [13/20] SYN-C-067-512157: n=67  nv=7  cost=832.0  feasible=True
+    [14/20] SYN-R-054-272774: n=54  nv=7  cost=1151.9  feasible=True
+    [15/20] SYN-RC-051-462875: n=51  nv=6  cost=1086.9  feasible=True
+    [16/20] SYN-C-073-958515: n=73  nv=7  cost=745.9  feasible=True
+    [17/20] SYN-R-069-764980: n=69  nv=9  cost=1239.5  feasible=True
+    [18/20] SYN-RC-043-594440: n=43  nv=5  cost=775.2  feasible=True
+    [19/20] SYN-C-075-793512: n=75  nv=9  cost=942.9  feasible=True
+    [20/20] SYN-R-055-072318: n=55  nv=7  cost=1228.3  feasible=True
+  Epoch 29/40  [Target  N=40-80]
+    [ 1/20] SYN-R-047-905515: n=47  nv=6  cost=1035.0  feasible=True
+    [ 2/20] SYN-RC-069-477548: n=69  nv=7  cost=1225.1  feasible=True
+    [ 3/20] SYN-C-048-118382: n=48  nv=5  cost=693.6  feasible=True
+    [ 4/20] SYN-R-069-403074: n=69  nv=9  cost=1354.5  feasible=True
+    [ 5/20] SYN-RC-073-910765: n=73  nv=10  cost=1266.5  feasible=True
+    [ 6/20] SYN-C-075-513707: n=75  nv=10  cost=1003.6  feasible=True
+    [ 7/20] SYN-R-078-113853: n=78  nv=9  cost=1288.9  feasible=True
+    [ 8/20] SYN-RC-060-032663: n=60  nv=6  cost=916.3  feasible=True
+    [ 9/20] SYN-C-068-395900: n=68  nv=7  cost=681.9  feasible=True
+    [10/20] SYN-R-079-415488: n=79  nv=8  cost=1360.1  feasible=True
+    [11/20] SYN-RC-072-002702: n=72  nv=10  cost=1292.3  feasible=True
+    [12/20] SYN-C-067-231419: n=67  nv=9  cost=773.7  feasible=True
+    [13/20] SYN-R-075-134293: n=75  nv=7  cost=1181.7  feasible=True
+    [14/20] SYN-RC-068-345826: n=68  nv=6  cost=1068.2  feasible=True
+    [15/20] SYN-C-050-232018: n=50  nv=6  cost=639.7  feasible=True
+    [16/20] SYN-R-070-927836: n=70  nv=9  cost=1237.3  feasible=True
+    [17/20] SYN-RC-068-980745: n=68  nv=7  cost=1176.3  feasible=True
+    [18/20] SYN-C-056-554770: n=56  nv=8  cost=895.7  feasible=True
+    [19/20] SYN-R-055-028877: n=55  nv=6  cost=1204.0  feasible=True
+    [20/20] SYN-RC-080-121613: n=80  nv=8  cost=1188.2  feasible=True
+  Epoch 30/40  [Target  N=40-80]
+    [ 1/20] SYN-RC-057-855486: n=57  nv=7  cost=1061.8  feasible=True
+    [ 2/20] SYN-C-073-240926: n=73  nv=11  cost=889.4  feasible=True
+    [ 3/20] SYN-R-071-159696: n=71  nv=9  cost=1343.8  feasible=True
+    [ 4/20] SYN-RC-080-009613: n=80  nv=8  cost=1260.4  feasible=True
+    [ 5/20] SYN-C-055-043772: n=55  nv=9  cost=624.4  feasible=True
+    [ 6/20] SYN-R-057-196516: n=57  nv=6  cost=1149.3  feasible=True
+    [ 7/20] SYN-RC-068-058624: n=68  nv=9  cost=1140.0  feasible=True
+    [ 8/20] SYN-C-044-883888: n=44  nv=7  cost=745.5  feasible=True
+    [ 9/20] SYN-R-058-868280: n=58  nv=6  cost=1135.6  feasible=True
+    [10/20] SYN-RC-055-420796: n=55  nv=8  cost=1024.2  feasible=True
+    [11/20] SYN-C-057-432948: n=57  nv=5  cost=843.4  feasible=True
+    [12/20] SYN-R-061-184229: n=61  nv=10  cost=1283.5  feasible=True
+    [13/20] SYN-RC-060-670267: n=60  nv=7  cost=1100.9  feasible=True
+    [14/20] SYN-C-074-534667: n=74  nv=9  cost=1086.0  feasible=True
+    [15/20] SYN-R-045-894571: n=45  nv=5  cost=993.8  feasible=True
+    [16/20] SYN-RC-048-566791: n=48  nv=5  cost=872.6  feasible=True
+    [17/20] SYN-C-049-208220: n=49  nv=5  cost=614.8  feasible=True
+    [18/20] SYN-R-054-369525: n=54  nv=5  cost=1260.3  feasible=True
+    [19/20] SYN-RC-064-064710: n=64  nv=7  cost=1150.4  feasible=True
+    [20/20] SYN-C-049-036568: n=49  nv=7  cost=630.3  feasible=True
+  Epoch 31/40  [Target  N=40-80]
+    [ 1/20] SYN-C-053-843730: n=53  nv=5  cost=706.3  feasible=True
+    [ 2/20] SYN-R-044-154320: n=44  nv=5  cost=1012.4  feasible=True
+    [ 3/20] SYN-RC-066-211222: n=66  nv=7  cost=1079.3  feasible=True
+    [ 4/20] SYN-C-066-178969: n=66  nv=9  cost=842.9  feasible=True
+    [ 5/20] SYN-R-061-168458: n=61  nv=10  cost=1198.5  feasible=True
+    [ 6/20] SYN-RC-074-263016: n=74  nv=8  cost=1244.9  feasible=True
+    [ 7/20] SYN-C-069-465872: n=69  nv=9  cost=725.7  feasible=True
+    [ 8/20] SYN-R-066-378212: n=66  nv=6  cost=1177.4  feasible=True
+    [ 9/20] SYN-RC-043-100633: n=43  nv=6  cost=907.5  feasible=True
+    [10/20] SYN-C-053-829586: n=53  nv=7  cost=782.5  feasible=True
+    [11/20] SYN-R-066-776273: n=66  nv=9  cost=1217.8  feasible=True
+    [12/20] SYN-RC-064-320869: n=64  nv=6  cost=1061.1  feasible=True
+    [13/20] SYN-C-077-854789: n=77  nv=8  cost=818.3  feasible=True
+    [14/20] SYN-R-041-152966: n=41  nv=6  cost=983.4  feasible=True
+    [15/20] SYN-RC-076-452671: n=76  nv=9  cost=1357.0  feasible=True
+    [16/20] SYN-C-064-809957: n=64  nv=6  cost=545.1  feasible=True
+    [17/20] SYN-R-070-088231: n=70  nv=9  cost=1301.2  feasible=True
+    [18/20] SYN-RC-040-781315: n=40  nv=5  cost=773.7  feasible=True
+    [19/20] SYN-C-062-778888: n=62  nv=6  cost=671.8  feasible=True
+    [20/20] SYN-R-059-514905: n=59  nv=7  cost=1137.1  feasible=True
+  Epoch 32/40  [Target  N=40-80]
+    [ 1/20] SYN-R-064-445468: n=64  nv=9  cost=1323.6  feasible=True
+    [ 2/20] SYN-RC-066-317946: n=66  nv=7  cost=1037.7  feasible=True
+    [ 3/20] SYN-C-074-258290: n=74  nv=9  cost=932.5  feasible=True
+    [ 4/20] SYN-R-074-773981: n=74  nv=12  cost=1432.5  feasible=True
+    [ 5/20] SYN-RC-078-470251: n=78  nv=10  cost=1290.0  feasible=True
+    [ 6/20] SYN-C-054-023035: n=54  nv=6  cost=690.0  feasible=True
+    [ 7/20] SYN-R-071-706926: n=71  nv=8  cost=1412.5  feasible=True
+    [ 8/20] SYN-RC-054-449597: n=54  nv=8  cost=937.7  feasible=True
+    [ 9/20] SYN-C-057-994395: n=57  nv=6  cost=642.5  feasible=True
+    [10/20] SYN-R-067-581659: n=67  nv=7  cost=1315.5  feasible=True
+    [11/20] SYN-RC-071-810822: n=71  nv=12  cost=1322.9  feasible=True
+    [12/20] SYN-C-041-149373: n=41  nv=5  cost=561.8  feasible=True
+    [13/20] SYN-R-064-508905: n=64  nv=9  cost=1378.7  feasible=True
+    [14/20] SYN-RC-061-539553: n=61  nv=7  cost=1111.3  feasible=True
+    [15/20] SYN-C-065-552228: n=65  nv=7  cost=655.1  feasible=True
+    [16/20] SYN-R-050-701818: n=50  nv=7  cost=1099.4  feasible=True
+    [17/20] SYN-RC-069-272013: n=69  nv=7  cost=1137.3  feasible=True
+    [18/20] SYN-C-048-206027: n=48  nv=6  cost=682.5  feasible=True
+    [19/20] SYN-R-079-589581: n=79  nv=8  cost=1351.3  feasible=True
+    [20/20] SYN-RC-074-796410: n=74  nv=9  cost=1287.2  feasible=True
+  Epoch 33/40  [Chaos   N=20-100]
+    [ 1/20] SYN-RC-023-731180: n=23  nv=3  cost=602.1  feasible=True
+    [ 2/20] SYN-C-070-247230: n=70  nv=7  cost=720.6  feasible=True
+    [ 3/20] SYN-R-095-195275: n=95  nv=10  cost=1542.0  feasible=True
+    [ 4/20] SYN-RC-092-532690: n=92  nv=8  cost=1298.3  feasible=True
+    [ 5/20] SYN-C-023-038416: n=23  nv=3  cost=282.5  feasible=True
+    [ 6/20] SYN-R-030-877551: n=30  nv=4  cost=738.4  feasible=True
+    [ 7/20] SYN-RC-074-123030: n=74  nv=10  cost=1119.6  feasible=True
+    [ 8/20] SYN-C-037-572387: n=37  nv=4  cost=456.7  feasible=True
+    [ 9/20] SYN-R-079-663909: n=79  nv=9  cost=1396.9  feasible=True
+    [10/20] SYN-RC-043-639250: n=43  nv=5  cost=888.1  feasible=True
+    [11/20] SYN-C-026-404847: n=26  nv=3  cost=370.4  feasible=True
+    [12/20] SYN-R-053-814332: n=53  nv=7  cost=1080.5  feasible=True
+    [13/20] SYN-RC-068-064118: n=68  nv=7  cost=1037.3  feasible=True
+    [14/20] SYN-C-061-392010: n=61  nv=9  cost=780.1  feasible=True
+    [15/20] SYN-R-047-056274: n=47  nv=6  cost=1035.8  feasible=True
+    [16/20] SYN-RC-078-244056: n=78  nv=7  cost=1233.5  feasible=True
+    [17/20] SYN-C-061-592865: n=61  nv=8  cost=758.6  feasible=True
+    [18/20] SYN-R-063-561105: n=63  nv=7  cost=1179.0  feasible=True
+    [19/20] SYN-RC-068-523067: n=68  nv=8  cost=1121.3  feasible=True
+    [20/20] SYN-C-055-904176: n=55  nv=7  cost=760.6  feasible=True
+  Epoch 34/40  [Chaos   N=20-100]
+    [ 1/20] SYN-C-073-895612: n=73  nv=9  cost=861.1  feasible=True
+    [ 2/20] SYN-R-052-962796: n=52  nv=7  cost=1063.4  feasible=True
+    [ 3/20] SYN-RC-030-352771: n=30  nv=4  cost=574.6  feasible=True
+    [ 4/20] SYN-C-080-437461: n=80  nv=9  cost=1044.7  feasible=True
+    [ 5/20] SYN-R-022-706838: n=22  nv=3  cost=724.5  feasible=True
+    [ 6/20] SYN-RC-089-793106: n=89  nv=11  cost=1419.7  feasible=True
+    [ 7/20] SYN-C-026-624906: n=26  nv=4  cost=395.4  feasible=True
+    [ 8/20] SYN-R-064-551086: n=64  nv=8  cost=1241.2  feasible=True
+    [ 9/20] SYN-RC-048-291548: n=48  nv=4  cost=830.8  feasible=True
+    [10/20] SYN-C-028-360873: n=28  nv=4  cost=432.1  feasible=True
+    [11/20] SYN-R-025-208276: n=25  nv=4  cost=698.0  feasible=True
+    [12/20] SYN-RC-023-349397: n=23  nv=3  cost=494.7  feasible=True
+    [13/20] SYN-C-051-357921: n=51  nv=6  cost=722.2  feasible=True
+    [14/20] SYN-R-045-458237: n=45  nv=8  cost=1020.3  feasible=True
+    [15/20] SYN-RC-022-901247: n=22  nv=4  cost=544.7  feasible=True
+    [16/20] SYN-C-099-995226: n=99  nv=9  cost=910.9  feasible=True
+    [17/20] SYN-R-039-642699: n=39  nv=4  cost=985.5  feasible=True
+    [18/20] SYN-RC-050-676426: n=50  nv=7  cost=928.5  feasible=True
+    [19/20] SYN-C-036-363661: n=36  nv=4  cost=499.2  feasible=True
+    [20/20] SYN-R-080-720928: n=80  nv=9  cost=1357.4  feasible=True
+  Epoch 35/40  [Chaos   N=20-100]
+    [ 1/20] SYN-R-034-262329: n=34  nv=4  cost=863.1  feasible=True
+    [ 2/20] SYN-RC-092-169639: n=92  nv=11  cost=1363.5  feasible=True
+    [ 3/20] SYN-C-047-644838: n=47  nv=5  cost=640.4  feasible=True
+    [ 4/20] SYN-R-079-014940: n=79  nv=9  cost=1448.3  feasible=True
+    [ 5/20] SYN-RC-052-325904: n=52  nv=6  cost=882.9  feasible=True
+    [ 6/20] SYN-C-067-719743: n=67  nv=8  cost=785.1  feasible=True
+    [ 7/20] SYN-R-041-241226: n=41  nv=5  cost=886.6  feasible=True
+    [ 8/20] SYN-RC-097-235930: n=97  nv=14  cost=1679.4  feasible=True
+    [ 9/20] SYN-C-097-444494: n=97  nv=10  cost=941.4  feasible=True
+    [10/20] SYN-R-034-595569: n=34  nv=6  cost=837.0  feasible=True
+    [11/20] SYN-RC-040-812804: n=40  nv=5  cost=759.7  feasible=True
+    [12/20] SYN-C-059-694884: n=59  nv=7  cost=700.6  feasible=True
+    [13/20] SYN-R-033-033047: n=33  nv=4  cost=838.4  feasible=True
+    [14/20] SYN-RC-094-197057: n=94  nv=11  cost=1302.2  feasible=True
+    [15/20] SYN-C-023-670211: n=23  nv=4  cost=477.5  feasible=True
+    [16/20] SYN-R-059-535231: n=59  nv=8  cost=1180.2  feasible=True
+    [17/20] SYN-RC-093-516017: n=93  nv=11  cost=1361.8  feasible=True
+    [18/20] SYN-C-068-655058: n=68  nv=6  cost=548.9  feasible=True
+    [19/20] SYN-R-070-385750: n=70  nv=9  cost=1380.8  feasible=True
+    [20/20] SYN-RC-045-308262: n=45  nv=7  cost=907.0  feasible=True
