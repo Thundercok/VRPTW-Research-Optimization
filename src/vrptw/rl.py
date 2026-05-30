@@ -208,7 +208,7 @@ class WelfordRewardNormalizer:
             return 1.0
         return math.sqrt(max(self._M2 / (self._n - 1), self.eps**2))
 
-    def normalize(self, r: float) -> float:
+    def normalize(self, r: float) -> float | None:
         self.observe(r)
         if self._n < self.warmup:
             return None  # caller must check before pushing to buffer

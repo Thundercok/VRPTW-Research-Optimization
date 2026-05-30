@@ -734,3 +734,122 @@ Domain-randomization curriculum: 40 epochs × 20 instances/epoch
     [18/20] SYN-C-068-655058: n=68  nv=6  cost=548.9  feasible=True
     [19/20] SYN-R-070-385750: n=70  nv=9  cost=1380.8  feasible=True
     [20/20] SYN-RC-045-308262: n=45  nv=7  cost=907.0  feasible=True
+  Epoch 36/40  [Chaos   N=20-100]
+    [ 1/20] SYN-RC-029-182201: n=29  nv=4  cost=654.3  feasible=True
+    [ 2/20] SYN-C-095-576827: n=95  nv=12  cost=1127.4  feasible=True
+    [ 3/20] SYN-R-100-084944: n=100  nv=12  cost=1663.9  feasible=True
+    [ 4/20] SYN-RC-051-580170: n=51  nv=7  cost=1019.8  feasible=True
+    [ 5/20] SYN-C-033-880193: n=33  nv=3  cost=488.9  feasible=True
+    [ 6/20] SYN-R-058-479632: n=58  nv=8  cost=1152.0  feasible=True
+    [ 7/20] SYN-RC-096-739697: n=96  nv=11  cost=1389.4  feasible=True
+    [ 8/20] SYN-C-035-035758: n=35  nv=5  cost=661.5  feasible=True
+    [ 9/20] SYN-R-092-463463: n=92  nv=11  cost=1614.5  feasible=True
+    [10/20] SYN-RC-025-702158: n=25  nv=3  cost=520.2  feasible=True
+    [11/20] SYN-C-064-813097: n=64  nv=8  cost=702.2  feasible=True
+    [12/20] SYN-R-088-379055: n=88  nv=10  cost=1368.6  feasible=True
+    [13/20] SYN-RC-074-503863: n=74  nv=7  cost=1141.9  feasible=True
+    [14/20] SYN-C-067-380115: n=67  nv=7  cost=845.5  feasible=True
+    [15/20] SYN-R-028-504473: n=28  nv=4  cost=893.1  feasible=True
+    [16/20] SYN-RC-084-579574: n=84  nv=12  cost=1393.9  feasible=True
+    [17/20] SYN-C-063-187093: n=63  nv=8  cost=704.4  feasible=True
+    [18/20] SYN-R-021-267787: n=21  nv=5  cost=732.8  feasible=True
+    [19/20] SYN-RC-073-087048: n=73  nv=9  cost=1168.4  feasible=True
+    [20/20] SYN-C-082-145651: n=82  nv=10  cost=888.2  feasible=True
+  Epoch 37/40  [Chaos   N=20-100]
+    [ 1/20] SYN-C-033-193124: n=33  nv=3  cost=422.0  feasible=True
+    [ 2/20] SYN-R-075-026357: n=75  nv=11  cost=1408.8  feasible=True
+    [ 3/20] SYN-RC-066-444064: n=66  nv=7  cost=993.8  feasible=True
+    [ 4/20] SYN-C-078-935268: n=78  nv=8  cost=802.4  feasible=True
+    [ 5/20] SYN-R-039-344503: n=39  nv=4  cost=823.4  feasible=True
+    [ 6/20] SYN-RC-075-493239: n=75  nv=7  cost=1060.4  feasible=True
+    [ 7/20] SYN-C-042-549476: n=42  nv=5  cost=472.3  feasible=True
+    [ 8/20] SYN-R-086-345705: n=86  nv=9  cost=1627.4  feasible=True
+    [ 9/20] SYN-RC-054-219714: n=54  nv=8  cost=1152.4  feasible=True
+    [10/20] SYN-C-098-331478: n=98  nv=10  cost=877.4  feasible=True
+    [11/20] SYN-R-088-515684: n=88  nv=10  cost=1423.1  feasible=True
+    [12/20] SYN-RC-081-459391: n=81  nv=8  cost=1117.7  feasible=True
+    [13/20] SYN-C-079-323231: n=79  nv=10  cost=1062.7  feasible=True
+    [14/20] SYN-R-075-384433: n=75  nv=10  cost=1425.6  feasible=True
+    [15/20] SYN-RC-095-557292: n=95  nv=11  cost=1339.3  feasible=True
+    [16/20] SYN-C-054-096753: n=54  nv=5  cost=746.7  feasible=True
+    [17/20] SYN-R-061-661511: n=61  nv=7  cost=1162.9  feasible=True
+    [18/20] SYN-RC-051-019747: n=51  nv=5  cost=942.7  feasible=True
+    [19/20] SYN-C-031-948972: n=31  nv=4  cost=456.2  feasible=True
+    [20/20] SYN-R-055-741154: n=55  nv=6  cost=1068.1  feasible=True
+  Epoch 38/40  [Chaos   N=20-100]
+    [ 1/20] SYN-R-077-191439: n=77  nv=11  cost=1468.0  feasible=True
+    [ 2/20] SYN-RC-051-663211: n=51  nv=8  cost=967.2  feasible=True
+    [ 3/20] SYN-C-079-156771: n=79  nv=8  cost=910.6  feasible=True
+    [ 4/20] SYN-R-092-621678: n=92  nv=9  cost=1570.3  feasible=True
+    [ 5/20] SYN-RC-098-808724: n=98  nv=12  cost=1555.2  feasible=True
+    [ 6/20] SYN-C-068-716112: n=68  nv=6  cost=759.1  feasible=True
+    [ 7/20] SYN-R-063-801493: n=63  nv=7  cost=1310.2  feasible=True
+    [ 8/20] SYN-RC-023-150488: n=23  nv=3  cost=539.5  feasible=True
+    [ 9/20] SYN-C-083-770973: n=83  nv=10  cost=761.6  feasible=True
+    [10/20] SYN-R-061-684346: n=61  nv=8  cost=1149.9  feasible=True
+    [11/20] SYN-RC-043-930134: n=43  nv=5  cost=760.6  feasible=True
+    [12/20] SYN-C-082-574361: n=82  nv=12  cost=1078.4  feasible=True
+    [13/20] SYN-R-047-549419: n=47  nv=6  cost=1002.0  feasible=True
+    [14/20] SYN-RC-065-410772: n=65  nv=7  cost=1046.2  feasible=True
+    [15/20] SYN-C-053-159319: n=53  nv=5  cost=658.9  feasible=True
+    [16/20] SYN-R-063-571760: n=63  nv=7  cost=1219.7  feasible=True
+    [17/20] SYN-RC-055-833212: n=55  nv=7  cost=1079.7  feasible=True
+    [18/20] SYN-C-096-705823: n=96  nv=10  cost=979.2  feasible=True
+    [19/20] SYN-R-055-141117: n=55  nv=7  cost=1078.2  feasible=True
+    [20/20] SYN-RC-091-149608: n=91  nv=11  cost=1417.3  feasible=True
+  Epoch 39/40  [Chaos   N=20-100]
+    [ 1/20] SYN-RC-021-813061: n=21  nv=3  cost=545.2  feasible=True
+    [ 2/20] SYN-C-086-805175: n=86  nv=8  cost=680.8  feasible=True
+    [ 3/20] SYN-R-044-709194: n=44  nv=5  cost=993.5  feasible=True
+    [ 4/20] SYN-RC-030-188399: n=30  nv=5  cost=774.3  feasible=True
+    [ 5/20] SYN-C-050-933888: n=50  nv=7  cost=701.1  feasible=True
+    [ 6/20] SYN-R-072-021000: n=72  nv=11  cost=1448.8  feasible=True
+    [ 7/20] SYN-RC-082-536738: n=82  nv=10  cost=1265.5  feasible=True
+    [ 8/20] SYN-C-091-543969: n=91  nv=9  cost=955.7  feasible=True
+    [ 9/20] SYN-R-050-781763: n=50  nv=5  cost=1046.8  feasible=True
+    [10/20] SYN-RC-080-473735: n=80  nv=9  cost=1323.0  feasible=True
+    [11/20] SYN-C-082-587201: n=82  nv=8  cost=974.7  feasible=True
+    [12/20] SYN-R-077-803663: n=77  nv=8  cost=1357.7  feasible=True
+    [13/20] SYN-RC-022-243170: n=22  nv=3  cost=575.3  feasible=True
+    [14/20] SYN-C-031-517621: n=31  nv=3  cost=359.8  feasible=True
+    [15/20] SYN-R-057-730402: n=57  nv=8  cost=1204.8  feasible=True
+    [16/20] SYN-RC-048-457563: n=48  nv=7  cost=987.8  feasible=True
+    [17/20] SYN-C-071-626712: n=71  nv=8  cost=602.3  feasible=True
+    [18/20] SYN-R-051-164011: n=51  nv=7  cost=1120.2  feasible=True
+    [19/20] SYN-RC-059-689883: n=59  nv=7  cost=997.4  feasible=True
+    [20/20] SYN-C-094-778228: n=94  nv=9  cost=1054.2  feasible=True
+  Epoch 40/40  [Chaos   N=20-100]
+    [ 1/20] SYN-C-067-987350: n=67  nv=7  cost=751.7  feasible=True
+    [ 2/20] SYN-R-080-173249: n=80  nv=12  cost=1632.0  feasible=True
+    [ 3/20] SYN-RC-090-653881: n=90  nv=10  cost=1346.7  feasible=True
+    [ 4/20] SYN-C-087-716541: n=87  nv=9  cost=849.2  feasible=True
+    [ 5/20] SYN-R-064-408228: n=64  nv=9  cost=1254.0  feasible=True
+    [ 6/20] SYN-RC-074-127748: n=74  nv=7  cost=1187.9  feasible=True
+    [ 7/20] SYN-C-090-063608: n=90  nv=10  cost=1042.6  feasible=True
+    [ 8/20] SYN-R-062-661064: n=62  nv=8  cost=1221.7  feasible=True
+    [ 9/20] SYN-RC-065-140701: n=65  nv=11  cost=1139.8  feasible=True
+    [10/20] SYN-C-078-389312: n=78  nv=10  cost=851.2  feasible=True
+    [11/20] SYN-R-054-250146: n=54  nv=8  cost=1214.2  feasible=True
+    [12/20] SYN-RC-059-787409: n=59  nv=6  cost=951.5  feasible=True
+    [13/20] SYN-C-052-148006: n=52  nv=6  cost=694.6  feasible=True
+    [14/20] SYN-R-049-141662: n=49  nv=8  cost=1084.0  feasible=True
+    [15/20] SYN-RC-035-468086: n=35  nv=4  cost=905.0  feasible=True
+    [16/20] SYN-C-044-764874: n=44  nv=6  cost=708.6  feasible=True
+    [17/20] SYN-R-060-594262: n=60  nv=7  cost=1119.9  feasible=True
+    [18/20] SYN-RC-035-094839: n=35  nv=5  cost=744.7  feasible=True
+    [19/20] SYN-C-088-771981: n=88  nv=12  cost=871.4  feasible=True
+    [20/20] SYN-R-043-765064: n=43  nv=8  cost=1072.2  feasible=True
+Weights saved → /Users/thundercock2/Documents/Github/VRPTW-Research-Optimization/VRPTW-Research-Optimization/rl_alns_dr_v15.safetensors
+Done.
+HighsMipSolverData::transformNewIntegerFeasibleSolution tmpSolver.run();
+HighsMipSolverData::transformNewIntegerFeasibleSolution tmpSolver.run();
+HighsMipSolverData::transformNewIntegerFeasibleSolution tmpSolver.run();
+HighsMipSolverData::transformNewIntegerFeasibleSolution tmpSolver.run();
+HighsMipSolverData::transformNewIntegerFeasibleSolution tmpSolver.run();
+HighsMipSolverData::transformNewIntegerFeasibleSolution tmpSolver.run();
+HighsMipSolverData::transformNewIntegerFeasibleSolution tmpSolver.run();
+HighsMipSolverData::transformNewIntegerFeasibleSolution tmpSolver.run();
+HighsMipSolverData::transformNewIntegerFeasibleSolution tmpSolver.run();
+HighsMipSolverData::transformNewIntegerFeasibleSolution tmpSolver.run();
+HighsMipSolverData::transformNewIntegerFeasibleSolution tmpSolver.run();
+HighsMipSolverData::transformNewIntegerFeasibleSolution tmpSolver.run();

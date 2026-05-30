@@ -77,9 +77,11 @@ if __name__ == "__main__":
     # ── Load Solomon instances ─────────────────────────────────────────────
     print(f"Loading datasets from: {cfg.data_path}")
     datasets = load_datasets(cfg.data_path)
-    rc1_insts = datasets.get("rc1", [])
-    rc2_insts = datasets.get("rc2", [])
-    all_insts = rc1_insts + rc2_insts
+    all_insts = []
+    counts_str = []
+    for g, insts in datasets.items():
+        all_insts.extend(insts)
+        counts_str.append(f"{g.upper()}: {len(insts)}")
     
     # Filter by user-requested instances if provided
     if args.instances:
@@ -87,7 +89,7 @@ if __name__ == "__main__":
         all_insts = [inst for inst in all_insts if inst.name.lower() in req_lower]
         print(f"Filtered to {len(all_insts)} requested instances: {[i.name for i in all_insts]}")
     else:
-        print(f"  RC1: {len(rc1_insts)} instances  |  RC2: {len(rc2_insts)} instances")
+        print("  " + "  |  ".join(counts_str))
 
     if not all_insts:
         print("ERROR: No matching instances found. Check data-path and instance filters.")

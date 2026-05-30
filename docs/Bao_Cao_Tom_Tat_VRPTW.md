@@ -182,7 +182,12 @@ Sau bước chèn lời giải hoặc sau bước Set Partitioning, hệ thống
 - **Relocate:** Di chuyển một khách hàng từ vị trí hiện tại sang một vị trí khác trên một tuyến khác.
 - **Swap:** Trao đổi vị trí của hai khách hàng nằm trên hai tuyến khác nhau.
 - **Cross-Exchange:** Trao đổi chéo hai phân đoạn khách hàng (độ dài phân đoạn tối đa là 3) giữa hai tuyến đường. Kỹ thuật này sử dụng một bộ lọc bán kính hạt mịn (granular radius filter) để loại bỏ sớm các tuyến đường quá xa nhau về địa lý hoặc không giao thoa về khung thời gian.
-- **Xóa tuyến chủ động (`_iterative_route_elimination`):** Giải thuật phân tách tuyến đường nhỏ nhất thành tập hợp các khách hàng đơn lẻ và tìm cách chèn toàn bộ các khách hàng này vào vị trí khả thi của các tuyến đường khác. Nếu chèn thành công, số lượng phương tiện thực tế giảm đi 1 xe một cách trực tiếp.
+
+#### 2.9. Tóm tắt phân tích độ phức tạp thuật toán
+- **Thời gian toán tử phá hủy:** Dao động từ $O(q)$ (phá hủy ngẫu nhiên) đến $O(q \cdot n \log n)$ (phá hủy Shaw).
+- **Thời gian toán tử sửa chữa:** Sửa chữa tham lam tốn $O(q \cdot m \cdot k)$, các toán tử Regret-2/3 tốn $O(q^2 \cdot m \cdot k)$ bước với kiểm tra tính khả thi $O(1)$ tại mỗi vị trí.
+- **Không gian lưu trữ:** Bộ đệm Plateau và Operator tốn không gian cố định $O(N_{buffer})$, Route Pool tốn không gian tuyến tính $O(N_{pool} \cdot n)$.
+- **Chi phí mỗi vòng lặp:** Lan truyền tiến mạng nơ-ron tốn thời gian hằng số nhỏ ($O(1)$). Toàn bộ chu kỳ ALNS (phá hủy + sửa chữa + LAC + huấn luyện trực tuyến mạng Operator) tốn từ 5.0 đến 12.0 mili-giây trên CPU Intel i7-14700KF. Bước Set Partitioning bằng MILP chạy định kỳ và được khống chế giới hạn cứng ở mức tối đa $4.0$ giây.
 
 ---
 
@@ -253,6 +258,25 @@ Dưới đây là bảng tổng hợp kết quả thực nghiệm trung bình th
 | **Trung bình toàn bộ** | **7.729** | **1011.78** | **+1.622%** |
 
 *Đánh giá:* Kết quả Gap% trung bình trên toàn bộ 56 thực thể Solomon chỉ là **1.62%** và duy trì số lượng xe tối ưu. Điều này chứng minh các bộ điều khiển DDQN đã học được các quy luật tổng quát về tiến trình tối ưu hóa và cấu trúc phân bố địa lý thay vì chỉ học vẹt (overfitting) trên một phân phối dữ liệu cụ thể.
+
+##### Bảng 3.3: Kết quả đối chứng hiệu năng giữa Hybrid-DDQN và Hybrid-DDQN-Transfer-DR trên nhóm RC1 với 2500 vòng lặp (5 lượt chạy)
+| Thực thể | Hybrid-DDQN (Học trực tuyến) | | | | Hybrid-DDQN-Transfer-DR (Chuyển giao) | | | |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| | **NV** | **TD** | **Gap%** | **Thời gian (s)** | **NV** | **TD** | **Gap%** | **Thời gian (s)** |
+| **RC101** | 15.00 | 1649.87 | -2.77% | 309.8 | 15.00 | 1657.39 | -2.33% | 159.9 |
+| **RC102** | 13.60 | 1501.41 | -3.43% | 260.9 | 13.20 | 1506.62 | -3.10% | 200.4 |
+| **RC103** | 11.80 | 1319.66 | +4.60% | 236.8 | 11.60 | 1320.24 | +4.64% | 136.9 |
+| **RC104** | 10.00 | 1156.36 | +1.84% | 156.5 | 10.00 | 1149.42 | +1.23% | 137.9 |
+| **RC105** | 14.20 | 1566.37 | -3.87% | 236.8 | 14.20 | 1564.68 | -3.97% | 156.2 |
+| **RC106** | 12.80 | 1390.74 | -2.39% | 254.5 | 12.40 | 1395.70 | -2.04% | 174.0 |
+| **RC107** | 11.60 | 1261.41 | +2.51% | 227.9 | 11.40 | 1257.22 | +2.17% | 170.4 |
+| **RC108** | 10.60 | 1139.66 | -0.01% | 171.2 | 10.60 | 1148.95 | +0.80% | 79.4 |
+| **Trung bình** | **12.45** | **1373.19** | **-0.44%** | **231.8** | **12.30** | **1375.03** | **-0.33%** | **151.9** |
+
+*Đóng góp của mô hình chuyển giao:*
+1. **Tối ưu Fleet Size:** Đạt trung bình 12.30 xe (tốt hơn mức 12.45 xe của học trực tuyến), hạn chế hội tụ non nhờ huấn luyện offline bằng Domain Randomization.
+2. **Tăng tốc 35%:** Thời gian xử lý trung bình giảm từ 231.8 giây xuống còn 151.9 giây do loại bỏ việc tính toán gradient trực tuyến.
+3. **Bảo toàn chất lượng tuyến:** Mức Gap% khoảng cách đạt -0.33%, tương đương với mức -0.44% của mô hình học trực tuyến đầy đủ.
 
 #### 3.4. Hệ thống phân phối trực quan và Cổng thông tin (NAMI)
 Nhằm hiện thực hóa kết quả nghiên cứu lý thuyết vào thực tiễn doanh nghiệp, chúng tôi đã phát triển cổng thông tin điều phối mang tên **NAMI**. Hệ thống có kiến trúc gồm:
