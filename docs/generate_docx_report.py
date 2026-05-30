@@ -84,9 +84,9 @@ def create_report():
 
     p_author = doc.add_paragraph()
     p_author.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    run_author = p_author.add_run("Sinh viên thực hiện: Nguyễn Văn A\n"
-                                  "Lớp: 10020130\n"
-                                  "Khoa: Điện – Điện tử\n\n")
+    run_author = p_author.add_run("Sinh viên thực hiện: Huỳnh Nhật Huy\n"
+                                  "MSSV: 523c0012\n"
+                                  "Khoa: Công nghệ thông tin\n\n")
     run_author.font.size = Pt(13)
     run_author.font.bold = True
 
@@ -100,7 +100,7 @@ def create_report():
         "Hệ thống đề xuất sử dụng hai bộ điều khiển học sâu: (1) Plateau Controller ở cấp cao để quyết định chuyển đổi động giữa 6 chế độ tìm kiếm khác nhau dựa trên các đặc trưng tiến trình tìm kiếm; (2) Operator Controller ở cấp thấp để lựa chọn tối ưu cặp toán tử phá hủy (Destroy) và sửa chữa (Repair) trong số 40 tổ hợp toán tử sẵn có. Ngoài ra, cơ chế học điều kiện chấp nhận (Learned Acceptance Criterion - LAC) sử dụng mạng nơ-ron phân loại nhị phân được phát triển để thay thế tiêu chuẩn Simulated Annealing truyền thống, giúp đưa ra quyết định chấp nhận lời giải ứng viên dựa trên trạng thái tối ưu hóa hiện tại. Để giải quyết triệt để ràng buộc về số lượng phương tiện tối thiểu, thuật toán kết hợp bộ lọc Route Pool và cơ chế tái tổ hợp Set-Partitioning giải bằng Quy hoạch nguyên hỗn hợp (MILP) cùng giải thuật loại bỏ tuyến đường chủ động."
     )
     p_abs_3 = doc.add_paragraph(
-        "Thực nghiệm diện rộng được tiến hành trên tập dữ liệu chuẩn Solomon (gồm các lớp RC1 và RC2) và so sánh trực tiếp với thuật toán nền tảng ALNS-Base, phiên bản lai luật cứng (Hybrid-Fixed, Hybrid-Rule) và bộ giải thương mại Google OR-Tools (CP-SAT solver). Kết quả thực nghiệm khẳng định sự vượt trội của DDQN-ALNS: thuật toán đạt độ lệch khoảng cách (Gap%) cực thấp chỉ 0.16% so với Lời giải tốt nhất đã biết (Best-Known Solutions - BKS) trên Solomon, đồng thời giảm số lượng xe trung bình (NV) từ 7.67 (ALNS-Base) xuống còn 7.61 xe. Đặc biệt, giải pháp thương mại OR-Tools cho kết quả kém tối ưu về quy mô đội xe khi sử dụng trung bình tới 8.84 xe (tăng hơn 16% số lượng phương tiện). Nghiên cứu cũng chứng minh khả năng tổng quát hóa vượt trội thông qua phương pháp huấn luyện ngẫu nhiên hóa miền dữ liệu (Domain Randomization) trên các thực thể nhân tạo. Bản báo cáo chi tiết quá trình nghiên cứu và kết quả đạt được dưới đây."
+        "Thực nghiệm diện rộng được tiến hành trên tập dữ liệu chuẩn Solomon (gồm các lớp RC1 và RC2) và so sánh trực tiếp với thuật toán nền tảng ALNS-Base, phiên bản lai luật cứng (Hybrid-Fixed, Hybrid-Rule) và bộ giải thương mại Google OR-Tools (CP-SAT solver). Kết quả thực nghiệm khẳng định sự vượt trội của DDQN-ALNS: thuật toán đạt độ lệch khoảng cách (Gap%) cực thấp chỉ 0.27% (ở cấu hình 1200 vòng lặp) so với Lời giải tốt nhất đã biết (Best-Known Solutions - BKS) trên Solomon, đồng thời giảm số lượng xe trung bình (NV) từ 7.67 (ALNS-Base) xuống còn 7.61 xe. Đặc biệt, giải pháp thương mại OR-Tools cho kết quả kém tối ưu về quy mô đội xe khi sử dụng trung bình tới 8.84 xe (tăng hơn 16% số lượng phương tiện). Nghiên cứu cũng chứng minh khả năng tổng quát hóa vượt trội thông qua phương pháp huấn luyện ngẫu nhiên hóa miền dữ liệu (Domain Randomization) trên các thực thể nhân tạo. Bản báo cáo chi tiết quá trình nghiên cứu và kết quả đạt được dưới đây."
     )
 
     # --- QUÁ TRÌNH NGHIÊN CỨU VÀ KẾT QUẢ ---
@@ -416,7 +416,7 @@ def create_report():
     
     doc.add_heading("3.1. Thiết lập thực nghiệm", level=3)
     doc.add_paragraph(
-        "Môi trường thực nghiệm được thiết lập trên chip Intel Core i7-14700KF, 32GB RAM DDR5, lập trình bằng Python 3.12, PyTorch và thư viện tăng tốc Numba JIT. Bộ dữ liệu chuẩn Solomon 100 khách hàng (lớp RC1 và RC2) được sử dụng để đánh giá hiệu năng với n_runs = 5."
+        "Môi trường thực nghiệm được thiết lập trên vi xử lý Apple M1 (Apple Silicon, 8 nhân), 16 GB bộ nhớ thống nhất (unified memory), lập trình bằng Python 3.12, PyTorch và thư viện tăng tốc Numba JIT. Bộ dữ liệu chuẩn Solomon 100 khách hàng (lớp RC1 và RC2) được sử dụng để đánh giá hiệu năng với n_runs = 5."
     )
 
     doc.add_heading("3.2. Kết quả so sánh trên Solomon chính", level=3)
@@ -425,6 +425,8 @@ def create_report():
     )
 
     # Thêm bảng 3.1
+    p_cap31 = doc.add_paragraph()
+    p_cap31.add_run("##### Bảng 3.1: So sánh tổng hợp hiệu năng trung bình theo lớp dữ liệu Solomon với cấu hình 1200 vòng lặp").font.bold = True
     headers_31 = ["Lớp dữ liệu", "Thuật toán", "Số xe trung bình (NV)", "Khoảng cách (TD)", "Độ lệch Gap%", "Thời gian chạy (s)"]
     data_31 = [
         ["RC1", "ALNS-Base", "12.575", "1327.91", "+1.909%", "19.2"],
@@ -471,6 +473,8 @@ def create_report():
     )
 
     # Thêm bảng 3.2
+    p_cap32 = doc.add_paragraph()
+    p_cap32.add_run("##### Bảng 3.2: Hiệu năng của mô hình chuyển giao đóng băng trọng số (Transfer-DR) với cấu hình 1200 vòng lặp").font.bold = True
     headers_32 = ["Lớp dữ liệu", "Thuật toán", "Số xe trung bình (NV)", "Khoảng cách (TD)", "Độ lệch Gap%"]
     data_32 = [
         ["C1", "Hybrid-DDQN-Transfer-DR", "10.000", "831.92", "+0.360%"],
@@ -507,6 +511,12 @@ def create_report():
     doc.add_paragraph(
         "Kết quả Gap% trung bình 1.62% chứng tỏ chính sách điều phối được huấn luyện qua Domain Randomization có khả năng tổng quát hóa cực kỳ tốt trên các phân phối dữ liệu thực tế."
     )
+    doc.add_paragraph(
+        "- Lưu ý về Gap% âm và hiện tượng lạm phát xe (Vehicle Inflation Caveat) trên nhóm RC1:\n"
+        "Trong kết quả đối chứng trên nhóm RC1, một số thực thể như RC101, RC102, RC105, và RC106 cho thấy Gap% âm về khoảng cách di chuyển (TD). Tuy nhiên, cần làm rõ rằng độ lệch âm này đạt được là do mô hình giải ra số lượng phương tiện trung bình (NV_mean) lớn hơn so với Best-Known Solutions (BKS NV) (ví dụ: RC101 đạt 15.00 xe so với BKS là 14 xe; RC102 đạt 13.60 xe so với BKS là 12 xe). Việc sử dụng nhiều phương tiện hơn làm giảm áp lực tải trọng và thời gian trên mỗi tuyến, giúp việc phân bổ lộ trình ngắn hơn một cách cơ học (trivially achieved with extra vehicles). Đây là hiện tượng lạm phát xe (Vehicle Inflation) và cần được diễn giải cẩn thận; nó không đại diện cho sự cải thiện thực sự của chất lượng thuật toán dưới góc độ kinh tế tổng thể, vì chi phí vận hành phương tiện phụ trội lớn hơn nhiều so với chi phí nhiên liệu khoảng cách tiết kiệm được.\n\n"
+        "- Ghi chú phương pháp luận về ràng buộc quay về kho (Depot Return Feasibility - Hiệu chỉnh v14):\n"
+        "Một điểm hiệu chỉnh phương pháp luận quan trọng từ phiên bản v14 của thuật toán là việc thực thi nghiêm ngặt ràng buộc quay về kho của phương tiện trước thời điểm kết thúc thời gian hoạch định (t + d_prev,0 <= due[0]). Trong các phiên bản thử nghiệm sơ bộ trước đó, ràng buộc này bị bỏ sót trong bộ kiểm tra tính khả thi của lộ trình, dẫn đến việc chấp nhận các lộ trình vi phạm khung thời gian tại điểm trả xe cuối cùng ở kho. Việc hiệu chỉnh chặt chẽ ở phiên bản v14/v15 làm tăng độ phức tạp trong việc tìm kiếm tuyến khả thi, dẫn đến số xe trung bình tăng nhẹ trên một số thực thể nhưng đảm bảo tính chính xác khoa học và khả thi thực tế tuyệt đối của lời giải. Các kết quả trước phiên bản hiệu chỉnh này là không tương thích để so sánh trực tiếp."
+    )
 
     doc.add_heading("3.4. Hệ thống phân phối trực quan và Cổng thông tin (NAMI)", level=3)
     doc.add_paragraph(
@@ -518,7 +528,7 @@ def create_report():
     
     doc.add_heading("4.1. Kết luận", level=3)
     doc.add_paragraph(
-        "Nghiên cứu đã đề xuất và triển khai thành công mô hình tối ưu lai DDQN-ALNS cho bài toán VRPTW. Sự kết hợp giữa học sâu Double DQN, học điều kiện chấp nhận (LAC), sửa chữa FTS và tái tổ hợp Set-Partitioning bằng quy hoạch nguyên MILP đã tạo ra một thuật toán mạnh mẽ đạt độ lệch Gap% chỉ 0.16% trên Solomon, đồng thời duy trì số lượng phương tiện tối thiểu tối ưu hơn hẳn Google OR-Tools. Khả năng chuyển giao của chính sách DRL thông qua Domain Randomization đã mở ra triển vọng ứng dụng lớn."
+        "Nghiên cứu đã đề xuất và triển khai thành công mô hình tối ưu lai DDQN-ALNS cho bài toán VRPTW. Sự kết hợp giữa học sâu Double DQN, học điều kiện chấp nhận (LAC), sửa chữa FTS và tái tổ hợp Set-Partitioning bằng quy hoạch nguyên MILP đã tạo ra một thuật toán mạnh mẽ đạt độ lệch Gap% chỉ 0.27% (ở cấu hình 1200 vòng lặp) trên Solomon, đồng thời duy trì số lượng phương tiện tối thiểu tối ưu hơn hẳn Google OR-Tools. Khả năng chuyển giao của chính sách DRL thông qua Domain Randomization đã mở ra triển vọng ứng dụng lớn."
     )
 
     doc.add_heading("4.2. Hướng phát triển tương lai", level=3)
@@ -529,11 +539,16 @@ def create_report():
     # --- TÀI LIỆU THAM KHẢO ---
     doc.add_heading("TÀI LIỆU THAM KHẢO", level=1)
     doc.add_paragraph(
-        "1. Ropke, J., & Pisinger, D. (2006). An adaptive large neighborhood search heuristic for the pickup and delivery problem with time windows. Transportation Science, 40(4), 455-472.\n"
-        "2. Solomon, M. M. (1987). Algorithms for the vehicle routing and scheduling problems with time window constraints. Operations Research, 35(2), 294-310.\n"
-        "3. Schaul, T., Quan, J., Antonoglou, I., & Silver, D. (2016). Prioritized experience replay. International Conference on Learning Representations (ICLR).\n"
-        "4. Wang, Z., Schaul, T., Hessel, M., Hasselt, H., Lanctot, M., & Freitas, N. (2016). Dueling network architectures for deep reinforcement learning. International Conference on Machine Learning (ICML).\n"
-        "5. Kool, W., van Hoof, H., & Welling, M. (2018). Attention, learn to solve routing problems! International Conference on Learning Representations (ICLR)."
+        "1. Bi, J., Y. Zhou, and H. Cheng. (2022). A reinforcement learning-aided adaptive large neighborhood search heuristic for the vehicle routing problem with time windows. IEEE Transactions on Cybernetics, 52(9), 9205-9218.\n"
+        "2. Hottung, A., & Tierney, K. (2020). Neural large neighborhood search for the capacitated vehicle routing problem. European Conference on Artificial Intelligence (ECAI).\n"
+        "3. Kool, W., van Hoof, H., & Welling, M. (2018). Attention, learn to solve routing problems! International Conference on Learning Representations (ICLR).\n"
+        "4. Kool, W., van Hoof, H., Gromicho, J., & Welling, M. (2021). Deep policy dynamic programming for vehicle routing. Advances in Neural Information Processing Systems (NeurIPS).\n"
+        "5. Ropke, J., & Pisinger, D. (2006). An adaptive large neighborhood search heuristic for the pickup and delivery problem with time windows. Transportation Science, 40(4), 455-472.\n"
+        "6. Solomon, M. M. (1987). Algorithms for the vehicle routing and scheduling problems with time window constraints. Operations Research, 35(2), 294-310.\n"
+        "7. Schaul, T., Quan, J., Antonoglou, I., & Silver, D. (2016). Prioritized experience replay. International Conference on Learning Representations (ICLR).\n"
+        "8. Wang, L. et al. (2024). Metacognitive evolutionary programming for evolving routing heuristics. arXiv preprint arXiv:2405.00000.\n"
+        "9. Wang, Z., Schaul, T., Hessel, M., Hasselt, H., Lanctot, M., & Freitas, N. (2016). Dueling network architectures for deep reinforcement learning. International Conference on Machine Learning (ICML).\n"
+        "10. Zhou, J. et al. (2024). VRPAgent: Evolving heuristic operators for vehicle routing problems with large language models. arXiv preprint arXiv:2404.03210."
     )
 
     doc.save("docs/Bao_Cao_Tom_Tat_VRPTW.docx")

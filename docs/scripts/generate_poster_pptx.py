@@ -111,7 +111,7 @@ def create_poster():
     p_fit.font.color.rgb = COLOR_WHITE
 
     p_subfit = tf_fit.add_paragraph()
-    p_subfit.text = "Khoa Điện – Điện tử"
+    p_subfit.text = "Khoa Công nghệ thông tin"
     p_subfit.font.name = 'Arial'
     p_subfit.font.size = Pt(24)
     p_subfit.font.italic = True
@@ -144,7 +144,7 @@ def create_poster():
 
     # 6.3. Thông tin Tác giả (SVTH & GVHD) ở dưới tiêu đề
     p_author_info = tf_title.add_paragraph()
-    p_author_info.text = "SVTH: Nguyễn Văn A¹ (MSSV: 10020130)\nGVHD: PGS. TS. Trần Hoàng Nam*"
+    p_author_info.text = "SVTH: Huỳnh Nhật Huy¹ (MSSV: 523c0012)\nGVHD: TS. Hồ Thị Linh*"
     p_author_info.font.name = 'Arial'
     p_author_info.font.size = Pt(18)
     p_author_info.font.bold = True
@@ -152,7 +152,7 @@ def create_poster():
     p_author_info.space_after = Pt(10)
 
     p_footnote = tf_title.add_paragraph()
-    p_footnote.text = "¹ Sinh viên ngành Kỹ thuật Điện tử - Viễn thông, Khoa Điện – Điện tử\n* Bộ môn Điện tử Công nghiệp, Khoa Điện – Điện tử"
+    p_footnote.text = "¹ Sinh viên ngành Khoa học máy tính, Khoa Công nghệ thông tin\n* Bộ môn Khoa học máy tính, Khoa Công nghệ thông tin"
     p_footnote.font.name = 'Arial'
     p_footnote.font.size = Pt(14)
     p_footnote.font.italic = True
@@ -172,7 +172,7 @@ def create_poster():
     p_uni.font.color.rgb = COLOR_WHITE
 
     p_fac = tf_logo.add_paragraph()
-    p_fac.text = "KHOA ĐIỆN - ĐIỆN TỬ"
+    p_fac.text = "KHOA CÔNG NGHỆ THÔNG TIN"
     p_fac.alignment = PP_ALIGN.RIGHT
     p_fac.font.name = 'Arial'
     p_fac.font.size = Pt(20)
@@ -284,7 +284,7 @@ def create_poster():
 
     add_bullet(tf_data, "Tập Solomon chính", "Đánh giá chi tiết trên các lớp RC1 (khung thời gian ngặt, khách hàng phân bố hỗn hợp giữa cụm và ngẫu nhiên) và RC2 (khung thời gian rộng, sức tải xe lớn). Quy mô thực thể gồm 100 khách hàng.")
     add_bullet(tf_data, "Ngẫu nhiên hóa miền (Domain Randomization)", "Huấn luyện chính sách DRL trên hệ thống mô phỏng dữ liệu tự động với quy mô từ 25 đến 100 khách hàng và các phân phối khung thời gian ngẫu nhiên để tăng khả năng tổng quát hóa.")
-    add_bullet(tf_data, "Môi trường phần cứng", "CPU Intel Core i7-14700KF (28 nhân, tốc độ lên tới 5.6 GHz), 32 GB RAM DDR5.")
+    add_bullet(tf_data, "Môi trường phần cứng", "CPU Apple M1 (Apple Silicon, 8 nhân), 16 GB bộ nhớ thống nhất (unified memory).")
     add_bullet(tf_data, "Môi trường phần mềm", "Python 3.10, PyTorch 2.1 (CPU-optimized), SciPy 1.11, Numba JIT (tối ưu hóa biên dịch trực tiếp các toán tử hình học và tìm kiếm).")
 
     # --- HÀNG 2: PHƯƠNG PHÁP THỰC HIỆN (BĂNG RỘNG TOÀN CHIỀU NGANG) ---
@@ -452,7 +452,7 @@ def create_poster():
     tf_concl.paragraphs[0].space_after = Pt(8)
 
     add_bullet(tf_concl, "Đóng góp chính", "Phát triển bộ điều khiển Plateau & Operator bằng Dueling Double DQN; thay Simulated Annealing bằng cơ chế học LAC; phát triển toán tử sửa chữa bảo toàn Forward Time Slack (FTS) phối hợp Set Partitioning qua MILP.")
-    add_bullet(tf_concl, "Hiệu năng thực tế", "Đạt Gap% chỉ 0.16% trên Solomon, duy trì quy mô đội xe tối thiểu tối ưu kinh tế vượt trội so với Google OR-Tools. Đóng gói hệ thống trực quan hóa điều phối NAMI.")
+    add_bullet(tf_concl, "Hiệu năng thực tế", "Đạt Gap% chỉ 0.27% trên Solomon (ở cấu hình 1200 vòng lặp), duy trì quy mô đội xe tối thiểu tối ưu kinh tế vượt trội so với Google OR-Tools. Đóng gói hệ thống trực quan hóa điều phối NAMI.")
     add_bullet(tf_concl, "Hướng nghiên cứu tiếp theo", "Mở rộng bài toán hỗ trợ đội xe không đồng nhất (Heterogeneous Fleet VRP) với sức tải và định mức chi phí khác nhau; tích hợp các quy định bắt buộc về thời gian làm việc và nghỉ ngơi của tài xế; phát triển mô hình tái tối ưu hóa động (Dynamic Routing) thời gian thực.")
 
     # Thêm mục Tài liệu tham khảo rút gọn ở dưới cùng cột kết luận
@@ -467,9 +467,9 @@ def create_poster():
     
     p_ref_text = tf_concl.add_paragraph()
     p_ref_text.text = (
-        "1. Ropke & Pisinger (2006). An adaptive large neighborhood search heuristic... Transportation Science, 40(4).\n"
-        "2. Solomon (1987). Algorithms for the vehicle routing and scheduling problems... Operations Research, 35(2).\n"
-        "3. Kool, van Hoof & Welling (2018). Attention, learn to solve routing problems! ICLR."
+        "1. Bi et al. (2022). A reinforcement learning-aided adaptive ALNS heuristic... IEEE Trans. Cybern., 52(9).\n"
+        "2. Kool et al. (2021). Deep policy dynamic programming for vehicle routing. NeurIPS.\n"
+        "3. Ropke & Pisinger (2006). An adaptive large neighborhood search heuristic... Transportation Science, 40(4)."
     )
     p_ref_text.font.name = 'Segoe UI'
     p_ref_text.font.size = Pt(11)
