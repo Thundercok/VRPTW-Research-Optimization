@@ -12,7 +12,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 
 from .config import MODES, Config
-from .core import Plan
+from .core import Inst, Plan
 from .operators import N_ACTIONS, N_R
 
 DEVICE = torch.device("cpu")
@@ -169,6 +169,57 @@ class EliteArchive:
         bucket.append(plan.copy())
         bucket.sort(key=lambda p: (p.nv, p.cost))
         self._plans[key] = bucket[: self.k]
+
+    def load_plans(self, folder: str, insts_dict: dict[str, Inst]) -> None:
+        if not os.path.exists(folder):
+            return
+        import json
+        for fname in os.listdir(folder):
+            if not fname.endswith(".json"):
+                continue
+            path = os.path.join(folder, fname)
+            try:
+                with open(path) as f:
+                    data = json.load(f)
+                inst_name = data["instance"]
+                if inst_name in insts_dict:
+                    plan = Plan(data["routes"], insts_dict[inst_name], data.get("algo", ""))
+                    bucket = self._plans.setdefault(inst_name, [])
+                    bucket.append(plan)
+                    bucket.sort(key=lambda p: (p.nv, p.cost))
+                    self._plans[inst_name] = bucket[: self.k]
+            except Exception:
+                pass
+
+    def update_and_save(self, plan: Plan, folder: str) -> None:
+        if not plan.feasible:
+            return
+        key = plan.inst.name
+        bucket = self._plans.setdefault(key, [])
+        old_best = bucket[0] if bucket else None
+        bucket.append(plan.copy())
+        bucket.sort(key=lambda p: (p.nv, p.cost))
+        self._plans[key] = bucket[: self.k]
+        
+        new_best = self._plans[key][0]
+        is_improved = (old_best is None or 
+                       new_best.nv < old_best.nv or 
+                       (new_best.nv == old_best.nv and new_best.cost < old_best.cost - 1e-6))
+        if is_improved:
+            os.makedirs(folder, exist_ok=True)
+            path = os.path.join(folder, f"{key}.json")
+            import json
+            try:
+                with open(path, "w") as f:
+                    json.dump({
+                        "instance": key,
+                        "cost": new_best.cost,
+                        "nv": new_best.nv,
+                        "routes": new_best.routes,
+                        "algo": new_best.algo
+                    }, f)
+            except Exception:
+                pass
 
     def best(self, inst_name: str) -> Plan | None:
         bucket = self._plans.get(inst_name, [])

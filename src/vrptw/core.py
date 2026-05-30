@@ -42,6 +42,16 @@ class Inst:
             1 for i in range(1, self.n + 1)
             if self.tw_width[i] < 0.5 * avg_cross_time
         ) / max(self.n, 1)
+        
+        # Precompute k-nearest neighbors for each customer (excluding depot 0, excluding self)
+        k_neighbors = min(15, self.n - 1) if self.n > 1 else 0
+        self.neighbors_k = [[]] # depot 0 has no neighbors in this list
+        for i in range(1, self.n + 1):
+            dists = self.dist[i].copy()
+            dists[0] = float('inf') # exclude depot
+            dists[i] = float('inf') # exclude self
+            nearest = list(np.argsort(dists)[:k_neighbors])
+            self.neighbors_k.append(nearest)
 
 
 @njit(cache=True)

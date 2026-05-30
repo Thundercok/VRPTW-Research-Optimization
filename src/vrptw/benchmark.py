@@ -164,6 +164,11 @@ def run_benchmark(
     ckpt_path = checkpoint_path or os.path.join(cfg.output_dir, "benchmark_checkpoint.csv")
     if archive is None:
         archive = EliteArchive(k=cfg.elite_archive_k)
+    
+    # Load existing plans for cross-seeding
+    plans_folder = os.path.join(cfg.output_dir, "elite_plans")
+    insts_dict = {inst.name: inst for inst in instances}
+    archive.load_plans(plans_folder, insts_dict)
 
     rows: list[dict] = []
     completed: set = set()
@@ -220,7 +225,7 @@ def run_benchmark(
 
             for i, (res, plan) in enumerate(run_results):
                 if plan is not None:
-                    archive.update(plan)
+                    archive.update_and_save(plan, plans_folder)
                 time_v.append(res["time"])
                 elapsed_h = (time.time() - wall_start) / 3600
                 if res["nv"] is not None:

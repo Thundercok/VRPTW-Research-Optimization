@@ -64,9 +64,10 @@ class ALNSSolver:
         temp = cfg.temp_control * cur.cost / math.log(2)
         history = [best.cost]
         no_imp = 0
+        self.q_scale = 1.0
         for it in range(cfg.alns_iterations):
             di, ri = self.bandit.select()
-            size = destroy_size(it, cfg.alns_iterations, cfg, self.inst.n)
+            size = destroy_size(it, cfg.alns_iterations, cfg, self.inst.n, scale=self.q_scale)
             dest, removed = DESTROY[di](cur.copy(), size)
             cand = REPAIR[ri](dest, removed)
             score = 0
@@ -80,6 +81,13 @@ class ALNSSolver:
                 cur = cand
             else:
                 no_imp += 1
+            
+            # Adapt q_scale based on whether search is improving or stuck
+            if no_imp == 0:
+                self.q_scale = max(0.6, self.q_scale * 0.98)
+            else:
+                self.q_scale = min(1.6, self.q_scale * 1.005)
+                
             self.bandit.update(di, ri, score, cfg.sigma1)
             if (it + 1) % cfg.segment_size == 0:
                 self.bandit.decay(cfg.bandit_decay)
@@ -148,8 +156,30 @@ class HybridDDQNSolver:
                         p_up[bare] = v.to(DEVICE)
                 elif k.startswith("operator."):
                     bare = k.split(".", 1)[1]
-                    if bare in operator_sd and tuple(v.shape) == tuple(operator_sd[bare].shape):
-                        o_up[bare] = v.to(DEVICE)
+                    if bare in operator_sd:
+                        if tuple(v.shape) != tuple(operator_sd[bare].shape):
+                            # Pad shape from (40, hid2) to (45, hid2) to support the 9th destroy operator
+                            if "adv_head.2.weight" in bare:
+                                padded = operator_sd[bare].clone()
+                                loaded_n = v.shape[0]
+                                padded[:loaded_n] = v
+                                # Copy weights of actions 25..29 (route_eliminate) to actions 35..39 (costly_route_eliminate)
+                                for new_act in range(loaded_n, padded.shape[0]):
+                                    rep_idx = new_act % 5
+                                    src_act = 5 * 5 + rep_idx
+                                    padded[new_act] = v[src_act]
+                                o_up[bare] = padded.to(DEVICE)
+                            elif "adv_head.2.bias" in bare:
+                                padded = operator_sd[bare].clone()
+                                loaded_n = v.shape[0]
+                                padded[:loaded_n] = v
+                                for new_act in range(loaded_n, padded.shape[0]):
+                                    rep_idx = new_act % 5
+                                    src_act = 5 * 5 + rep_idx
+                                    padded[new_act] = v[src_act]
+                                o_up[bare] = padded.to(DEVICE)
+                        else:
+                            o_up[bare] = v.to(DEVICE)
         plateau_sd.update(p_up)
         operator_sd.update(o_up)
         self.ctrl.q.load_state_dict(plateau_sd)
@@ -245,6 +275,10 @@ class HybridDDQNSolver:
         td_component = (1.0 - lam) * (
             3.0 * best_nv_gain * denom + 3.5 * best_cost_gain + 2.0 * cur_nv_gain * denom + 1.8 * cur_cost_gain
         )
+        if best_after.nv < best_before.nv:
+            base += 15.0 * (best_before.nv - best_after.nv)
+        if cur_after.nv < cur_before.nv:
+            base += 5.0 * (cur_before.nv - cur_after.nv)
         base += nv_component + td_component
         if accepted_moves <= max(1, self.cfg.segment_size // 10):
             base -= 0.15
@@ -270,6 +304,10 @@ class HybridDDQNSolver:
             td_component = (1.0 - lam) * (
                 0.50 * best_nv_gain * denom + 1.80 * best_cost_gain + 0.30 * cur_nv_gain * denom + 0.90 * cur_cost_gain
             )
+            if best_after.nv < best_before.nv:
+                base += 15.0 * (best_before.nv - best_after.nv)
+            if cur_after.nv < cur_before.nv:
+                base += 5.0 * (cur_before.nv - cur_after.nv)
             base += nv_component + td_component
             if cur_after.nv > cur_before.nv:
                 base -= 0.5 * ((cur_after.nv - cur_before.nv) / denom) * denom
@@ -377,6 +415,7 @@ class HybridDDQNSolver:
         history: list[float] = [best.cost]
         recent_improvements: deque[int] = deque(maxlen=cfg.segment_size)
         no_imp = 0
+        self.q_scale = 1.0
         n_segments = math.ceil(cfg.hybrid_iterations / cfg.segment_size)
 
         for seg_idx in range(n_segments):
@@ -418,7 +457,7 @@ class HybridDDQNSolver:
                         prior_strength=self.cfg.bandit_prior_strength,
                     )
                     op_action = di * N_R + ri
-                size = destroy_size(it, cfg.hybrid_iterations, cfg, self.inst.n, scale=mode.destroy_scale)
+                size = destroy_size(it, cfg.hybrid_iterations, cfg, self.inst.n, scale=mode.destroy_scale * self.q_scale)
                 cur_before = cur.copy()
                 best_before = best.copy()
                 dest, removed = DESTROY[di](cur.copy(), size)
@@ -510,6 +549,13 @@ class HybridDDQNSolver:
                         )
                     if (it + 1) % 4 == 0:
                         self.op_ctrl.train_step()
+                
+                # Adapt q_scale based on whether search is improving or stuck
+                if no_imp == 0:
+                    self.q_scale = max(0.6, self.q_scale * 0.98)
+                else:
+                    self.q_scale = min(1.6, self.q_scale * 1.005)
+                    
                 temp *= cfg.temp_decay * mode.temp_decay_scale
                 history.append(best.cost)
                 if no_imp >= cfg.early_stop_patience:

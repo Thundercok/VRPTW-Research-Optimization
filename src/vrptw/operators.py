@@ -55,6 +55,7 @@ def op_shaw(plan: Plan, size: int) -> tuple[Plan, list[int]]:
     while len(removed) < size:
         # Dynamically select a reference node from the already removed set
         ref_node = random.choice(removed)
+        neighbors = inst.neighbors_k[ref_node]
         candidates = [
             (
                 n,
@@ -62,9 +63,21 @@ def op_shaw(plan: Plan, size: int) -> tuple[Plan, list[int]]:
                 + 0.4 * abs(inst.ready_times[ref_node] - inst.ready_times[n]) / max_tw
                 + 0.1 * abs(inst.demands[ref_node] - inst.demands[n]) / inst.capacity,
             )
-            for n in nodes
+            for n in neighbors
             if n not in rs
         ]
+        if not candidates:
+            # Fallback to all remaining nodes if neighbors are exhausted
+            candidates = [
+                (
+                    n,
+                    0.5 * inst.dist[ref_node, n] / max_dist
+                    + 0.4 * abs(inst.ready_times[ref_node] - inst.ready_times[n]) / max_tw
+                    + 0.1 * abs(inst.demands[ref_node] - inst.demands[n]) / inst.capacity,
+                )
+                for n in nodes
+                if n not in rs
+            ]
         if not candidates:
             break
         candidates.sort(key=lambda x: x[1])
@@ -244,6 +257,70 @@ def op_cross_route_shaw(plan: Plan, size: int) -> tuple[Plan, list[int]]:
     return _invalidate(plan), removed
 
 
+def _remove_neighborhood_additional(plan: Plan, removed: list[int], size: int) -> list[int]:
+    inst = plan.inst
+    nodes = [n for r in plan.routes for n in r]
+    rs = set(removed)
+    candidates = [n for n in nodes if n not in rs]
+    if not candidates or len(removed) >= size:
+        return removed
+    
+    max_dist = inst.max_dist + 1e-9
+    max_tw = max(inst.due_times - inst.ready_times) + 1e-9
+    
+    scores = []
+    for n in candidates:
+        min_score = float('inf')
+        for ref in removed:
+            score = (
+                0.5 * inst.dist[ref, n] / max_dist
+                + 0.4 * abs(inst.ready_times[ref] - inst.ready_times[n]) / max_tw
+                + 0.1 * abs(inst.demands[ref] - inst.demands[n]) / inst.capacity
+            )
+            if score < min_score:
+                min_score = score
+        scores.append((n, min_score))
+        
+    scores.sort(key=lambda x: x[1])
+    
+    p = 3.0
+    while len(removed) < size and scores:
+        idx = int((random.random() ** p) * len(scores))
+        chosen, _ = scores.pop(idx)
+        removed.append(chosen)
+        rs.add(chosen)
+        
+    return removed
+
+
+def op_route_costly_eliminate(plan: Plan, size: int) -> tuple[Plan, list[int]]:
+    if len(plan.routes) <= 1:
+        return op_random(plan, size)
+    inst = plan.inst
+    scored = []
+    from .heuristics import _route_cost_list
+    for idx, route in enumerate(plan.routes):
+        if not route:
+            continue
+        cost = _route_cost_list(route, inst)
+        noise = random.random() * 0.1 * cost
+        scored.append((cost + noise, idx))
+    
+    best_idx = max(scored, key=lambda x: x[0])[1]
+    removed = list(plan.routes[best_idx])
+    drop_ids = {best_idx}
+    
+    plan.routes = [r for i, r in enumerate(plan.routes) if i not in drop_ids]
+    
+    if len(removed) < size:
+        removed = _remove_neighborhood_additional(plan, removed, size)
+        rs = set(removed)
+        plan.routes = [[n for n in r if n not in rs] for r in plan.routes]
+        plan.routes = [r for r in plan.routes if r]
+        
+    return _invalidate(plan), removed
+
+
 DESTROY = [
     op_random,
     op_worst,
@@ -252,6 +329,7 @@ DESTROY = [
     op_tw_urgent,
     op_route_eliminate,
     op_route_dispersion_eliminate,
+    op_route_costly_eliminate,
     op_cross_route_shaw,
 ]
 
@@ -417,7 +495,7 @@ REPAIR = [op_greedy, op_regret_2, op_regret_3, op_tw_greedy, op_fts_greedy]
 N_D, N_R = len(DESTROY), len(REPAIR)
 N_ACTIONS = N_D * N_R
 
-assert N_D == 8
+assert N_D == 9
 assert N_R == 5
 for _m in MODES:
     assert len(_m.destroy_bias) == N_D

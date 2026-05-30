@@ -195,6 +195,61 @@ def _try_route_compact(plan: Plan, nv_ceiling: int | None = None) -> Plan | None
     return None
 
 
+def _best_or_opt(plan: Plan, nv_ceiling: int | None = None):
+    inst = plan.inst
+    best_delta, best_move = -1e-9, None
+    for si, source_route in enumerate(plan.routes):
+        sc = _route_cost_list(source_route, inst)
+        for L in (2, 3):
+            for sp in range(len(source_route) - L + 1):
+                seg = source_route[sp : sp + L]
+                sn = source_route[:sp] + source_route[sp + L:]
+                if sn and not _check_route(sn, inst):
+                    continue
+                snc = _route_cost_list(sn, inst) if sn else 0.0
+                for di, dest_route in enumerate(plan.routes):
+                    if di == si:
+                        continue
+                    dc = _route_cost_list(dest_route, inst)
+                    for ip in range(len(dest_route) + 1):
+                        # Try original segment order
+                        dn = dest_route[:ip] + seg + dest_route[ip:]
+                        if _check_route(dn, inst):
+                            new_nv = plan.nv - (1 if not sn else 0)
+                            if nv_ceiling is None or new_nv <= nv_ceiling:
+                                delta = snc + _route_cost_list(dn, inst) - sc - dc
+                                if new_nv < plan.nv:
+                                    delta -= 1000.0
+                                if delta < best_delta:
+                                    best_delta, best_move = delta, (si, sp, L, di, ip, False)
+
+                        # Try reversed segment order
+                        dn_rev = dest_route[:ip] + list(reversed(seg)) + dest_route[ip:]
+                        if _check_route(dn_rev, inst):
+                            new_nv = plan.nv - (1 if not sn else 0)
+                            if nv_ceiling is None or new_nv <= nv_ceiling:
+                                delta = snc + _route_cost_list(dn_rev, inst) - sc - dc
+                                if new_nv < plan.nv:
+                                    delta -= 1000.0
+                                if delta < best_delta:
+                                    best_delta, best_move = delta, (si, sp, L, di, ip, True)
+    return best_move
+
+
+def _apply_or_opt(plan: Plan, move: tuple[int, int, int, int, int, bool]) -> Plan:
+    si, sp, L, di, ip, is_reversed = move
+    routes = [r[:] for r in plan.routes]
+    seg = routes[si][sp : sp + L]
+    del routes[si][sp : sp + L]
+    if si < di and len(routes[si]) == 0:
+        di -= 1
+    routes = [r for r in routes if r]
+    if is_reversed:
+        seg = list(reversed(seg))
+    routes[di] = routes[di][:ip] + seg + routes[di][ip:]
+    return Plan(routes, plan.inst, plan.algo)
+
+
 def local_search(plan: Plan, max_passes: int = 1,
                  nv_ceiling: int | None = None,
                  max_ls_moves: int = 5) -> Plan:
@@ -227,6 +282,14 @@ def local_search(plan: Plan, max_passes: int = 1,
             if move is not None:
                 cand = _apply_swap(best, move)
                 if cand.feasible and cand.cost + 1e-9 < best.cost:
+                    best, improved = cand, True
+                    moves += 1
+                    continue
+            move = _best_or_opt(best, nv_ceiling=nv_ceiling)
+            if move is not None:
+                cand = _apply_or_opt(best, move)
+                if cand.feasible and (cand.dominates(best) or
+                        (cand.nv == best.nv and cand.cost + 1e-9 < best.cost)):
                     best, improved = cand, True
                     moves += 1
                     continue
