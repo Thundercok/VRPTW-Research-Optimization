@@ -6,7 +6,7 @@
         "dev": "vite",
         "build": "vite build",
         "preview": "vite preview",
-        "dev:all": "concurrently -k -n \"firebase,backend,vite\" -c \"yellow,blue,green\" \"(firebase emulators:start --only auth,firestore & ./scripts/seed-user.sh & wait)\" \"make dev-emulator\" \"vite --port 5050\""
+        "dev:all": "concurrently -k -n \"firebase,backend,vite\" -c \"yellow,blue,green\" \"(npx firebase-tools emulators:start --only auth,firestore & ./scripts/seed-user.sh & wait)\" \"make dev-emulator\" \"vite --port 5050\""
     },
     "dependencies": {
         "firebase": "^11.0.0",
