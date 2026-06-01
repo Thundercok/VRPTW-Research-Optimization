@@ -338,29 +338,29 @@ class ModeSpec:
 
 MODES: tuple[ModeSpec, ...] = (
     ModeSpec(
-        "default", 1.00, 1.00, 1.000, (1.0, 1.0, 1.0, 1.0, 1.0, 0.8, 0.8, 0.8, 1.0), (1.0, 1.0, 1.0, 1.0, 1.1), 0, False
+        "default", 1.00, 1.00, 1.000, (1.0, 1.0, 1.0, 1.0, 1.0, 0.8, 0.8, 0.8, 1.0, 0.8), (1.0, 1.0, 1.0, 1.0, 1.1), 0, False
     ),
     ModeSpec(
-        "intensify", 0.70, 0.98, 0.995, (0.5, 1.3, 1.2, 0.5, 1.0, 0.7, 0.8, 0.8, 0.9), (1.3, 1.2, 0.8, 1.0, 1.3), 1, False
+        "intensify", 0.70, 0.98, 0.995, (0.5, 1.3, 1.2, 0.5, 1.0, 0.7, 0.8, 0.8, 0.9, 0.6), (1.3, 1.2, 0.8, 1.0, 1.3), 1, False
     ),
     ModeSpec(
-        "diversify", 1.35, 1.08, 1.002, (1.5, 0.9, 1.3, 1.4, 1.0, 0.7, 1.4, 1.4, 1.6), (0.9, 1.0, 1.3, 1.0, 0.9), 0, False
+        "diversify", 1.35, 1.08, 1.002, (1.5, 0.9, 1.3, 1.4, 1.0, 0.7, 1.4, 1.4, 1.6, 1.2), (0.9, 1.0, 1.3, 1.0, 0.9), 0, False
     ),
     ModeSpec(
-        "tw_rescue", 1.10, 1.05, 1.000, (0.6, 0.9, 1.1, 0.8, 1.8, 0.4, 0.8, 0.8, 1.0), (0.8, 1.0, 1.2, 1.8, 2.2), 1, False
+        "tw_rescue", 1.10, 1.05, 1.000, (0.6, 0.9, 1.1, 0.8, 1.8, 0.4, 0.8, 0.8, 1.0, 0.4), (0.8, 1.0, 1.2, 1.8, 2.2), 1, False
     ),
     ModeSpec(
         "pool_recombine",
         0.90,
         1.01,
         0.997,
-        (0.7, 1.2, 0.9, 1.1, 0.8, 1.8, 1.6, 1.6, 1.1),
+        (0.7, 1.2, 0.9, 1.1, 0.8, 1.8, 1.6, 1.6, 1.1, 1.8),
         (0.7, 1.1, 1.5, 0.9, 1.1),
         1,
         True,
     ),
     ModeSpec(
-        "route_reduce", 0.95, 1.02, 0.998, (0.6, 1.0, 0.9, 1.7, 0.6, 2.2, 2.4, 2.4, 1.2), (0.8, 1.2, 1.5, 1.0, 1.4), 1, True
+        "route_reduce", 0.95, 1.02, 0.998, (0.6, 1.0, 0.9, 1.7, 0.6, 2.2, 2.4, 2.4, 1.2, 2.6), (0.8, 1.2, 1.5, 1.0, 1.4), 1, True
     ),
 )
 
@@ -1087,6 +1087,54 @@ def op_route_costly_eliminate(plan: Plan, size: int) -> tuple[Plan, list[int]]:
     return _invalidate(plan), removed
 
 
+def op_route_merge_sample(plan: Plan, size: int) -> tuple[Plan, list[int]]:
+    """
+    Route Merge Sampling (10th destroy operator).
+
+    Selects the capacity-compatible route pair with the smallest combined customer
+    count and removes the smaller route's customers. The repair operator must then
+    insert them back — often into the surviving route, producing a longer merged
+    route that the pool otherwise under-represents.
+
+    Key difference from op_route_eliminate: this operator explicitly verifies
+    combined capacity compatibility before selection, maximising the probability
+    that repair produces a single consolidated route rather than creating a new one.
+    """
+    if len(plan.routes) <= 1:
+        return op_random(plan, size)
+    inst = plan.inst
+
+    # Find capacity-compatible pairs sorted by combined customer count
+    candidates = []
+    for i, r1 in enumerate(plan.routes):
+        load1 = sum(inst.demands[n] for n in r1)
+        for j, r2 in enumerate(plan.routes):
+            if j <= i:
+                continue
+            load2 = sum(inst.demands[n] for n in r2)
+            if load1 + load2 > inst.capacity:
+                continue
+            combined_len = len(r1) + len(r2)
+            load_fill = (load1 + load2) / max(inst.capacity, 1)
+            # Prefer denser pairs (high fill = fewer wasted seats after merge)
+            score = combined_len - load_fill * 4.0 + random.random() * 1.5
+            candidates.append((score, i, j))
+
+    if not candidates:
+        return op_route_eliminate(plan, size)
+
+    # Power-law selection: bias toward lower-score (denser / smaller) pairs
+    candidates.sort()
+    p = 3.0
+    idx = int((random.random() ** p) * len(candidates))
+    _, i, j = candidates[idx]
+
+    small_idx = i if len(plan.routes[i]) <= len(plan.routes[j]) else j
+    removed = list(plan.routes[small_idx])
+    plan.routes = [r for k, r in enumerate(plan.routes) if k != small_idx]
+    return _invalidate(plan), removed
+
+
 DESTROY = [
     op_random,
     op_worst,
@@ -1097,6 +1145,7 @@ DESTROY = [
     op_route_dispersion_eliminate,
     op_route_costly_eliminate,
     op_cross_route_shaw,
+    op_route_merge_sample,          # idx 9 — new
 ]
 
 
@@ -1261,7 +1310,7 @@ REPAIR = [op_greedy, op_regret_2, op_regret_3, op_tw_greedy, op_fts_greedy]
 N_D, N_R = len(DESTROY), len(REPAIR)
 N_ACTIONS = N_D * N_R
 
-assert N_D == 9
+assert N_D == 10
 assert N_R == 5
 for _m in MODES:
     assert len(_m.destroy_bias) == N_D
@@ -1555,17 +1604,74 @@ def _apply_or_opt(plan: Plan, move: tuple[int, int, int, int, int, bool]) -> Pla
     return Plan(routes, plan.inst, plan.algo)
 
 
-def local_search(plan: Plan, max_passes: int = 1,
-                 nv_ceiling: int | None = None,
-                 max_ls_moves: int = 5) -> Plan:
+def _try_route_merge(plan: Plan) -> Plan | None:
     """
-    max_ls_moves caps the relocate/swap/cross/compact while-True loop per pass.
-    Prevents unbounded Python-loop runtimes on slow EPYC-class CPUs.
+    Route Consolidation Move.
+
+    Attempts to merge any two capacity-compatible routes into a single feasible
+    route via EDF-ordered best-insertion. Unlike _try_route_compact (which
+    scatters customers across many routes), this produces ONE longer route —
+    exactly the route type MILP needs to assemble an NV-1 partition.
+
+    Checks at most the 4 shortest routes for O(k * n^2) tractability.
+    Returns the best merged plan (nv-1), or None if no merge is feasible.
+    """
+    inst = plan.inst
+    if len(plan.routes) <= 1:
+        return None
+
+    ranked = sorted(range(len(plan.routes)), key=lambda i: len(plan.routes[i]))
+    check_idxs = ranked[: min(4, len(ranked))]
+    best_merged: Plan | None = None
+
+    for pos_i, i in enumerate(check_idxs):
+        r1 = plan.routes[i]
+        load1 = sum(inst.demands[n] for n in r1)
+        for j in check_idxs[pos_i + 1 :]:
+            r2 = plan.routes[j]
+            if load1 + sum(inst.demands[n] for n in r2) > inst.capacity:
+                continue  # capacity gate
+
+            # EDF ordering minimises downstream TW violations
+            combined = sorted(list(r1) + list(r2), key=lambda n: inst.due_times[n])
+            merged_route: list[int] = []
+            ok = True
+            for node in combined:
+                _, pos = _best_insert_position(node, merged_route, inst)
+                if pos is None:
+                    ok = False
+                    break
+                merged_route.insert(pos, node)
+            if not ok or not _check_route(merged_route, inst):
+                continue
+
+            surviving = [r[:] for k, r in enumerate(plan.routes) if k != i and k != j]
+            surviving.append(merged_route)
+            cand = Plan(surviving, inst, plan.algo)
+            if not cand.feasible:
+                continue
+            if best_merged is None or cand.dominates(best_merged) or cand.nv < best_merged.nv:
+                best_merged = cand
+
+    return best_merged
+
+
+def local_search(
+    plan: Plan,
+    max_passes: int = 1,
+    nv_ceiling: int | None = None,
+    max_ls_moves: int = 5,
+    pool=None,                  # RoutePool | None — seeds pool with every improvement
+) -> Plan:
+    """
+    pool: when provided, each improvement along the LS trajectory is added to
+          the route pool, generating diverse intermediate routes for MILP.
+          Also triggers _try_route_merge at the end to seed merged-route types.
     """
     best = plan.copy()
     for _ in range(max_passes):
         improved = False
-        routes   = []
+        routes = []
         for route in best.routes:
             nr = _two_opt_best(route, best.inst)
             routes.append(nr)
@@ -1581,6 +1687,8 @@ def local_search(plan: Plan, max_passes: int = 1,
                 if cand.feasible and (cand.dominates(best) or
                         (cand.nv == best.nv and cand.cost + 1e-9 < best.cost)):
                     best, improved = cand, True
+                    if pool is not None:
+                        pool.add_plan(best)
                     moves += 1
                     continue
             move = _best_swap(best)
@@ -1588,6 +1696,8 @@ def local_search(plan: Plan, max_passes: int = 1,
                 cand = _apply_swap(best, move)
                 if cand.feasible and cand.cost + 1e-9 < best.cost:
                     best, improved = cand, True
+                    if pool is not None:
+                        pool.add_plan(best)
                     moves += 1
                     continue
             move = _best_or_opt(best, nv_ceiling=nv_ceiling)
@@ -1596,49 +1706,152 @@ def local_search(plan: Plan, max_passes: int = 1,
                 if cand.feasible and (cand.dominates(best) or
                         (cand.nv == best.nv and cand.cost + 1e-9 < best.cost)):
                     best, improved = cand, True
+                    if pool is not None:
+                        pool.add_plan(best)
                     moves += 1
                     continue
             cross = _cross_exchange(best, nv_ceiling=nv_ceiling)
             if cross is not None:
                 best, improved = cross, True
+                if pool is not None:
+                    pool.add_plan(best)
                 moves += 1
                 continue
             compact = _try_route_compact(best, nv_ceiling=nv_ceiling)
             if compact is not None:
                 best, improved = compact, True
+                if pool is not None:
+                    pool.add_plan(best)
                 moves += 1
                 continue
             break
 
         if not improved:
             break
+
+    # Pool-seeding bonus: generate merged-route type not produced by normal LS
+    if pool is not None:
+        merged = _try_route_merge(best)
+        if merged is not None:
+            pool.add_plan(merged)
+
     return best
 
+def _try_chain_elimination(plan: Plan, target_idx: int) -> Plan | None:
+    """
+    Single-target ejection chain.  Processes each customer in the target route;
+    for customers that fail direct insertion, attempts a depth-2 chain:
+      c → Ri  (displacing d from Ri)  →  d → Rj
+    Returns a feasible Plan with nv-1, or None if any customer is unplaceable.
+    """
+    inst = plan.inst
+    target = plan.routes[target_idx]
+    routes = [r[:] for i, r in enumerate(plan.routes) if i != target_idx]
 
-def _iterative_route_elimination(plan: Plan, inst: Inst,
-                                  max_rounds: int = 6) -> Plan:
+    # Tightest TW first — hardest-to-place customers block everything downstream
+    for c in sorted(target, key=lambda n: inst.due_times[n] - inst.ready_times[n]):
+
+        # --- Level 1: direct best-insertion ---
+        best_delta, best_ri, best_pos = float("inf"), None, None
+        for ri, route in enumerate(routes):
+            delta, pos = _best_insert_position(c, route, inst)
+            if pos is not None and delta < best_delta:
+                best_delta, best_ri, best_pos = delta, ri, pos
+
+        if best_ri is not None:
+            routes[best_ri].insert(best_pos, c)
+            continue
+
+        # --- Level 2: ejection chain  (c ejects d from Ri, d moves to Rj) ---
+        best_chain_cost = float("inf")
+        best_chain: tuple | None = None   # (ri, eject_pos, d, rj)
+
+        for ri, route in enumerate(routes):
+            for eject_pos, d in enumerate(route):
+                # Temporary route with d removed
+                stripped = route[:eject_pos] + route[eject_pos + 1:]
+                delta_c, pos_c = _best_insert_position(c, stripped, inst)
+                if pos_c is None:
+                    continue
+                # Check if d can land anywhere else
+                for rj, other in enumerate(routes):
+                    if rj == ri:
+                        continue
+                    delta_d, pos_d = _best_insert_position(d, other, inst)
+                    if pos_d is not None:
+                        total = delta_c + delta_d
+                        if total < best_chain_cost:
+                            best_chain_cost = total
+                            best_chain = (ri, eject_pos, d, rj)
+
+        if best_chain is None:
+            return None  # c unplaceable even with chain
+
+        ri, eject_pos, d, rj = best_chain
+        # Apply: remove d, insert c into Ri, insert d into Rj
+        stripped_ri = routes[ri][:eject_pos] + routes[ri][eject_pos + 1:]
+        _, pos_c = _best_insert_position(c, stripped_ri, inst)
+        if pos_c is None:
+            return None
+        routes[ri] = stripped_ri[:pos_c] + [c] + stripped_ri[pos_c:]
+
+        _, pos_d = _best_insert_position(d, routes[rj], inst)
+        if pos_d is None:
+            return None
+        routes[rj].insert(pos_d, d)
+
+    cand = Plan([r for r in routes if r], inst, plan.algo)
+    return cand if cand.feasible else None
+
+
+def _ejection_chain_eliminate(plan: Plan) -> Plan | None:
     """
-    Greedily eliminates the shortest/lightest route by redistributing its
-    customers into remaining routes.  Runs local_search after each success.
-    Primary mechanism for NV reduction on RC2 wide-TW instances where the
-    ALNS NV reward is too sparse to trigger reliably.
+    Tries to eliminate up to the 4 smallest routes via depth-2 ejection chains.
+    Complements _iterative_route_elimination: handles cases where greedy
+    insertion fails due to TW blocking but a 2-step chain resolves the conflict.
+
+    Complexity: O(k × n_target × n_routes × route_len × n_routes) per call —
+    fast enough for post-search use on 100-customer instances.
+    Returns first feasible NV-1 plan found, or None.
     """
+    if len(plan.routes) <= 1:
+        return None
+
+    ranked = sorted(
+        range(len(plan.routes)),
+        key=lambda i: (len(plan.routes[i]),
+                       sum(plan.inst.demands[n] for n in plan.routes[i])),
+    )
+    for target_idx in ranked[:4]:
+        result = _try_chain_elimination(plan, target_idx)
+        if result is not None:
+            return result
+    return None
+
+
+def _iterative_route_elimination(
+    plan: Plan,
+    inst: Inst,
+    max_rounds: int = 6,
+    pool=None,                  # RoutePool | None — seeds pool after each success
+) -> Plan:
     best = plan.copy()
     for _ in range(max_rounds):
         if len(best.routes) <= 1:
             break
         sorted_idxs = sorted(
             range(len(best.routes)),
-            key=lambda i: (len(best.routes[i]),
-                           _route_load(best.routes[i], inst),
-                           _route_cost_list(best.routes[i], inst)),
+            key=lambda i: (
+                len(best.routes[i]),
+                _route_load(best.routes[i], inst),
+                _route_cost_list(best.routes[i], inst),
+            ),
         )
         eliminated = False
         for target_idx in sorted_idxs[:5]:
             target = best.routes[target_idx]
             others = [r[:] for i, r in enumerate(best.routes) if i != target_idx]
-            ok     = True
-            # Insert tightest-TW customers first — hardest to place
+            ok = True
             for node in sorted(target, key=lambda n: inst.due_times[n] - inst.ready_times[n]):
                 best_d, best_r, best_p = float("inf"), None, None
                 for oi, route in enumerate(others):
@@ -1654,8 +1867,10 @@ def _iterative_route_elimination(plan: Plan, inst: Inst,
             cand = Plan([r for r in others if r], inst, best.algo)
             if not cand.feasible:
                 continue
-            cand = local_search(cand, max_passes=2, nv_ceiling=cand.nv)
+            cand = local_search(cand, max_passes=2, nv_ceiling=cand.nv, pool=pool)
             if cand.feasible:
+                if pool is not None:
+                    pool.add_plan(cand)
                 best = cand
                 eliminated = True
                 break
@@ -1829,25 +2044,69 @@ def _greedy_recombine(route_records: list[RouteRecord], incumbent: Plan,
     return plan if plan.feasible else incumbent.copy()
 
 
-def recombine_with_route_pool(incumbent: Plan, pool: RoutePool, cfg: Config,
-                              nv_ceiling: int | None = None,
-                              nv_target: int | None = None) -> Plan:
+def recombine_with_route_pool(
+    incumbent: Plan,
+    pool: RoutePool,
+    cfg: Config,
+    nv_ceiling: int | None = None,
+    nv_target: int | None = None,
+) -> Plan:
     pool.add_plan(incumbent)
     recs = pool.records(incumbent)
     if not recs:
         return incumbent.copy()
 
-    # Adaptive penalty: each selected route pays max(cfg_scale, 2*mean_cost).
-    # At RC101 mean ~105, this gives >=210 per route; 2-vehicle savings=420 > BKS TD gap of ~20.
     mean_cost = float(np.mean([r.cost for r in recs])) if recs else 100.0
     use_penalty = (nv_ceiling is not None) or (nv_target is not None)
-    vehicle_penalty = max(cfg.sp_vehicle_penalty_scale, mean_cost * 2.0) if use_penalty else 0.0
-
     effective_ceiling = nv_target if nv_target is not None else nv_ceiling
 
-    candidate = _milp_recombine(recs, incumbent.inst, cfg, nv_ceiling=effective_ceiling, vehicle_penalty=vehicle_penalty)
-    if candidate is None:
-        candidate = _greedy_recombine(recs, incumbent, nv_ceiling=effective_ceiling)
+    if not use_penalty:
+        # Standard recombination: no NV pressure
+        candidate = _milp_recombine(recs, incumbent.inst, cfg,
+                                     nv_ceiling=effective_ceiling, vehicle_penalty=0.0)
+        if candidate is None:
+            candidate = _greedy_recombine(recs, incumbent, nv_ceiling=effective_ceiling)
+        return candidate if candidate.dominates(incumbent) else incumbent.copy()
+
+    # NV-targeted: try multiple penalty scales so one scale finds the partition
+    # if it exists in the pool, even when mean_cost * 2.0 is insufficient.
+    # Time per query: sp_time_limit / n_scales; total budget = sp_time_limit.
+    penalty_scales = (2.0, 5.0, 12.0)
+    per_query_limit = max(1.0, cfg.sp_time_limit / len(penalty_scales))
+
+    # Temporarily override time limit per query
+    class _TmpCfg:
+        def __getattr__(self, name):
+            if name == "sp_time_limit":
+                return per_query_limit
+            return getattr(cfg, name)
+    tmp_cfg = _TmpCfg()
+
+    for scale in penalty_scales:
+        penalty = max(cfg.sp_vehicle_penalty_scale, mean_cost * scale)
+        candidate = _milp_recombine(
+            recs, incumbent.inst, tmp_cfg,
+            nv_ceiling=effective_ceiling,
+            vehicle_penalty=penalty,
+        )
+        if candidate is not None and (
+            effective_ceiling is None or candidate.nv <= effective_ceiling
+        ):
+            # Run LS at the new NV to recover TD
+            from .local_search import local_search
+            candidate = local_search(
+                candidate,
+                max_passes=1,
+                nv_ceiling=candidate.nv,
+                max_ls_moves=10,
+            )
+            if candidate.feasible and (
+                effective_ceiling is None or candidate.nv <= effective_ceiling
+            ):
+                return candidate
+
+    # All scales failed: greedy fallback
+    candidate = _greedy_recombine(recs, incumbent, nv_ceiling=effective_ceiling)
     if effective_ceiling is not None and candidate.nv > effective_ceiling:
         return incumbent.copy()
     return candidate if candidate.dominates(incumbent) else incumbent.copy()
@@ -2483,7 +2742,12 @@ from .config import (
 )
 from .core import Inst, Plan, _avg_slack, _fleet_fill, _plan_spread
 from .heuristics import build_greedy
-from .local_search import _iterative_route_elimination, local_search
+from .local_search import (
+    _ejection_chain_eliminate,
+    _iterative_route_elimination,
+    local_search,
+    _try_route_merge,
+)
 from .operators import DESTROY, N_D, N_R, REPAIR, accept, accept_with_nv_ceiling, destroy_size
 from .pool import RoutePool, recombine_with_route_pool
 from .rl import (
@@ -2572,6 +2836,7 @@ class HybridDDQNSolver:
         self.reward_norm = WelfordRewardNormalizer(clip_sigma=8.0, warmup=128)
         self.mode_bandits: list[ThompsonBandit] = [ThompsonBandit(N_D, N_R) for _ in MODES]
         self._segment_recombine_used = False
+        self._pool_seeding_done: bool = False   # guard: fires once per solve()
         self._init_nv = 1
         self.archive = EliteArchive(k=cfg.elite_archive_k)
 
@@ -2649,9 +2914,32 @@ class HybridDDQNSolver:
             self.lac.load_state_dict(lac_weights)
 
         if "ucb.mu" in weights:
-            self.ucb_aug._mu = weights["ucb.mu"].numpy().astype(np.float64)
-            self.ucb_aug._cnt = weights["ucb.cnt"].numpy().astype(np.float64)
-            self.ucb_aug._m2 = weights["ucb.m2"].numpy().astype(np.float64)
+            loaded_mu = weights["ucb.mu"].numpy().astype(np.float64)
+            loaded_cnt = weights["ucb.cnt"].numpy().astype(np.float64)
+            loaded_m2 = weights["ucb.m2"].numpy().astype(np.float64)
+            if len(loaded_mu) < self.ucb_aug.n:
+                padded_mu = np.zeros(self.ucb_aug.n, dtype=np.float64)
+                padded_cnt = np.ones(self.ucb_aug.n, dtype=np.float64) * 0.5
+                padded_m2 = np.ones(self.ucb_aug.n, dtype=np.float64) * 0.5
+                
+                padded_mu[:len(loaded_mu)] = loaded_mu
+                padded_cnt[:len(loaded_cnt)] = loaded_cnt
+                padded_m2[:len(loaded_m2)] = loaded_m2
+                
+                for new_act in range(len(loaded_mu), self.ucb_aug.n):
+                    rep_idx = new_act % 5
+                    src_act = 5 * 5 + rep_idx
+                    padded_mu[new_act] = loaded_mu[src_act]
+                    padded_cnt[new_act] = loaded_cnt[src_act]
+                    padded_m2[new_act] = loaded_m2[src_act]
+                
+                self.ucb_aug._mu = padded_mu
+                self.ucb_aug._cnt = padded_cnt
+                self.ucb_aug._m2 = padded_m2
+            else:
+                self.ucb_aug._mu = loaded_mu
+                self.ucb_aug._cnt = loaded_cnt
+                self.ucb_aug._m2 = loaded_m2
             self.ucb_aug._N = float(self.ucb_aug._cnt.sum())
 
         norm_d = {k.split(".", 1)[1]: float(weights[k]) for k in weights if k.startswith("reward_norm.")}
@@ -2839,6 +3127,126 @@ class HybridDDQNSolver:
         pool.add_plan(best)
         return best
 
+    def _seed_pool_large_destroy(self, best: Plan, pool: RoutePool, n_seeds: int = 30) -> None:
+        """
+        Dedicated pool-diversity seeding pass.
+
+        Runs n_seeds destroy-repair cycles with large destroy ratios (40-65%) to
+        generate consolidated routes covering more customers per vehicle.
+
+        Rationale: normal ALNS (10-40% destroy) produces routes of 5-7 customers.
+        RC101 BKS NV=14 requires routes averaging 7.1 customers per route. Large
+        destroys force regret-3 repair to build fewer, longer routes — exactly
+        the missing pool diversity preventing MILP from finding an NV-1 partition.
+
+        NEVER updates best. Only seeds pool with individual routes and full plans.
+        """
+        inst = self.inst
+        cfg = self.cfg
+
+        for it in range(n_seeds):
+            # Stagger ratios: 60% (large) and 42% (medium-large)
+            ratio = 0.60 if it % 3 != 1 else 0.42
+            size = max(5, int(ratio * inst.n))
+
+            # Alternate shaw (spatial clustering) and route_eliminate (full route removal)
+            di = 2 if it % 2 == 0 else 5   # DESTROY[2]=op_shaw, DESTROY[5]=op_route_eliminate
+            destroyed, removed = DESTROY[di](best.copy(), size)
+
+            # regret-3 repair: tends to build fewer, longer routes than greedy
+            candidate = REPAIR[2](destroyed, removed)   # REPAIR[2] = op_regret_3
+
+            # Add individual routes unconditionally (each route is self-contained feasible)
+            for route in candidate.routes:
+                pool.add_route(route)
+
+            if candidate.feasible:
+                pool.add_plan(candidate)
+
+            # Every 5th seed: attempt explicit route merges on best for direct NV-1 seeds
+            if it % 5 == 0:
+                merged = _try_route_merge(best)
+                if merged is not None:
+                    pool.add_plan(merged)
+                    for route in merged.routes:
+                        pool.add_route(route)
+
+    def _committed_nv_search(
+        self,
+        start: Plan,
+        pool: RoutePool,
+        target_nv: int,
+        n_iters: int = 300,
+    ) -> Plan | None:
+        """
+        Focused ALNS with hard NV ceiling = target_nv.
+
+        Mechanism:
+        - 4× initial temperature: accepts up to ~20% TD regression for NV gain
+        - Accepts NV=target_nv+1 candidates and immediately applies LS with
+          nv_ceiling=target_nv, catching solutions 'one step away'
+        - Always seeds pool with individual routes regardless of acceptance
+        - Never modifies self.best or persistent solver state
+
+        Returns best feasible plan at target_nv found, or None.
+        """
+        cfg = self.cfg
+        inst = self.inst
+
+        if start.nv <= target_nv:
+            return start.copy()
+
+        cur = start.copy()
+        best_found: Plan | None = None
+        # High temperature: prioritise NV over TD for this search phase
+        temp = cfg.temp_control * cur.cost / math.log(2) * 4.0
+        bandit = ThompsonBandit(N_D, N_R)
+
+        for it in range(n_iters):
+            di, ri = bandit.select()
+            size = destroy_size(it, n_iters, cfg, inst.n, scale=1.0)
+            dest, removed = DESTROY[di](cur.copy(), size)
+            cand = REPAIR[ri](dest, removed)
+
+            # Unconditional pool seeding — every route encountered is valuable
+            for route in cand.routes:
+                pool.add_route(route)
+
+            score = 0
+            if cand.feasible and cand.nv <= target_nv:
+                pool.add_plan(cand)
+                # SA acceptance within the hard NV ceiling
+                if (
+                    cand.nv < cur.nv
+                    or (cand.nv == cur.nv and cand.cost <= cur.cost)
+                    or random.random() < math.exp(-(cand.cost - cur.cost) / max(temp, 1e-6))
+                ):
+                    cur = cand
+                if best_found is None or cand.dominates(best_found) or cand.nv < best_found.nv:
+                    best_found = cand.copy()
+                    score = cfg.sigma1
+
+            elif cand.feasible and cand.nv == target_nv + 1:
+                # One vehicle over target — cheap LS pass may close the gap
+                cand_ls = local_search(
+                    cand,
+                    max_passes=1,
+                    nv_ceiling=target_nv,
+                    max_ls_moves=cfg.max_ls_moves,
+                    pool=pool,
+                )
+                if cand_ls.feasible and cand_ls.nv <= target_nv:
+                    pool.add_plan(cand_ls)
+                    cur = cand_ls
+                    if best_found is None or cand_ls.dominates(best_found) or cand_ls.nv < best_found.nv:
+                        best_found = cand_ls.copy()
+                        score = cfg.sigma1
+
+            bandit.update(di, ri, score, cfg.sigma1)
+            temp *= cfg.temp_decay
+
+        return best_found
+
     def solve(
         self,
         seed: int | None = None,
@@ -2880,6 +3288,15 @@ class HybridDDQNSolver:
             progress = seg_idx / max(n_segments, 1)
             imp_rate = sum(recent_improvements) / max(len(recent_improvements), 1)
             self._segment_recombine_used = False
+            # Plateau-triggered seeding: fires once when plateau first reached
+            if (
+                not self._pool_seeding_done
+                and no_imp >= cfg.plateau_start
+                and len(pool._routes) >= cfg.rl_recombine_min_routes
+            ):
+                self._pool_seeding_done = True
+                self._seed_pool_large_destroy(best, pool, n_seeds=25)
+
             state_before = self._state(cur, best, no_imp, temp, imp_rate, progress, pool)
             action, ctrl_active = self._select_action(state_before, cur, best, no_imp, progress, pool, frozen)
             mode = MODES[action]
@@ -3067,6 +3484,10 @@ class HybridDDQNSolver:
                 best = local_search(recombined, max_passes=cfg.polish_ls_passes, nv_ceiling=recombined.nv, max_ls_moves=cfg.max_ls_moves)
                 history.append(best.cost)
 
+        # Enrich pool before MILP queries: large-destroy seeds cover the 7-9 customer
+        # route types that normal search under-generates.
+        self._seed_pool_large_destroy(best, pool, n_seeds=20)
+
         # Explicit NV-reduction loop: try MILP with nv_target = best.nv-1, best.nv-2
         # Accept any feasible result with fewer vehicles (BKS has *worse* TD for fewer NV).
         for _target_nv in range(best.nv - 1, max(best.nv - 3, 0), -1):
@@ -3079,6 +3500,7 @@ class HybridDDQNSolver:
                 max_passes=cfg.polish_ls_passes + 1,
                 nv_ceiling=_rec.nv,
                 max_ls_moves=cfg.max_ls_moves * 2,
+                pool=pool,          # seed intermediates into pool
             )
             if _rec.feasible and _rec.nv <= _target_nv:
                 best = _rec
@@ -3086,12 +3508,42 @@ class HybridDDQNSolver:
                 history.append(best.cost)
                 # Don't break — try to go one lower
 
-        # Iterative elimination: accept any feasible fewer-NV result even if TD increases.
-        # BKS uses MORE TD than our 16-vehicle solution — domination check is wrong here.
-        eliminated = _iterative_route_elimination(best, self.inst)
+        # Pass 1: depth-2 ejection chain (handles TW-blocked direct insertions)
+        chain_result = _ejection_chain_eliminate(best)
+        if chain_result is not None and chain_result.feasible and (
+            chain_result.nv < best.nv or chain_result.dominates(best)
+        ):
+            best = chain_result
+            pool.add_plan(best)
+            history.append(best.cost)
+
+        # Pass 2: iterative greedy elimination (unchanged, catches easier cases)
+        eliminated = _iterative_route_elimination(best, self.inst, pool=pool)
         if eliminated.feasible and (eliminated.nv < best.nv or eliminated.dominates(best)):
             best = eliminated
+            pool.add_plan(best)
             history.append(best.cost)
+
+        # Pass 3: committed NV search — only if still above target
+        from .config import BKS as _BKS
+        _bks = _BKS.get(self.inst.name)
+        _bks_nv = int(_bks["nv"]) if _bks else max(1, best.nv - 1)
+        if best.nv > _bks_nv:
+            committed = self._committed_nv_search(best, pool, target_nv=best.nv - 1)
+            if committed is not None and committed.feasible and (
+                committed.nv < best.nv or committed.dominates(best)
+            ):
+                best = committed
+                pool.add_plan(best)
+                history.append(best.cost)
+                # One more ejection attempt at the new, lower NV
+                chain2 = _ejection_chain_eliminate(best)
+                if chain2 is not None and chain2.feasible and (
+                    chain2.nv < best.nv or chain2.dominates(best)
+                ):
+                    best = chain2
+                    pool.add_plan(best)
+                    history.append(best.cost)
 
         best.algo = self.algo_name
         self.archive.update(best)

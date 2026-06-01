@@ -25,7 +25,12 @@ from .config import (
 )
 from .core import Inst, Plan, _avg_slack, _fleet_fill, _plan_spread
 from .heuristics import build_greedy
-from .local_search import _iterative_route_elimination, local_search
+from .local_search import (
+    _ejection_chain_eliminate,
+    _iterative_route_elimination,
+    local_search,
+    _try_route_merge,
+)
 from .operators import DESTROY, N_D, N_R, REPAIR, accept, accept_with_nv_ceiling, destroy_size
 from .pool import RoutePool, recombine_with_route_pool
 from .rl import (
@@ -114,6 +119,7 @@ class HybridDDQNSolver:
         self.reward_norm = WelfordRewardNormalizer(clip_sigma=8.0, warmup=128)
         self.mode_bandits: list[ThompsonBandit] = [ThompsonBandit(N_D, N_R) for _ in MODES]
         self._segment_recombine_used = False
+        self._pool_seeding_done: bool = False   # guard: fires once per solve()
         self._init_nv = 1
         self.archive = EliteArchive(k=cfg.elite_archive_k)
 
@@ -191,9 +197,32 @@ class HybridDDQNSolver:
             self.lac.load_state_dict(lac_weights)
 
         if "ucb.mu" in weights:
-            self.ucb_aug._mu = weights["ucb.mu"].numpy().astype(np.float64)
-            self.ucb_aug._cnt = weights["ucb.cnt"].numpy().astype(np.float64)
-            self.ucb_aug._m2 = weights["ucb.m2"].numpy().astype(np.float64)
+            loaded_mu = weights["ucb.mu"].numpy().astype(np.float64)
+            loaded_cnt = weights["ucb.cnt"].numpy().astype(np.float64)
+            loaded_m2 = weights["ucb.m2"].numpy().astype(np.float64)
+            if len(loaded_mu) < self.ucb_aug.n:
+                padded_mu = np.zeros(self.ucb_aug.n, dtype=np.float64)
+                padded_cnt = np.ones(self.ucb_aug.n, dtype=np.float64) * 0.5
+                padded_m2 = np.ones(self.ucb_aug.n, dtype=np.float64) * 0.5
+                
+                padded_mu[:len(loaded_mu)] = loaded_mu
+                padded_cnt[:len(loaded_cnt)] = loaded_cnt
+                padded_m2[:len(loaded_m2)] = loaded_m2
+                
+                for new_act in range(len(loaded_mu), self.ucb_aug.n):
+                    rep_idx = new_act % 5
+                    src_act = 5 * 5 + rep_idx
+                    padded_mu[new_act] = loaded_mu[src_act]
+                    padded_cnt[new_act] = loaded_cnt[src_act]
+                    padded_m2[new_act] = loaded_m2[src_act]
+                
+                self.ucb_aug._mu = padded_mu
+                self.ucb_aug._cnt = padded_cnt
+                self.ucb_aug._m2 = padded_m2
+            else:
+                self.ucb_aug._mu = loaded_mu
+                self.ucb_aug._cnt = loaded_cnt
+                self.ucb_aug._m2 = loaded_m2
             self.ucb_aug._N = float(self.ucb_aug._cnt.sum())
 
         norm_d = {k.split(".", 1)[1]: float(weights[k]) for k in weights if k.startswith("reward_norm.")}
@@ -381,6 +410,126 @@ class HybridDDQNSolver:
         pool.add_plan(best)
         return best
 
+    def _seed_pool_large_destroy(self, best: Plan, pool: RoutePool, n_seeds: int = 30) -> None:
+        """
+        Dedicated pool-diversity seeding pass.
+
+        Runs n_seeds destroy-repair cycles with large destroy ratios (40-65%) to
+        generate consolidated routes covering more customers per vehicle.
+
+        Rationale: normal ALNS (10-40% destroy) produces routes of 5-7 customers.
+        RC101 BKS NV=14 requires routes averaging 7.1 customers per route. Large
+        destroys force regret-3 repair to build fewer, longer routes — exactly
+        the missing pool diversity preventing MILP from finding an NV-1 partition.
+
+        NEVER updates best. Only seeds pool with individual routes and full plans.
+        """
+        inst = self.inst
+        cfg = self.cfg
+
+        for it in range(n_seeds):
+            # Stagger ratios: 60% (large) and 42% (medium-large)
+            ratio = 0.60 if it % 3 != 1 else 0.42
+            size = max(5, int(ratio * inst.n))
+
+            # Alternate shaw (spatial clustering) and route_eliminate (full route removal)
+            di = 2 if it % 2 == 0 else 5   # DESTROY[2]=op_shaw, DESTROY[5]=op_route_eliminate
+            destroyed, removed = DESTROY[di](best.copy(), size)
+
+            # regret-3 repair: tends to build fewer, longer routes than greedy
+            candidate = REPAIR[2](destroyed, removed)   # REPAIR[2] = op_regret_3
+
+            # Add individual routes unconditionally (each route is self-contained feasible)
+            for route in candidate.routes:
+                pool.add_route(route)
+
+            if candidate.feasible:
+                pool.add_plan(candidate)
+
+            # Every 5th seed: attempt explicit route merges on best for direct NV-1 seeds
+            if it % 5 == 0:
+                merged = _try_route_merge(best)
+                if merged is not None:
+                    pool.add_plan(merged)
+                    for route in merged.routes:
+                        pool.add_route(route)
+
+    def _committed_nv_search(
+        self,
+        start: Plan,
+        pool: RoutePool,
+        target_nv: int,
+        n_iters: int = 300,
+    ) -> Plan | None:
+        """
+        Focused ALNS with hard NV ceiling = target_nv.
+
+        Mechanism:
+        - 4× initial temperature: accepts up to ~20% TD regression for NV gain
+        - Accepts NV=target_nv+1 candidates and immediately applies LS with
+          nv_ceiling=target_nv, catching solutions 'one step away'
+        - Always seeds pool with individual routes regardless of acceptance
+        - Never modifies self.best or persistent solver state
+
+        Returns best feasible plan at target_nv found, or None.
+        """
+        cfg = self.cfg
+        inst = self.inst
+
+        if start.nv <= target_nv:
+            return start.copy()
+
+        cur = start.copy()
+        best_found: Plan | None = None
+        # High temperature: prioritise NV over TD for this search phase
+        temp = cfg.temp_control * cur.cost / math.log(2) * 4.0
+        bandit = ThompsonBandit(N_D, N_R)
+
+        for it in range(n_iters):
+            di, ri = bandit.select()
+            size = destroy_size(it, n_iters, cfg, inst.n, scale=1.0)
+            dest, removed = DESTROY[di](cur.copy(), size)
+            cand = REPAIR[ri](dest, removed)
+
+            # Unconditional pool seeding — every route encountered is valuable
+            for route in cand.routes:
+                pool.add_route(route)
+
+            score = 0
+            if cand.feasible and cand.nv <= target_nv:
+                pool.add_plan(cand)
+                # SA acceptance within the hard NV ceiling
+                if (
+                    cand.nv < cur.nv
+                    or (cand.nv == cur.nv and cand.cost <= cur.cost)
+                    or random.random() < math.exp(-(cand.cost - cur.cost) / max(temp, 1e-6))
+                ):
+                    cur = cand
+                if best_found is None or cand.dominates(best_found) or cand.nv < best_found.nv:
+                    best_found = cand.copy()
+                    score = cfg.sigma1
+
+            elif cand.feasible and cand.nv == target_nv + 1:
+                # One vehicle over target — cheap LS pass may close the gap
+                cand_ls = local_search(
+                    cand,
+                    max_passes=1,
+                    nv_ceiling=target_nv,
+                    max_ls_moves=cfg.max_ls_moves,
+                    pool=pool,
+                )
+                if cand_ls.feasible and cand_ls.nv <= target_nv:
+                    pool.add_plan(cand_ls)
+                    cur = cand_ls
+                    if best_found is None or cand_ls.dominates(best_found) or cand_ls.nv < best_found.nv:
+                        best_found = cand_ls.copy()
+                        score = cfg.sigma1
+
+            bandit.update(di, ri, score, cfg.sigma1)
+            temp *= cfg.temp_decay
+
+        return best_found
+
     def solve(
         self,
         seed: int | None = None,
@@ -422,6 +571,15 @@ class HybridDDQNSolver:
             progress = seg_idx / max(n_segments, 1)
             imp_rate = sum(recent_improvements) / max(len(recent_improvements), 1)
             self._segment_recombine_used = False
+            # Plateau-triggered seeding: fires once when plateau first reached
+            if (
+                not self._pool_seeding_done
+                and no_imp >= cfg.plateau_start
+                and len(pool._routes) >= cfg.rl_recombine_min_routes
+            ):
+                self._pool_seeding_done = True
+                self._seed_pool_large_destroy(best, pool, n_seeds=25)
+
             state_before = self._state(cur, best, no_imp, temp, imp_rate, progress, pool)
             action, ctrl_active = self._select_action(state_before, cur, best, no_imp, progress, pool, frozen)
             mode = MODES[action]
@@ -609,6 +767,10 @@ class HybridDDQNSolver:
                 best = local_search(recombined, max_passes=cfg.polish_ls_passes, nv_ceiling=recombined.nv, max_ls_moves=cfg.max_ls_moves)
                 history.append(best.cost)
 
+        # Enrich pool before MILP queries: large-destroy seeds cover the 7-9 customer
+        # route types that normal search under-generates.
+        self._seed_pool_large_destroy(best, pool, n_seeds=20)
+
         # Explicit NV-reduction loop: try MILP with nv_target = best.nv-1, best.nv-2
         # Accept any feasible result with fewer vehicles (BKS has *worse* TD for fewer NV).
         for _target_nv in range(best.nv - 1, max(best.nv - 3, 0), -1):
@@ -621,6 +783,7 @@ class HybridDDQNSolver:
                 max_passes=cfg.polish_ls_passes + 1,
                 nv_ceiling=_rec.nv,
                 max_ls_moves=cfg.max_ls_moves * 2,
+                pool=pool,          # seed intermediates into pool
             )
             if _rec.feasible and _rec.nv <= _target_nv:
                 best = _rec
@@ -628,12 +791,42 @@ class HybridDDQNSolver:
                 history.append(best.cost)
                 # Don't break — try to go one lower
 
-        # Iterative elimination: accept any feasible fewer-NV result even if TD increases.
-        # BKS uses MORE TD than our 16-vehicle solution — domination check is wrong here.
-        eliminated = _iterative_route_elimination(best, self.inst)
+        # Pass 1: depth-2 ejection chain (handles TW-blocked direct insertions)
+        chain_result = _ejection_chain_eliminate(best)
+        if chain_result is not None and chain_result.feasible and (
+            chain_result.nv < best.nv or chain_result.dominates(best)
+        ):
+            best = chain_result
+            pool.add_plan(best)
+            history.append(best.cost)
+
+        # Pass 2: iterative greedy elimination (unchanged, catches easier cases)
+        eliminated = _iterative_route_elimination(best, self.inst, pool=pool)
         if eliminated.feasible and (eliminated.nv < best.nv or eliminated.dominates(best)):
             best = eliminated
+            pool.add_plan(best)
             history.append(best.cost)
+
+        # Pass 3: committed NV search — only if still above target
+        from .config import BKS as _BKS
+        _bks = _BKS.get(self.inst.name)
+        _bks_nv = int(_bks["nv"]) if _bks else max(1, best.nv - 1)
+        if best.nv > _bks_nv:
+            committed = self._committed_nv_search(best, pool, target_nv=best.nv - 1)
+            if committed is not None and committed.feasible and (
+                committed.nv < best.nv or committed.dominates(best)
+            ):
+                best = committed
+                pool.add_plan(best)
+                history.append(best.cost)
+                # One more ejection attempt at the new, lower NV
+                chain2 = _ejection_chain_eliminate(best)
+                if chain2 is not None and chain2.feasible and (
+                    chain2.nv < best.nv or chain2.dominates(best)
+                ):
+                    best = chain2
+                    pool.add_plan(best)
+                    history.append(best.cost)
 
         best.algo = self.algo_name
         self.archive.update(best)

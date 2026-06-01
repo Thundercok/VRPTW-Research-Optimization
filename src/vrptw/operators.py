@@ -321,6 +321,54 @@ def op_route_costly_eliminate(plan: Plan, size: int) -> tuple[Plan, list[int]]:
     return _invalidate(plan), removed
 
 
+def op_route_merge_sample(plan: Plan, size: int) -> tuple[Plan, list[int]]:
+    """
+    Route Merge Sampling (10th destroy operator).
+
+    Selects the capacity-compatible route pair with the smallest combined customer
+    count and removes the smaller route's customers. The repair operator must then
+    insert them back — often into the surviving route, producing a longer merged
+    route that the pool otherwise under-represents.
+
+    Key difference from op_route_eliminate: this operator explicitly verifies
+    combined capacity compatibility before selection, maximising the probability
+    that repair produces a single consolidated route rather than creating a new one.
+    """
+    if len(plan.routes) <= 1:
+        return op_random(plan, size)
+    inst = plan.inst
+
+    # Find capacity-compatible pairs sorted by combined customer count
+    candidates = []
+    for i, r1 in enumerate(plan.routes):
+        load1 = sum(inst.demands[n] for n in r1)
+        for j, r2 in enumerate(plan.routes):
+            if j <= i:
+                continue
+            load2 = sum(inst.demands[n] for n in r2)
+            if load1 + load2 > inst.capacity:
+                continue
+            combined_len = len(r1) + len(r2)
+            load_fill = (load1 + load2) / max(inst.capacity, 1)
+            # Prefer denser pairs (high fill = fewer wasted seats after merge)
+            score = combined_len - load_fill * 4.0 + random.random() * 1.5
+            candidates.append((score, i, j))
+
+    if not candidates:
+        return op_route_eliminate(plan, size)
+
+    # Power-law selection: bias toward lower-score (denser / smaller) pairs
+    candidates.sort()
+    p = 3.0
+    idx = int((random.random() ** p) * len(candidates))
+    _, i, j = candidates[idx]
+
+    small_idx = i if len(plan.routes[i]) <= len(plan.routes[j]) else j
+    removed = list(plan.routes[small_idx])
+    plan.routes = [r for k, r in enumerate(plan.routes) if k != small_idx]
+    return _invalidate(plan), removed
+
+
 DESTROY = [
     op_random,
     op_worst,
@@ -331,6 +379,7 @@ DESTROY = [
     op_route_dispersion_eliminate,
     op_route_costly_eliminate,
     op_cross_route_shaw,
+    op_route_merge_sample,          # idx 9 — new
 ]
 
 
@@ -495,7 +544,7 @@ REPAIR = [op_greedy, op_regret_2, op_regret_3, op_tw_greedy, op_fts_greedy]
 N_D, N_R = len(DESTROY), len(REPAIR)
 N_ACTIONS = N_D * N_R
 
-assert N_D == 9
+assert N_D == 10
 assert N_R == 5
 for _m in MODES:
     assert len(_m.destroy_bias) == N_D

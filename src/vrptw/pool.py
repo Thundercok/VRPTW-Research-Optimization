@@ -156,25 +156,69 @@ def _greedy_recombine(route_records: list[RouteRecord], incumbent: Plan,
     return plan if plan.feasible else incumbent.copy()
 
 
-def recombine_with_route_pool(incumbent: Plan, pool: RoutePool, cfg: Config,
-                              nv_ceiling: int | None = None,
-                              nv_target: int | None = None) -> Plan:
+def recombine_with_route_pool(
+    incumbent: Plan,
+    pool: RoutePool,
+    cfg: Config,
+    nv_ceiling: int | None = None,
+    nv_target: int | None = None,
+) -> Plan:
     pool.add_plan(incumbent)
     recs = pool.records(incumbent)
     if not recs:
         return incumbent.copy()
 
-    # Adaptive penalty: each selected route pays max(cfg_scale, 2*mean_cost).
-    # At RC101 mean ~105, this gives >=210 per route; 2-vehicle savings=420 > BKS TD gap of ~20.
     mean_cost = float(np.mean([r.cost for r in recs])) if recs else 100.0
     use_penalty = (nv_ceiling is not None) or (nv_target is not None)
-    vehicle_penalty = max(cfg.sp_vehicle_penalty_scale, mean_cost * 2.0) if use_penalty else 0.0
-
     effective_ceiling = nv_target if nv_target is not None else nv_ceiling
 
-    candidate = _milp_recombine(recs, incumbent.inst, cfg, nv_ceiling=effective_ceiling, vehicle_penalty=vehicle_penalty)
-    if candidate is None:
-        candidate = _greedy_recombine(recs, incumbent, nv_ceiling=effective_ceiling)
+    if not use_penalty:
+        # Standard recombination: no NV pressure
+        candidate = _milp_recombine(recs, incumbent.inst, cfg,
+                                     nv_ceiling=effective_ceiling, vehicle_penalty=0.0)
+        if candidate is None:
+            candidate = _greedy_recombine(recs, incumbent, nv_ceiling=effective_ceiling)
+        return candidate if candidate.dominates(incumbent) else incumbent.copy()
+
+    # NV-targeted: try multiple penalty scales so one scale finds the partition
+    # if it exists in the pool, even when mean_cost * 2.0 is insufficient.
+    # Time per query: sp_time_limit / n_scales; total budget = sp_time_limit.
+    penalty_scales = (2.0, 5.0, 12.0)
+    per_query_limit = max(1.0, cfg.sp_time_limit / len(penalty_scales))
+
+    # Temporarily override time limit per query
+    class _TmpCfg:
+        def __getattr__(self, name):
+            if name == "sp_time_limit":
+                return per_query_limit
+            return getattr(cfg, name)
+    tmp_cfg = _TmpCfg()
+
+    for scale in penalty_scales:
+        penalty = max(cfg.sp_vehicle_penalty_scale, mean_cost * scale)
+        candidate = _milp_recombine(
+            recs, incumbent.inst, tmp_cfg,
+            nv_ceiling=effective_ceiling,
+            vehicle_penalty=penalty,
+        )
+        if candidate is not None and (
+            effective_ceiling is None or candidate.nv <= effective_ceiling
+        ):
+            # Run LS at the new NV to recover TD
+            from .local_search import local_search
+            candidate = local_search(
+                candidate,
+                max_passes=1,
+                nv_ceiling=candidate.nv,
+                max_ls_moves=10,
+            )
+            if candidate.feasible and (
+                effective_ceiling is None or candidate.nv <= effective_ceiling
+            ):
+                return candidate
+
+    # All scales failed: greedy fallback
+    candidate = _greedy_recombine(recs, incumbent, nv_ceiling=effective_ceiling)
     if effective_ceiling is not None and candidate.nv > effective_ceiling:
         return incumbent.copy()
     return candidate if candidate.dominates(incumbent) else incumbent.copy()

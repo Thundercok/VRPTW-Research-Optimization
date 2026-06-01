@@ -362,6 +362,7 @@ export class App {
       loadingElapsed: document.getElementById('loading-elapsed'),
       loadingBackend: document.getElementById('loading-backend'),
       loadingDevice: document.getElementById('loading-device'),
+      loadingConsole: document.getElementById('loading-console'),
       toastRoot: document.getElementById('toast-root'),
       status: document.getElementById('status')
     };
@@ -3761,7 +3762,7 @@ export class App {
       }
       this.setStatus(`Submit error: ${friendly}`, 'error');
       this.toast('Submit Failed', friendly, 'error');
-      this.hideLoadingImmediate();
+      await this.showLoadingError(friendly);
     } finally {
       this.runSession.abortController = null;
     }
@@ -3783,24 +3784,35 @@ export class App {
         signal: this.runSession.abortController?.signal
       });
       if (this.runSession.cancelled || sessionToken !== this.runSession.token) return;
+      
       const phase = data?.debug?.phase || data.status;
+      this.loadingAnim.backendPhase = phase;
+
+      const events = data?.debug?.events || [];
+      events.forEach(evt => {
+        if (evt && evt.message) {
+          this.addConsoleLog(evt.message);
+        }
+      });
+
+      if (events.length > 0) {
+        this.loadingAnim.backendMessage = events[events.length - 1].message;
+      }
+
       if (phase === 'queued') {
-        this.setLoadingProgress(this.loadingAnim.progress, null, 'Job queued, waiting for worker...', 0.18, 'idle');
-        this.setLoadingSubtitle('Backend has accepted the job. Waiting for the worker to pick it up.');
+        this.setLoadingSubtitle('Backend has accepted the job. Waiting for a worker thread.');
         this.setLoadingBackend('queued', 'warn');
       } else if (phase === 'processing') {
-        this.setLoadingProgress(this.loadingAnim.progress, null, 'Worker picked up the job...', 0.22, 'idle');
-        this.setLoadingSubtitle('Worker thread reserved. Preparing solver inputs...');
+        this.setLoadingSubtitle('Worker reserved. Preparing solver inputs...');
         this.setLoadingBackend('processing', 'ok');
       } else if (phase === 'matrix') {
-        this.setLoadingProgress(this.loadingAnim.progress, null, 'Building distance matrix...', 0.3, 'idle');
-        this.setLoadingSubtitle('Computing pairwise distances and travel times for the customers.');
+        this.setLoadingSubtitle('Computing distance matrix for route optimization...');
         this.setLoadingBackend('building matrix', 'ok');
       } else if (phase === 'solving') {
-        this.setLoadingProgress(this.loadingAnim.progress, null, 'Backend is solving routes...', 0.4, 'alns');
-        this.setLoadingSubtitle('Running DDQN-ALNS hybrid + ALNS baseline in parallel threads.');
-        this.setLoadingBackend('solving', 'ok');
+        this.setLoadingSubtitle('Running parallel DDQN-ALNS hybrid and ALNS baseline solvers...');
+        this.setLoadingBackend('solving model', 'ok');
       }
+
       if (data.status === 'done') {
         if (this.runSession.cancelled || sessionToken !== this.runSession.token) return;
         this.state.lastResult = data.result;
@@ -4218,6 +4230,54 @@ export class App {
   }
 
 
+  clearConsoleLog() {
+    if (this.el.loadingConsole) {
+      this.el.loadingConsole.innerHTML = '';
+    }
+    this.loadingAnim.loggedEvents = new Set();
+  }
+
+  addConsoleLog(message) {
+    if (!this.el.loadingConsole || !message) return;
+    if (!this.loadingAnim.loggedEvents) {
+      this.loadingAnim.loggedEvents = new Set();
+    }
+    if (this.loadingAnim.loggedEvents.has(message)) return;
+    this.loadingAnim.loggedEvents.add(message);
+
+    const placeholder = this.el.loadingConsole.querySelector('.placeholder');
+    if (placeholder) {
+      placeholder.remove();
+    }
+
+    const elapsedMs = Date.now() - (this.loadingAnim.runStartedAt || Date.now());
+    const elapsedSec = (elapsedMs / 1000).toFixed(1);
+
+    const line = document.createElement('div');
+    line.className = 'loading-console-line';
+    line.innerHTML = `<span style="color: #64748b; margin-right: 6px;">[${elapsedSec}s]</span> ${message}`;
+
+    this.el.loadingConsole.appendChild(line);
+    this.el.loadingConsole.scrollTop = this.el.loadingConsole.scrollHeight;
+  }
+
+  async showLoadingError(message) {
+    this.stopLoadingProgress();
+    this.loadingAnim.backendPhase = 'failed';
+    this.addConsoleLog(`Error: ${message}`);
+    this.setLoadingProgress(this.loadingAnim.progress, 'Optimization Failed', message, 0, 'idle');
+    this.setLoadingBackend('failed', 'error');
+    if (this.el.loadingCard) {
+      this.el.loadingCard.setAttribute('data-phase', 'failed');
+      this.el.loadingCard.classList.add('loading-card-shake');
+    }
+    await new Promise((resolve) => setTimeout(resolve, 3200));
+    if (this.el.loadingCard) {
+      this.el.loadingCard.classList.remove('loading-card-shake');
+    }
+    this.el.loading?.classList.add('hidden');
+  }
+
   setLoadingProgress(value, title = null, subtitle = null, normalizedSpeed = 0, algo = 'idle') {
     const clamped = Math.max(0, Math.min(100, Number(value) || 0));
     this.loadingAnim.progress = clamped;
@@ -4232,6 +4292,10 @@ export class App {
     if (this.el.loadingCard) {
       this.el.loadingCard.style.setProperty('--truck-speed', Number(normalizedSpeed || 0).toFixed(3));
       this.el.loadingCard.dataset.algo = algo;
+      
+      const activePhase = this.loadingAnim.backendPhase || 'queued';
+      this.el.loadingCard.setAttribute('data-phase', activePhase);
+
       this.el.loadingCard.classList.remove('is-slow', 'is-medium', 'is-fast');
       if (normalizedSpeed > 0.67) this.el.loadingCard.classList.add('is-fast');
       else if (normalizedSpeed > 0.34) this.el.loadingCard.classList.add('is-medium');
@@ -4243,6 +4307,9 @@ export class App {
     }
     if (this.el.loadingTruck) {
       this.el.loadingTruck.style.setProperty('--loading-progress', `${clamped}%`);
+    }
+    if (this.el.loadingPercent) {
+      this.el.loadingPercent.textContent = `${Math.round(clamped)}%`;
     }
   }
 
@@ -4259,57 +4326,65 @@ export class App {
 
   startLoadingProgress() {
     this.stopLoadingProgress();
+    this.clearConsoleLog();
     this.loadingAnim.active = true;
     this.loadingAnim.progress = 0;
-    this.loadingAnim.stage = 0;
-    this.loadingAnim.stageStartedAt = performance.now();
-    this.loadingAnim.lastTickAt = this.loadingAnim.stageStartedAt;
+    this.loadingAnim.backendPhase = 'queued';
+    this.loadingAnim.backendMessage = '';
     this.loadingAnim.runStartedAt = Date.now();
     this.setLoadingProgress(0, 'AI is optimizing routes...', 'Queueing job...', 0.22, 'idle');
     this.setLoadingSubtitle('Sending request to the backend solver...');
     this.applyDeviceBadge();
     this.setLoadingBackend('queued', 'warn');
+    this.addConsoleLog('Optimization job submitted to worker queue.');
     this.startElapsedTicker();
     this.el.loading?.classList.remove('loading--minimized');
     this.el.loadingLauncher?.classList.add('hidden');
 
-    const phases = [
-      { label: 'Queueing job...', until: 16, algo: 'idle', base: 0.03, amp: 0.02 },
-      { label: 'Building distance matrix...', until: 34, algo: 'idle', base: 0.03, amp: 0.022 },
-      { label: 'Running DDQN...', until: 66, algo: 'ddqn', base: 0.044, amp: 0.038 },
-      { label: 'Running ALNS...', until: 96, algo: 'alns', base: 0.039, amp: 0.034 },
-      { label: 'Finalizing best routes...', until: 99, algo: 'alns', base: 0.012, amp: 0.01 }
-    ];
+    const phasesConfig = {
+      'queued': { label: 'Queueing job...', until: 15, baseSpeed: 0.08, algo: 'idle' },
+      'processing': { label: 'Worker picked up the job...', until: 30, baseSpeed: 0.06, algo: 'idle' },
+      'matrix': { label: 'Building distance matrix...', until: 50, baseSpeed: 0.05, algo: 'idle' },
+      'solving': { label: 'Running solvers in parallel...', until: 95, baseSpeed: 0.012, algo: 'alns' },
+      'done': { label: 'Optimization complete!', until: 100, baseSpeed: 0.4, algo: 'done' }
+    };
 
     const tick = (now) => {
       if (!this.loadingAnim.active) return;
 
-      const stage = phases[this.loadingAnim.stage] || phases[phases.length - 1];
-      const delta = Math.max(8, now - this.loadingAnim.lastTickAt);
-      const pulse = (Math.sin(now / 220) + 1) / 2;
-      const step = (stage.base + stage.amp * pulse) * (delta / 16);
-
-      if (this.loadingAnim.progress < stage.until) {
-        this.loadingAnim.progress = Math.min(stage.until, this.loadingAnim.progress + step);
+      const phaseKey = this.loadingAnim.backendPhase || 'queued';
+      const config = phasesConfig[phaseKey] || phasesConfig['queued'];
+      
+      const lastTick = this.loadingAnim.lastTickAt || now;
+      const delta = Math.max(8, now - lastTick);
+      
+      const distance = config.until - this.loadingAnim.progress;
+      let step = 0;
+      
+      if (distance > 0) {
+        const factor = 0.4 + (distance / config.until) * 0.8;
+        step = config.baseSpeed * factor * (delta / 16);
+        this.loadingAnim.progress = Math.min(config.until, this.loadingAnim.progress + step);
+      } else {
+        step = 0.003 * (delta / 16);
+        this.loadingAnim.progress = Math.min(99.5, this.loadingAnim.progress + step);
       }
+
+      const currentLabel = this.loadingAnim.backendMessage || config.label;
 
       this.setLoadingProgress(
         this.loadingAnim.progress,
         null,
-        stage.label,
-        Math.min(1, step / 0.1),
-        stage.algo
+        currentLabel,
+        Math.min(1, Math.max(0.1, step / 0.1)),
+        config.algo
       );
-
-      if (this.loadingAnim.progress >= stage.until - 0.01 && this.loadingAnim.stage < phases.length - 1) {
-        this.loadingAnim.stage += 1;
-        this.loadingAnim.stageStartedAt = now;
-      }
 
       this.loadingAnim.lastTickAt = now;
       this.loadingAnim.rafId = requestAnimationFrame(tick);
     };
 
+    this.loadingAnim.lastTickAt = performance.now();
     this.loadingAnim.rafId = requestAnimationFrame(tick);
   }
 

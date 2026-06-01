@@ -5,7 +5,8 @@
     "scripts": {
         "dev": "vite",
         "build": "vite build",
-        "preview": "vite preview"
+        "preview": "vite preview",
+        "dev:all": "concurrently -k -n \"firebase,backend,vite\" -c \"yellow,blue,green\" \"(firebase emulators:start --only auth,firestore & ./scripts/seed-user.sh & wait)\" \"make dev-emulator\" \"vite --port 5050\""
     },
     "dependencies": {
         "firebase": "^11.0.0",
@@ -15,6 +16,7 @@
     },
     "devDependencies": {
         "@vitejs/plugin-react": "^4.3.0",
+        "concurrently": "^9.2.1",
         "vite": "^5.3.0"
     }
 }

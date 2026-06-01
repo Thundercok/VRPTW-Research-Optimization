@@ -1,5 +1,0 @@
-Dataset,Instance,Algorithm,NV_mean,NV_std,NV_diff,TD_mean,TD_std,Gap%,OnTime,Time_s,NV_cv,TD_cv,NV_inflated,raw_costs,raw_nv
-C1,C101,Hybrid-DDQN,10.0,0.0,0.0,828.94,0.0,-0.0,100.0,35.6,0.0,0.0,False,828.9369,10
-R1,R101,Hybrid-DDQN,19.0,0.0,0.0,1653.02,0.0,0.13,100.0,68.9,0.0,0.0,False,1653.0157,19
-RC1,RC101,Hybrid-DDQN,15.0,0.0,1.0,1656.32,0.0,-2.39,100.0,75.6,0.0,0.0,True,1656.3215,15
-RC2,RC201,Hybrid-DDQN,4.0,0.0,0.0,1501.62,0.0,6.73,100.0,80.8,0.0,0.0,False,1501.6210,4
