@@ -1,10 +1,15 @@
-.PHONY: dev dev-emulator test dist emulators test-e2e
+.PHONY: dev dev-emulator test dist emulators test-e2e dev-all
 
 dev:
 	PYTHONPATH=./src/backend uv run uvicorn main:app --host 127.0.0.1 --port 8000 --reload --app-dir src/backend
 
 dev-emulator:
 	FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099 PYTHONPATH=./src/backend uv run uvicorn main:app --host 127.0.0.1 --port 8000 --reload --app-dir src/backend
+
+dev-all:
+	@echo "Flushing old background processes..."
+	-@npx kill-port 4000 5050 8000 8080 9099 4400 4500 2>/dev/null || true
+	@npm run dev:all
 
 test:
 	PYTHONPATH=/src/backend uv run pytest tests/ -v
