@@ -311,7 +311,7 @@ def local_search(plan: Plan, max_passes: int = 1,
 
 
 def _iterative_route_elimination(plan: Plan, inst: Inst,
-                                  max_rounds: int = 4) -> Plan:
+                                  max_rounds: int = 6) -> Plan:
     """
     Greedily eliminates the shortest/lightest route by redistributing its
     customers into remaining routes.  Runs local_search after each success.
@@ -329,7 +329,7 @@ def _iterative_route_elimination(plan: Plan, inst: Inst,
                            _route_cost_list(best.routes[i], inst)),
         )
         eliminated = False
-        for target_idx in sorted_idxs[:3]:
+        for target_idx in sorted_idxs[:5]:
             target = best.routes[target_idx]
             others = [r[:] for i, r in enumerate(best.routes) if i != target_idx]
             ok     = True

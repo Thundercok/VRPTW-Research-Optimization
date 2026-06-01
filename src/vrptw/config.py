@@ -234,7 +234,7 @@ class Config:
     route_pool_limit: int = 480
     route_pool_max_per_customer: int = 18
     sp_time_limit: float = 4.0
-    sp_vehicle_penalty_scale: float = 100.0
+    sp_vehicle_penalty_scale: float = 200.0
 
     # ── polish ────────────────────────────────────────────────────────────
     polish_ls_passes: int = 2

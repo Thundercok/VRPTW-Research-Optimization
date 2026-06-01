@@ -257,7 +257,7 @@ class Config:
     route_pool_limit: int = 480
     route_pool_max_per_customer: int = 18
     sp_time_limit: float = 4.0
-    sp_vehicle_penalty_scale: float = 100.0
+    sp_vehicle_penalty_scale: float = 200.0
 
     # ── polish ────────────────────────────────────────────────────────────
     polish_ls_passes: int = 2
@@ -1616,7 +1616,7 @@ def local_search(plan: Plan, max_passes: int = 1,
 
 
 def _iterative_route_elimination(plan: Plan, inst: Inst,
-                                  max_rounds: int = 4) -> Plan:
+                                  max_rounds: int = 6) -> Plan:
     """
     Greedily eliminates the shortest/lightest route by redistributing its
     customers into remaining routes.  Runs local_search after each success.
@@ -1634,7 +1634,7 @@ def _iterative_route_elimination(plan: Plan, inst: Inst,
                            _route_cost_list(best.routes[i], inst)),
         )
         eliminated = False
-        for target_idx in sorted_idxs[:3]:
+        for target_idx in sorted_idxs[:5]:
             target = best.routes[target_idx]
             others = [r[:] for i, r in enumerate(best.routes) if i != target_idx]
             ok     = True
@@ -1769,7 +1769,8 @@ def _sp_vehicle_penalty(inst: Inst, cfg: Config) -> float:
 
 
 def _milp_recombine(route_records: list[RouteRecord], inst: Inst, cfg: Config,
-                    nv_ceiling: int | None = None) -> Plan | None:
+                    nv_ceiling: int | None = None,
+                    vehicle_penalty: float | None = None) -> Plan | None:
     if not MILP_OK or not route_records:
         return None
     n_routes = len(route_records)
@@ -1784,7 +1785,8 @@ def _milp_recombine(route_records: list[RouteRecord], inst: Inst, cfg: Config,
         constraints.append(LinearConstraint(
             np.ones((1, n_routes)), lb=np.array([0.0]), ub=np.array([float(nv_ceiling)])
         ))
-    costs  = np.array([_sp_vehicle_penalty(inst, cfg) + rec.cost for rec in route_records])
+    penalty = vehicle_penalty if vehicle_penalty is not None else _sp_vehicle_penalty(inst, cfg)
+    costs  = np.array([penalty + rec.cost for rec in route_records])
     result = milp(
         c=costs, constraints=constraints,
         integrality=np.ones(n_routes, dtype=int),
@@ -1828,15 +1830,25 @@ def _greedy_recombine(route_records: list[RouteRecord], incumbent: Plan,
 
 
 def recombine_with_route_pool(incumbent: Plan, pool: RoutePool, cfg: Config,
-                              nv_ceiling: int | None = None) -> Plan:
+                              nv_ceiling: int | None = None,
+                              nv_target: int | None = None) -> Plan:
     pool.add_plan(incumbent)
     recs = pool.records(incumbent)
     if not recs:
         return incumbent.copy()
-    candidate = _milp_recombine(recs, incumbent.inst, cfg, nv_ceiling=nv_ceiling)
+
+    # Adaptive penalty: each selected route pays max(cfg_scale, 2*mean_cost).
+    # At RC101 mean ~105, this gives >=210 per route; 2-vehicle savings=420 > BKS TD gap of ~20.
+    mean_cost = float(np.mean([r.cost for r in recs])) if recs else 100.0
+    use_penalty = (nv_ceiling is not None) or (nv_target is not None)
+    vehicle_penalty = max(cfg.sp_vehicle_penalty_scale, mean_cost * 2.0) if use_penalty else 0.0
+
+    effective_ceiling = nv_target if nv_target is not None else nv_ceiling
+
+    candidate = _milp_recombine(recs, incumbent.inst, cfg, nv_ceiling=effective_ceiling, vehicle_penalty=vehicle_penalty)
     if candidate is None:
-        candidate = _greedy_recombine(recs, incumbent, nv_ceiling=nv_ceiling)
-    if nv_ceiling is not None and candidate.nv > nv_ceiling:
+        candidate = _greedy_recombine(recs, incumbent, nv_ceiling=effective_ceiling)
+    if effective_ceiling is not None and candidate.nv > effective_ceiling:
         return incumbent.copy()
     return candidate if candidate.dominates(incumbent) else incumbent.copy()
 
@@ -3055,9 +3067,29 @@ class HybridDDQNSolver:
                 best = local_search(recombined, max_passes=cfg.polish_ls_passes, nv_ceiling=recombined.nv, max_ls_moves=cfg.max_ls_moves)
                 history.append(best.cost)
 
-        # Post-search NV reduction pass (especially effective on RC2)
+        # Explicit NV-reduction loop: try MILP with nv_target = best.nv-1, best.nv-2
+        # Accept any feasible result with fewer vehicles (BKS has *worse* TD for fewer NV).
+        for _target_nv in range(best.nv - 1, max(best.nv - 3, 0), -1):
+            _rec = recombine_with_route_pool(best, pool, cfg, nv_target=_target_nv)
+            if not _rec.feasible or _rec.nv > _target_nv:
+                break  # pool lacks routes to cover at this NV; lower targets will also fail
+            # Deep LS to improve TD at the new NV (2x default moves)
+            _rec = local_search(
+                _rec,
+                max_passes=cfg.polish_ls_passes + 1,
+                nv_ceiling=_rec.nv,
+                max_ls_moves=cfg.max_ls_moves * 2,
+            )
+            if _rec.feasible and _rec.nv <= _target_nv:
+                best = _rec
+                pool.add_plan(best)
+                history.append(best.cost)
+                # Don't break — try to go one lower
+
+        # Iterative elimination: accept any feasible fewer-NV result even if TD increases.
+        # BKS uses MORE TD than our 16-vehicle solution — domination check is wrong here.
         eliminated = _iterative_route_elimination(best, self.inst)
-        if eliminated.dominates(best):
+        if eliminated.feasible and (eliminated.nv < best.nv or eliminated.dominates(best)):
             best = eliminated
             history.append(best.cost)
 

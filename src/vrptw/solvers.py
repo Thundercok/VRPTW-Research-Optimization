@@ -609,9 +609,29 @@ class HybridDDQNSolver:
                 best = local_search(recombined, max_passes=cfg.polish_ls_passes, nv_ceiling=recombined.nv, max_ls_moves=cfg.max_ls_moves)
                 history.append(best.cost)
 
-        # Post-search NV reduction pass (especially effective on RC2)
+        # Explicit NV-reduction loop: try MILP with nv_target = best.nv-1, best.nv-2
+        # Accept any feasible result with fewer vehicles (BKS has *worse* TD for fewer NV).
+        for _target_nv in range(best.nv - 1, max(best.nv - 3, 0), -1):
+            _rec = recombine_with_route_pool(best, pool, cfg, nv_target=_target_nv)
+            if not _rec.feasible or _rec.nv > _target_nv:
+                break  # pool lacks routes to cover at this NV; lower targets will also fail
+            # Deep LS to improve TD at the new NV (2x default moves)
+            _rec = local_search(
+                _rec,
+                max_passes=cfg.polish_ls_passes + 1,
+                nv_ceiling=_rec.nv,
+                max_ls_moves=cfg.max_ls_moves * 2,
+            )
+            if _rec.feasible and _rec.nv <= _target_nv:
+                best = _rec
+                pool.add_plan(best)
+                history.append(best.cost)
+                # Don't break — try to go one lower
+
+        # Iterative elimination: accept any feasible fewer-NV result even if TD increases.
+        # BKS uses MORE TD than our 16-vehicle solution — domination check is wrong here.
         eliminated = _iterative_route_elimination(best, self.inst)
-        if eliminated.dominates(best):
+        if eliminated.feasible and (eliminated.nv < best.nv or eliminated.dominates(best)):
             best = eliminated
             history.append(best.cost)
 

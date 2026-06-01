@@ -96,7 +96,8 @@ def _sp_vehicle_penalty(inst: Inst, cfg: Config) -> float:
 
 
 def _milp_recombine(route_records: list[RouteRecord], inst: Inst, cfg: Config,
-                    nv_ceiling: int | None = None) -> Plan | None:
+                    nv_ceiling: int | None = None,
+                    vehicle_penalty: float | None = None) -> Plan | None:
     if not MILP_OK or not route_records:
         return None
     n_routes = len(route_records)
@@ -111,7 +112,8 @@ def _milp_recombine(route_records: list[RouteRecord], inst: Inst, cfg: Config,
         constraints.append(LinearConstraint(
             np.ones((1, n_routes)), lb=np.array([0.0]), ub=np.array([float(nv_ceiling)])
         ))
-    costs  = np.array([_sp_vehicle_penalty(inst, cfg) + rec.cost for rec in route_records])
+    penalty = vehicle_penalty if vehicle_penalty is not None else _sp_vehicle_penalty(inst, cfg)
+    costs  = np.array([penalty + rec.cost for rec in route_records])
     result = milp(
         c=costs, constraints=constraints,
         integrality=np.ones(n_routes, dtype=int),
@@ -155,15 +157,25 @@ def _greedy_recombine(route_records: list[RouteRecord], incumbent: Plan,
 
 
 def recombine_with_route_pool(incumbent: Plan, pool: RoutePool, cfg: Config,
-                              nv_ceiling: int | None = None) -> Plan:
+                              nv_ceiling: int | None = None,
+                              nv_target: int | None = None) -> Plan:
     pool.add_plan(incumbent)
     recs = pool.records(incumbent)
     if not recs:
         return incumbent.copy()
-    candidate = _milp_recombine(recs, incumbent.inst, cfg, nv_ceiling=nv_ceiling)
+
+    # Adaptive penalty: each selected route pays max(cfg_scale, 2*mean_cost).
+    # At RC101 mean ~105, this gives >=210 per route; 2-vehicle savings=420 > BKS TD gap of ~20.
+    mean_cost = float(np.mean([r.cost for r in recs])) if recs else 100.0
+    use_penalty = (nv_ceiling is not None) or (nv_target is not None)
+    vehicle_penalty = max(cfg.sp_vehicle_penalty_scale, mean_cost * 2.0) if use_penalty else 0.0
+
+    effective_ceiling = nv_target if nv_target is not None else nv_ceiling
+
+    candidate = _milp_recombine(recs, incumbent.inst, cfg, nv_ceiling=effective_ceiling, vehicle_penalty=vehicle_penalty)
     if candidate is None:
-        candidate = _greedy_recombine(recs, incumbent, nv_ceiling=nv_ceiling)
-    if nv_ceiling is not None and candidate.nv > nv_ceiling:
+        candidate = _greedy_recombine(recs, incumbent, nv_ceiling=effective_ceiling)
+    if effective_ceiling is not None and candidate.nv > effective_ceiling:
         return incumbent.copy()
     return candidate if candidate.dominates(incumbent) else incumbent.copy()
 
