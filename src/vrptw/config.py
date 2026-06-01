@@ -238,6 +238,7 @@ class Config:
 
     # ── polish ────────────────────────────────────────────────────────────
     polish_ls_passes: int = 2
+    max_ls_moves: int = 15
     recombine_after_main_search: bool = True
     recombine_after_polish: bool = True
 
@@ -274,6 +275,8 @@ class Config:
             raise ValueError(f"hybrid_iterations must be >= 0, got {self.hybrid_iterations}")
         if self.early_stop_patience <= 0:
             raise ValueError(f"early_stop_patience must be > 0, got {self.early_stop_patience}")
+        if self.max_ls_moves <= 0:
+            raise ValueError(f"max_ls_moves must be > 0, got {self.max_ls_moves}")
         if not (0.0 <= self.destroy_ratio_min < self.destroy_ratio_max <= 1.0):
             raise ValueError(
                 f"Invalid destroy ratios: min={self.destroy_ratio_min}, max={self.destroy_ratio_max}. "

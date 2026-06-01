@@ -24,6 +24,7 @@ from vrptw import (
     ALGO_HYBRID_FIXED,
     ALGO_HYBRID_RULE,
     ALGO_HYBRID_DDQN,
+    ALGO_ORTOOLS,
 )
 
 # ── REQUIRED: all execution must be inside this guard so that spawn workers
@@ -50,7 +51,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--algorithms",
         nargs="+",
-        choices=[ALGO_ALNS_BASE, ALGO_HYBRID_FIXED, ALGO_HYBRID_RULE, ALGO_HYBRID_DDQN],
+        choices=[ALGO_ALNS_BASE, ALGO_HYBRID_FIXED, ALGO_HYBRID_RULE, ALGO_HYBRID_DDQN, ALGO_ORTOOLS],
         default=[ALGO_ALNS_BASE, ALGO_HYBRID_FIXED, ALGO_HYBRID_RULE, ALGO_HYBRID_DDQN],
         help="Algorithms to include in benchmark"
     )

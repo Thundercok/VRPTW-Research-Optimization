@@ -1,3 +1,30 @@
+function darkenHex(hex, percent) {
+    if (!hex || !hex.startsWith('#')) return hex;
+    let raw = hex.replace('#', '');
+    if (raw.length === 3) {
+        raw = raw[0] + raw[0] + raw[1] + raw[1] + raw[2] + raw[2];
+    }
+    let r = parseInt(raw.substring(0, 2), 16);
+    let g = parseInt(raw.substring(2, 4), 16);
+    let b = parseInt(raw.substring(4, 6), 16);
+    r = Math.max(0, Math.floor(r * (1 - percent)));
+    g = Math.max(0, Math.floor(g * (1 - percent)));
+    b = Math.max(0, Math.floor(b * (1 - percent)));
+    return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+}
+
+function hexToRgba(hex, alpha) {
+    if (!hex || !hex.startsWith('#')) return `rgba(0,0,0,${alpha})`;
+    let raw = hex.replace('#', '');
+    if (raw.length === 3) {
+        raw = raw[0] + raw[0] + raw[1] + raw[1] + raw[2] + raw[2];
+    }
+    let r = parseInt(raw.substring(0, 2), 16);
+    let g = parseInt(raw.substring(2, 4), 16);
+    let b = parseInt(raw.substring(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 export class MapController {
     constructor(app) {
         this.app = app;
@@ -23,7 +50,12 @@ export class MapController {
 
         L.control.zoom({ position: 'bottomright' }).addTo(this.map);
 
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        const savedTheme = localStorage.getItem('vrptw_map_theme') || 'carto-light';
+        const tileUrl = savedTheme === 'carto-dark'
+            ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+            : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+
+        L.tileLayer(tileUrl, {
             maxZoom: 19,
             attribution: '&copy; CARTO'
         }).addTo(this.map);
@@ -138,19 +170,16 @@ export class MapController {
         this.app.state.customers.forEach(c => {
             const p = [c.lat, c.lng];
             bounds.push(p);
-            L.circleMarker(p, {
-                renderer: this.canvasRenderer,
-                radius: c.isDepot ? 6 : 4,
-                color: c.isDepot ? '#2563eb' : '#64748b',
-                weight: c.isDepot ? 3 : 2,
-                fillColor: '#ffffff',
-                fillOpacity: 1
-            }).bindPopup(`
-        <div style="font-family: Inter, sans-serif;">
-          <strong style="font-size: 14px; color: #0f172a;">${c.name}</strong>
-          <div style="color: #64748b; font-size: 12px; margin-top: 4px;">Demand: ${c.demand} units</div>
-        </div>
-      `).addTo(this.markerLayer);
+            const markerOptions = {
+                icon: c.isDepot ? this.buildDepotIcon() : this.buildCustomerIcon(c.ready, c.due)
+            };
+            L.marker(p, markerOptions).bindPopup(`
+                <div style="font-family: Inter, sans-serif;">
+                  <strong style="font-size: 14px; color: #0f172a;">${c.name}</strong>
+                  <div style="color: #64748b; font-size: 12px; margin-top: 4px;">Demand: ${c.demand} units</div>
+                  <div style="color: #64748b; font-size: 11px;">Time Window: ${c.ready} - ${c.due}</div>
+                </div>
+            `).addTo(this.markerLayer);
         });
         if (bounds.length > 0) this.map.fitBounds(bounds, { padding: [40, 40] });
     }
@@ -200,6 +229,7 @@ export class MapController {
 
     async fetchRoadGeometries(result) {
         this.roadRoutes.clear();
+        this.osrmWarned = false;
         const jobs = [];
         for (const prefix in result) {
             const algo = result[prefix];
@@ -218,6 +248,19 @@ export class MapController {
         this._rerenderWithRoads(result);
     }
 
+    triggerOsrmWarning() {
+        if (!this.osrmWarned) {
+            this.osrmWarned = true;
+            this.app.toast(
+                this.app.lang === 'vn' ? 'Đang vẽ đường thẳng' : 'Drawing Straight Lines',
+                this.app.lang === 'vn'
+                    ? 'Máy chủ định tuyến OSRM đang ngoại tuyến hoặc giới hạn truy cập. Đang hiển thị đường chim bay.'
+                    : 'The OSRM routing server is offline or rate-limited. Falling back to Euclidean path segments.',
+                'warn'
+            );
+        }
+    }
+
     async _fetchSingleRoute(route, prefix) {
         const waypoints = route.path; // [[lat,lng], ...]
         if (waypoints.length < 2) return;
@@ -225,9 +268,15 @@ export class MapController {
         const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`;
         try {
             const resp = await fetch(url);
-            if (!resp.ok) return;
+            if (!resp.ok) {
+                this.triggerOsrmWarning();
+                return;
+            }
             const data = await resp.json();
-            if (data.code !== 'Ok' || !data.routes?.length) return;
+            if (data.code !== 'Ok' || !data.routes?.length) {
+                this.triggerOsrmWarning();
+                return;
+            }
 
             const geo = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]); // [lng,lat]→[lat,lng]
             // Cumulative distances along the geometry
@@ -251,6 +300,7 @@ export class MapController {
             this.roadRoutes.set(key, { geometry: geo, cumDist, legBounds });
         } catch (e) {
             console.warn(`OSRM failed for ${prefix} v${route.vehicle_id}:`, e);
+            this.triggerOsrmWarning();
         }
     }
 
@@ -586,7 +636,9 @@ export class MapController {
     buildDepotIcon() {
         return L.divIcon({
             className: 'map-marker-wrap',
-            iconSize: [72, 84], iconAnchor: [36, 72], popupAnchor: [0, -42],
+            iconSize: [48, 48],
+            iconAnchor: [24, 24],
+            popupAnchor: [0, -24],
             html: `<div class="map-icon-3d depot" style="--icon-main:#0ea5e9;--icon-dark:#0c4a6e;--icon-shadow:rgba(14,165,233,0.36)"><span class="map-icon-glyph">🏭</span></div>`
         });
     }
@@ -600,7 +652,9 @@ export class MapController {
         const br = isUrgent ? '4px' : '50%';
         return L.divIcon({
             className: 'map-marker-wrap',
-            iconSize: [28, 36], iconAnchor: [14, 33], popupAnchor: [0, -20],
+            iconSize: [24, 24],
+            iconAnchor: [12, 12],
+            popupAnchor: [0, -12],
             html: `
                 <div class="map-icon-3d customer" style="--icon-main:${mainColor};--icon-dark:${darkColor};--icon-shadow:${shadowColor}; border-radius: ${br};">
                     <svg class="map-icon-avatar" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -618,10 +672,14 @@ export class MapController {
     }
 
     buildVehicleIcon(color = '#0b8a65') {
+        const darkColor = darkenHex(color, 0.4);
+        const shadowColor = hexToRgba(color, 0.35);
         return L.divIcon({
             className: 'map-marker-wrap',
-            iconSize: [56, 56], iconAnchor: [28, 28], popupAnchor: [0, -18],
-            html: `<div class="map-icon-3d vehicle" style="--icon-main:${color};--icon-dark:#0f3d33;--icon-shadow:rgba(15,61,51,0.35)"><span class="map-icon-glyph">🚚</span></div>`
+            iconSize: [40, 40],
+            iconAnchor: [20, 20],
+            popupAnchor: [0, -20],
+            html: `<div class="map-icon-3d vehicle" style="--icon-main:${color};--icon-dark:${darkColor};--icon-shadow:${shadowColor}"><span class="map-icon-glyph">🚚</span></div>`
         });
     }
 

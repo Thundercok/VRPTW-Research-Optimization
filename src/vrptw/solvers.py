@@ -338,7 +338,7 @@ class HybridDDQNSolver:
             nv_cap = min(best.nv, refined.nv)
             recombined = recombine_with_route_pool(refined, pool, self.cfg, nv_ceiling=nv_cap)
             if recombined.dominates(refined):
-                refined = local_search(recombined, max_passes=1, nv_ceiling=recombined.nv)
+                refined = local_search(recombined, max_passes=1, nv_ceiling=recombined.nv, max_ls_moves=self.cfg.max_ls_moves)
         return refined
 
     def _fixed_nv_polish(self, start: Plan, pool: RoutePool, inherited_bandit: ThompsonBandit | None = None) -> Plan:
@@ -346,7 +346,7 @@ class HybridDDQNSolver:
         target_nv = start.nv
         # Inherit operator statistics from main search instead of cold-starting
         polish_bandit = inherited_bandit.clone() if inherited_bandit is not None else ThompsonBandit(N_D, N_R)
-        cur = local_search(start, max_passes=cfg.polish_ls_passes, nv_ceiling=target_nv)
+        cur = local_search(start, max_passes=cfg.polish_ls_passes, nv_ceiling=target_nv, max_ls_moves=cfg.max_ls_moves)
         best = cur.copy()
         pool.add_plan(best)
         temp = cfg.temp_control * best.cost / math.log(2)
@@ -356,7 +356,7 @@ class HybridDDQNSolver:
             size = destroy_size(it, cfg.polish_iterations, cfg, self.inst.n, scale=0.70)
             dest, removed = DESTROY[di](cur.copy(), size)
             cand = REPAIR[ri](dest, removed)
-            cand = local_search(cand, max_passes=1, nv_ceiling=target_nv)
+            cand = local_search(cand, max_passes=1, nv_ceiling=target_nv, max_ls_moves=cfg.max_ls_moves)
             pool.add_plan(cand)
             score, cur_before = 0, cur
             if accept_with_nv_ceiling(cur, cand, temp, target_nv):
@@ -377,7 +377,7 @@ class HybridDDQNSolver:
             temp *= cfg.temp_decay * 0.997
             if no_imp >= cfg.polish_patience:
                 break
-        best = local_search(best, max_passes=cfg.polish_ls_passes, nv_ceiling=best.nv)
+        best = local_search(best, max_passes=cfg.polish_ls_passes, nv_ceiling=best.nv, max_ls_moves=cfg.max_ls_moves)
         pool.add_plan(best)
         return best
 
@@ -511,7 +511,7 @@ class HybridDDQNSolver:
                             if action in (MODE_INTENSIFY, MODE_TW_RESCUE, MODE_POOL_RECOMBINE, MODE_ROUTE_REDUCE)
                             else None
                         )
-                        cand = local_search(cand, max_passes=MODES[action].ls_passes, nv_ceiling=nv_cap)
+                        cand = local_search(cand, max_passes=MODES[action].ls_passes, nv_ceiling=nv_cap, max_ls_moves=cfg.max_ls_moves)
                         self.ls_budget.record(time.time() - t_ls, cost_pre, cand.cost)
                     improved = cand.dominates(cur)
                     pool.add_plan(cand)
@@ -606,7 +606,7 @@ class HybridDDQNSolver:
         if cfg.recombine_after_polish:
             recombined = recombine_with_route_pool(best, pool, cfg, nv_ceiling=best.nv)
             if recombined.dominates(best):
-                best = local_search(recombined, max_passes=cfg.polish_ls_passes, nv_ceiling=recombined.nv)
+                best = local_search(recombined, max_passes=cfg.polish_ls_passes, nv_ceiling=recombined.nv, max_ls_moves=cfg.max_ls_moves)
                 history.append(best.cost)
 
         # Post-search NV reduction pass (especially effective on RC2)
