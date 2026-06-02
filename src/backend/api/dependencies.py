@@ -6,6 +6,7 @@ from firebase_admin import auth
 
 security = HTTPBearer(auto_error=False)
 
+
 async def require_user(cred: HTTPAuthorizationCredentials = Depends(security)) -> dict[str, str]:
     if demo_auth_bypass_enabled():
         # Fallback to anonymous admin/operator during local demo run / tests
@@ -48,4 +49,3 @@ async def require_user(cred: HTTPAuthorizationCredentials = Depends(security)) -
             detail="Invalid or expired Firebase ID token.",
             headers={"WWW-Authenticate": "Bearer"},
         ) from e
-

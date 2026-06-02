@@ -6,7 +6,8 @@ const I18N = {
     'lang-toggle': 'VN',
     'feedback-badge': 'Anonymous channel',
     'feedback-title': 'Share anonymous feedback',
-    'feedback-lead': 'Send a private suggestion, bug report, or product idea. Admins can review entries later and use them to shape the roadmap.',
+    'feedback-lead':
+      'Send a private suggestion, bug report, or product idea. Admins can review entries later and use them to shape the roadmap.',
     'feedback-point-1': 'No login required.',
     'feedback-point-2': 'Messages are stored anonymously.',
     'feedback-point-3': 'Admins can review feedback in the demo app.',
@@ -22,7 +23,8 @@ const I18N = {
     'lang-toggle': 'EN',
     'feedback-badge': 'Kênh ẩn danh',
     'feedback-title': 'Gửi góp ý ẩn danh',
-    'feedback-lead': 'Gửi đề xuất riêng, báo lỗi hoặc ý tưởng sản phẩm. Admin sẽ xem được các phản hồi sau đó để phát triển roadmap.',
+    'feedback-lead':
+      'Gửi đề xuất riêng, báo lỗi hoặc ý tưởng sản phẩm. Admin sẽ xem được các phản hồi sau đó để phát triển roadmap.',
     'feedback-point-1': 'Không cần đăng nhập.',
     'feedback-point-2': 'Nội dung được lưu ẩn danh.',
     'feedback-point-3': 'Admin có thể xem feedback trong app demo.',
@@ -101,7 +103,8 @@ async function main() {
     };
 
     if (!payload.message) {
-      if (status) status.textContent = lang === 'vn' ? 'Vui lòng nhập nội dung feedback.' : 'Please enter a feedback message.';
+      if (status)
+        status.textContent = lang === 'vn' ? 'Vui lòng nhập nội dung feedback.' : 'Please enter a feedback message.';
       return;
     }
 
@@ -124,7 +127,8 @@ async function main() {
       rating.value = '';
       if (status) status.textContent = lang === 'vn' ? 'Đã gửi feedback. Cảm ơn bạn!' : 'Feedback sent. Thank you!';
     } catch (error) {
-      if (status) status.textContent = lang === 'vn' ? `Gửi thất bại: ${error.message}` : `Submit failed: ${error.message}`;
+      if (status)
+        status.textContent = lang === 'vn' ? `Gửi thất bại: ${error.message}` : `Submit failed: ${error.message}`;
     } finally {
       if (submitBtn) submitBtn.disabled = false;
     }

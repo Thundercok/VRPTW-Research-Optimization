@@ -1,220 +1,227 @@
 function darkenHex(hex, percent) {
-    if (!hex || !hex.startsWith('#')) return hex;
-    let raw = hex.replace('#', '');
-    if (raw.length === 3) {
-        raw = raw[0] + raw[0] + raw[1] + raw[1] + raw[2] + raw[2];
-    }
-    let r = parseInt(raw.substring(0, 2), 16);
-    let g = parseInt(raw.substring(2, 4), 16);
-    let b = parseInt(raw.substring(4, 6), 16);
-    r = Math.max(0, Math.floor(r * (1 - percent)));
-    g = Math.max(0, Math.floor(g * (1 - percent)));
-    b = Math.max(0, Math.floor(b * (1 - percent)));
-    return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+  if (!hex || !hex.startsWith('#')) return hex;
+  let raw = hex.replace('#', '');
+  if (raw.length === 3) {
+    raw = raw[0] + raw[0] + raw[1] + raw[1] + raw[2] + raw[2];
+  }
+  let r = parseInt(raw.substring(0, 2), 16);
+  let g = parseInt(raw.substring(2, 4), 16);
+  let b = parseInt(raw.substring(4, 6), 16);
+  r = Math.max(0, Math.floor(r * (1 - percent)));
+  g = Math.max(0, Math.floor(g * (1 - percent)));
+  b = Math.max(0, Math.floor(b * (1 - percent)));
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
 }
 
 function hexToRgba(hex, alpha) {
-    if (!hex || !hex.startsWith('#')) return `rgba(0,0,0,${alpha})`;
-    let raw = hex.replace('#', '');
-    if (raw.length === 3) {
-        raw = raw[0] + raw[0] + raw[1] + raw[1] + raw[2] + raw[2];
-    }
-    let r = parseInt(raw.substring(0, 2), 16);
-    let g = parseInt(raw.substring(2, 4), 16);
-    let b = parseInt(raw.substring(4, 6), 16);
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  if (!hex || !hex.startsWith('#')) return `rgba(0,0,0,${alpha})`;
+  let raw = hex.replace('#', '');
+  if (raw.length === 3) {
+    raw = raw[0] + raw[0] + raw[1] + raw[1] + raw[2] + raw[2];
+  }
+  let r = parseInt(raw.substring(0, 2), 16);
+  let g = parseInt(raw.substring(2, 4), 16);
+  let b = parseInt(raw.substring(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
 export class MapController {
-    constructor(app) {
-        this.app = app;
-        this.map = null;
-        this.ddqnMap = null;
-        this.alnsMap = null;
-        this.vehicleAnimations = [];
-        this.ddqnVehicles = new Map();
-        this.alnsVehicles = new Map();
-        this.roadRoutes = new Map();
-        this.routeLayers = {};
-        this.vehicleLayers = {};
-        this.vehiclesMap = {};
+  constructor(app) {
+    this.app = app;
+    this.map = null;
+    this.ddqnMap = null;
+    this.alnsMap = null;
+    this.vehicleAnimations = [];
+    this.ddqnVehicles = new Map();
+    this.alnsVehicles = new Map();
+    this.roadRoutes = new Map();
+    this.routeLayers = {};
+    this.vehicleLayers = {};
+    this.vehiclesMap = {};
+  }
+
+  init() {
+    this.map = L.map('map-container', {
+      zoomControl: false,
+    }).setView([10.73193, 106.69934], 13);
+
+    this.ddqnMap = this.map;
+    this.alnsMap = this.map;
+
+    L.control.zoom({ position: 'bottomright' }).addTo(this.map);
+
+    const savedTheme = localStorage.getItem('vrptw_map_theme') || 'carto-light';
+    const tileUrl =
+      savedTheme === 'carto-dark'
+        ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+        : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+
+    L.tileLayer(tileUrl, {
+      maxZoom: 19,
+      attribution: '&copy; CARTO',
+    }).addTo(this.map);
+
+    this.canvasRenderer = L.canvas({ padding: 0.5 });
+    this.markerLayer = L.layerGroup().addTo(this.map);
+
+    // Keep legacy layers defined for backwards compatibility
+    this.ddqnRouteLayer = L.layerGroup();
+    this.alnsRouteLayer = L.layerGroup();
+    this.alnsDiffLayer = L.layerGroup();
+    this.ddqnVehicleLayer = L.layerGroup();
+    this.alnsVehicleLayer = L.layerGroup();
+
+    // Switch listeners are dynamically updated in App.js when solver runs,
+    // but we setup standard ones here as a fallback.
+    this.currentView = 'ddqn';
+  }
+
+  getRouteLayer(algoName) {
+    if (!this.routeLayers) this.routeLayers = {};
+    if (!this.routeLayers[algoName]) {
+      this.routeLayers[algoName] = L.layerGroup();
+    }
+    return this.routeLayers[algoName];
+  }
+
+  getVehicleLayer(algoName) {
+    if (!this.vehicleLayers) this.vehicleLayers = {};
+    if (!this.vehicleLayers[algoName]) {
+      this.vehicleLayers[algoName] = L.layerGroup();
+    }
+    return this.vehicleLayers[algoName];
+  }
+
+  getVehiclesMap(algoName) {
+    if (!this.vehiclesMap) this.vehiclesMap = {};
+    if (!this.vehiclesMap[algoName]) {
+      this.vehiclesMap[algoName] = new Map();
+    }
+    return this.vehiclesMap[algoName];
+  }
+
+  switchView(view) {
+    this.currentView = view;
+
+    // Remove all route and vehicle layers
+    if (this.routeLayers) {
+      for (const key in this.routeLayers) {
+        this.map.removeLayer(this.routeLayers[key]);
+      }
+    }
+    if (this.vehicleLayers) {
+      for (const key in this.vehicleLayers) {
+        this.map.removeLayer(this.vehicleLayers[key]);
+      }
     }
 
-    init() {
-        this.map = L.map('map-container', {
-            zoomControl: false
-        }).setView([10.73193, 106.69934], 13);
+    this.map.removeLayer(this.ddqnRouteLayer);
+    this.map.removeLayer(this.ddqnVehicleLayer);
+    this.map.removeLayer(this.alnsRouteLayer);
+    this.map.removeLayer(this.alnsVehicleLayer);
+    this.map.removeLayer(this.alnsDiffLayer);
 
-        this.ddqnMap = this.map;
-        this.alnsMap = this.map;
+    // Add active layers
+    const routeLayer = this.getRouteLayer(view);
+    const vehicleLayer = this.getVehicleLayer(view);
+    routeLayer.addTo(this.map);
+    vehicleLayer.addTo(this.map);
 
-        L.control.zoom({ position: 'bottomright' }).addTo(this.map);
-
-        const savedTheme = localStorage.getItem('vrptw_map_theme') || 'carto-light';
-        const tileUrl = savedTheme === 'carto-dark'
-            ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-            : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
-
-        L.tileLayer(tileUrl, {
-            maxZoom: 19,
-            attribution: '&copy; CARTO'
-        }).addTo(this.map);
-
-        this.canvasRenderer = L.canvas({ padding: 0.5 });
-        this.markerLayer = L.layerGroup().addTo(this.map);
-
-        // Keep legacy layers defined for backwards compatibility
-        this.ddqnRouteLayer = L.layerGroup();
-        this.alnsRouteLayer = L.layerGroup();
-        this.alnsDiffLayer = L.layerGroup();
-        this.ddqnVehicleLayer = L.layerGroup();
-        this.alnsVehicleLayer = L.layerGroup();
-
-        // Switch listeners are dynamically updated in App.js when solver runs, 
-        // but we setup standard ones here as a fallback.
-        this.currentView = 'ddqn';
+    if (view === 'alns' && this.alnsDiffLayer) {
+      this.map.addLayer(this.alnsDiffLayer);
     }
 
-    getRouteLayer(algoName) {
-        if (!this.routeLayers) this.routeLayers = {};
-        if (!this.routeLayers[algoName]) {
-            this.routeLayers[algoName] = L.layerGroup();
-        }
-        return this.routeLayers[algoName];
+    if (this.app.simulationController) {
+      this.app.simulationController.updateFrame();
     }
+  }
 
-    getVehicleLayer(algoName) {
-        if (!this.vehicleLayers) this.vehicleLayers = {};
-        if (!this.vehicleLayers[algoName]) {
-            this.vehicleLayers[algoName] = L.layerGroup();
-        }
-        return this.vehicleLayers[algoName];
+  invalidate() {
+    if (this.map) this.map.invalidateSize();
+  }
+
+  clearRoutes() {
+    this.stopVehicleAnimations();
+    if (this.routeLayers) {
+      for (const key in this.routeLayers) {
+        this.routeLayers[key].clearLayers();
+      }
     }
-
-    getVehiclesMap(algoName) {
-        if (!this.vehiclesMap) this.vehiclesMap = {};
-        if (!this.vehiclesMap[algoName]) {
-            this.vehiclesMap[algoName] = new Map();
-        }
-        return this.vehiclesMap[algoName];
+    if (this.vehicleLayers) {
+      for (const key in this.vehicleLayers) {
+        this.vehicleLayers[key].clearLayers();
+      }
     }
+    this.alnsDiffLayer?.clearLayers();
+    this.vehiclesMap = {};
 
-    switchView(view) {
-        this.currentView = view;
-        
-        // Remove all route and vehicle layers
-        if (this.routeLayers) {
-            for (const key in this.routeLayers) {
-                this.map.removeLayer(this.routeLayers[key]);
-            }
-        }
-        if (this.vehicleLayers) {
-            for (const key in this.vehicleLayers) {
-                this.map.removeLayer(this.vehicleLayers[key]);
-            }
-        }
-        
-        this.map.removeLayer(this.ddqnRouteLayer);
-        this.map.removeLayer(this.ddqnVehicleLayer);
-        this.map.removeLayer(this.alnsRouteLayer);
-        this.map.removeLayer(this.alnsVehicleLayer);
-        this.map.removeLayer(this.alnsDiffLayer);
+    this.ddqnRouteLayer?.clearLayers();
+    this.alnsRouteLayer?.clearLayers();
+    this.ddqnVehicleLayer?.clearLayers();
+    this.alnsVehicleLayer?.clearLayers();
+    this.ddqnVehicles.clear();
+    this.alnsVehicles.clear();
 
-        // Add active layers
-        const routeLayer = this.getRouteLayer(view);
-        const vehicleLayer = this.getVehicleLayer(view);
-        routeLayer.addTo(this.map);
-        vehicleLayer.addTo(this.map);
+    this.roadRoutes.clear();
+  }
 
-        if (view === 'alns' && this.alnsDiffLayer) {
-            this.map.addLayer(this.alnsDiffLayer);
-        }
-
-        if (this.app.simulationController) {
-            this.app.simulationController.updateFrame();
-        }
-    }
-
-    invalidate() {
-        if (this.map) this.map.invalidateSize();
-    }
-
-    clearRoutes() {
-        this.stopVehicleAnimations();
-        if (this.routeLayers) {
-            for (const key in this.routeLayers) {
-                this.routeLayers[key].clearLayers();
-            }
-        }
-        if (this.vehicleLayers) {
-            for (const key in this.vehicleLayers) {
-                this.vehicleLayers[key].clearLayers();
-            }
-        }
-        this.alnsDiffLayer?.clearLayers();
-        this.vehiclesMap = {};
-        
-        this.ddqnRouteLayer?.clearLayers();
-        this.alnsRouteLayer?.clearLayers();
-        this.ddqnVehicleLayer?.clearLayers();
-        this.alnsVehicleLayer?.clearLayers();
-        this.ddqnVehicles.clear();
-        this.alnsVehicles.clear();
-        
-        this.roadRoutes.clear();
-    }
-
-    renderMarkers() {
-        this.markerLayer.clearLayers();
-        const bounds = [];
-        this.app.state.customers.forEach(c => {
-            const p = [c.lat, c.lng];
-            bounds.push(p);
-            const markerOptions = {
-                icon: c.isDepot ? this.buildDepotIcon() : this.buildCustomerIcon(c.ready, c.due)
-            };
-            L.marker(p, markerOptions).bindPopup(`
+  renderMarkers() {
+    this.markerLayer.clearLayers();
+    const bounds = [];
+    this.app.state.customers.forEach((c) => {
+      const p = [c.lat, c.lng];
+      bounds.push(p);
+      const markerOptions = {
+        icon: c.isDepot ? this.buildDepotIcon() : this.buildCustomerIcon(c.ready, c.due),
+      };
+      L.marker(p, markerOptions)
+        .bindPopup(
+          `
                 <div style="font-family: Inter, sans-serif;">
                   <strong style="font-size: 14px; color: #0f172a;">${c.name}</strong>
                   <div style="color: #64748b; font-size: 12px; margin-top: 4px;">Demand: ${c.demand} units</div>
                   <div style="color: #64748b; font-size: 11px;">Time Window: ${c.ready} - ${c.due}</div>
                 </div>
-            `).addTo(this.markerLayer);
-        });
-        if (bounds.length > 0) this.map.fitBounds(bounds, { padding: [40, 40] });
-    }
+            `
+        )
+        .addTo(this.markerLayer);
+    });
+    if (bounds.length > 0) this.map.fitBounds(bounds, { padding: [40, 40] });
+  }
 
-    // ── Route rendering (straight-line fallback, replaced by OSRM when ready) ──
+  // ── Route rendering (straight-line fallback, replaced by OSRM when ready) ──
 
-    renderAlgoRoutes(algo, algoNameOrIsDdqn, color, capacity) {
-        const algoName = (typeof algoNameOrIsDdqn === 'boolean')
-            ? (algoNameOrIsDdqn ? 'ddqn' : 'alns')
-            : algoNameOrIsDdqn;
-        const layerGroup = this.getRouteLayer(algoName);
-        (algo.routes || []).forEach((route, routeIndex) => {
-            if (!route.path || route.path.length < 2) return;
-            const popupContent = this._buildRoutePopup(route, capacity, routeIndex);
-            const routeColor = this.colorForRoute(routeIndex, route, color);
-            L.polyline(route.path.map((p) => [p[0], p[1]]), {
-                renderer: this.canvasRenderer,
-                color: routeColor,
-                weight: 4,
-                opacity: 0.9
-            }).bindPopup(popupContent).addTo(layerGroup);
-        });
-    }
+  renderAlgoRoutes(algo, algoNameOrIsDdqn, color, capacity) {
+    const algoName = typeof algoNameOrIsDdqn === 'boolean' ? (algoNameOrIsDdqn ? 'ddqn' : 'alns') : algoNameOrIsDdqn;
+    const layerGroup = this.getRouteLayer(algoName);
+    (algo.routes || []).forEach((route, routeIndex) => {
+      if (!route.path || route.path.length < 2) return;
+      const popupContent = this._buildRoutePopup(route, capacity, routeIndex);
+      const routeColor = this.colorForRoute(routeIndex, route, color);
+      L.polyline(
+        route.path.map((p) => [p[0], p[1]]),
+        {
+          renderer: this.canvasRenderer,
+          color: routeColor,
+          weight: 4,
+          opacity: 0.9,
+        }
+      )
+        .bindPopup(popupContent)
+        .addTo(layerGroup);
+    });
+  }
 
-    _buildRoutePopup(route, capacity, routeIndex) {
-        const fleetVehicle = this.app.state.fleet?.[route.vehicle_id];
-        const driverName = fleetVehicle ? fleetVehicle.driver : `Vehicle ${route.vehicle_id}`;
-        const vehCap = fleetVehicle ? fleetVehicle.capacity : capacity;
-        const load = Number(route.load ?? 0);
-        const cap = Number(vehCap);
-        const loadLine = Number.isFinite(load) && Number.isFinite(cap) && cap > 0
-            ? `<br/>Load: ${load} / ${cap}` : '';
-        const badge = this.buildLoadBadge(load, cap);
-        const ratioText = Number.isFinite(badge.ratio) ? `${(badge.ratio * 100).toFixed(1)}%` : 'N/A';
-        return `
+  _buildRoutePopup(route, capacity, routeIndex) {
+    const fleetVehicle = this.app.state.fleet?.[route.vehicle_id];
+    const driverName = fleetVehicle ? fleetVehicle.driver : `Vehicle ${route.vehicle_id}`;
+    const vehCap = fleetVehicle ? fleetVehicle.capacity : capacity;
+    const load = Number(route.load ?? 0);
+    const cap = Number(vehCap);
+    const loadLine = Number.isFinite(load) && Number.isFinite(cap) && cap > 0 ? `<br/>Load: ${load} / ${cap}` : '';
+    const badge = this.buildLoadBadge(load, cap);
+    const ratioText = Number.isFinite(badge.ratio) ? `${(badge.ratio * 100).toFixed(1)}%` : 'N/A';
+    return `
             <div class="route-popup">
                 <strong>${driverName}</strong>
                 ${loadLine}
@@ -223,298 +230,305 @@ export class MapController {
                 <br/><span class="route-load-pill ${badge.tone}">${badge.label}</span>
             </div>
         `;
+  }
+
+  // ── OSRM road geometry fetching ──────────────────────────────────────
+
+  async fetchRoadGeometries(result) {
+    this.roadRoutes.clear();
+    this.osrmWarned = false;
+    const jobs = [];
+    for (const prefix in result) {
+      const algo = result[prefix];
+      if (!algo || !algo.routes) continue;
+      for (const route of algo.routes) {
+        if (!route.path || route.path.length < 2) continue;
+        jobs.push({ route, prefix });
+      }
+    }
+    // Fetch sequentially with small delays to be polite to OSRM
+    for (const job of jobs) {
+      await this._fetchSingleRoute(job.route, job.prefix);
+      await new Promise((r) => setTimeout(r, 80));
+    }
+    // Re-render polylines with road geometry
+    this._rerenderWithRoads(result);
+  }
+
+  triggerOsrmWarning() {
+    if (!this.osrmWarned) {
+      this.osrmWarned = true;
+      this.app.toast(
+        this.app.lang === 'vn' ? 'Đang vẽ đường thẳng' : 'Drawing Straight Lines',
+        this.app.lang === 'vn'
+          ? 'Máy chủ định tuyến OSRM đang ngoại tuyến hoặc giới hạn truy cập. Đang hiển thị đường chim bay.'
+          : 'The OSRM routing server is offline or rate-limited. Falling back to Euclidean path segments.',
+        'warn'
+      );
+    }
+  }
+
+  async _fetchSingleRoute(route, prefix) {
+    const waypoints = route.path; // [[lat,lng], ...]
+    if (waypoints.length < 2) return;
+    const coords = waypoints.map((w) => `${w[1]},${w[0]}`).join(';');
+    const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`;
+    try {
+      const resp = await fetch(url);
+      if (!resp.ok) {
+        this.triggerOsrmWarning();
+        return;
+      }
+      const data = await resp.json();
+      if (data.code !== 'Ok' || !data.routes?.length) {
+        this.triggerOsrmWarning();
+        return;
+      }
+
+      const geo = data.routes[0].geometry.coordinates.map((c) => [c[1], c[0]]); // [lng,lat]→[lat,lng]
+      // Cumulative distances along the geometry
+      const cumDist = [0];
+      for (let i = 1; i < geo.length; i++) {
+        cumDist.push(cumDist[i - 1] + this._approxDist(geo[i - 1], geo[i]));
+      }
+      // Find geometry indices closest to each original waypoint
+      const legBounds = [0];
+      for (let wi = 1; wi < waypoints.length; wi++) {
+        let bestIdx = legBounds[legBounds.length - 1];
+        let bestD = Infinity;
+        for (let gi = bestIdx; gi < geo.length; gi++) {
+          const d = this._approxDist(geo[gi], waypoints[wi]);
+          if (d < bestD) {
+            bestD = d;
+            bestIdx = gi;
+          }
+          if (d > bestD * 4 && gi > bestIdx + 10) break;
+        }
+        legBounds.push(bestIdx);
+      }
+      const key = `${prefix}_${route.vehicle_id}`;
+      this.roadRoutes.set(key, { geometry: geo, cumDist, legBounds });
+    } catch (e) {
+      console.warn(`OSRM failed for ${prefix} v${route.vehicle_id}:`, e);
+      this.triggerOsrmWarning();
+    }
+  }
+
+  _rerenderWithRoads(result) {
+    const cap = Number(this.app.state.lastRunFleet?.capacity ?? this.app.state.capacity);
+
+    const colors = {
+      ddqn: '#0b8a65',
+      alns: '#2563eb',
+      ortools: '#e11d48',
+      hybrid_fixed: '#d97706',
+      hybrid_ddqn: '#7c3aed',
+      hybrid_ddqn_transfer_rc1: '#0284c7',
+      hybrid_ddqn_transfer_dr: '#4f46e5',
+      hybrid: '#0b8a65',
+    };
+
+    const rerender = (algo, algoName, baseColor, capacity) => {
+      if (!algo?.routes) return;
+      const layerGroup = this.getRouteLayer(algoName);
+      layerGroup.clearLayers();
+      const prefix = algoName;
+      algo.routes.forEach((route, routeIndex) => {
+        if (!route.path || route.path.length < 2) return;
+        const popup = this._buildRoutePopup(route, capacity, routeIndex);
+        const color = this.colorForRoute(routeIndex, route, baseColor || '#6b7280');
+        const key = `${prefix}_${route.vehicle_id}`;
+        const road = this.roadRoutes.get(key);
+        const coords = road ? road.geometry : route.path.map((p) => [p[0], p[1]]);
+        L.polyline(coords, {
+          color,
+          weight: 4,
+          opacity: 0.9,
+          lineJoin: 'round',
+          lineCap: 'round',
+        })
+          .bindPopup(popup)
+          .addTo(layerGroup);
+      });
+    };
+
+    for (const algoName in result) {
+      const baseColor = colors[algoName] || '#6b7280';
+      rerender(result[algoName], algoName, baseColor, cap);
     }
 
-    // ── OSRM road geometry fetching ──────────────────────────────────────
-
-    async fetchRoadGeometries(result) {
-        this.roadRoutes.clear();
-        this.osrmWarned = false;
-        const jobs = [];
-        for (const prefix in result) {
-            const algo = result[prefix];
-            if (!algo || !algo.routes) continue;
-            for (const route of algo.routes) {
-                if (!route.path || route.path.length < 2) continue;
-                jobs.push({ route, prefix });
-            }
-        }
-        // Fetch sequentially with small delays to be polite to OSRM
-        for (const job of jobs) {
-            await this._fetchSingleRoute(job.route, job.prefix);
-            await new Promise(r => setTimeout(r, 80));
-        }
-        // Re-render polylines with road geometry
-        this._rerenderWithRoads(result);
+    if (result.ddqn && result.alns) {
+      this.alnsDiffLayer.clearLayers();
+      this.renderAlnsOnlySegments(result.ddqn, result.alns);
     }
+  }
 
-    triggerOsrmWarning() {
-        if (!this.osrmWarned) {
-            this.osrmWarned = true;
-            this.app.toast(
-                this.app.lang === 'vn' ? 'Đang vẽ đường thẳng' : 'Drawing Straight Lines',
-                this.app.lang === 'vn'
-                    ? 'Máy chủ định tuyến OSRM đang ngoại tuyến hoặc giới hạn truy cập. Đang hiển thị đường chim bay.'
-                    : 'The OSRM routing server is offline or rate-limited. Falling back to Euclidean path segments.',
-                'warn'
-            );
-        }
-    }
+  _approxDist(a, b) {
+    const R = 6371;
+    const lat1 = (a[0] * Math.PI) / 180,
+      lat2 = (b[0] * Math.PI) / 180;
+    const dLat = lat2 - lat1,
+      dLng = ((b[1] - a[1]) * Math.PI) / 180;
+    const x = dLng * Math.cos((lat1 + lat2) / 2);
+    return Math.sqrt(x * x + dLat * dLat) * R;
+  }
 
-    async _fetchSingleRoute(route, prefix) {
-        const waypoints = route.path; // [[lat,lng], ...]
-        if (waypoints.length < 2) return;
-        const coords = waypoints.map(w => `${w[1]},${w[0]}`).join(';');
-        const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`;
-        try {
-            const resp = await fetch(url);
-            if (!resp.ok) {
-                this.triggerOsrmWarning();
-                return;
-            }
-            const data = await resp.json();
-            if (data.code !== 'Ok' || !data.routes?.length) {
-                this.triggerOsrmWarning();
-                return;
-            }
+  // ── Interpolate position along road geometry for a given leg + fraction ──
 
-            const geo = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]); // [lng,lat]→[lat,lng]
-            // Cumulative distances along the geometry
-            const cumDist = [0];
-            for (let i = 1; i < geo.length; i++) {
-                cumDist.push(cumDist[i - 1] + this._approxDist(geo[i - 1], geo[i]));
-            }
-            // Find geometry indices closest to each original waypoint
-            const legBounds = [0];
-            for (let wi = 1; wi < waypoints.length; wi++) {
-                let bestIdx = legBounds[legBounds.length - 1];
-                let bestD = Infinity;
-                for (let gi = bestIdx; gi < geo.length; gi++) {
-                    const d = this._approxDist(geo[gi], waypoints[wi]);
-                    if (d < bestD) { bestD = d; bestIdx = gi; }
-                    if (d > bestD * 4 && gi > bestIdx + 10) break;
-                }
-                legBounds.push(bestIdx);
-            }
-            const key = `${prefix}_${route.vehicle_id}`;
-            this.roadRoutes.set(key, { geometry: geo, cumDist, legBounds });
-        } catch (e) {
-            console.warn(`OSRM failed for ${prefix} v${route.vehicle_id}:`, e);
-            this.triggerOsrmWarning();
-        }
-    }
-
-    _rerenderWithRoads(result) {
-        const cap = Number(this.app.state.lastRunFleet?.capacity ?? this.app.state.capacity);
-        
-        const colors = {
-            ddqn: '#0b8a65',
-            alns: '#2563eb',
-            ortools: '#e11d48',
-            hybrid_fixed: '#d97706',
-            hybrid_ddqn: '#7c3aed',
-            hybrid_ddqn_transfer_rc1: '#0284c7',
-            hybrid_ddqn_transfer_dr: '#4f46e5',
-            hybrid: '#0b8a65'
+  _interpolateRoad(roadData, legIndex, frac) {
+    if (!roadData || legIndex + 1 >= roadData.legBounds.length) return null;
+    const si = roadData.legBounds[legIndex];
+    const ei = roadData.legBounds[legIndex + 1];
+    if (si >= ei) return null;
+    const sd = roadData.cumDist[si];
+    const ed = roadData.cumDist[ei];
+    const target = sd + frac * (ed - sd);
+    for (let i = si; i < ei; i++) {
+      if (roadData.cumDist[i + 1] >= target) {
+        const segS = roadData.cumDist[i],
+          segE = roadData.cumDist[i + 1];
+        const f = segE > segS ? (target - segS) / (segE - segS) : 0;
+        return {
+          lat: roadData.geometry[i][0] + f * (roadData.geometry[i + 1][0] - roadData.geometry[i][0]),
+          lng: roadData.geometry[i][1] + f * (roadData.geometry[i + 1][1] - roadData.geometry[i][1]),
         };
-
-        const rerender = (algo, algoName, baseColor, capacity) => {
-            if (!algo?.routes) return;
-            const layerGroup = this.getRouteLayer(algoName);
-            layerGroup.clearLayers();
-            const prefix = algoName;
-            algo.routes.forEach((route, routeIndex) => {
-                if (!route.path || route.path.length < 2) return;
-                const popup = this._buildRoutePopup(route, capacity, routeIndex);
-                const color = this.colorForRoute(routeIndex, route, baseColor || '#6b7280');
-                const key = `${prefix}_${route.vehicle_id}`;
-                const road = this.roadRoutes.get(key);
-                const coords = road ? road.geometry : route.path.map(p => [p[0], p[1]]);
-                L.polyline(coords, {
-                    color, weight: 4, opacity: 0.9, lineJoin: 'round', lineCap: 'round'
-                }).bindPopup(popup).addTo(layerGroup);
-            });
-        };
-
-        for (const algoName in result) {
-            const baseColor = colors[algoName] || '#6b7280';
-            rerender(result[algoName], algoName, baseColor, cap);
-        }
-
-        if (result.ddqn && result.alns) {
-            this.alnsDiffLayer.clearLayers();
-            this.renderAlnsOnlySegments(result.ddqn, result.alns);
-        }
+      }
     }
+    return { lat: roadData.geometry[ei][0], lng: roadData.geometry[ei][1] };
+  }
 
-    _approxDist(a, b) {
-        const R = 6371;
-        const lat1 = a[0] * Math.PI / 180, lat2 = b[0] * Math.PI / 180;
-        const dLat = lat2 - lat1, dLng = (b[1] - a[1]) * Math.PI / 180;
-        const x = dLng * Math.cos((lat1 + lat2) / 2);
-        return Math.sqrt(x * x + dLat * dLat) * R;
+  // ── Vehicle simulation ──────────────────────────────────────────────
+
+  buildLoadBadge(load, cap) {
+    if (!Number.isFinite(load) || !Number.isFinite(cap) || cap <= 0) {
+      return { ratio: NaN, label: 'No load info', tone: 'neutral' };
     }
+    const ratio = load / cap;
+    if (ratio > 0.95) return { ratio, label: 'Critical load', tone: 'critical' };
+    if (ratio >= 0.8) return { ratio, label: 'Near full', tone: 'near' };
+    return { ratio, label: 'Safe load', tone: 'safe' };
+  }
 
-    // ── Interpolate position along road geometry for a given leg + fraction ──
+  colorForRoute(routeIndex, route, fallback) {
+    const palette = ['#0ea5e9', '#2563eb', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#f43f5e', '#14b8a6'];
+    if (routeIndex < palette.length) return palette[routeIndex];
+    const hue = (routeIndex * 137.508) % 360;
+    return `hsl(${hue},72%,44%)`;
+  }
 
-    _interpolateRoad(roadData, legIndex, frac) {
-        if (!roadData || legIndex + 1 >= roadData.legBounds.length) return null;
-        const si = roadData.legBounds[legIndex];
-        const ei = roadData.legBounds[legIndex + 1];
-        if (si >= ei) return null;
-        const sd = roadData.cumDist[si];
-        const ed = roadData.cumDist[ei];
-        const target = sd + frac * (ed - sd);
-        for (let i = si; i < ei; i++) {
-            if (roadData.cumDist[i + 1] >= target) {
-                const segS = roadData.cumDist[i], segE = roadData.cumDist[i + 1];
-                const f = segE > segS ? (target - segS) / (segE - segS) : 0;
-                return {
-                    lat: roadData.geometry[i][0] + f * (roadData.geometry[i + 1][0] - roadData.geometry[i][0]),
-                    lng: roadData.geometry[i][1] + f * (roadData.geometry[i + 1][1] - roadData.geometry[i][1])
-                };
-            }
-        }
-        return { lat: roadData.geometry[ei][0], lng: roadData.geometry[ei][1] };
+  renderVehicleMarkers(algo, isDdqn, color) {
+    const result = this.app.state.lastResult;
+    if (result) this.initSimulation(result);
+  }
+
+  initSimulation(result) {
+    if (this.routeLayers) {
+      for (const key in this.routeLayers) {
+        this.routeLayers[key].clearLayers();
+      }
     }
-
-    // ── Vehicle simulation ──────────────────────────────────────────────
-
-    buildLoadBadge(load, cap) {
-        if (!Number.isFinite(load) || !Number.isFinite(cap) || cap <= 0) {
-            return { ratio: NaN, label: 'No load info', tone: 'neutral' };
-        }
-        const ratio = load / cap;
-        if (ratio > 0.95) return { ratio, label: 'Critical load', tone: 'critical' };
-        if (ratio >= 0.80) return { ratio, label: 'Near full', tone: 'near' };
-        return { ratio, label: 'Safe load', tone: 'safe' };
+    if (this.vehicleLayers) {
+      for (const key in this.vehicleLayers) {
+        this.vehicleLayers[key].clearLayers();
+      }
     }
+    this.ddqnVehicleLayer?.clearLayers();
+    this.alnsVehicleLayer?.clearLayers();
+    this.ddqnVehicles.clear();
+    this.alnsVehicles.clear();
+    this.vehiclesMap = {};
 
-    colorForRoute(routeIndex, route, fallback) {
-        const palette = [
-            '#0ea5e9', '#2563eb', '#10b981', '#f59e0b',
-            '#ec4899', '#8b5cf6', '#f43f5e', '#14b8a6',
-        ];
-        if (routeIndex < palette.length) return palette[routeIndex];
-        const hue = (routeIndex * 137.508) % 360;
-        return `hsl(${hue},72%,44%)`;
+    const colors = {
+      ddqn: '#0b8a65',
+      alns: '#2563eb',
+      ortools: '#e11d48',
+      hybrid_fixed: '#d97706',
+      hybrid_ddqn: '#7c3aed',
+      hybrid_ddqn_transfer_rc1: '#0284c7',
+      hybrid_ddqn_transfer_dr: '#4f46e5',
+      hybrid: '#0b8a65',
+    };
+
+    const setupVehicles = (algo, algoName, baseColor) => {
+      if (!algo?.routes) return;
+      const layer = this.getVehicleLayer(algoName);
+      layer.clearLayers();
+      const vehicleMap = this.getVehiclesMap(algoName);
+
+      algo.routes.forEach((route, idx) => {
+        if (!route.path || route.path.length === 0) return;
+        const color = this.colorForRoute(idx, route, baseColor);
+        const start = route.path[0];
+        const marker = L.marker([start[0], start[1]], {
+          icon: this.buildVehicleIcon(color),
+        });
+        const fleetVehicle = this.app.state.fleet?.[route.vehicle_id];
+        const driverName = fleetVehicle ? fleetVehicle.driver : `Vehicle #${route.vehicle_id}`;
+        marker.bindPopup(driverName);
+        marker.addTo(layer);
+        vehicleMap.set(route.vehicle_id, marker);
+      });
+    };
+
+    for (const algoName in result) {
+      const baseColor = colors[algoName] || '#6b7280';
+      setupVehicles(result[algoName], algoName, baseColor);
+
+      if (algoName === 'ddqn') {
+        const map = this.getVehiclesMap('ddqn');
+        map.forEach((marker, id) => {
+          this.ddqnVehicles.set(id, marker);
+          marker.addTo(this.ddqnVehicleLayer);
+        });
+      } else if (algoName === 'alns') {
+        const map = this.getVehiclesMap('alns');
+        map.forEach((marker, id) => {
+          this.alnsVehicles.set(id, marker);
+          marker.addTo(this.alnsVehicleLayer);
+        });
+      }
     }
+  }
 
-    renderVehicleMarkers(algo, isDdqn, color) {
-        const result = this.app.state.lastResult;
-        if (result) this.initSimulation(result);
-    }
+  updateSimulation(t_sim, algoResult, isDdqnOrAlgoName) {
+    const algoName = typeof isDdqnOrAlgoName === 'boolean' ? (isDdqnOrAlgoName ? 'ddqn' : 'alns') : isDdqnOrAlgoName;
+    const vehicleMap = this.getVehiclesMap(algoName);
+    const prefix = algoName;
+    if (!algoResult?.routes) return;
 
-    initSimulation(result) {
-        if (this.routeLayers) {
-            for (const key in this.routeLayers) {
-                this.routeLayers[key].clearLayers();
-            }
-        }
-        if (this.vehicleLayers) {
-            for (const key in this.vehicleLayers) {
-                this.vehicleLayers[key].clearLayers();
-            }
-        }
-        this.ddqnVehicleLayer?.clearLayers();
-        this.alnsVehicleLayer?.clearLayers();
-        this.ddqnVehicles.clear();
-        this.alnsVehicles.clear();
-        this.vehiclesMap = {};
+    const layerGroup = this.getRouteLayer(algoName);
+    layerGroup.clearLayers();
+    const capacity = Number(this.app.state.lastRunFleet?.capacity ?? this.app.state.capacity);
 
-        const colors = {
-            ddqn: '#0b8a65',
-            alns: '#2563eb',
-            ortools: '#e11d48',
-            hybrid_fixed: '#d97706',
-            hybrid_ddqn: '#7c3aed',
-            hybrid_ddqn_transfer_rc1: '#0284c7',
-            hybrid_ddqn_transfer_dr: '#4f46e5',
-            hybrid: '#0b8a65'
-        };
+    const colors = {
+      ddqn: '#0b8a65',
+      alns: '#2563eb',
+      ortools: '#e11d48',
+      hybrid_fixed: '#d97706',
+      hybrid_ddqn: '#7c3aed',
+      hybrid_ddqn_transfer_rc1: '#0284c7',
+      hybrid_ddqn_transfer_dr: '#4f46e5',
+      hybrid: '#0b8a65',
+    };
+    const baseColor = colors[algoName] || '#6b7280';
 
-        const setupVehicles = (algo, algoName, baseColor) => {
-            if (!algo?.routes) return;
-            const layer = this.getVehicleLayer(algoName);
-            layer.clearLayers();
-            const vehicleMap = this.getVehiclesMap(algoName);
+    algoResult.routes.forEach((route, routeIndex) => {
+      const marker = vehicleMap.get(route.vehicle_id);
+      if (!marker) return;
+      const roadKey = `${prefix}_${route.vehicle_id}`;
+      const roadData = this.roadRoutes.get(roadKey);
+      const state = this.getVehicleStateAtTime(route, t_sim, roadData);
+      marker.setLatLng([state.lat, state.lng]);
 
-            algo.routes.forEach((route, idx) => {
-                if (!route.path || route.path.length === 0) return;
-                const color = this.colorForRoute(idx, route, baseColor);
-                const start = route.path[0];
-                const marker = L.marker([start[0], start[1]], {
-                    icon: this.buildVehicleIcon(color)
-                });
-                const fleetVehicle = this.app.state.fleet?.[route.vehicle_id];
-                const driverName = fleetVehicle ? fleetVehicle.driver : `Vehicle #${route.vehicle_id}`;
-                marker.bindPopup(driverName);
-                marker.addTo(layer);
-                vehicleMap.set(route.vehicle_id, marker);
-            });
-        };
+      // Dynamically update marker icon graphics to reflect active incidents
+      const routeColor = this.colorForRoute(routeIndex, route, baseColor);
+      const activeIncident = this.app.simulationController?.incidents?.get(route.vehicle_id);
+      marker.setIcon(this.buildVehicleIcon(routeColor, activeIncident?.type));
 
-        for (const algoName in result) {
-            const baseColor = colors[algoName] || '#6b7280';
-            setupVehicles(result[algoName], algoName, baseColor);
+      const fleetVehicle = this.app.state.fleet?.[route.vehicle_id];
+      const driverName = fleetVehicle ? fleetVehicle.driver : `Vehicle #${route.vehicle_id}`;
 
-            if (algoName === 'ddqn') {
-                const map = this.getVehiclesMap('ddqn');
-                map.forEach((marker, id) => {
-                    this.ddqnVehicles.set(id, marker);
-                    marker.addTo(this.ddqnVehicleLayer);
-                });
-            } else if (algoName === 'alns') {
-                const map = this.getVehiclesMap('alns');
-                map.forEach((marker, id) => {
-                    this.alnsVehicles.set(id, marker);
-                    marker.addTo(this.alnsVehicleLayer);
-                });
-            }
-        }
-    }
-
-    updateSimulation(t_sim, algoResult, isDdqnOrAlgoName) {
-        const algoName = (typeof isDdqnOrAlgoName === 'boolean') 
-            ? (isDdqnOrAlgoName ? 'ddqn' : 'alns') 
-            : isDdqnOrAlgoName;
-        const vehicleMap = this.getVehiclesMap(algoName);
-        const prefix = algoName;
-        if (!algoResult?.routes) return;
-
-        const layerGroup = this.getRouteLayer(algoName);
-        layerGroup.clearLayers();
-        const capacity = Number(this.app.state.lastRunFleet?.capacity ?? this.app.state.capacity);
-        
-        const colors = {
-            ddqn: '#0b8a65',
-            alns: '#2563eb',
-            ortools: '#e11d48',
-            hybrid_fixed: '#d97706',
-            hybrid_ddqn: '#7c3aed',
-            hybrid_ddqn_transfer_rc1: '#0284c7',
-            hybrid_ddqn_transfer_dr: '#4f46e5',
-            hybrid: '#0b8a65'
-        };
-        const baseColor = colors[algoName] || '#6b7280';
-
-        algoResult.routes.forEach((route, routeIndex) => {
-            const marker = vehicleMap.get(route.vehicle_id);
-            if (!marker) return;
-            const roadKey = `${prefix}_${route.vehicle_id}`;
-            const roadData = this.roadRoutes.get(roadKey);
-            const state = this.getVehicleStateAtTime(route, t_sim, roadData);
-            marker.setLatLng([state.lat, state.lng]);
-
-            // Dynamically update marker icon graphics to reflect active incidents
-            const routeColor = this.colorForRoute(routeIndex, route, baseColor);
-            const activeIncident = this.app.simulationController?.incidents?.get(route.vehicle_id);
-            marker.setIcon(this.buildVehicleIcon(routeColor, activeIncident?.type));
-
-            const fleetVehicle = this.app.state.fleet?.[route.vehicle_id];
-            const driverName = fleetVehicle ? fleetVehicle.driver : `Vehicle #${route.vehicle_id}`;
-
-            marker.bindPopup(`
+      marker.bindPopup(`
                 <div style="font-family: Inter, sans-serif; min-width: 160px; padding: 4px 0;">
                     <div style="font-weight: 700; font-size: 13px; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 6px;">
                         🚚 ${driverName}
@@ -528,147 +542,224 @@ export class MapController {
                 </div>
             `);
 
-            const color = this.colorForRoute(routeIndex, route, baseColor);
-            const popup = this._buildRoutePopup(route, capacity, routeIndex);
-            const coords = roadData ? roadData.geometry : route.path.map(p => [p[0], p[1]]);
+      const color = this.colorForRoute(routeIndex, route, baseColor);
+      const popup = this._buildRoutePopup(route, capacity, routeIndex);
+      const coords = roadData ? roadData.geometry : route.path.map((p) => [p[0], p[1]]);
 
-            let splitIdx = 0;
-            if (roadData) {
-                const legIndex = state.legIndex ?? 0;
-                const frac = state.frac ?? 0;
-                const si = roadData.legBounds[legIndex] ?? 0;
-                const ei = roadData.legBounds[legIndex + 1] ?? coords.length - 1;
-                splitIdx = Math.min(coords.length - 1, si + Math.round(frac * (ei - si)));
-            } else {
-                splitIdx = Math.min(coords.length - 1, state.stopIndex ?? 0);
-            }
+      let splitIdx = 0;
+      if (roadData) {
+        const legIndex = state.legIndex ?? 0;
+        const frac = state.frac ?? 0;
+        const si = roadData.legBounds[legIndex] ?? 0;
+        const ei = roadData.legBounds[legIndex + 1] ?? coords.length - 1;
+        splitIdx = Math.min(coords.length - 1, si + Math.round(frac * (ei - si)));
+      } else {
+        splitIdx = Math.min(coords.length - 1, state.stopIndex ?? 0);
+      }
 
-            const completedCoords = coords.slice(0, splitIdx + 1);
-            completedCoords.push([state.lat, state.lng]);
-            const upcomingCoords = [[state.lat, state.lng]].concat(coords.slice(splitIdx + 1));
+      const completedCoords = coords.slice(0, splitIdx + 1);
+      completedCoords.push([state.lat, state.lng]);
+      const upcomingCoords = [[state.lat, state.lng]].concat(coords.slice(splitIdx + 1));
 
-            if (completedCoords.length >= 2) {
-                L.polyline(completedCoords, {
-                    color, weight: 4.5, opacity: 0.95, lineJoin: 'round', lineCap: 'round'
-                }).bindPopup(popup).addTo(layerGroup);
-            }
-            if (upcomingCoords.length >= 2) {
-                L.polyline(upcomingCoords, {
-                    color, weight: 3, opacity: 0.25, dashArray: '6, 6', lineJoin: 'round', lineCap: 'round'
-                }).bindPopup(popup).addTo(layerGroup);
-            }
-        });
+      if (completedCoords.length >= 2) {
+        L.polyline(completedCoords, {
+          color,
+          weight: 4.5,
+          opacity: 0.95,
+          lineJoin: 'round',
+          lineCap: 'round',
+        })
+          .bindPopup(popup)
+          .addTo(layerGroup);
+      }
+      if (upcomingCoords.length >= 2) {
+        L.polyline(upcomingCoords, {
+          color,
+          weight: 3,
+          opacity: 0.25,
+          dashArray: '6, 6',
+          lineJoin: 'round',
+          lineCap: 'round',
+        })
+          .bindPopup(popup)
+          .addTo(layerGroup);
+      }
+    });
+  }
+
+  getVehicleStateAtTime(route, t_sim, roadData = null) {
+    if (this.app.simulationController) {
+      const incidentState = this.app.simulationController.getIncidentState(route.vehicle_id, t_sim, route, roadData);
+      if (incidentState) return incidentState;
+    }
+    return this.getVehicleStateAtTimeDirect(route, t_sim, roadData);
+  }
+
+  getVehicleStateAtTimeDirect(route, t_sim, roadData = null) {
+    if (!route.path || route.path.length === 0) {
+      return { lat: 0, lng: 0, status: 'Completed', detail: 'No route path', legIndex: 0, frac: 0, stopIndex: 0 };
+    }
+    if (!route.schedule || route.schedule.length === 0) {
+      const start = route.path[0];
+      return {
+        lat: start[0],
+        lng: start[1],
+        status: 'Completed',
+        detail: 'Parked at Depot (no schedule)',
+        legIndex: 0,
+        frac: 0,
+        stopIndex: 0,
+      };
     }
 
-    getVehicleStateAtTime(route, t_sim, roadData = null) {
-        if (this.app.simulationController) {
-            const incidentState = this.app.simulationController.getIncidentState(route.vehicle_id, t_sim, route, roadData);
-            if (incidentState) return incidentState;
+    const path = route.path;
+    const schedule = route.schedule;
+    const numStops = route.stops ? route.stops.length : 0;
+
+    let t_last = 0;
+    let coord_last = path[0];
+
+    for (let i = 0; i < numStops; i++) {
+      const step = schedule[i];
+      const coord_curr = path[i + 1];
+      if (!step || !coord_curr) continue;
+
+      const t_travel_start = t_last;
+      const t_arrival = step.arrival;
+      const t_service_start = step.service_start;
+      const t_departure = step.departure;
+
+      if (t_sim >= t_travel_start && t_sim < t_arrival) {
+        const dur = t_arrival - t_travel_start;
+        const frac = dur > 0 ? (t_sim - t_travel_start) / dur : 1;
+        // Try road geometry first
+        const roadPos = this._interpolateRoad(roadData, i, frac);
+        if (roadPos) {
+          return {
+            ...roadPos,
+            status: 'Traveling',
+            detail: `En route to "${step.name}". ETA ${Math.ceil(t_arrival - t_sim)}m.`,
+            legIndex: i,
+            frac: frac,
+            stopIndex: i,
+          };
         }
-        return this.getVehicleStateAtTimeDirect(route, t_sim, roadData);
+        // Straight-line fallback
+        const lat = coord_last[0] + frac * (coord_curr[0] - coord_last[0]);
+        const lng = coord_last[1] + frac * (coord_curr[1] - coord_last[1]);
+        return {
+          lat,
+          lng,
+          status: 'Traveling',
+          detail: `Traveling to "${step.name}". Arriving in ${Math.ceil(t_arrival - t_sim)}m.`,
+          legIndex: i,
+          frac: frac,
+          stopIndex: i,
+        };
+      }
+
+      if (t_sim >= t_arrival && t_sim < t_service_start) {
+        return {
+          lat: coord_curr[0],
+          lng: coord_curr[1],
+          status: 'Waiting',
+          detail: `Waiting at "${step.name}" (window opens in ${Math.ceil(t_service_start - t_sim)}m).`,
+          legIndex: i,
+          frac: 1.0,
+          stopIndex: i + 1,
+        };
+      }
+
+      if (t_sim >= t_service_start && t_sim < t_departure) {
+        return {
+          lat: coord_curr[0],
+          lng: coord_curr[1],
+          status: 'Servicing',
+          detail: `Servicing "${step.name}". Remaining: ${Math.ceil(t_departure - t_sim)}m.`,
+          legIndex: i,
+          frac: 1.0,
+          stopIndex: i + 1,
+        };
+      }
+
+      t_last = t_departure;
+      coord_last = coord_curr;
     }
 
-    getVehicleStateAtTimeDirect(route, t_sim, roadData = null) {
-        if (!route.path || route.path.length === 0) {
-            return { lat: 0, lng: 0, status: 'Completed', detail: 'No route path', legIndex: 0, frac: 0, stopIndex: 0 };
+    // Return to depot
+    const stepDepot = schedule[numStops];
+    const coord_depot = path[numStops + 1] || path[0];
+    if (stepDepot && coord_depot) {
+      const t_travel_start = t_last;
+      const t_arrival = stepDepot.arrival;
+      if (t_sim >= t_travel_start && t_sim < t_arrival) {
+        const dur = t_arrival - t_travel_start;
+        const frac = dur > 0 ? (t_sim - t_travel_start) / dur : 1;
+        const roadPos = this._interpolateRoad(roadData, numStops, frac);
+        if (roadPos) {
+          return {
+            ...roadPos,
+            status: 'Returning',
+            detail: `Returning to Depot. ETA ${Math.ceil(t_arrival - t_sim)}m.`,
+            legIndex: numStops,
+            frac: frac,
+            stopIndex: numStops,
+          };
         }
-        if (!route.schedule || route.schedule.length === 0) {
-            const start = route.path[0];
-            return { lat: start[0], lng: start[1], status: 'Completed', detail: 'Parked at Depot (no schedule)', legIndex: 0, frac: 0, stopIndex: 0 };
-        }
-
-        const path = route.path;
-        const schedule = route.schedule;
-        const numStops = route.stops ? route.stops.length : 0;
-
-        let t_last = 0;
-        let coord_last = path[0];
-
-        for (let i = 0; i < numStops; i++) {
-            const step = schedule[i];
-            const coord_curr = path[i + 1];
-            if (!step || !coord_curr) continue;
-
-            const t_travel_start = t_last;
-            const t_arrival = step.arrival;
-            const t_service_start = step.service_start;
-            const t_departure = step.departure;
-
-            if (t_sim >= t_travel_start && t_sim < t_arrival) {
-                const dur = t_arrival - t_travel_start;
-                const frac = dur > 0 ? (t_sim - t_travel_start) / dur : 1;
-                // Try road geometry first
-                const roadPos = this._interpolateRoad(roadData, i, frac);
-                if (roadPos) {
-                    return { ...roadPos, status: 'Traveling', detail: `En route to "${step.name}". ETA ${Math.ceil(t_arrival - t_sim)}m.`, legIndex: i, frac: frac, stopIndex: i };
-                }
-                // Straight-line fallback
-                const lat = coord_last[0] + frac * (coord_curr[0] - coord_last[0]);
-                const lng = coord_last[1] + frac * (coord_curr[1] - coord_last[1]);
-                return { lat, lng, status: 'Traveling', detail: `Traveling to "${step.name}". Arriving in ${Math.ceil(t_arrival - t_sim)}m.`, legIndex: i, frac: frac, stopIndex: i };
-            }
-
-            if (t_sim >= t_arrival && t_sim < t_service_start) {
-                return { lat: coord_curr[0], lng: coord_curr[1], status: 'Waiting', detail: `Waiting at "${step.name}" (window opens in ${Math.ceil(t_service_start - t_sim)}m).`, legIndex: i, frac: 1.0, stopIndex: i + 1 };
-            }
-
-            if (t_sim >= t_service_start && t_sim < t_departure) {
-                return { lat: coord_curr[0], lng: coord_curr[1], status: 'Servicing', detail: `Servicing "${step.name}". Remaining: ${Math.ceil(t_departure - t_sim)}m.`, legIndex: i, frac: 1.0, stopIndex: i + 1 };
-            }
-
-            t_last = t_departure;
-            coord_last = coord_curr;
-        }
-
-        // Return to depot
-        const stepDepot = schedule[numStops];
-        const coord_depot = path[numStops + 1] || path[0];
-        if (stepDepot && coord_depot) {
-            const t_travel_start = t_last;
-            const t_arrival = stepDepot.arrival;
-            if (t_sim >= t_travel_start && t_sim < t_arrival) {
-                const dur = t_arrival - t_travel_start;
-                const frac = dur > 0 ? (t_sim - t_travel_start) / dur : 1;
-                const roadPos = this._interpolateRoad(roadData, numStops, frac);
-                if (roadPos) {
-                    return { ...roadPos, status: 'Returning', detail: `Returning to Depot. ETA ${Math.ceil(t_arrival - t_sim)}m.`, legIndex: numStops, frac: frac, stopIndex: numStops };
-                }
-                const lat = coord_last[0] + frac * (coord_depot[0] - coord_last[0]);
-                const lng = coord_last[1] + frac * (coord_depot[1] - coord_last[1]);
-                return { lat, lng, status: 'Returning', detail: `Returning to Depot. Arriving in ${Math.ceil(t_arrival - t_sim)}m.`, legIndex: numStops, frac: frac, stopIndex: numStops };
-            }
-            t_last = t_arrival;
-        }
-
-        const endCoord = coord_depot || coord_last;
-        return { lat: endCoord[0], lng: endCoord[1], status: 'Completed', detail: 'All tasks completed. Parked at Depot.', legIndex: numStops, frac: 1.0, stopIndex: numStops + 1 };
+        const lat = coord_last[0] + frac * (coord_depot[0] - coord_last[0]);
+        const lng = coord_last[1] + frac * (coord_depot[1] - coord_last[1]);
+        return {
+          lat,
+          lng,
+          status: 'Returning',
+          detail: `Returning to Depot. Arriving in ${Math.ceil(t_arrival - t_sim)}m.`,
+          legIndex: numStops,
+          frac: frac,
+          stopIndex: numStops,
+        };
+      }
+      t_last = t_arrival;
     }
 
-    stopVehicleAnimations() { /* simulation handles ticks */ }
+    const endCoord = coord_depot || coord_last;
+    return {
+      lat: endCoord[0],
+      lng: endCoord[1],
+      status: 'Completed',
+      detail: 'All tasks completed. Parked at Depot.',
+      legIndex: numStops,
+      frac: 1.0,
+      stopIndex: numStops + 1,
+    };
+  }
 
-    buildDepotIcon() {
-        return L.divIcon({
-            className: 'map-marker-wrap',
-            iconSize: [48, 48],
-            iconAnchor: [24, 24],
-            popupAnchor: [0, -24],
-            html: `<div class="map-icon-3d depot" style="--icon-main:#0ea5e9;--icon-dark:#0c4a6e;--icon-shadow:rgba(14,165,233,0.36)"><span class="map-icon-glyph">🏭</span></div>`
-        });
-    }
+  stopVehicleAnimations() {
+    /* simulation handles ticks */
+  }
 
-    buildCustomerIcon(ready, due) {
-        const urgency = (Number(due) || 1000) - (Number(ready) || 0);
-        const isUrgent = urgency < 20;
-        const mainColor = isUrgent ? '#ef4444' : '#7c3aed';
-        const darkColor = isUrgent ? '#991b1b' : '#5b21b6';
-        const shadowColor = isUrgent ? 'rgba(239,68,68,0.35)' : 'rgba(124,58,237,0.35)';
-        const br = isUrgent ? '4px' : '50%';
-        return L.divIcon({
-            className: 'map-marker-wrap',
-            iconSize: [24, 24],
-            iconAnchor: [12, 12],
-            popupAnchor: [0, -12],
-            html: `
+  buildDepotIcon() {
+    return L.divIcon({
+      className: 'map-marker-wrap',
+      iconSize: [48, 48],
+      iconAnchor: [24, 24],
+      popupAnchor: [0, -24],
+      html: `<div class="map-icon-3d depot" style="--icon-main:#0ea5e9;--icon-dark:#0c4a6e;--icon-shadow:rgba(14,165,233,0.36)"><span class="map-icon-glyph">🏭</span></div>`,
+    });
+  }
+
+  buildCustomerIcon(ready, due) {
+    const urgency = (Number(due) || 1000) - (Number(ready) || 0);
+    const isUrgent = urgency < 20;
+    const mainColor = isUrgent ? '#ef4444' : '#7c3aed';
+    const darkColor = isUrgent ? '#991b1b' : '#5b21b6';
+    const shadowColor = isUrgent ? 'rgba(239,68,68,0.35)' : 'rgba(124,58,237,0.35)';
+    const br = isUrgent ? '4px' : '50%';
+    return L.divIcon({
+      className: 'map-marker-wrap',
+      iconSize: [24, 24],
+      iconAnchor: [12, 12],
+      popupAnchor: [0, -12],
+      html: `
                 <div class="map-icon-3d customer" style="--icon-main:${mainColor};--icon-dark:${darkColor};--icon-shadow:${shadowColor}; border-radius: ${br};">
                     <svg class="map-icon-avatar" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                         <ellipse class="avatar-hair-back" cx="12" cy="9" rx="6.4" ry="5.7"></ellipse>
@@ -680,110 +771,118 @@ export class MapController {
                         <circle class="avatar-eye" cx="13.6" cy="10" r="0.5"></circle>
                         <path class="avatar-mouth" d="M10.1 12.3c.5.4 1.1.6 1.9.6s1.4-.2 1.9-.6"></path>
                     </svg>
-                </div>`
-        });
+                </div>`,
+    });
+  }
+
+  buildVehicleIcon(color = '#0b8a65', incidentType = null) {
+    const darkColor = darkenHex(color, 0.4);
+    const shadowColor = hexToRgba(color, 0.35);
+    let glyph = '🚚';
+    let styleOverride = '';
+
+    if (incidentType === 'breakdown') {
+      glyph = '⚠️';
+      styleOverride =
+        'border-color:#ef4444;box-shadow:0 0 10px #ef4444;background:#fee2e2;color:#ef4444;animation:card-pulse-danger 1s infinite alternate;';
+    } else if (incidentType === 'traffic') {
+      glyph = '🚦';
+      styleOverride =
+        'border-color:#f59e0b;box-shadow:0 0 10px #f59e0b;background:#fef3c7;color:#b45309;animation:card-pulse-warning 1s infinite alternate;';
     }
 
-    buildVehicleIcon(color = '#0b8a65', incidentType = null) {
-        const darkColor = darkenHex(color, 0.4);
-        const shadowColor = hexToRgba(color, 0.35);
-        let glyph = '🚚';
-        let styleOverride = '';
+    return L.divIcon({
+      className: 'map-marker-wrap',
+      iconSize: [40, 40],
+      iconAnchor: [20, 20],
+      popupAnchor: [0, -20],
+      html: `<div class="map-icon-3d vehicle" style="--icon-main:${color};--icon-dark:${darkColor};--icon-shadow:${shadowColor};${styleOverride}"><span class="map-icon-glyph">${glyph}</span></div>`,
+    });
+  }
 
-        if (incidentType === 'breakdown') {
-            glyph = '⚠️';
-            styleOverride = 'border-color:#ef4444;box-shadow:0 0 10px #ef4444;background:#fee2e2;color:#ef4444;animation:card-pulse-danger 1s infinite alternate;';
-        } else if (incidentType === 'traffic') {
-            glyph = '🚦';
-            styleOverride = 'border-color:#f59e0b;box-shadow:0 0 10px #f59e0b;background:#fef3c7;color:#b45309;animation:card-pulse-warning 1s infinite alternate;';
+  // ── Diff segments (ALNS-only edges) ──────────────────────────────────
+
+  segmentKey(a, b) {
+    const ka = `${Number(a[0]).toFixed(5)},${Number(a[1]).toFixed(5)}`;
+    const kb = `${Number(b[0]).toFixed(5)},${Number(b[1]).toFixed(5)}`;
+    return ka < kb ? `${ka}|${kb}` : `${kb}|${ka}`;
+  }
+
+  collectSegmentSet(algo) {
+    const set = new Set();
+    (algo.routes || []).forEach((route) => {
+      if (!route.path || route.path.length < 2) return;
+      for (let i = 0; i < route.path.length - 1; i++) {
+        set.add(this.segmentKey(route.path[i], route.path[i + 1]));
+      }
+    });
+    return set;
+  }
+
+  drawDiffSegment(path, layerGroup, routeIndex) {
+    L.polyline(path, { color: '#ff5a5f', weight: 10, opacity: 0.22, lineCap: 'round' }).addTo(layerGroup);
+    L.polyline(path, { color: '#d7191c', weight: 5, opacity: 0.92, dashArray: '8 5', lineCap: 'round' })
+      .bindPopup(`ALNS-only segment • Route ${routeIndex + 1}`)
+      .addTo(layerGroup);
+  }
+
+  renderAlnsOnlySegments(ddqn, alns) {
+    const ddqnSegments = this.collectSegmentSet(ddqn);
+    let highlightedSegments = 0;
+    (alns.routes || []).forEach((route, routeIndex) => {
+      if (!route.path || route.path.length < 2) return;
+      let streak = [];
+      for (let i = 0; i < route.path.length - 1; i++) {
+        const a = route.path[i],
+          b = route.path[i + 1];
+        if (!ddqnSegments.has(this.segmentKey(a, b))) {
+          if (streak.length === 0) streak.push([a[0], a[1]]);
+          streak.push([b[0], b[1]]);
+          highlightedSegments += 1;
+          continue;
         }
-
-        return L.divIcon({
-            className: 'map-marker-wrap',
-            iconSize: [40, 40],
-            iconAnchor: [20, 20],
-            popupAnchor: [0, -20],
-            html: `<div class="map-icon-3d vehicle" style="--icon-main:${color};--icon-dark:${darkColor};--icon-shadow:${shadowColor};${styleOverride}"><span class="map-icon-glyph">${glyph}</span></div>`
-        });
-    }
-
-    // ── Diff segments (ALNS-only edges) ──────────────────────────────────
-
-    segmentKey(a, b) {
-        const ka = `${Number(a[0]).toFixed(5)},${Number(a[1]).toFixed(5)}`;
-        const kb = `${Number(b[0]).toFixed(5)},${Number(b[1]).toFixed(5)}`;
-        return ka < kb ? `${ka}|${kb}` : `${kb}|${ka}`;
-    }
-
-    collectSegmentSet(algo) {
-        const set = new Set();
-        (algo.routes || []).forEach((route) => {
-            if (!route.path || route.path.length < 2) return;
-            for (let i = 0; i < route.path.length - 1; i++) {
-                set.add(this.segmentKey(route.path[i], route.path[i + 1]));
-            }
-        });
-        return set;
-    }
-
-    drawDiffSegment(path, layerGroup, routeIndex) {
-        L.polyline(path, { color: '#ff5a5f', weight: 10, opacity: 0.22, lineCap: 'round' }).addTo(layerGroup);
-        L.polyline(path, { color: '#d7191c', weight: 5, opacity: 0.92, dashArray: '8 5', lineCap: 'round' })
-            .bindPopup(`ALNS-only segment • Route ${routeIndex + 1}`).addTo(layerGroup);
-    }
-
-    renderAlnsOnlySegments(ddqn, alns) {
-        const ddqnSegments = this.collectSegmentSet(ddqn);
-        let highlightedSegments = 0;
-        (alns.routes || []).forEach((route, routeIndex) => {
-            if (!route.path || route.path.length < 2) return;
-            let streak = [];
-            for (let i = 0; i < route.path.length - 1; i++) {
-                const a = route.path[i], b = route.path[i + 1];
-                if (!ddqnSegments.has(this.segmentKey(a, b))) {
-                    if (streak.length === 0) streak.push([a[0], a[1]]);
-                    streak.push([b[0], b[1]]);
-                    highlightedSegments += 1;
-                    continue;
-                }
-                if (streak.length > 1) { this.drawDiffSegment(streak, this.alnsDiffLayer, routeIndex); streak = []; }
-            }
-            if (streak.length > 1) this.drawDiffSegment(streak, this.alnsDiffLayer, routeIndex);
-        });
-        if (highlightedSegments > 0) {
-            this.app.setStatus(`Highlighted ${highlightedSegments} ALNS segments that do not appear in DDQN.`, 'ok');
+        if (streak.length > 1) {
+          this.drawDiffSegment(streak, this.alnsDiffLayer, routeIndex);
+          streak = [];
         }
-        return highlightedSegments;
+      }
+      if (streak.length > 1) this.drawDiffSegment(streak, this.alnsDiffLayer, routeIndex);
+    });
+    if (highlightedSegments > 0) {
+      this.app.setStatus(`Highlighted ${highlightedSegments} ALNS segments that do not appear in DDQN.`, 'ok');
     }
+    return highlightedSegments;
+  }
 
-    updateVehicle(id, lat, lng, status) {
-        if (!this.map) return;
-        const color = status === 'danger' ? '#ef4444' : '#10b981';
-        if (!this.ddqnVehicles.has(id)) {
-            const m1 = L.circleMarker([lat, lng], { color, radius: 6, fillOpacity: 1 }).addTo(this.ddqnVehicleLayer);
-            this.ddqnVehicles.set(id, m1);
-        } else {
-            this.ddqnVehicles.get(id).setLatLng([lat, lng]).setStyle({ color });
-        }
-        if (!this.alnsVehicles.has(id)) {
-            const m2 = L.circleMarker([lat, lng], { color, radius: 6, fillOpacity: 1 }).addTo(this.alnsVehicleLayer);
-            this.alnsVehicles.set(id, m2);
-        } else {
-            this.alnsVehicles.get(id).setLatLng([lat, lng]).setStyle({ color });
-        }
+  updateVehicle(id, lat, lng, status) {
+    if (!this.map) return;
+    const color = status === 'danger' ? '#ef4444' : '#10b981';
+    if (!this.ddqnVehicles.has(id)) {
+      const m1 = L.circleMarker([lat, lng], { color, radius: 6, fillOpacity: 1 }).addTo(this.ddqnVehicleLayer);
+      this.ddqnVehicles.set(id, m1);
+    } else {
+      this.ddqnVehicles.get(id).setLatLng([lat, lng]).setStyle({ color });
     }
+    if (!this.alnsVehicles.has(id)) {
+      const m2 = L.circleMarker([lat, lng], { color, radius: 6, fillOpacity: 1 }).addTo(this.alnsVehicleLayer);
+      this.alnsVehicles.set(id, m2);
+    } else {
+      this.alnsVehicles.get(id).setLatLng([lat, lng]).setStyle({ color });
+    }
+  }
 
-    focusOnVehicle(vehicleId) {
-        const marker = this.currentView === 'ddqn' ? this.ddqnVehicles.get(Number(vehicleId)) : this.alnsVehicles.get(Number(vehicleId));
-        if (marker) {
-            this.map.setView(marker.getLatLng(), 15, { animate: true });
-            marker.openPopup();
-        } else {
-            const key = `${this.currentView}_${vehicleId}`;
-            const road = this.roadRoutes.get(key);
-            if (road && road.geometry.length > 0) {
-                this.map.fitBounds(L.polyline(road.geometry).getBounds(), { padding: [50, 50] });
-            }
-        }
+  focusOnVehicle(vehicleId) {
+    const marker =
+      this.currentView === 'ddqn' ? this.ddqnVehicles.get(Number(vehicleId)) : this.alnsVehicles.get(Number(vehicleId));
+    if (marker) {
+      this.map.setView(marker.getLatLng(), 15, { animate: true });
+      marker.openPopup();
+    } else {
+      const key = `${this.currentView}_${vehicleId}`;
+      const road = this.roadRoutes.get(key);
+      if (road && road.geometry.length > 0) {
+        this.map.fitBounds(L.polyline(road.geometry).getBounds(), { padding: [50, 50] });
+      }
     }
+  }
 }

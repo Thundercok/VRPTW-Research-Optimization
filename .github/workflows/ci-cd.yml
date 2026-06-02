@@ -1,0 +1,235 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+  checks: write
+  pull-requests: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── LINT & FORMAT JOB ────────────────────────────────────────────────────────
+  lint-and-format:
+    name: Lint & Format Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install Python Lint Tools
+        run: pip install ruff
+
+      - name: Ruff Check & Format Check
+        run: |
+          ruff check .
+          ruff format --check .
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install Frontend Dependencies
+        run: npm ci
+
+      - name: ESLint Lint Check
+        run: npm run lint
+
+      - name: Prettier Format Check
+        run: npm run format:check
+
+  # ── BUILD & TEST JOB ─────────────────────────────────────────────────────────
+  build-and-test:
+    name: Build & E2E Testing
+    needs: lint-and-format
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install Node Dependencies
+        run: npm ci
+
+      - name: Build Frontend Assets
+        run: npm run build
+
+      - name: Set up Java JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: "temurin"
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: Cache Firebase Emulator Binaries
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/firebase/emulators
+          key: ${{ runner.os }}-firebase-emulators-${{ hashFiles('firebase.json') }}
+          restore-keys: |
+            ${{ runner.os }}-firebase-emulators-
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Install Python Dependencies
+        run: uv sync --all-groups --all-extras
+
+      - name: Install Playwright Browsers & OS Dependencies
+        run: uv run python -m playwright install --with-deps chromium
+
+      - name: Run E2E Integration Suite
+        run: make test-e2e
+
+  # ── DOCKER BUILD & VERIFY JOB ────────────────────────────────────────────────
+  docker-build:
+    name: Docker Build & Verification
+    needs: lint-and-format
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build local image (verification)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          tags: vrptw-app:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Only log in and push to GHCR on pushes to main or develop branches
+      - name: Log in to GitHub Container Registry (GHCR)
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Push Docker image to GHCR
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}:latest
+            ghcr.io/${{ github.repository }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ── DEPLOY PREVIEW (FOR PRs) ─────────────────────────────────────────────────
+  deploy-preview:
+    name: Deploy PR Preview Channel
+    needs: build-and-test
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install & Build
+        run: |
+          npm ci
+          npm run build
+
+      - name: Deploy to Firebase Hosting (Preview)
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_VRPTW_CD89D }}
+          projectId: vrptw-cd89d
+
+  # ── DEPLOY PRODUCTION (FOR MERGE TO MAIN/DEVELOP) ───────────────────────────
+  deploy-production:
+    name: Deploy to Production
+    needs: [build-and-test, docker-build]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install & Build
+        run: |
+          npm ci
+          npm run build
+
+      - name: Deploy to Firebase Hosting (Live)
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_VRPTW_CD89D }}
+          channelId: live
+          projectId: vrptw-cd89d
+
+      - name: Upload Page Assets (GitHub Pages)
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      - name: Deploy to GitHub Pages
+        if: github.ref == 'refs/heads/main'
+        id: deployment
+        uses: actions/deploy-pages@v4

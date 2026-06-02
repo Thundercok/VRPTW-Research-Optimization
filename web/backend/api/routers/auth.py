@@ -2,10 +2,17 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, Header, Query
-
 from api.dependencies import require_user
-from models.schemas import AuthRequest, ForgotPasswordRequest, ForgotPasswordResetRequest, RegisterConfirmRequest, RegisterOTPRequest, RegisterVerifyRequest, RequiredPasswordChangeRequest
+from fastapi import APIRouter, Depends, Header, Query
+from models.schemas import (
+    AuthRequest,
+    ForgotPasswordRequest,
+    ForgotPasswordResetRequest,
+    RegisterConfirmRequest,
+    RegisterOTPRequest,
+    RegisterVerifyRequest,
+    RequiredPasswordChangeRequest,
+)
 from services import auth_service
 
 router = APIRouter(tags=["auth"])

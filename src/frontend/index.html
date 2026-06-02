@@ -1,463 +1,527 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f8fbff" />
+    <meta
+      name="description"
+      content="NAMI helps teams upload delivery stops, compare route plans, and dispatch with confidence from a clean route planner."
+    />
+    <title>NAMI | Delivery Route Planning That Feels Simple</title>
 
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#f8fbff" />
-  <meta name="description"
-    content="NAMI helps teams upload delivery stops, compare route plans, and dispatch with confidence from a clean route planner." />
-  <title>NAMI | Delivery Route Planning That Feels Simple</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
 
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
-    rel="stylesheet" />
-
-  <script type="importmap">
-    {
-      "imports": {
-        "firebase/app": "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js",
-        "firebase/auth": "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js",
-        "firebase/firestore": "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js",
-        "firebase/analytics": "https://www.gstatic.com/firebasejs/10.12.5/firebase-analytics.js"
+    <script type="importmap">
+      {
+        "imports": {
+          "firebase/app": "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js",
+          "firebase/auth": "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js",
+          "firebase/firestore": "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js",
+          "firebase/analytics": "https://www.gstatic.com/firebasejs/10.12.5/firebase-analytics.js"
+        }
       }
-    }
-  </script>
+    </script>
 
-  <link rel="stylesheet" href="css/landing.css" />
-</head>
+    <link rel="stylesheet" href="css/landing.css" />
+  </head>
 
-<body>
-  <a class="skip-link" href="#main">Skip to content</a>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
 
-  <nav class="site-nav" aria-label="Primary navigation">
-    <div class="container nav-inner">
-      <a class="brand" href="#" aria-label="NAMI home">
-        <span class="brand-mark" aria-hidden="true"><span></span></span>
-        <span class="brand-copy">
-          <strong>NAMI</strong>
-          <small>Route planning made calmer</small>
-        </span>
-      </a>
+    <nav class="site-nav" aria-label="Primary navigation">
+      <div class="container nav-inner">
+        <a class="brand" href="#" aria-label="NAMI home">
+          <span class="brand-mark" aria-hidden="true"><span></span></span>
+          <span class="brand-copy">
+            <strong>NAMI</strong>
+            <small>Route planning made calmer</small>
+          </span>
+        </a>
 
-      <div class="nav-links" aria-label="Page sections">
-        <a href="#how">How it works</a>
-        <a href="#demo">Demo</a>
-        <a href="#features">Features</a>
-        <a href="#proof">Proof</a>
-        <a href="#run">Run it</a>
-      </div>
-
-      <a class="btn btn-primary btn-small nav-cta" href="app.html">Open NAMI</a>
-
-      <button class="menu-button" type="button" aria-label="Open navigation" aria-expanded="false"
-        aria-controls="mobile-menu" data-menu-button>
-        <span></span>
-        <span></span>
-        <span></span>
-      </button>
-    </div>
-
-    <div class="mobile-menu" id="mobile-menu" hidden>
-      <div class="container">
-        <a href="#how">How it works</a>
-        <a href="#demo">Demo</a>
-        <a href="#features">Features</a>
-        <a href="#proof">Proof</a>
-        <a href="#run">Run it</a>
-        <a href="app.html">Open NAMI</a>
-      </div>
-    </div>
-  </nav>
-
-  <main id="main">
-    <section class="hero" aria-labelledby="hero-title">
-      <div class="hero-blob blob-1" aria-hidden="true"></div>
-      <div class="hero-blob blob-2" aria-hidden="true"></div>
-      <div class="hero-blob blob-3" aria-hidden="true"></div>
-      <div class="container hero-grid">
-        <div class="hero-content">
-          <p class="eyebrow">Modern route planning for busy delivery teams</p>
-          <h1 id="hero-title">NAMI makes delivery routes easier to plan.</h1>
-          <p class="hero-copy">
-            Upload stops, set delivery windows, compare route options, and review the plan on a clean map before the day
-            goes live.
-          </p>
-
-          <div class="hero-actions">
-            <a class="btn btn-primary" href="app.html">Open NAMI</a>
-            <a class="btn btn-secondary" href="#demo">See the demo flow</a>
-          </div>
-
-          <div class="mini-proof" aria-label="Project highlights">
-            <span><b>No-login</b> demo mode</span>
-            <span><b>CSV/XLSX</b> friendly</span>
-            <span><b>Map-first</b> review</span>
-          </div>
+        <div class="nav-links" aria-label="Page sections">
+          <a href="#how">How it works</a>
+          <a href="#demo">Demo</a>
+          <a href="#features">Features</a>
+          <a href="#proof">Proof</a>
+          <a href="#run">Run it</a>
         </div>
 
-        <div class="hero-preview" aria-hidden="true">
-          <div class="hero-board-wrapper">
-            <div class="nami-hero-board">
-              <div class="board-header">
-                <div class="board-dot-group">
-                  <span class="board-dot red"></span>
-                  <span class="board-dot yellow"></span>
-                  <span class="board-dot green"></span>
+        <a class="btn btn-primary btn-small nav-cta" href="app.html">Open NAMI</a>
+
+        <button
+          class="menu-button"
+          type="button"
+          aria-label="Open navigation"
+          aria-expanded="false"
+          aria-controls="mobile-menu"
+          data-menu-button
+        >
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+      </div>
+
+      <div class="mobile-menu" id="mobile-menu" hidden>
+        <div class="container">
+          <a href="#how">How it works</a>
+          <a href="#demo">Demo</a>
+          <a href="#features">Features</a>
+          <a href="#proof">Proof</a>
+          <a href="#run">Run it</a>
+          <a href="app.html">Open NAMI</a>
+        </div>
+      </div>
+    </nav>
+
+    <main id="main">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-blob blob-1" aria-hidden="true"></div>
+        <div class="hero-blob blob-2" aria-hidden="true"></div>
+        <div class="hero-blob blob-3" aria-hidden="true"></div>
+        <div class="container hero-grid">
+          <div class="hero-content">
+            <p class="eyebrow">Modern route planning for busy delivery teams</p>
+            <h1 id="hero-title">NAMI makes delivery routes easier to plan.</h1>
+            <p class="hero-copy">
+              Upload stops, set delivery windows, compare route options, and review the plan on a clean map before the
+              day goes live.
+            </p>
+
+            <div class="hero-actions">
+              <a class="btn btn-primary" href="app.html">Open NAMI</a>
+              <a class="btn btn-secondary" href="#demo">See the demo flow</a>
+            </div>
+
+            <div class="mini-proof" aria-label="Project highlights">
+              <span><b>No-login</b> demo mode</span>
+              <span><b>CSV/XLSX</b> friendly</span>
+              <span><b>Map-first</b> review</span>
+            </div>
+          </div>
+
+          <div class="hero-preview" aria-hidden="true">
+            <div class="hero-board-wrapper">
+              <div class="nami-hero-board">
+                <div class="board-header">
+                  <div class="board-dot-group">
+                    <span class="board-dot red"></span>
+                    <span class="board-dot yellow"></span>
+                    <span class="board-dot green"></span>
+                  </div>
+                  <span class="board-title">NAMI Dispatch Simulation</span>
                 </div>
-                <span class="board-title">NAMI Dispatch Simulation</span>
+                <div class="board-body">
+                  <svg viewBox="0 0 500 350" preserveAspectRatio="none">
+                    <defs>
+                      <pattern id="hero-grid-pattern" width="25" height="25" patternUnits="userSpaceOnUse">
+                        <path d="M 25 0 L 0 0 0 25" fill="none" stroke="rgba(255, 255, 255, 0.04)" stroke-width="1" />
+                      </pattern>
+                    </defs>
+                    <rect width="100%" height="100%" fill="url(#hero-grid-pattern)" />
+
+                    <!-- Routes -->
+                    <path class="hero-route alt" d="M 60 270 C 130 180, 200 320, 300 210 C 360 140, 400 240, 440 160" />
+                    <path class="hero-route main" d="M 60 270 C 160 160, 240 240, 320 120 C 360 60, 400 200, 440 160" />
+
+                    <!-- Vehicles -->
+                    <circle class="hero-vehicle-dot alt-v" r="6" />
+                    <circle class="hero-vehicle-dot main-v" r="6" />
+
+                    <!-- Stop nodes -->
+                    <g class="hero-node depot" transform="translate(60, 270)">
+                      <circle class="pulse" r="12" />
+                      <circle class="core" r="6" />
+                    </g>
+                    <g class="hero-node stop" transform="translate(300, 210)">
+                      <circle class="pulse" r="8" />
+                      <circle class="core" r="4" />
+                    </g>
+                    <g class="hero-node stop" transform="translate(320, 120)">
+                      <circle class="pulse" r="8" />
+                      <circle class="core" r="4" />
+                    </g>
+                    <g class="hero-node stop" transform="translate(440, 160)">
+                      <circle class="pulse" r="8" />
+                      <circle class="core" r="4" />
+                    </g>
+                  </svg>
+                </div>
               </div>
-              <div class="board-body">
-                <svg viewBox="0 0 500 350" preserveAspectRatio="none">
-                  <defs>
-                    <pattern id="hero-grid-pattern" width="25" height="25" patternUnits="userSpaceOnUse">
-                      <path d="M 25 0 L 0 0 0 25" fill="none" stroke="rgba(255, 255, 255, 0.04)" stroke-width="1" />
-                    </pattern>
-                  </defs>
-                  <rect width="100%" height="100%" fill="url(#hero-grid-pattern)" />
-                  
-                  <!-- Routes -->
-                  <path class="hero-route alt" d="M 60 270 C 130 180, 200 320, 300 210 C 360 140, 400 240, 440 160" />
-                  <path class="hero-route main" d="M 60 270 C 160 160, 240 240, 320 120 C 360 60, 400 200, 440 160" />
-                  
-                  <!-- Vehicles -->
-                  <circle class="hero-vehicle-dot alt-v" r="6" />
-                  <circle class="hero-vehicle-dot main-v" r="6" />
-                  
-                  <!-- Stop nodes -->
-                  <g class="hero-node depot" transform="translate(60, 270)">
-                    <circle class="pulse" r="12" />
-                    <circle class="core" r="6" />
-                  </g>
-                  <g class="hero-node stop" transform="translate(300, 210)">
-                    <circle class="pulse" r="8" />
-                    <circle class="core" r="4" />
-                  </g>
-                  <g class="hero-node stop" transform="translate(320, 120)">
-                    <circle class="pulse" r="8" />
-                    <circle class="core" r="4" />
-                  </g>
-                  <g class="hero-node stop" transform="translate(440, 160)">
-                    <circle class="pulse" r="8" />
-                    <circle class="core" r="4" />
+
+              <!-- Floating info cards moved outside overflow:hidden boundaries -->
+              <div class="hero-floating-card c1">
+                <div class="card-icon">⚡</div>
+                <div class="card-text">
+                  <b>18% less driving</b>
+                  <span>Optimized Route B</span>
+                </div>
+              </div>
+              <div class="hero-floating-card c2">
+                <div class="card-icon">📍</div>
+                <div class="card-text">
+                  <b>12 stops loaded</b>
+                  <span>From CSV manifest</span>
+                </div>
+              </div>
+              <div class="hero-floating-card c3">
+                <div class="card-icon">⏰</div>
+                <div class="card-text">
+                  <b>100% on-time</b>
+                  <span>Windows verified</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="how">
+        <div class="container">
+          <div class="section-heading center">
+            <p class="eyebrow">How it works</p>
+            <h2>Three steps from spreadsheet to route plan.</h2>
+            <p class="lead">
+              Keep the workflow simple: bring in the stops, compare a few route options, then choose the plan that looks
+              right.
+            </p>
+          </div>
+
+          <div class="steps">
+            <article class="step upload">
+              <span class="step-num">01</span>
+              <h3>Bring in the day's stops.</h3>
+              <p>
+                Start from sample data or upload a manifest with locations, demand, service time, and delivery windows.
+              </p>
+              <div class="step-art upload-art">
+                <svg width="80" height="80" viewBox="0 0 80 80" fill="none" aria-hidden="true">
+                  <rect width="80" height="80" rx="8" fill="rgba(57, 119, 246, 0.03)" />
+                  <rect
+                    x="22"
+                    y="16"
+                    width="36"
+                    height="48"
+                    rx="4"
+                    stroke="var(--blue)"
+                    stroke-width="2"
+                    fill="rgba(255, 255, 255, 0.9)"
+                  />
+                  <line x1="29" y1="26" x2="43" y2="26" stroke="var(--line)" stroke-width="2" stroke-linecap="round" />
+                  <line x1="29" y1="34" x2="51" y2="34" stroke="var(--line)" stroke-width="2" stroke-linecap="round" />
+                  <line x1="29" y1="42" x2="47" y2="42" stroke="var(--line)" stroke-width="2" stroke-linecap="round" />
+                  <g class="bouncing-arrow">
+                    <path
+                      d="M40 48 V58 M35 53 L40 58 L45 53"
+                      stroke="var(--teal)"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
                   </g>
                 </svg>
               </div>
-            </div>
-            
-            <!-- Floating info cards moved outside overflow:hidden boundaries -->
-            <div class="hero-floating-card c1">
-              <div class="card-icon">⚡</div>
-              <div class="card-text">
-                <b>18% less driving</b>
-                <span>Optimized Route B</span>
+            </article>
+            <article class="step solve">
+              <span class="step-num">02</span>
+              <h3>Let NAMI compare plans.</h3>
+              <p>See distance, vehicle count, runtime, and timing health side by side instead of guessing.</p>
+              <div class="step-art compare-art">
+                <svg width="80" height="80" viewBox="0 0 80 80" fill="none" aria-hidden="true">
+                  <rect width="80" height="80" rx="8" fill="rgba(57, 119, 246, 0.03)" />
+                  <rect
+                    class="bar-left"
+                    x="24"
+                    y="44"
+                    width="12"
+                    height="20"
+                    rx="2"
+                    fill="var(--muted)"
+                    opacity="0.5"
+                  />
+                  <rect class="bar-right" x="44" y="32" width="12" height="32" rx="2" fill="var(--teal)" />
+                  <line
+                    x1="20"
+                    y1="32"
+                    x2="60"
+                    y2="32"
+                    stroke="var(--blue)"
+                    stroke-width="1.5"
+                    stroke-dasharray="3 3"
+                  />
+                  <circle class="compare-sparkle" cx="50" cy="32" r="4" fill="var(--yellow)" />
+                </svg>
               </div>
-            </div>
-            <div class="hero-floating-card c2">
-              <div class="card-icon">📍</div>
-              <div class="card-text">
-                <b>12 stops loaded</b>
-                <span>From CSV manifest</span>
+            </article>
+            <article class="step share">
+              <span class="step-num">03</span>
+              <h3>Review the map before dispatch.</h3>
+              <p>Catch awkward turns, odd clusters, and risky timing before the route reaches the road.</p>
+              <div class="step-art dispatch-art">
+                <svg width="80" height="80" viewBox="0 0 80 80" fill="none" aria-hidden="true">
+                  <rect width="80" height="80" rx="8" fill="rgba(57, 119, 246, 0.03)" />
+                  <path
+                    class="draw-path"
+                    d="M 20 60 C 25 35, 45 25, 50 45 C 55 60, 60 50, 65 30"
+                    stroke="var(--blue)"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    fill="none"
+                  />
+                  <g class="pulsing-pin" transform="translate(50, 45)">
+                    <circle cx="0" cy="0" r="10" fill="rgba(240, 98, 146, 0.2)" class="pin-ring" />
+                    <circle cx="0" cy="0" r="4" fill="var(--coral)" />
+                  </g>
+                </svg>
               </div>
-            </div>
-            <div class="hero-floating-card c3">
-              <div class="card-icon">⏰</div>
-              <div class="card-text">
-                <b>100% on-time</b>
-                <span>Windows verified</span>
-              </div>
-            </div>
+            </article>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <section class="section" id="how">
-      <div class="container">
-        <div class="section-heading center">
-          <p class="eyebrow">How it works</p>
-          <h2>Three steps from spreadsheet to route plan.</h2>
-          <p class="lead">
-            Keep the workflow simple: bring in the stops, compare a few route options, then choose the plan that looks
-            right.
-          </p>
-        </div>
+      <section class="section section-soft" id="demo">
+        <div class="container">
+          <div class="section-heading">
+            <p class="eyebrow">Interactive preview</p>
+            <h2>Click through a delivery day.</h2>
+            <p class="lead">
+              NAMI keeps the flow understandable: load the stops, compare routes, then review the plan on a map.
+            </p>
+          </div>
 
-        <div class="steps">
-          <article class="step upload">
-            <span class="step-num">01</span>
-            <h3>Bring in the day's stops.</h3>
-            <p>Start from sample data or upload a manifest with locations, demand, service time, and delivery windows.</p>
-            <div class="step-art upload-art">
-              <svg width="80" height="80" viewBox="0 0 80 80" fill="none" aria-hidden="true">
-                <rect width="80" height="80" rx="8" fill="rgba(57, 119, 246, 0.03)" />
-                <rect x="22" y="16" width="36" height="48" rx="4" stroke="var(--blue)" stroke-width="2" fill="rgba(255, 255, 255, 0.9)" />
-                <line x1="29" y1="26" x2="43" y2="26" stroke="var(--line)" stroke-width="2" stroke-linecap="round" />
-                <line x1="29" y1="34" x2="51" y2="34" stroke="var(--line)" stroke-width="2" stroke-linecap="round" />
-                <line x1="29" y1="42" x2="47" y2="42" stroke="var(--line)" stroke-width="2" stroke-linecap="round" />
-                <g class="bouncing-arrow">
-                  <path d="M40 48 V58 M35 53 L40 58 L45 53" stroke="var(--teal)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+          <div class="planner">
+            <div class="planner-side" role="tablist" aria-label="Planner preview steps">
+              <button class="tab-button active" type="button" data-planner-tab="upload" role="tab" aria-selected="true">
+                <span class="tab-icon">1</span>
+                <div class="tab-content">
+                  <b class="tab-title">Load the day</b>
+                  <span class="tab-desc">Stops, vehicles, capacity, windows.</span>
+                </div>
+              </button>
+              <button class="tab-button" type="button" data-planner-tab="compare" role="tab" aria-selected="false">
+                <span class="tab-icon">2</span>
+                <div class="tab-content">
+                  <b class="tab-title">Compare routes</b>
+                  <span class="tab-desc">Distance, vehicles, time, on-time rate.</span>
+                </div>
+              </button>
+              <button class="tab-button" type="button" data-planner-tab="dispatch" role="tab" aria-selected="false">
+                <span class="tab-icon">3</span>
+                <div class="tab-content">
+                  <b class="tab-title">Dispatch with confidence</b>
+                  <span class="tab-desc">Map review before action.</span>
+                </div>
+              </button>
+            </div>
+
+            <div class="planner-screen state-upload" id="planner-screen-el" aria-label="Animated route preview">
+              <div class="screen-note">
+                <span id="screen-title">Manifest loaded</span>
+                <span class="screen-pill" id="screen-pill">12 stops ready</span>
+              </div>
+
+              <svg
+                viewBox="0 0 760 430"
+                id="planner-svg"
+                preserveAspectRatio="none"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <defs>
+                  <pattern id="screen-grid" width="30" height="30" patternUnits="userSpaceOnUse">
+                    <path d="M 30 0 L 0 0 0 30" fill="none" stroke="rgba(255, 255, 255, 0.04)" stroke-width="1" />
+                  </pattern>
+                  <linearGradient id="route-a-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#3977f6" />
+                    <stop offset="100%" stop-color="#a18cd1" />
+                  </linearGradient>
+                  <linearGradient id="route-b-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#65d6cc" />
+                    <stop offset="100%" stop-color="#10a89c" />
+                  </linearGradient>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#screen-grid)" />
+
+                <!-- Route paths -->
+                <path
+                  class="screen-route route-a"
+                  d="M 80 320 C 180 320, 280 280, 380 280 C 480 280, 560 240, 660 240"
+                />
+                <path
+                  class="screen-route route-b"
+                  d="M 80 320 C 130 240, 180 160, 240 160 C 330 160, 430 120, 520 120 C 570 120, 620 180, 660 240"
+                />
+
+                <!-- Vehicles -->
+                <circle class="screen-vehicle vehicle-a" r="7" />
+                <circle class="screen-vehicle vehicle-b" r="7" />
+
+                <!-- Stops (aligned to routes!) -->
+                <!-- Depot -->
+                <g class="screen-node depot" transform="translate(80, 320)">
+                  <circle class="pulse" r="14" />
+                  <circle class="core" r="8" />
+                  <text class="label" y="-14">Depot</text>
+                </g>
+                <!-- Stop 1 (Route B) -->
+                <g class="screen-node stop node-stop1" transform="translate(240, 160)">
+                  <circle class="pulse" r="10" />
+                  <circle class="core" r="6" />
+                  <text class="label" y="-12">Stop 1</text>
+                </g>
+                <!-- Stop 2 (Route A) -->
+                <g class="screen-node stop node-stop2" transform="translate(380, 280)">
+                  <circle class="pulse" r="10" />
+                  <circle class="core" r="6" />
+                  <text class="label" y="-12">Stop 2</text>
+                </g>
+                <!-- Stop 3 (Route B) -->
+                <g class="screen-node stop node-stop3" transform="translate(520, 120)">
+                  <circle class="pulse" r="10" />
+                  <circle class="core" r="6" />
+                  <text class="label" y="-12">Stop 3</text>
+                </g>
+                <!-- Stop 4 (End for both) -->
+                <g class="screen-node stop node-stop4" transform="translate(660, 240)">
+                  <circle class="pulse" r="10" />
+                  <circle class="core" r="6" />
+                  <text class="label" y="-12">Stop 4</text>
                 </g>
               </svg>
-            </div>
-          </article>
-          <article class="step solve">
-            <span class="step-num">02</span>
-            <h3>Let NAMI compare plans.</h3>
-            <p>See distance, vehicle count, runtime, and timing health side by side instead of guessing.</p>
-            <div class="step-art compare-art">
-              <svg width="80" height="80" viewBox="0 0 80 80" fill="none" aria-hidden="true">
-                <rect width="80" height="80" rx="8" fill="rgba(57, 119, 246, 0.03)" />
-                <rect class="bar-left" x="24" y="44" width="12" height="20" rx="2" fill="var(--muted)" opacity="0.5" />
-                <rect class="bar-right" x="44" y="32" width="12" height="32" rx="2" fill="var(--teal)" />
-                <line x1="20" y1="32" x2="60" y2="32" stroke="var(--blue)" stroke-width="1.5" stroke-dasharray="3 3" />
-                <circle class="compare-sparkle" cx="50" cy="32" r="4" fill="var(--yellow)" />
-              </svg>
-            </div>
-          </article>
-          <article class="step share">
-            <span class="step-num">03</span>
-            <h3>Review the map before dispatch.</h3>
-            <p>Catch awkward turns, odd clusters, and risky timing before the route reaches the road.</p>
-            <div class="step-art dispatch-art">
-              <svg width="80" height="80" viewBox="0 0 80 80" fill="none" aria-hidden="true">
-                <rect width="80" height="80" rx="8" fill="rgba(57, 119, 246, 0.03)" />
-                <path class="draw-path" d="M 20 60 C 25 35, 45 25, 50 45 C 55 60, 60 50, 65 30" stroke="var(--blue)" stroke-width="2" stroke-linecap="round" fill="none" />
-                <g class="pulsing-pin" transform="translate(50, 45)">
-                  <circle cx="0" cy="0" r="10" fill="rgba(240, 98, 146, 0.2)" class="pin-ring" />
-                  <circle cx="0" cy="0" r="4" fill="var(--coral)" />
-                </g>
-              </svg>
-            </div>
-          </article>
-        </div>
-      </div>
-    </section>
 
-    <section class="section section-soft" id="demo">
-      <div class="container">
-        <div class="section-heading">
-          <p class="eyebrow">Interactive preview</p>
-          <h2>Click through a delivery day.</h2>
-          <p class="lead">
-            NAMI keeps the flow understandable: load the stops, compare routes, then review the plan on a map.
-          </p>
-        </div>
-
-        <div class="planner">
-          <div class="planner-side" role="tablist" aria-label="Planner preview steps">
-            <button class="tab-button active" type="button" data-planner-tab="upload" role="tab" aria-selected="true">
-              <span class="tab-icon">1</span>
-              <div class="tab-content">
-                <b class="tab-title">Load the day</b>
-                <span class="tab-desc">Stops, vehicles, capacity, windows.</span>
+              <div class="screen-panel">
+                <div><span id="panel-a-label">Imported</span><b id="panel-a-value">12 stops</b></div>
+                <div><span id="panel-b-label">Vehicles</span><b id="panel-b-value">4 ready</b></div>
+                <div><span id="panel-c-label">Status</span><b id="panel-c-value">Clean</b></div>
               </div>
-            </button>
-            <button class="tab-button" type="button" data-planner-tab="compare" role="tab" aria-selected="false">
-              <span class="tab-icon">2</span>
-              <div class="tab-content">
-                <b class="tab-title">Compare routes</b>
-                <span class="tab-desc">Distance, vehicles, time, on-time rate.</span>
-              </div>
-            </button>
-            <button class="tab-button" type="button" data-planner-tab="dispatch" role="tab" aria-selected="false">
-              <span class="tab-icon">3</span>
-              <div class="tab-content">
-                <b class="tab-title">Dispatch with confidence</b>
-                <span class="tab-desc">Map review before action.</span>
-              </div>
-            </button>
-          </div>
-
-          <div class="planner-screen state-upload" id="planner-screen-el" aria-label="Animated route preview">
-            <div class="screen-note">
-              <span id="screen-title">Manifest loaded</span>
-              <span class="screen-pill" id="screen-pill">12 stops ready</span>
-            </div>
-            
-            <svg viewBox="0 0 760 430" id="planner-svg" preserveAspectRatio="none" aria-hidden="true" focusable="false">
-              <defs>
-                <pattern id="screen-grid" width="30" height="30" patternUnits="userSpaceOnUse">
-                  <path d="M 30 0 L 0 0 0 30" fill="none" stroke="rgba(255, 255, 255, 0.04)" stroke-width="1" />
-                </pattern>
-                <linearGradient id="route-a-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stop-color="#3977f6" />
-                  <stop offset="100%" stop-color="#a18cd1" />
-                </linearGradient>
-                <linearGradient id="route-b-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stop-color="#65d6cc" />
-                  <stop offset="100%" stop-color="#10a89c" />
-                </linearGradient>
-              </defs>
-              <rect width="100%" height="100%" fill="url(#screen-grid)" />
-              
-              <!-- Route paths -->
-              <path class="screen-route route-a" d="M 80 320 C 180 320, 280 280, 380 280 C 480 280, 560 240, 660 240" />
-              <path class="screen-route route-b" d="M 80 320 C 130 240, 180 160, 240 160 C 330 160, 430 120, 520 120 C 570 120, 620 180, 660 240" />
-              
-              <!-- Vehicles -->
-              <circle class="screen-vehicle vehicle-a" r="7" />
-              <circle class="screen-vehicle vehicle-b" r="7" />
-              
-              <!-- Stops (aligned to routes!) -->
-              <!-- Depot -->
-              <g class="screen-node depot" transform="translate(80, 320)">
-                <circle class="pulse" r="14" />
-                <circle class="core" r="8" />
-                <text class="label" y="-14">Depot</text>
-              </g>
-              <!-- Stop 1 (Route B) -->
-              <g class="screen-node stop node-stop1" transform="translate(240, 160)">
-                <circle class="pulse" r="10" />
-                <circle class="core" r="6" />
-                <text class="label" y="-12">Stop 1</text>
-              </g>
-              <!-- Stop 2 (Route A) -->
-              <g class="screen-node stop node-stop2" transform="translate(380, 280)">
-                <circle class="pulse" r="10" />
-                <circle class="core" r="6" />
-                <text class="label" y="-12">Stop 2</text>
-              </g>
-              <!-- Stop 3 (Route B) -->
-              <g class="screen-node stop node-stop3" transform="translate(520, 120)">
-                <circle class="pulse" r="10" />
-                <circle class="core" r="6" />
-                <text class="label" y="-12">Stop 3</text>
-              </g>
-              <!-- Stop 4 (End for both) -->
-              <g class="screen-node stop node-stop4" transform="translate(660, 240)">
-                <circle class="pulse" r="10" />
-                <circle class="core" r="6" />
-                <text class="label" y="-12">Stop 4</text>
-              </g>
-            </svg>
-            
-            <div class="screen-panel">
-              <div><span id="panel-a-label">Imported</span><b id="panel-a-value">12 stops</b></div>
-              <div><span id="panel-b-label">Vehicles</span><b id="panel-b-value">4 ready</b></div>
-              <div><span id="panel-c-label">Status</span><b id="panel-c-value">Clean</b></div>
             </div>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <section class="section" id="features">
-      <div class="container">
-        <div class="section-heading">
-          <p class="eyebrow">Built for real route work</p>
-          <h2>Useful answers without the clutter.</h2>
-          <p class="lead">
-            NAMI keeps the important details visible while leaving the complicated routing logic in the background.
-          </p>
-        </div>
+      <section class="section" id="features">
+        <div class="container">
+          <div class="section-heading">
+            <p class="eyebrow">Built for real route work</p>
+            <h2>Useful answers without the clutter.</h2>
+            <p class="lead">
+              NAMI keeps the important details visible while leaving the complicated routing logic in the background.
+            </p>
+          </div>
 
-        <div class="feature-grid">
-          <article class="feature" style="--feature-bg:#e7f8f6; --feature-color:#087a72;">
-            <span class="feature-mark">M</span>
-            <h3>Manifest import</h3>
-            <p>Start from existing route data instead of rebuilding stops one by one.</p>
-          </article>
-          <article class="feature" style="--feature-bg:#dceaff; --feature-color:#245fd8;">
-            <span class="feature-mark">C</span>
-            <h3>Clear comparison</h3>
-            <p>Compare route options with simple numbers: distance, vehicles, time, and arrival health.</p>
-          </article>
-          <article class="feature" style="--feature-bg:#fff3d6; --feature-color:#9b6400;">
-            <span class="feature-mark">R</span>
-            <h3>Map review</h3>
-            <p>Use the map to catch odd choices before a route becomes tomorrow's problem.</p>
-          </article>
-          <article class="feature" style="--feature-bg:#ffe9e5; --feature-color:#c73b29;">
-            <span class="feature-mark">D</span>
-            <h3>Demo friendly</h3>
-            <p>Open NAMI quickly, load sample data, and show the route workflow without setup drama.</p>
-          </article>
-          <article class="feature" style="--feature-bg:#eaf7df; --feature-color:#4d7c0f;">
-            <span class="feature-mark">B</span>
-            <h3>Sample routes</h3>
-            <p>Included demo datasets make it easy to show the workflow before using real customer stops.</p>
-          </article>
-          <article class="feature" style="--feature-bg:#eee7ff; --feature-color:#6d28d9;">
-            <span class="feature-mark">A</span>
-            <h3>API-backed</h3>
-            <p>The browser experience connects to the backend solver flow instead of acting like a static mockup.</p>
-          </article>
-        </div>
-      </div>
-    </section>
-
-    <section class="section section-soft" id="proof">
-      <div class="container">
-        <div class="section-heading">
-          <p class="eyebrow">Proof, minus the fog</p>
-          <h2>Clear promises. Visible evidence.</h2>
-          <p class="lead">
-            NAMI is backed by benchmark data and a working planner, but the landing page stays focused on what users can
-            understand quickly.
-          </p>
-        </div>
-
-        <div class="proof-grid">
-          <article class="proof-card">
-            <span class="proof-value teal">7/8</span>
-            <h3>Test wins</h3>
-            <p>In the current audit, NAMI's route engine outperformed the older baseline in seven of eight test cases.</p>
-          </article>
-          <article class="proof-card">
-            <span class="proof-value">56</span>
-            <h3>Test data included</h3>
-            <p>Sample route files are included so results can be inspected locally.</p>
-          </article>
-          <article class="proof-card">
-            <span class="proof-value coral">CSV</span>
-            <h3>Real data path</h3>
-            <p>The app is shaped around route manifests, not just hand-picked demo stops.</p>
-          </article>
-          <article class="proof-card">
-            <span class="proof-value">Map</span>
-            <h3>Visual review</h3>
-            <p>Every plan should be readable by a person before it is treated as a result.</p>
-          </article>
-        </div>
-
-        <aside class="plain-note">
-          <strong>Plain truth.</strong>
-          <p>
-            The strongest current story is simple: NAMI compares routes clearly and opens into a working dispatch demo.
-            The headline stays focused on what the planner can do today.
-          </p>
-        </aside>
-      </div>
-    </section>
-
-
-
-    <section class="section section-dark" id="run">
-      <div class="container tech-layout">
-        <div>
-          <p class="eyebrow">Run it locally</p>
-          <h2>Open NAMI and test the flow.</h2>
-          <p class="lead">
-            Start the backend, open the planner, and try the route flow with included demo data.
-          </p>
-          <div class="hero-actions">
-            <a class="btn btn-primary" href="app.html">Open NAMI</a>
-            <a class="btn btn-secondary" href="https://github.com/Thundercok/VRPTW-Research-Optimization"
-              target="_blank" rel="noopener">View source</a>
+          <div class="feature-grid">
+            <article class="feature" style="--feature-bg: #e7f8f6; --feature-color: #087a72">
+              <span class="feature-mark">M</span>
+              <h3>Manifest import</h3>
+              <p>Start from existing route data instead of rebuilding stops one by one.</p>
+            </article>
+            <article class="feature" style="--feature-bg: #dceaff; --feature-color: #245fd8">
+              <span class="feature-mark">C</span>
+              <h3>Clear comparison</h3>
+              <p>Compare route options with simple numbers: distance, vehicles, time, and arrival health.</p>
+            </article>
+            <article class="feature" style="--feature-bg: #fff3d6; --feature-color: #9b6400">
+              <span class="feature-mark">R</span>
+              <h3>Map review</h3>
+              <p>Use the map to catch odd choices before a route becomes tomorrow's problem.</p>
+            </article>
+            <article class="feature" style="--feature-bg: #ffe9e5; --feature-color: #c73b29">
+              <span class="feature-mark">D</span>
+              <h3>Demo friendly</h3>
+              <p>Open NAMI quickly, load sample data, and show the route workflow without setup drama.</p>
+            </article>
+            <article class="feature" style="--feature-bg: #eaf7df; --feature-color: #4d7c0f">
+              <span class="feature-mark">B</span>
+              <h3>Sample routes</h3>
+              <p>Included demo datasets make it easy to show the workflow before using real customer stops.</p>
+            </article>
+            <article class="feature" style="--feature-bg: #eee7ff; --feature-color: #6d28d9">
+              <span class="feature-mark">A</span>
+              <h3>API-backed</h3>
+              <p>The browser experience connects to the backend solver flow instead of acting like a static mockup.</p>
+            </article>
           </div>
         </div>
+      </section>
 
-        <div class="terminal">
-          <div class="terminal-top" aria-hidden="true">
-            <span class="dot" style="background:#ef4444"></span>
-            <span class="dot" style="background:#f59e0b"></span>
-            <span class="dot" style="background:#10b981"></span>
-            <span class="terminal-title">local setup</span>
+      <section class="section section-soft" id="proof">
+        <div class="container">
+          <div class="section-heading">
+            <p class="eyebrow">Proof, minus the fog</p>
+            <h2>Clear promises. Visible evidence.</h2>
+            <p class="lead">
+              NAMI is backed by benchmark data and a working planner, but the landing page stays focused on what users
+              can understand quickly.
+            </p>
           </div>
-          <pre><span class="comment"># clone NAMI</span>
+
+          <div class="proof-grid">
+            <article class="proof-card">
+              <span class="proof-value teal">7/8</span>
+              <h3>Test wins</h3>
+              <p>
+                In the current audit, NAMI's route engine outperformed the older baseline in seven of eight test cases.
+              </p>
+            </article>
+            <article class="proof-card">
+              <span class="proof-value">56</span>
+              <h3>Test data included</h3>
+              <p>Sample route files are included so results can be inspected locally.</p>
+            </article>
+            <article class="proof-card">
+              <span class="proof-value coral">CSV</span>
+              <h3>Real data path</h3>
+              <p>The app is shaped around route manifests, not just hand-picked demo stops.</p>
+            </article>
+            <article class="proof-card">
+              <span class="proof-value">Map</span>
+              <h3>Visual review</h3>
+              <p>Every plan should be readable by a person before it is treated as a result.</p>
+            </article>
+          </div>
+
+          <aside class="plain-note">
+            <strong>Plain truth.</strong>
+            <p>
+              The strongest current story is simple: NAMI compares routes clearly and opens into a working dispatch
+              demo. The headline stays focused on what the planner can do today.
+            </p>
+          </aside>
+        </div>
+      </section>
+
+      <section class="section section-dark" id="run">
+        <div class="container tech-layout">
+          <div>
+            <p class="eyebrow">Run it locally</p>
+            <h2>Open NAMI and test the flow.</h2>
+            <p class="lead">Start the backend, open the planner, and try the route flow with included demo data.</p>
+            <div class="hero-actions">
+              <a class="btn btn-primary" href="app.html">Open NAMI</a>
+              <a
+                class="btn btn-secondary"
+                href="https://github.com/Thundercok/VRPTW-Research-Optimization"
+                target="_blank"
+                rel="noopener"
+                >View source</a
+              >
+            </div>
+          </div>
+
+          <div class="terminal">
+            <div class="terminal-top" aria-hidden="true">
+              <span class="dot" style="background: #ef4444"></span>
+              <span class="dot" style="background: #f59e0b"></span>
+              <span class="dot" style="background: #10b981"></span>
+              <span class="terminal-title">local setup</span>
+            </div>
+            <pre><span class="comment"># clone NAMI</span>
 <span class="prompt">PS&gt;</span> git clone https://github.com/Thundercok/VRPTW-Research-Optimization.git
 <span class="prompt">PS&gt;</span> cd VRPTW-Research-Optimization
 
@@ -466,247 +530,251 @@
 <span class="prompt">PS&gt;</span> .\.venv\Scripts\Activate.ps1
 <span class="prompt">PS&gt;</span> uv pip install -r requirements.txt
 <span class="prompt">PS&gt;</span> python main.py</pre>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="container">
+        <div class="footer-grid">
+          <div>
+            <a class="brand" href="#">
+              <span class="brand-mark" aria-hidden="true"><span></span></span>
+              <span class="brand-copy">
+                <strong>NAMI</strong>
+                <small>Route planning made calmer</small>
+              </span>
+            </a>
+            <p>
+              A modern route-planning landing page with clearer copy, brighter visuals, and a product story people can
+              understand fast.
+            </p>
+          </div>
+
+          <div class="footer-links">
+            <h4>Product</h4>
+            <a href="app.html">Open NAMI</a>
+            <a href="#demo">Demo flow</a>
+            <a href="#features">Features</a>
+          </div>
+
+          <div class="footer-links">
+            <h4>Evidence</h4>
+            <a href="#proof">Proof</a>
+            <a href="#run">Run locally</a>
+            <a href="https://github.com/Thundercok/VRPTW-Research-Optimization" target="_blank" rel="noopener"
+              >Repository</a
+            >
+          </div>
+
+          <div class="footer-links">
+            <h4>Project</h4>
+            <a href="feedback.html">Feedback</a>
+            <a href="auth.html">Authentication</a>
+            <a href="feedback_admin.html">Admin feedback</a>
+          </div>
+        </div>
+
+        <div class="footer-bottom">
+          <span>&copy; 2026 VRPTW Research Optimization. Released under the MIT License.</span>
+          <span>Simple first. Useful always.</span>
         </div>
       </div>
-    </section>
-  </main>
+    </footer>
 
-  <footer class="footer">
-    <div class="container">
-      <div class="footer-grid">
-        <div>
-          <a class="brand" href="#">
-            <span class="brand-mark" aria-hidden="true"><span></span></span>
-            <span class="brand-copy">
-              <strong>NAMI</strong>
-              <small>Route planning made calmer</small>
-            </span>
-          </a>
-          <p>
-            A modern route-planning landing page with clearer copy, brighter visuals, and a product story people can
-            understand fast.
-          </p>
-        </div>
+    <script type="module" src="js/observability.js?v=20260522"></script>
+    <script>
+      (function () {
+        'use strict';
 
-        <div class="footer-links">
-          <h4>Product</h4>
-          <a href="app.html">Open NAMI</a>
-          <a href="#demo">Demo flow</a>
-          <a href="#features">Features</a>
-        </div>
+        var menuButton = document.querySelector('[data-menu-button]');
+        var mobileMenu = document.getElementById('mobile-menu');
+        var siteNav = document.querySelector('.site-nav');
+        var plannerTabs = Array.from(document.querySelectorAll('[data-planner-tab]'));
+        var title = document.getElementById('screen-title');
+        var pill = document.getElementById('screen-pill');
+        var labels = [
+          document.getElementById('panel-a-label'),
+          document.getElementById('panel-b-label'),
+          document.getElementById('panel-c-label'),
+        ];
+        var values = [
+          document.getElementById('panel-a-value'),
+          document.getElementById('panel-b-value'),
+          document.getElementById('panel-c-value'),
+        ];
 
-        <div class="footer-links">
-          <h4>Evidence</h4>
-          <a href="#proof">Proof</a>
-          <a href="#run">Run locally</a>
-          <a href="https://github.com/Thundercok/VRPTW-Research-Optimization" target="_blank"
-            rel="noopener">Repository</a>
-        </div>
+        var plannerCopy = {
+          upload: {
+            title: 'Manifest loaded',
+            pill: '12 stops ready',
+            labels: ['Imported', 'Vehicles', 'Status'],
+            values: ['12 stops', '4 ready', 'Clean'],
+          },
+          compare: {
+            title: 'Two plans compared',
+            pill: '18% less driving',
+            labels: ['Route A', 'Route B', 'Best pick'],
+            values: ['42.8 km', '35.1 km', 'B'],
+          },
+          dispatch: {
+            title: 'Ready for review',
+            pill: 'All windows checked',
+            labels: ['On time', 'Vehicles', 'Map'],
+            values: ['100%', '4', 'Ready'],
+          },
+        };
 
-        <div class="footer-links">
-          <h4>Project</h4>
-          <a href="feedback.html">Feedback</a>
-          <a href="auth.html">Authentication</a>
-          <a href="feedback_admin.html">Admin feedback</a>
-        </div>
-      </div>
-
-      <div class="footer-bottom">
-        <span>&copy; 2026 VRPTW Research Optimization. Released under the MIT License.</span>
-        <span>Simple first. Useful always.</span>
-      </div>
-    </div>
-  </footer>
-
-  <script type="module" src="js/observability.js?v=20260522"></script>
-  <script>
-    (function () {
-      "use strict";
-
-      var menuButton = document.querySelector("[data-menu-button]");
-      var mobileMenu = document.getElementById("mobile-menu");
-      var siteNav = document.querySelector(".site-nav");
-      var plannerTabs = Array.from(document.querySelectorAll("[data-planner-tab]"));
-      var title = document.getElementById("screen-title");
-      var pill = document.getElementById("screen-pill");
-      var labels = [
-        document.getElementById("panel-a-label"),
-        document.getElementById("panel-b-label"),
-        document.getElementById("panel-c-label")
-      ];
-      var values = [
-        document.getElementById("panel-a-value"),
-        document.getElementById("panel-b-value"),
-        document.getElementById("panel-c-value")
-      ];
-
-      var plannerCopy = {
-        upload: {
-          title: "Manifest loaded",
-          pill: "12 stops ready",
-          labels: ["Imported", "Vehicles", "Status"],
-          values: ["12 stops", "4 ready", "Clean"]
-        },
-        compare: {
-          title: "Two plans compared",
-          pill: "18% less driving",
-          labels: ["Route A", "Route B", "Best pick"],
-          values: ["42.8 km", "35.1 km", "B"]
-        },
-        dispatch: {
-          title: "Ready for review",
-          pill: "All windows checked",
-          labels: ["On time", "Vehicles", "Map"],
-          values: ["100%", "4", "Ready"]
+        function closeMenu() {
+          if (!menuButton || !mobileMenu) return;
+          mobileMenu.classList.remove('open');
+          mobileMenu.hidden = true;
+          menuButton.setAttribute('aria-expanded', 'false');
         }
-      };
 
-      function closeMenu() {
-        if (!menuButton || !mobileMenu) return;
-        mobileMenu.classList.remove("open");
-        mobileMenu.hidden = true;
-        menuButton.setAttribute("aria-expanded", "false");
-      }
-
-      function syncNav() {
-        if (!siteNav) return;
-        siteNav.classList.toggle("is-scrolled", window.scrollY > 6);
-      }
-
-      function scrollToSection(hash, smooth) {
-        if (!hash || hash === "#") return false;
-        var target = document.querySelector(hash);
-        if (!target) return false;
-        var top = target.offsetTop - 82;
-        window.scrollTo({ top: Math.max(0, top), behavior: smooth ? "smooth" : "auto" });
-        return true;
-      }
-
-      function setPlannerTab(key) {
-        var copy = plannerCopy[key] || plannerCopy.upload;
-        plannerTabs.forEach(function (tab) {
-          var active = tab.getAttribute("data-planner-tab") === key;
-          tab.classList.toggle("active", active);
-          tab.setAttribute("aria-selected", String(active));
-        });
-        if (title) title.textContent = copy.title;
-        if (pill) pill.textContent = copy.pill;
-        copy.labels.forEach(function (text, index) {
-          if (labels[index]) labels[index].textContent = text;
-        });
-        copy.values.forEach(function (text, index) {
-          if (values[index]) values[index].textContent = text;
-        });
-
-        // Sync screen state class
-        var screenEl = document.getElementById("planner-screen-el");
-        if (screenEl) {
-          screenEl.className = "planner-screen state-" + key;
+        function syncNav() {
+          if (!siteNav) return;
+          siteNav.classList.toggle('is-scrolled', window.scrollY > 6);
         }
-      }
 
-      if (menuButton && mobileMenu) {
-        menuButton.addEventListener("click", function () {
-          var nextOpen = !mobileMenu.classList.contains("open");
-          mobileMenu.classList.toggle("open", nextOpen);
-          mobileMenu.hidden = !nextOpen;
-          menuButton.setAttribute("aria-expanded", String(nextOpen));
-        });
+        function scrollToSection(hash, smooth) {
+          if (!hash || hash === '#') return false;
+          var target = document.querySelector(hash);
+          if (!target) return false;
+          var top = target.offsetTop - 82;
+          window.scrollTo({ top: Math.max(0, top), behavior: smooth ? 'smooth' : 'auto' });
+          return true;
+        }
 
-        mobileMenu.querySelectorAll("a").forEach(function (link) {
-          link.addEventListener("click", closeMenu);
-        });
-      }
+        function setPlannerTab(key) {
+          var copy = plannerCopy[key] || plannerCopy.upload;
+          plannerTabs.forEach(function (tab) {
+            var active = tab.getAttribute('data-planner-tab') === key;
+            tab.classList.toggle('active', active);
+            tab.setAttribute('aria-selected', String(active));
+          });
+          if (title) title.textContent = copy.title;
+          if (pill) pill.textContent = copy.pill;
+          copy.labels.forEach(function (text, index) {
+            if (labels[index]) labels[index].textContent = text;
+          });
+          copy.values.forEach(function (text, index) {
+            if (values[index]) values[index].textContent = text;
+          });
 
-      window.addEventListener("scroll", syncNav, { passive: true });
-      syncNav();
-
-      // Scroll spy navigation highlight
-      function setupScrollSpy() {
-        var navLinks = Array.from(document.querySelectorAll(".nav-links a[href^='#']"));
-        var sections = navLinks.map(function(link) {
-          var id = link.getAttribute("href");
-          var target = document.querySelector(id);
-          return target ? { link: link, target: target } : null;
-        }).filter(Boolean);
-
-        if (sections.length === 0) return;
-
-        function onScroll() {
-          var scrollPos = window.scrollY + 120;
-          var activeSection = null;
-
-          for (var i = 0; i < sections.length; i++) {
-            var section = sections[i];
-            var top = section.target.offsetTop;
-            var height = section.target.offsetHeight;
-            if (scrollPos >= top && scrollPos < top + height) {
-              activeSection = section;
-            }
+          // Sync screen state class
+          var screenEl = document.getElementById('planner-screen-el');
+          if (screenEl) {
+            screenEl.className = 'planner-screen state-' + key;
           }
+        }
 
-          if (!activeSection && sections.length > 0) {
-            if (scrollPos < sections[0].target.offsetTop) {
-              navLinks.forEach(function(l) { l.classList.remove("active"); });
-              return;
-            }
-          }
+        if (menuButton && mobileMenu) {
+          menuButton.addEventListener('click', function () {
+            var nextOpen = !mobileMenu.classList.contains('open');
+            mobileMenu.classList.toggle('open', nextOpen);
+            mobileMenu.hidden = !nextOpen;
+            menuButton.setAttribute('aria-expanded', String(nextOpen));
+          });
 
-          sections.forEach(function(section) {
-            if (section === activeSection) {
-              section.link.classList.add("active");
-            } else {
-              section.link.classList.remove("active");
-            }
+          mobileMenu.querySelectorAll('a').forEach(function (link) {
+            link.addEventListener('click', closeMenu);
           });
         }
 
-        window.addEventListener("scroll", onScroll, { passive: true });
-        onScroll();
-      }
-      setupScrollSpy();
+        window.addEventListener('scroll', syncNav, { passive: true });
+        syncNav();
 
-      document.querySelectorAll("a[href^='#']").forEach(function (link) {
-        link.addEventListener("click", function (event) {
-          var hash = link.getAttribute("href");
-          if (!hash || hash === "#") return;
-          if (!scrollToSection(hash, true)) return;
-          event.preventDefault();
-          closeMenu();
-          history.pushState(null, "", hash);
+        // Scroll spy navigation highlight
+        function setupScrollSpy() {
+          var navLinks = Array.from(document.querySelectorAll(".nav-links a[href^='#']"));
+          var sections = navLinks
+            .map(function (link) {
+              var id = link.getAttribute('href');
+              var target = document.querySelector(id);
+              return target ? { link: link, target: target } : null;
+            })
+            .filter(Boolean);
+
+          if (sections.length === 0) return;
+
+          function onScroll() {
+            var scrollPos = window.scrollY + 120;
+            var activeSection = null;
+
+            for (var i = 0; i < sections.length; i++) {
+              var section = sections[i];
+              var top = section.target.offsetTop;
+              var height = section.target.offsetHeight;
+              if (scrollPos >= top && scrollPos < top + height) {
+                activeSection = section;
+              }
+            }
+
+            if (!activeSection && sections.length > 0) {
+              if (scrollPos < sections[0].target.offsetTop) {
+                navLinks.forEach(function (l) {
+                  l.classList.remove('active');
+                });
+                return;
+              }
+            }
+
+            sections.forEach(function (section) {
+              if (section === activeSection) {
+                section.link.classList.add('active');
+              } else {
+                section.link.classList.remove('active');
+              }
+            });
+          }
+
+          window.addEventListener('scroll', onScroll, { passive: true });
+          onScroll();
+        }
+        setupScrollSpy();
+
+        document.querySelectorAll("a[href^='#']").forEach(function (link) {
+          link.addEventListener('click', function (event) {
+            var hash = link.getAttribute('href');
+            if (!hash || hash === '#') return;
+            if (!scrollToSection(hash, true)) return;
+            event.preventDefault();
+            closeMenu();
+            history.pushState(null, '', hash);
+          });
         });
-      });
 
-      if (window.location.hash) {
-        window.setTimeout(function () {
-          scrollToSection(window.location.hash, false);
-        }, 120);
-      }
+        if (window.location.hash) {
+          window.setTimeout(function () {
+            scrollToSection(window.location.hash, false);
+          }, 120);
+        }
 
-      var plannerOrder = ["upload", "compare", "dispatch"];
-      var plannerIndex = 0;
-      var autoInterval = window.setInterval(function () {
-        if (document.hidden) return;
-        plannerIndex = (plannerIndex + 1) % plannerOrder.length;
-        setPlannerTab(plannerOrder[plannerIndex]);
-      }, 6000);
+        var plannerOrder = ['upload', 'compare', 'dispatch'];
+        var plannerIndex = 0;
+        var autoInterval = window.setInterval(function () {
+          if (document.hidden) return;
+          plannerIndex = (plannerIndex + 1) % plannerOrder.length;
+          setPlannerTab(plannerOrder[plannerIndex]);
+        }, 6000);
 
-      plannerTabs.forEach(function (tab) {
-        tab.addEventListener("click", function () {
-          window.clearInterval(autoInterval);
-          var key = tab.getAttribute("data-planner-tab");
-          plannerIndex = plannerOrder.indexOf(key);
-          setPlannerTab(key);
+        plannerTabs.forEach(function (tab) {
+          tab.addEventListener('click', function () {
+            window.clearInterval(autoInterval);
+            var key = tab.getAttribute('data-planner-tab');
+            plannerIndex = plannerOrder.indexOf(key);
+            setPlannerTab(key);
+          });
         });
-      });
 
-      document.querySelectorAll("a[href='app.html']").forEach(function (link) {
-        link.addEventListener("click", function () {
-          if (window.vrptwTrack) window.vrptwTrack("landing_open_planner");
+        document.querySelectorAll("a[href='app.html']").forEach(function (link) {
+          link.addEventListener('click', function () {
+            if (window.vrptwTrack) window.vrptwTrack('landing_open_planner');
+          });
         });
-      });
-    })();
-  </script>
-</body>
-
+      })();
+    </script>
+  </body>
 </html>

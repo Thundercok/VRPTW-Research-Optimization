@@ -87,12 +87,7 @@ def record_user_event(email: str, event_type: str, source: str = "auth") -> None
 
 
 def list_user_activity(email: str, limit: int = 10) -> dict[str, Any]:
-    snaps = (
-        _event_doc(email)
-        .order_by("createdAt", direction=firestore.Query.DESCENDING)
-        .limit(limit)
-        .stream()
-    )
+    snaps = _event_doc(email).order_by("createdAt", direction=firestore.Query.DESCENDING).limit(limit).stream()
     items = []
     for snap in snaps:
         row = snap.to_dict() or {}

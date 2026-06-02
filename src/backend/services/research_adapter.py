@@ -5,6 +5,7 @@ scale so the ALNS solver can reuse `inst.dist` for both. Users provide time
 windows directly in that common unit (default: minutes assuming ~60 km/h, i.e.
 "1 km ~= 1 minute"). This is a simplification sufficient for web demo.
 """
+
 from __future__ import annotations
 
 import math
@@ -94,29 +95,33 @@ def plan_to_payload(
             wait = max(0.0, ready - arrival)
             service_dur = float(points[node].service)
             departure = service_start + service_dur
-            schedule.append({
-                "customer_id": int(points[node].id) if points[node].id is not None else int(node),
-                "name": getattr(points[node], "name", "") or f"Stop-{node}",
-                "arrival": round(arrival, 2),
-                "wait": round(wait, 2),
-                "service_start": round(service_start, 2),
-                "service_duration": round(service_dur, 2),
-                "departure": round(departure, 2),
-            })
+            schedule.append(
+                {
+                    "customer_id": int(points[node].id) if points[node].id is not None else int(node),
+                    "name": getattr(points[node], "name", "") or f"Stop-{node}",
+                    "arrival": round(arrival, 2),
+                    "wait": round(wait, 2),
+                    "service_start": round(service_start, 2),
+                    "service_duration": round(service_dur, 2),
+                    "departure": round(departure, 2),
+                }
+            )
             current_time = departure
             prev = node
         # Return to depot
         return_travel = dist[prev, 0]
         return_arrival = current_time + return_travel
-        schedule.append({
-            "customer_id": 0,
-            "name": getattr(points[0], "name", "") or "Depot",
-            "arrival": round(return_arrival, 2),
-            "wait": 0,
-            "service_start": round(return_arrival, 2),
-            "service_duration": 0,
-            "departure": round(return_arrival, 2),
-        })
+        schedule.append(
+            {
+                "customer_id": 0,
+                "name": getattr(points[0], "name", "") or "Depot",
+                "arrival": round(return_arrival, 2),
+                "wait": 0,
+                "service_start": round(return_arrival, 2),
+                "service_duration": 0,
+                "departure": round(return_arrival, 2),
+            }
+        )
 
         routes_out.append(
             {

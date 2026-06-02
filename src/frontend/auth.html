@@ -1,16 +1,17 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#ffffff" />
+    <title>Sign In | NAMI Dispatch</title>
 
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#ffffff" />
-  <title>Sign In | NAMI Dispatch</title>
-
-  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
-  <meta http-equiv="Pragma" content="no-cache" />
-  <meta http-equiv="Expires" content="0" />
-  <meta http-equiv="Content-Security-Policy" content="
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="
     default-src 'self';
     script-src 'self' 'unsafe-inline' 'unsafe-eval'
       https://apis.google.com https://www.gstatic.com https://unpkg.com https://cdn.jsdelivr.net
@@ -23,206 +24,220 @@
       wss://*.firebaseio.com http://localhost:* http://127.0.0.1:*
       ws://localhost:* ws://127.0.0.1:*;
     frame-src 'self' https://*.firebaseapp.com https://apis.google.com http://localhost:* http://127.0.0.1:*;
-  ">
+  "
+    />
 
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
-    rel="stylesheet" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
 
-  <link rel="stylesheet" href="css/style.css?v=20260429a" />
+    <link rel="stylesheet" href="css/style.css?v=20260429a" />
 
-  <link rel="stylesheet" href="css/auth.css?v=20260429a" />
+    <link rel="stylesheet" href="css/auth.css?v=20260429a" />
 
-  <script type="importmap">
-    {
-      "imports": {
-        "firebase/app":       "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js",
-        "firebase/auth":      "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js",
-        "firebase/firestore": "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js",
-        "firebase/analytics": "https://www.gstatic.com/firebasejs/10.12.5/firebase-analytics.js"
-      }
-    }
-  </script>
-
-  <script type="module">
-    import { firebaseService } from "./js/firebaseService.js";
-    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
-
-    if (firebaseService.auth) {
-      onAuthStateChanged(firebaseService.auth, (user) => {
-        if (user) {
-          window.location.replace("app.html");
-        } else {
-          document.getElementById('auth-screen').classList.remove('hidden');
+    <script type="importmap">
+      {
+        "imports": {
+          "firebase/app": "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js",
+          "firebase/auth": "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js",
+          "firebase/firestore": "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js",
+          "firebase/analytics": "https://www.gstatic.com/firebasejs/10.12.5/firebase-analytics.js"
         }
-      });
-    } else {
-      document.getElementById('auth-screen').classList.remove('hidden');
-    }
-  </script>
-</head>
+      }
+    </script>
 
-<body>
-  <section id="auth-screen" class="auth-screen hidden">
-    <!-- Ambient Backdrop Glows -->
-    <div class="auth-blob blob-1" aria-hidden="true"></div>
-    <div class="auth-blob blob-2" aria-hidden="true"></div>
+    <script type="module">
+      import { firebaseService } from './js/firebaseService.js';
+      import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
 
-    <div class="auth-card">
+      if (firebaseService.auth) {
+        onAuthStateChanged(firebaseService.auth, (user) => {
+          if (user) {
+            window.location.replace('app.html');
+          } else {
+            document.getElementById('auth-screen').classList.remove('hidden');
+          }
+        });
+      } else {
+        document.getElementById('auth-screen').classList.remove('hidden');
+      }
+    </script>
+  </head>
 
-      <p class="tag">NAMI</p>
+  <body>
+    <section id="auth-screen" class="auth-screen hidden">
+      <!-- Ambient Backdrop Glows -->
+      <div class="auth-blob blob-1" aria-hidden="true"></div>
+      <div class="auth-blob blob-2" aria-hidden="true"></div>
 
-      <div class="auth-headline">
-        <h1 id="auth-title">VRPTW Dispatch Portal</h1>
-        <div class="auth-icons" aria-hidden="true">
-          <span>🚚</span>
-          <span>📍</span>
-          <span>🗺️</span>
-        </div>
-      </div>
+      <div class="auth-card">
+        <p class="tag">NAMI</p>
 
-      <!-- Route illustration -->
-      <div class="auth-visual" aria-hidden="true">
-        <svg viewBox="0 0 420 100" role="img" focusable="false">
-          <defs>
-            <linearGradient id="routeGrad" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stop-color="#93c5fd" />
-              <stop offset="100%" stop-color="#2563eb" />
-            </linearGradient>
-            <filter id="neonGlow" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="3.5" result="blur" />
-              <feMerge>
-                <feMergeNode in="blur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-          </defs>
-          <!-- Route path -->
-          <path class="route-path" d="M24 72 C90 18, 170 92, 250 44 S360 52, 396 26" fill="none"
-            stroke="url(#routeGrad)" stroke-width="4" stroke-linecap="round" stroke-dasharray="6 8" filter="url(#neonGlow)" />
-          <!-- Depot -->
-          <circle class="route-node route-node-1" cx="24" cy="72" r="6" fill="#2563eb" />
-          <!-- Waypoints -->
-          <circle class="route-node route-node-2" cx="250" cy="44" r="5" fill="#60a5fa" />
-          <circle class="route-node route-node-3" cx="396" cy="26" r="6" fill="#2563eb" />
-          <!-- Truck -->
-          <g class="route-truck" transform="translate(138 52)">
-            <rect x="0" y="8" width="62" height="20" rx="5" fill="#1d4ed8" />
-            <rect x="40" y="2" width="18" height="14" rx="3" fill="#2563eb" />
-            <rect x="43" y="4" width="12" height="8" rx="2" fill="#bfdbfe" opacity="0.6" />
-            <circle cx="14" cy="30" r="5" fill="#1e3a8a" />
-            <circle cx="46" cy="30" r="5" fill="#1e3a8a" />
-          </g>
-        </svg>
-      </div>
-
-      <div class="auth-views">
-
-        <!-- LOGIN -->
-        <div id="auth-view-login" class="auth-form auth-view active">
-          <div class="form-group">
-            <label for="login-email">Email</label>
-            <input id="login-email" type="email" placeholder="you@company.com" autocomplete="email" />
-          </div>
-
-          <div class="form-group">
-            <label for="login-password">Password</label>
-            <input id="login-password" type="password" placeholder="Enter password" autocomplete="current-password" />
-          </div>
-
-          <button id="btn-login" class="btn" type="button">Sign In</button>
-
-          <p id="auth-hint" class="hint auth-hint" style="display:none;"></p>
-
-          <div class="auth-links">
-            <button id="link-forgot-password" class="link-btn" type="button">Forgot password?</button>
-            <button id="btn-open-register" class="btn ghost" type="button">Create account</button>
-          </div>
-
-          <div id="guest-block" class="auth-guest hidden">
-            <div class="auth-divider"><span>or</span></div>
-            <button id="btn-guest-login" class="btn ghost guest-btn" type="button">
-              Continue as Guest
-            </button>
-            <p id="guest-hint" class="hint auth-hint">
-              Demo mode — skip sign-in and try the VRPTW solver directly.
-            </p>
+        <div class="auth-headline">
+          <h1 id="auth-title">VRPTW Dispatch Portal</h1>
+          <div class="auth-icons" aria-hidden="true">
+            <span>🚚</span>
+            <span>📍</span>
+            <span>🗺️</span>
           </div>
         </div>
 
-        <!-- REGISTER -->
-        <div id="auth-view-register" class="auth-form auth-view hidden">
-          <div class="form-group">
-            <label for="register-email">Email</label>
-            <input id="register-email" type="email" placeholder="you@company.com" autocomplete="email" />
-          </div>
+        <!-- Route illustration -->
+        <div class="auth-visual" aria-hidden="true">
+          <svg viewBox="0 0 420 100" role="img" focusable="false">
+            <defs>
+              <linearGradient id="routeGrad" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stop-color="#93c5fd" />
+                <stop offset="100%" stop-color="#2563eb" />
+              </linearGradient>
+              <filter id="neonGlow" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="3.5" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
+            <!-- Route path -->
+            <path
+              class="route-path"
+              d="M24 72 C90 18, 170 92, 250 44 S360 52, 396 26"
+              fill="none"
+              stroke="url(#routeGrad)"
+              stroke-width="4"
+              stroke-linecap="round"
+              stroke-dasharray="6 8"
+              filter="url(#neonGlow)"
+            />
+            <!-- Depot -->
+            <circle class="route-node route-node-1" cx="24" cy="72" r="6" fill="#2563eb" />
+            <!-- Waypoints -->
+            <circle class="route-node route-node-2" cx="250" cy="44" r="5" fill="#60a5fa" />
+            <circle class="route-node route-node-3" cx="396" cy="26" r="6" fill="#2563eb" />
+            <!-- Truck -->
+            <g class="route-truck" transform="translate(138 52)">
+              <rect x="0" y="8" width="62" height="20" rx="5" fill="#1d4ed8" />
+              <rect x="40" y="2" width="18" height="14" rx="3" fill="#2563eb" />
+              <rect x="43" y="4" width="12" height="8" rx="2" fill="#bfdbfe" opacity="0.6" />
+              <circle cx="14" cy="30" r="5" fill="#1e3a8a" />
+              <circle cx="46" cy="30" r="5" fill="#1e3a8a" />
+            </g>
+          </svg>
+        </div>
 
-          <div class="form-group">
-            <label for="register-password">Password</label>
-            <input id="register-password" type="password" placeholder="Choose a password" autocomplete="new-password" />
-          </div>
+        <div class="auth-views">
+          <!-- LOGIN -->
+          <div id="auth-view-login" class="auth-form auth-view active">
+            <div class="form-group">
+              <label for="login-email">Email</label>
+              <input id="login-email" type="email" placeholder="you@company.com" autocomplete="email" />
+            </div>
 
-          <div class="form-group">
-            <label>One-time code</label>
-            <div class="otp-row">
-              <input id="register-otp" class="otp-input" type="text" inputmode="numeric" placeholder="6-digit OTP"
-                maxlength="6" autocomplete="one-time-code" />
-              <button id="btn-request-otp" class="btn ghost otp-send-btn" type="button">Send OTP</button>
+            <div class="form-group">
+              <label for="login-password">Password</label>
+              <input id="login-password" type="password" placeholder="Enter password" autocomplete="current-password" />
+            </div>
+
+            <button id="btn-login" class="btn" type="button">Sign In</button>
+
+            <p id="auth-hint" class="hint auth-hint" style="display: none"></p>
+
+            <div class="auth-links">
+              <button id="link-forgot-password" class="link-btn" type="button">Forgot password?</button>
+              <button id="btn-open-register" class="btn ghost" type="button">Create account</button>
+            </div>
+
+            <div id="guest-block" class="auth-guest hidden">
+              <div class="auth-divider"><span>or</span></div>
+              <button id="btn-guest-login" class="btn ghost guest-btn" type="button">Continue as Guest</button>
+              <p id="guest-hint" class="hint auth-hint">Demo mode — skip sign-in and try the VRPTW solver directly.</p>
             </div>
           </div>
-          <p id="register-otp-countdown" class="otp-countdown">
-            Click Send OTP to receive a verification code.
-          </p>
 
-          <div class="inline-row auth-actions">
-            <button id="btn-register" class="btn hidden" type="button" disabled>Register</button>
-            <button id="btn-back-login-from-register" class="btn ghost" type="button">← Back</button>
+          <!-- REGISTER -->
+          <div id="auth-view-register" class="auth-form auth-view hidden">
+            <div class="form-group">
+              <label for="register-email">Email</label>
+              <input id="register-email" type="email" placeholder="you@company.com" autocomplete="email" />
+            </div>
+
+            <div class="form-group">
+              <label for="register-password">Password</label>
+              <input
+                id="register-password"
+                type="password"
+                placeholder="Choose a password"
+                autocomplete="new-password"
+              />
+            </div>
+
+            <div class="form-group">
+              <label>One-time code</label>
+              <div class="otp-row">
+                <input
+                  id="register-otp"
+                  class="otp-input"
+                  type="text"
+                  inputmode="numeric"
+                  placeholder="6-digit OTP"
+                  maxlength="6"
+                  autocomplete="one-time-code"
+                />
+                <button id="btn-request-otp" class="btn ghost otp-send-btn" type="button">Send OTP</button>
+              </div>
+            </div>
+            <p id="register-otp-countdown" class="otp-countdown">Click Send OTP to receive a verification code.</p>
+
+            <div class="inline-row auth-actions">
+              <button id="btn-register" class="btn hidden" type="button" disabled>Register</button>
+              <button id="btn-back-login-from-register" class="btn ghost" type="button">← Back</button>
+            </div>
+          </div>
+
+          <!-- FORGOT PASSWORD -->
+          <div id="auth-view-forgot" class="auth-form auth-view hidden">
+            <div class="form-group">
+              <label for="forgot-email">Email</label>
+              <input id="forgot-email" type="email" placeholder="you@company.com" autocomplete="email" />
+            </div>
+            <p class="hint">We'll send a reset link to this address.</p>
+
+            <div class="inline-row auth-actions">
+              <button id="btn-forgot-password" class="btn" type="button">Send Reset Link</button>
+              <button id="btn-back-login-from-forgot" class="btn ghost" type="button">← Back</button>
+            </div>
+          </div>
+
+          <!-- RESET PASSWORD -->
+          <div id="auth-view-reset" class="auth-form auth-view hidden">
+            <div class="form-group">
+              <label for="reset-password">New password</label>
+              <input id="reset-password" type="password" placeholder="Enter new password" autocomplete="new-password" />
+            </div>
+
+            <div class="form-group">
+              <label for="reset-password-confirm">Confirm password</label>
+              <input
+                id="reset-password-confirm"
+                type="password"
+                placeholder="Re-enter new password"
+                autocomplete="new-password"
+              />
+            </div>
+
+            <div class="inline-row auth-actions">
+              <button id="btn-reset-password" class="btn" type="button">Update Password</button>
+              <button id="btn-back-login-from-reset" class="btn ghost" type="button">← Back</button>
+            </div>
           </div>
         </div>
-
-        <!-- FORGOT PASSWORD -->
-        <div id="auth-view-forgot" class="auth-form auth-view hidden">
-          <div class="form-group">
-            <label for="forgot-email">Email</label>
-            <input id="forgot-email" type="email" placeholder="you@company.com" autocomplete="email" />
-          </div>
-          <p class="hint">
-            We'll send a reset link to this address.
-          </p>
-
-          <div class="inline-row auth-actions">
-            <button id="btn-forgot-password" class="btn" type="button">Send Reset Link</button>
-            <button id="btn-back-login-from-forgot" class="btn ghost" type="button">← Back</button>
-          </div>
-        </div>
-
-        <!-- RESET PASSWORD -->
-        <div id="auth-view-reset" class="auth-form auth-view hidden">
-          <div class="form-group">
-            <label for="reset-password">New password</label>
-            <input id="reset-password" type="password" placeholder="Enter new password" autocomplete="new-password" />
-          </div>
-
-          <div class="form-group">
-            <label for="reset-password-confirm">Confirm password</label>
-            <input id="reset-password-confirm" type="password" placeholder="Re-enter new password"
-              autocomplete="new-password" />
-          </div>
-
-          <div class="inline-row auth-actions">
-            <button id="btn-reset-password" class="btn" type="button">Update Password</button>
-            <button id="btn-back-login-from-reset" class="btn ghost" type="button">← Back</button>
-          </div>
-        </div>
-
       </div>
-    </div>
-  </section>
+    </section>
 
-  <script type="module" src="js/observability.js?v=20260429a"></script>
-  <script type="module" src="js/main.js?v=20260429a"></script>
-</body>
-
+    <script type="module" src="js/observability.js?v=20260429a"></script>
+    <script type="module" src="js/main.js?v=20260429a"></script>
+  </body>
 </html>

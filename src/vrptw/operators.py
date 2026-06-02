@@ -264,13 +264,13 @@ def _remove_neighborhood_additional(plan: Plan, removed: list[int], size: int) -
     candidates = [n for n in nodes if n not in rs]
     if not candidates or len(removed) >= size:
         return removed
-    
+
     max_dist = inst.max_dist + 1e-9
     max_tw = max(inst.due_times - inst.ready_times) + 1e-9
-    
+
     scores = []
     for n in candidates:
-        min_score = float('inf')
+        min_score = float("inf")
         for ref in removed:
             score = (
                 0.5 * inst.dist[ref, n] / max_dist
@@ -280,16 +280,16 @@ def _remove_neighborhood_additional(plan: Plan, removed: list[int], size: int) -
             if score < min_score:
                 min_score = score
         scores.append((n, min_score))
-        
+
     scores.sort(key=lambda x: x[1])
-    
+
     p = 3.0
     while len(removed) < size and scores:
         idx = int((random.random() ** p) * len(scores))
         chosen, _ = scores.pop(idx)
         removed.append(chosen)
         rs.add(chosen)
-        
+
     return removed
 
 
@@ -299,25 +299,26 @@ def op_route_costly_eliminate(plan: Plan, size: int) -> tuple[Plan, list[int]]:
     inst = plan.inst
     scored = []
     from .heuristics import _route_cost_list
+
     for idx, route in enumerate(plan.routes):
         if not route:
             continue
         cost = _route_cost_list(route, inst)
         noise = random.random() * 0.1 * cost
         scored.append((cost + noise, idx))
-    
+
     best_idx = max(scored, key=lambda x: x[0])[1]
     removed = list(plan.routes[best_idx])
     drop_ids = {best_idx}
-    
+
     plan.routes = [r for i, r in enumerate(plan.routes) if i not in drop_ids]
-    
+
     if len(removed) < size:
         removed = _remove_neighborhood_additional(plan, removed, size)
         rs = set(removed)
         plan.routes = [[n for n in r if n not in rs] for r in plan.routes]
         plan.routes = [r for r in plan.routes if r]
-        
+
     return _invalidate(plan), removed
 
 
@@ -379,7 +380,7 @@ DESTROY = [
     op_route_dispersion_eliminate,
     op_route_costly_eliminate,
     op_cross_route_shaw,
-    op_route_merge_sample,          # idx 9 — new
+    op_route_merge_sample,  # idx 9 — new
 ]
 
 

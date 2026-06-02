@@ -7,7 +7,7 @@ const loginBtn = document.getElementById('btn-login');
 if (loginBtn) {
   loginBtn.addEventListener('click', async () => {
     // Your existing login logic
-    // IMPORTANT: You no longer need to manually toggle .hidden classes 
+    // IMPORTANT: You no longer need to manually toggle .hidden classes
     // to show the dashboard. The window.location redirect in auth.html handles it.
   });
 }
@@ -23,10 +23,12 @@ if (runModelBtn) {
 const logoutBtn = document.getElementById('btn-logout');
 if (logoutBtn) {
   logoutBtn.addEventListener('click', () => {
-    firebaseAuth().signOut().then(() => {
-      // The auth guard in app.html will automatically catch this 
-      // and kick them back to auth.html.
-    });
+    firebaseAuth()
+      .signOut()
+      .then(() => {
+        // The auth guard in app.html will automatically catch this
+        // and kick them back to auth.html.
+      });
   });
 }
 

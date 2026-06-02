@@ -50,7 +50,7 @@ export class FleetController {
           breakStart: '12:00',
           breakDuration: 30,
           skills: 'None',
-          status: 'Active'
+          status: 'Active',
         });
       }
     } else if (fleet.length > size) {
@@ -71,12 +71,13 @@ export class FleetController {
     const container = document.getElementById('view-fleet');
     if (!container || container.classList.contains('hidden')) return;
 
-    const activeVehicles = this.app.state.fleet.filter(v => v.status === 'Active');
+    const activeVehicles = this.app.state.fleet.filter((v) => v.status === 'Active');
     const totalCapacity = activeVehicles.reduce((sum, v) => sum + Number(v.capacity), 0);
-    const avgSpeed = activeVehicles.length > 0 
-      ? (activeVehicles.reduce((sum, v) => sum + Number(v.speed), 0) / activeVehicles.length).toFixed(2)
-      : '0.00';
-    const maintenanceCount = this.app.state.fleet.filter(v => v.status === 'Maintenance').length;
+    const avgSpeed =
+      activeVehicles.length > 0
+        ? (activeVehicles.reduce((sum, v) => sum + Number(v.speed), 0) / activeVehicles.length).toFixed(2)
+        : '0.00';
+    const maintenanceCount = this.app.state.fleet.filter((v) => v.status === 'Maintenance').length;
 
     let html = `
       <div class="fleet-view-container">
@@ -209,7 +210,7 @@ export class FleetController {
 
     // Bind dynamic events inside the table
     const inputs = container.querySelectorAll('.fleet-input');
-    inputs.forEach(input => {
+    inputs.forEach((input) => {
       input.addEventListener('change', (e) => {
         const tr = e.target.closest('tr');
         const index = Number(tr.dataset.index);
@@ -227,24 +228,32 @@ export class FleetController {
         // Inline validation for shift hours and break times
         const veh = this.app.state.fleet[index];
         const updatedVeh = { ...veh, [field]: val };
-        
+
         if (field === 'shiftStart' || field === 'shiftEnd') {
           const start = updatedVeh.shiftStart;
           const end = updatedVeh.shiftEnd;
           if (start && end && start >= end) {
-            this.app.toast('Invalid Shift Window', `Shift end (${end}) must be after shift start (${start}) for Driver #${index + 1}.`, 'error');
+            this.app.toast(
+              'Invalid Shift Window',
+              `Shift end (${end}) must be after shift start (${start}) for Driver #${index + 1}.`,
+              'error'
+            );
             e.target.classList.add('input-error');
             e.target.value = veh[field]; // revert input value
             return;
           }
         }
-        
+
         if (field === 'breakStart' || field === 'shiftStart' || field === 'shiftEnd') {
           const brk = updatedVeh.breakStart;
           const start = updatedVeh.shiftStart;
           const end = updatedVeh.shiftEnd;
           if (brk && start && end && (brk < start || brk > end)) {
-            this.app.toast('Invalid Break Time', `Lunch break (${brk}) must fall within shift hours (${start} - ${end}) for Driver #${index + 1}.`, 'error');
+            this.app.toast(
+              'Invalid Break Time',
+              `Lunch break (${brk}) must fall within shift hours (${start} - ${end}) for Driver #${index + 1}.`,
+              'error'
+            );
             e.target.classList.add('input-error');
             e.target.value = veh[field]; // revert input value
             return;
@@ -256,7 +265,7 @@ export class FleetController {
 
         // Sync back to main slider if capacity was edited
         if (field === 'capacity') {
-          const maxCap = Math.max(...this.app.state.fleet.map(v => v.capacity));
+          const maxCap = Math.max(...this.app.state.fleet.map((v) => v.capacity));
           this.app.state.capacity = maxCap;
           const mainCapSlider = document.getElementById('capacity-slider');
           if (mainCapSlider) {
@@ -286,10 +295,10 @@ export class FleetController {
         breakStart: '12:00',
         breakDuration: 30,
         skills: 'None',
-        status: 'Active'
+        status: 'Active',
       });
       this.save();
-      
+
       const size = this.app.state.fleet.length;
       this.app.state.vehicles = size;
       const mainVehSlider = document.getElementById('vehicles-slider');
@@ -315,12 +324,12 @@ export class FleetController {
 
     // Bind Delete buttons
     const deleteBtns = container.querySelectorAll('.btn-fleet-delete');
-    deleteBtns.forEach(btn => {
+    deleteBtns.forEach((btn) => {
       btn.addEventListener('click', (e) => {
         const index = Number(e.target.dataset.index);
         this.app.state.fleet.splice(index, 1);
         // Re-index remaining
-        this.app.state.fleet.forEach((v, idx) => v.id = idx);
+        this.app.state.fleet.forEach((v, idx) => (v.id = idx));
         this.save();
 
         const size = this.app.state.fleet.length;

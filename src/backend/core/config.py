@@ -27,8 +27,7 @@ def load_local_env() -> None:
 def frontend_reset_url(token: str) -> str:
     from urllib.parse import urlencode
 
-    base = os.getenv(
-        "FRONTEND_URL", "http://127.0.0.1:8000").strip()
+    base = os.getenv("FRONTEND_URL", "http://127.0.0.1:8000").strip()
     query = urlencode({"screen": "reset", "token": token})
     sep = "&" if "?" in base else "?"
     return f"{base}{sep}{query}"

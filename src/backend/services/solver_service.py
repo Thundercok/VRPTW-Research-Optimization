@@ -5,6 +5,7 @@ Config is tuned for web responsiveness: ~500 iterations cap so a typical
 20-customer request finishes within ~10-20s on CPU. For benchmarks use
 `vrptw_clean.run_instance` directly.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -131,7 +132,7 @@ def _run_solver_in_process(algo: str, payload_dict: dict[str, Any]) -> dict[str,
             sys.path.insert(0, str(candidate))
 
     from models.schemas import JobRequest
-    from services.solver_service import _run_ddqn_alns, _run_alns, _run_algo_generic
+    from services.solver_service import _run_algo_generic, _run_alns, _run_ddqn_alns
 
     payload = JobRequest(**payload_dict)
 
@@ -189,10 +190,10 @@ def _log_device_once() -> None:
         )
     else:
         logger.info(
-            "Torch device: CPU only (torch %s). For GPU acceleration run "
-            "`python scripts/install_torch_gpu.py`.",
+            "Torch device: CPU only (torch %s). For GPU acceleration run `python scripts/install_torch_gpu.py`.",
             info.get("torch_version"),
         )
+
 
 _DEFAULT_TRANSFER_PATH = _ROOT / "model" / "rl_alns_transfer.safetensors"
 _DR_TRANSFER_PATH = _ROOT / "rl_alns_dr_v15.safetensors"
@@ -378,7 +379,6 @@ def _load_weights_for_solver(solver: Any, algo: str) -> None:
 
     from safetensors.torch import load_file
 
-
     label = "rc1" if "rc1" in algo else "dr"
     candidates = []
     output_dir = _ROOT / "logs"
@@ -508,7 +508,15 @@ async def solve_model(payload: JobRequest, matrix: list[list[float]] | None = No
     else:
         payload_dict = payload.dict()
 
-    algos = ["ddqn", "alns", "ortools", "hybrid_fixed", "hybrid_ddqn", "hybrid_ddqn_transfer_rc1", "hybrid_ddqn_transfer_dr"]
+    algos = [
+        "ddqn",
+        "alns",
+        "ortools",
+        "hybrid_fixed",
+        "hybrid_ddqn",
+        "hybrid_ddqn_transfer_rc1",
+        "hybrid_ddqn_transfer_dr",
+    ]
 
     tasks = {}
     for algo in algos:

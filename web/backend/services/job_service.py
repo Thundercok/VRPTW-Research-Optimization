@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime
 import time
+from datetime import datetime
 from typing import Any
 from uuid import uuid4
 
@@ -77,8 +77,12 @@ class JobService:
                 debug["matrix_finished_at"] = matrix_finished_at
                 debug["matrix_duration_sec"] = max(0.0, matrix_finished_at - matrix_started_at)
                 debug["matrix_provider"] = matrix_result.get("provider")
-                debug["matrix_size"] = len(matrix_result.get("matrix", [])) if isinstance(matrix_result.get("matrix"), list) else 0
-                self._record_event(state, "matrix", f"Distance matrix ready via {matrix_result.get('provider', 'unknown')}")
+                debug["matrix_size"] = (
+                    len(matrix_result.get("matrix", [])) if isinstance(matrix_result.get("matrix"), list) else 0
+                )
+                self._record_event(
+                    state, "matrix", f"Distance matrix ready via {matrix_result.get('provider', 'unknown')}"
+                )
 
                 solver_started_at = self._now()
                 debug["phase"] = "solving"
@@ -114,8 +118,7 @@ class JobService:
 
     async def submit(self, body: JobRequest) -> dict[str, str]:
         if len(body.customers) < 2:
-            raise HTTPException(
-                status_code=400, detail="Need depot and customer")
+            raise HTTPException(status_code=400, detail="Need depot and customer")
 
         job_id = str(uuid4())
         now = self._now()
@@ -221,12 +224,12 @@ class JobService:
             )
 
         for bucket in buckets:
-            bucket["avg_queue_wait_sec"] = round(
-                bucket["queue_wait_sum"] / bucket["queue_wait_count"], 2
-            ) if bucket["queue_wait_count"] else 0.0
-            bucket["avg_solver_sec"] = round(
-                bucket["solver_sum"] / bucket["solver_count"], 2
-            ) if bucket["solver_count"] else 0.0
+            bucket["avg_queue_wait_sec"] = (
+                round(bucket["queue_wait_sum"] / bucket["queue_wait_count"], 2) if bucket["queue_wait_count"] else 0.0
+            )
+            bucket["avg_solver_sec"] = (
+                round(bucket["solver_sum"] / bucket["solver_count"], 2) if bucket["solver_count"] else 0.0
+            )
             del bucket["queue_wait_sum"]
             del bucket["queue_wait_count"]
             del bucket["solver_sum"]

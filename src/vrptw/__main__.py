@@ -15,6 +15,7 @@ def cmd_smoke_test(args):
     inst = SyntheticVRPTWGenerator(n_nodes=args.nodes, distribution=args.dist, seed=args.seed).generate()
     smoke_test(inst, seed=args.seed)
 
+
 def cmd_solve(args):
     if not os.path.exists(args.file):
         print(f"Error: file not found: {args.file}")
@@ -25,14 +26,17 @@ def cmd_solve(args):
     import numpy as np
 
     from .core import Inst
+
     with open(args.file, encoding="utf-8") as fh:
         lines = fh.readlines()
-    name     = lines[0].strip()
+    name = lines[0].strip()
     capacity = float(lines[4].strip().split()[1])
-    rows     = [list(map(float, ln.split())) for ln in lines[9:] if ln.strip()]
+    rows = [list(map(float, ln.split())) for ln in lines[9:] if ln.strip()]
     inst = Inst({"name": name, "capacity": capacity, "data": np.array(rows)})
 
-    print(f"Solving instance {inst.name} (capacity={inst.capacity}, customers={len(inst.demands)-1}) with {args.algo}...")
+    print(
+        f"Solving instance {inst.name} (capacity={inst.capacity}, customers={len(inst.demands) - 1}) with {args.algo}..."
+    )
 
     cfg = Config(
         alns_iterations=args.iters,
@@ -54,6 +58,7 @@ def cmd_solve(args):
         sys.exit(1)
 
     import time
+
     t0 = time.time()
     plan, history = solver.solve(seed=args.seed)
     dur = time.time() - t0
@@ -66,6 +71,7 @@ def cmd_solve(args):
     print("\nRoutes:")
     for i, route in enumerate(plan.routes, 1):
         print(f"  Route #{i}: Depot -> {' -> '.join(map(str, route))} -> Depot")
+
 
 def cmd_benchmark(args):
     from .benchmark import print_summary_table, run_benchmark
@@ -122,6 +128,7 @@ def cmd_benchmark(args):
     print_summary_table(df)
     print(f"\nFull results saved to: {os.path.join(cfg.output_dir, 'benchmark_clean.csv')}")
 
+
 def main():
     parser = argparse.ArgumentParser(description="VRPTW Optimization Research Suite CLI")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -136,9 +143,13 @@ def main():
     # Solve command
     p_solve = subparsers.add_parser("solve", help="Solve a specific Solomon dataset file")
     p_solve.add_argument("file", type=str, help="Path to Solomon .txt file")
-    p_solve.add_argument("--algo", type=str, default="Hybrid-DDQN",
-                         choices=["ALNS-Base", "Hybrid-Fixed", "Hybrid-Rule", "Hybrid-DDQN"],
-                         help="Optimization solver to run")
+    p_solve.add_argument(
+        "--algo",
+        type=str,
+        default="Hybrid-DDQN",
+        choices=["ALNS-Base", "Hybrid-Fixed", "Hybrid-Rule", "Hybrid-DDQN"],
+        help="Optimization solver to run",
+    )
     p_solve.add_argument("--iters", type=int, default=1200, help="Solver iteration limit")
     p_solve.add_argument("--early-stop", type=int, default=250, help="Early stop patience")
     p_solve.add_argument("--polish", type=int, default=80, help="Local search polishing iterations")
@@ -148,9 +159,14 @@ def main():
     # Benchmark command
     p_bench = subparsers.add_parser("benchmark", help="Run benchmark suite on Solomon instances")
     p_bench.add_argument("--instances", nargs="+", default=[], help="List of specific instance names to run")
-    p_bench.add_argument("--algo", "--algorithms", nargs="+", dest="algo",
-                         default=["ALNS-Base", "Hybrid-Fixed", "Hybrid-Rule", "Hybrid-DDQN"],
-                         help="Algorithms to include in benchmark")
+    p_bench.add_argument(
+        "--algo",
+        "--algorithms",
+        nargs="+",
+        dest="algo",
+        default=["ALNS-Base", "Hybrid-Fixed", "Hybrid-Rule", "Hybrid-DDQN"],
+        help="Algorithms to include in benchmark",
+    )
     p_bench.add_argument("--runs", type=int, default=3, help="Number of runs per algorithm/instance combo")
     p_bench.add_argument("--iters", type=int, default=1200, help="Solver iteration limit")
     p_bench.add_argument("--early-stop", type=int, default=250, help="Early stop patience")
@@ -162,6 +178,7 @@ def main():
 
     args = parser.parse_args()
     args.func(args)
+
 
 if __name__ == "__main__":
     main()

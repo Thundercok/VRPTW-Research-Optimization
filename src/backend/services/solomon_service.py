@@ -44,10 +44,19 @@ def _to_lat_lng(x: float, y: float) -> tuple[float, float]:
 # not need to be retuned. Distance and time use the same unit (~1 km <-> 1 unit).
 _DEMO_FLEET = {"vehicles": 4, "capacity": 80}
 _DEMO_NAMES = [
-    "Đại học Tôn Đức Thắng", "Ben Thanh Market", "Notre-Dame Cathedral",
-    "Tan Dinh Market", "Independence Palace", "Pham Ngu Lao Hostel",
-    "Cho Lon Wholesale", "Phu My Hung Office", "An Phu Logistics Park",
-    "Thao Dien Studios", "Phu Nhuan Pharmacy", "Tan Binh Cargo", "Go Vap Warehouse",
+    "Đại học Tôn Đức Thắng",
+    "Ben Thanh Market",
+    "Notre-Dame Cathedral",
+    "Tan Dinh Market",
+    "Independence Palace",
+    "Pham Ngu Lao Hostel",
+    "Cho Lon Wholesale",
+    "Phu My Hung Office",
+    "An Phu Logistics Park",
+    "Thao Dien Studios",
+    "Phu Nhuan Pharmacy",
+    "Tan Binh Cargo",
+    "Go Vap Warehouse",
 ]
 _DEMO_ADDRESSES = [
     "19 Nguyễn Hữu Thọ, Tân Hưng, Quận 7, Hồ Chí Minh",
@@ -66,7 +75,7 @@ _DEMO_ADDRESSES = [
 ]
 _DEMO_RAW: list[tuple[float, float, int, int, int, int]] = [
     # (lat, lng, demand, ready, due, service)
-    (10.7330, 106.7025, 0, 0, 240, 0),     # Ton Duc Thang University Depot
+    (10.7330, 106.7025, 0, 0, 240, 0),  # Ton Duc Thang University Depot
     (10.7723, 106.6985, 8, 0, 90, 10),
     (10.7798, 106.6991, 6, 30, 120, 10),
     (10.7886, 106.6904, 9, 20, 110, 10),
@@ -116,6 +125,8 @@ _R1_DEMO_RAW: list[tuple[float, float, int, int, int, int]] = [
     (10.8300, 106.7200, 10, 40, 140, 12),
     (10.7700, 106.7400, 8, 60, 160, 12),
 ]
+
+
 def _builtin_variant(name: str) -> dict[str, Any]:
     raw_data = _DEMO_RAW
     if name == "c1_demo":
@@ -184,7 +195,7 @@ def load_solomon_dataset(name: str = "demo") -> dict[str, Any]:
     )
 
     customers: list[dict[str, Any]] = []
-    for raw in lines[header_idx + 1:]:
+    for raw in lines[header_idx + 1 :]:
         m = row_re.match(raw)
         if not m:
             continue

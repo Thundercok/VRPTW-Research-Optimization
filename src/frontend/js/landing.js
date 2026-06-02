@@ -116,7 +116,7 @@
         'DDQN-ALNS hybrid solver for the Vehicle Routing Problem with Time Windows. Open-source research project.',
       'footer.paper': 'Paper draft',
       'footer.benchmarks': 'Benchmarks',
-      'footer.copyright': '© 2026 VRPTW Research Optimization. Released under the MIT License.'
+      'footer.copyright': '© 2026 VRPTW Research Optimization. Released under the MIT License.',
     },
     vn: {
       'brand.sub': 'Nghiên cứu tối ưu hóa',
@@ -163,11 +163,9 @@
       'features.f1.body':
         'Agent Double DQN học cách chọn destroy operator phù hợp khi quá trình tìm kiếm chững lại; ALNS đảm nhiệm bước repair.',
       'features.f2.title': 'Benchmark Solomon',
-      'features.f2.body':
-        'Tải RC1, RC2 chỉ với một click. Tự điền sức chứa, số xe và khung giờ.',
+      'features.f2.body': 'Tải RC1, RC2 chỉ với một click. Tự điền sức chứa, số xe và khung giờ.',
       'features.f3.title': 'Nhập dữ liệu thật',
-      'features.f3.body':
-        'Upload CSV/XLSX kèm lat, lng, demand, ready, due, service. Hoặc geocode địa chỉ và thả pin.',
+      'features.f3.body': 'Upload CSV/XLSX kèm lat, lng, demand, ready, due, service. Hoặc geocode địa chỉ và thả pin.',
       'features.f4.title': 'So sánh song song',
       'features.f4.body':
         'DDQN-ALNS và ALNS thuần chạy song song. Quan sát bản đồ tuyến, runtime, tổng quãng đường, độ cân bằng tải.',
@@ -199,8 +197,7 @@
       'results.r2': 'Gap zero-shot trên RC2',
       'results.r3': 'Runtime trung vị cho instance 100 khách',
       'results.r4': 'Runtime so với ALNS cơ bản ở cùng chất lượng',
-      'results.note':
-        'Số liệu thô có trong logs/benchmark_clean.csv và logs/benchmark_transfer.csv của repo.',
+      'results.note': 'Số liệu thô có trong logs/benchmark_clean.csv và logs/benchmark_transfer.csv của repo.',
 
       'tech.eyebrow': 'Công nghệ',
       'tech.title': 'Xây dựng trên các công cụ mã nguồn mở đã được kiểm chứng',
@@ -223,8 +220,8 @@
         'Solver lai DDQN-ALNS cho bài toán Định tuyến phương tiện có khung giờ. Dự án nghiên cứu mã nguồn mở.',
       'footer.paper': 'Bản nháp paper',
       'footer.benchmarks': 'Benchmarks',
-      'footer.copyright': '© 2026 VRPTW Research Optimization. Phát hành theo giấy phép MIT.'
-    }
+      'footer.copyright': '© 2026 VRPTW Research Optimization. Phát hành theo giấy phép MIT.',
+    },
   };
 
   function getStoredLang() {

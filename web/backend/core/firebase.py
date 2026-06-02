@@ -3,9 +3,8 @@ from __future__ import annotations
 import json
 
 import firebase_admin
+from core.config import firebase_service_account_json, firebase_service_account_path
 from firebase_admin import credentials, firestore
-
-from core.config import firebase_project_id, firebase_service_account_json, firebase_service_account_path
 
 _db: firestore.Client | None = None
 
@@ -23,9 +22,10 @@ def init_firebase() -> firestore.Client:
 def get_db() -> firestore.Client:
     return init_firebase()
 
+
 def _build_firebase_app() -> firebase_admin.App:
     # We stripped out the options dict to prevent the old project ID from overriding your new JSON key.
-    
+
     account_json = firebase_service_account_json()
     if account_json:
         info = json.loads(account_json)

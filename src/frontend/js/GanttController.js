@@ -14,14 +14,14 @@ export class GanttController {
     this.canvas = null;
     this.ctx = null;
     this.tooltip = null;
-    
+
     this.isCollapsed = false;
     this.activeAlgo = 'ddqn';
     this.result = null;
     this.simTime = 0;
     this.maxTime = 240;
     this.scaleX = 2.5; // pixels per minute
-    
+
     this.segments = [];
     this.hoveredSegment = null;
   }
@@ -30,7 +30,7 @@ export class GanttController {
     // 1. Create the main panel element
     this.panel = document.createElement('div');
     this.panel.className = 'gantt-panel gantt-entering hidden';
-    
+
     this.panel.innerHTML = `
       <div class="gantt-header" id="gantt-header-clickable">
         <div class="gantt-header-left">
@@ -183,19 +183,21 @@ export class GanttController {
       hybrid_ddqn: 'Hybrid DDQN (Random)',
       hybrid_ddqn_transfer_rc1: 'Hybrid DDQN (RC1)',
       hybrid_ddqn_transfer_dr: 'Hybrid DDQN (DR)',
-      hybrid: 'Hybrid DDQN'
+      hybrid: 'Hybrid DDQN',
     };
 
-    select.innerHTML = Object.keys(result).map(key => 
-      `<option value="${key}" ${key === this.activeAlgo ? 'selected' : ''}>${labels[key] || key}</option>`
-    ).join('');
+    select.innerHTML = Object.keys(result)
+      .map(
+        (key) => `<option value="${key}" ${key === this.activeAlgo ? 'selected' : ''}>${labels[key] || key}</option>`
+      )
+      .join('');
 
     const badge = this.panel.querySelector('#gantt-badge');
     badge.textContent = (labels[this.activeAlgo] || this.activeAlgo).toUpperCase();
 
     // Calculate max time duration for scheduling
     let maxTime = 120;
-    algoResult.routes.forEach(route => {
+    algoResult.routes.forEach((route) => {
       if (route.schedule && route.schedule.length > 0) {
         const lastStep = route.schedule[route.schedule.length - 1];
         if (lastStep && lastStep.arrival > maxTime) {
@@ -211,7 +213,7 @@ export class GanttController {
   resizeAndDraw() {
     const wrap = this.panel.querySelector('#gantt-wrap');
     if (!wrap) return;
-    
+
     const containerWidth = wrap.clientWidth;
     // Calculate pixels per minute (at least 2.2px/min, stretching to container if shorter)
     this.scaleX = Math.max(2.2, (containerWidth - LABEL_WIDTH - 24) / this.maxTime);
@@ -227,7 +229,7 @@ export class GanttController {
     this.canvas.height = totalHeight * dpr;
     this.canvas.style.width = `${totalWidth}px`;
     this.canvas.style.height = `${totalHeight}px`;
-    
+
     this.ctx.resetTransform();
     this.ctx.scale(dpr, dpr);
 
@@ -246,7 +248,7 @@ export class GanttController {
     // 1. Draw Grid lines & X-axis Header
     this.ctx.fillStyle = '#f8fafc'; // light grid header
     this.ctx.fillRect(LABEL_WIDTH, 0, width - LABEL_WIDTH, HEADER_HEIGHT);
-    
+
     // Bottom border of axis header
     this.ctx.strokeStyle = 'var(--border)';
     this.ctx.lineWidth = 1;
@@ -290,12 +292,13 @@ export class GanttController {
       this.ctx.stroke();
 
       // Driver Name Label
-      const fleetVehicle = this.app.state.fleet?.[route.vehicle_id] || this.app.state.fleet?.find(v => v.id === route.vehicle_id);
+      const fleetVehicle =
+        this.app.state.fleet?.[route.vehicle_id] || this.app.state.fleet?.find((v) => v.id === route.vehicle_id);
       const driverName = fleetVehicle ? fleetVehicle.driver : `Driver #${route.vehicle_id + 1}`;
-      
+
       this.ctx.fillStyle = '#f8fafc'; // label block background
       this.ctx.fillRect(0, y, LABEL_WIDTH, ROW_HEIGHT);
-      
+
       // Vertical border separating labels and timeline
       this.ctx.strokeStyle = 'var(--border)';
       this.ctx.lineWidth = 1;
@@ -312,7 +315,7 @@ export class GanttController {
 
       // Render Schedule Segments
       if (!route.schedule || route.schedule.length === 0) return;
-      
+
       const routeColor = this.colorForRoute(idx);
       let t_last = 0;
 
@@ -347,8 +350,8 @@ export class GanttController {
             data: {
               from: t_last,
               to: step.arrival,
-              destination: isDepot ? 'Depot' : (step.name || `Stop #${step.customer_id}`)
-            }
+              destination: isDepot ? 'Depot' : step.name || `Stop #${step.customer_id}`,
+            },
           });
         }
 
@@ -381,8 +384,8 @@ export class GanttController {
               from: step.arrival,
               to: step.service_start,
               waitTime: waitDur,
-              stopName: step.name || `Stop #${step.customer_id}`
-            }
+              stopName: step.name || `Stop #${step.customer_id}`,
+            },
           });
         }
 
@@ -395,7 +398,7 @@ export class GanttController {
           this.ctx.fillStyle = routeColor;
           this.ctx.globalAlpha = 0.85;
           this.ctx.fillRect(x, barY, w, ROW_BAR_HEIGHT);
-          
+
           this.ctx.strokeStyle = routeColor;
           this.ctx.lineWidth = 1;
           this.ctx.strokeRect(x, barY, w, ROW_BAR_HEIGHT);
@@ -424,8 +427,8 @@ export class GanttController {
               stopName: step.name || `Stop #${step.customer_id}`,
               from: step.service_start,
               to: step.departure,
-              duration: step.service_duration
-            }
+              duration: step.service_duration,
+            },
           });
         }
 
@@ -436,7 +439,7 @@ export class GanttController {
     // 3. Draw Vertical Time Cursor (Simulation sync)
     if (this.simTime > 0) {
       const cursorX = LABEL_WIDTH + this.simTime * this.scaleX;
-      
+
       this.ctx.strokeStyle = '#dc2626'; // var(--danger)
       this.ctx.lineWidth = 1.5;
       this.ctx.setLineDash([3, 3]);
@@ -469,13 +472,11 @@ export class GanttController {
     const my = e.clientY - rect.top;
 
     // Find if hovering over a segment
-    const hovered = this.segments.find(seg => 
-      mx >= seg.x1 && mx <= seg.x2 && my >= seg.y1 && my <= seg.y2
-    );
+    const hovered = this.segments.find((seg) => mx >= seg.x1 && mx <= seg.x2 && my >= seg.y1 && my <= seg.y2);
 
     if (hovered) {
       this.hoveredSegment = hovered;
-      
+
       let html = `<div class="gantt-tooltip-title">${hovered.driverName}</div>`;
 
       if (hovered.type === 'travel') {
@@ -506,7 +507,7 @@ export class GanttController {
 
       this.tooltip.innerHTML = html;
       this.tooltip.classList.add('visible');
-      
+
       // Position tooltip near cursor but handle window boundaries
       const tRect = this.tooltip.getBoundingClientRect();
       let left = e.clientX + 14;

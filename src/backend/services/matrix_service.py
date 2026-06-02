@@ -19,8 +19,7 @@ async def calculate_matrix(points: list[MatrixPoint]) -> dict[str, Any]:
             response = await client.get(osrm)
             response.raise_for_status()
             data = response.json()
-        matrix_km = [[(v or 0.0) / 1000 for v in row]
-                     for row in data.get("distances", [])]
+        matrix_km = [[(v or 0.0) / 1000 for v in row] for row in data.get("distances", [])]
         return {"matrix": matrix_km, "provider": "osrm"}
     except Exception:
         geo_points = [(p.lat, p.lng) for p in points]

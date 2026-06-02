@@ -8,8 +8,8 @@ from .core import Inst, Plan, _check_route, _route_cost
 def _best_insert_position(node: int, route: list[int], inst: Inst) -> tuple[float, int | None]:
     best_cost, best_pos = float("inf"), None
     for pos in range(len(route) + 1):
-        prev = route[pos - 1] if pos > 0       else 0
-        nxt  = route[pos]     if pos < len(route) else 0
+        prev = route[pos - 1] if pos > 0 else 0
+        nxt = route[pos] if pos < len(route) else 0
         delta = inst.dist[prev, node] + inst.dist[node, nxt] - inst.dist[prev, nxt]
         if delta < best_cost and _check_route(route[:pos] + [node] + route[pos:], inst):
             best_cost, best_pos = delta, pos
@@ -45,18 +45,17 @@ def _route_avg_slack(route: list[int], inst: Inst) -> float:
     slack, t, prev = 0.0, 0.0, 0
     for node in route:
         t += inst.dist[prev, node]
-        t  = max(t, inst.ready_times[node])
+        t = max(t, inst.ready_times[node])
         slack += inst.due_times[node] - t
-        t   += inst.service_times[node]
+        t += inst.service_times[node]
         prev = node
     return slack / len(route)
-
 
 
 def build_greedy(inst: Inst, algo: str = "") -> Plan:
     def arrival(route, pos, node, arrivals):
         prev = route[pos - 1] if pos > 0 else 0
-        t    = arrivals[pos - 1] if pos > 0 else 0.0
+        t = arrivals[pos - 1] if pos > 0 else 0.0
         return max(t + inst.dist[prev, node], inst.ready_times[node])
 
     def feasible_insert(route, pos, node, arrivals, load):
@@ -67,12 +66,12 @@ def build_greedy(inst: Inst, algo: str = "") -> Plan:
             return False, None
         ft, prev = t + inst.service_times[node], node
         for idx in range(pos, len(route)):
-            nxt  = route[idx]
-            ft  += inst.dist[prev, nxt]
-            ft   = max(ft, inst.ready_times[nxt])
+            nxt = route[idx]
+            ft += inst.dist[prev, nxt]
+            ft = max(ft, inst.ready_times[nxt])
             if ft > inst.due_times[nxt]:
                 return False, None
-            ft  += inst.service_times[nxt]
+            ft += inst.service_times[nxt]
             prev = nxt
         return True, t
 
@@ -80,9 +79,9 @@ def build_greedy(inst: Inst, algo: str = "") -> Plan:
         arrivals, t, prev = [], 0.0, 0
         for node in route:
             t += inst.dist[prev, node]
-            t  = max(t, inst.ready_times[node])
+            t = max(t, inst.ready_times[node])
             arrivals.append(t)
-            t   += inst.service_times[node]
+            t += inst.service_times[node]
             prev = node
         return arrivals
 
@@ -92,8 +91,8 @@ def build_greedy(inst: Inst, algo: str = "") -> Plan:
             ok, _ = feasible_insert(route, pos, node, arrivals, load)
             if not ok:
                 continue
-            prev  = route[pos - 1] if pos > 0          else 0
-            nxt   = route[pos]     if pos < len(route) else 0
+            prev = route[pos - 1] if pos > 0 else 0
+            nxt = route[pos] if pos < len(route) else 0
             delta = inst.dist[prev, node] + inst.dist[node, nxt] - inst.dist[prev, nxt]
             if delta < best_cost:
                 best_cost, best_pos = delta, pos
@@ -105,8 +104,8 @@ def build_greedy(inst: Inst, algo: str = "") -> Plan:
         seed = max(unrouted, key=lambda n: inst.dist[0, n])
         if max(inst.dist[0, seed], inst.ready_times[seed]) > inst.due_times[seed]:
             seed = min(unrouted, key=lambda n: inst.due_times[n])
-        route    = [seed]
-        load     = inst.demands[seed]
+        route = [seed]
+        load = inst.demands[seed]
         arrivals = [max(inst.dist[0, seed], inst.ready_times[seed])]
         unrouted.remove(seed)
         improved = True
@@ -132,17 +131,17 @@ def build_greedy(inst: Inst, algo: str = "") -> Plan:
     if plan.feasible:
         return plan
 
-    customers   = sorted(range(1, inst.n + 1), key=lambda n: (inst.due_times[n], inst.ready_times[n]))
-    unrouted_set= set(customers)
+    customers = sorted(range(1, inst.n + 1), key=lambda n: (inst.due_times[n], inst.ready_times[n]))
+    unrouted_set = set(customers)
     fallback: list[list[int]] = []
     while unrouted_set:
         route_fb: list[int] = []
         node, load, t = 0, 0.0, 0.0
         while unrouted_set:
             feasible = [
-                c for c in unrouted_set
-                if load + inst.demands[c] <= inst.capacity
-                and t + inst.dist[node, c] <= inst.due_times[c]
+                c
+                for c in unrouted_set
+                if load + inst.demands[c] <= inst.capacity and t + inst.dist[node, c] <= inst.due_times[c]
             ]
             if not feasible:
                 break
@@ -150,8 +149,8 @@ def build_greedy(inst: Inst, algo: str = "") -> Plan:
             route_fb.append(nxt)
             unrouted_set.remove(nxt)
             load += inst.demands[nxt]
-            t     = max(t + inst.dist[node, nxt], inst.ready_times[nxt]) + inst.service_times[nxt]
-            node  = nxt
+            t = max(t + inst.dist[node, nxt], inst.ready_times[nxt]) + inst.service_times[nxt]
+            node = nxt
         if route_fb:
             fallback.append(route_fb)
         elif unrouted_set:
@@ -159,4 +158,3 @@ def build_greedy(inst: Inst, algo: str = "") -> Plan:
             fallback.append([nxt])
             unrouted_set.remove(nxt)
     return Plan(fallback, inst, algo)
-

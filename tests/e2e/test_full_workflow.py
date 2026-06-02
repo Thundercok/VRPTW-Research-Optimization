@@ -47,9 +47,9 @@ def test_record_full_app_workflow(page: Page):
     page.fill("#login-email", TEST_EMAIL)
     page.fill("#login-password", TEST_PASSWORD)
     shot(page, "02_login_fields_filled")
-    
+
     page.click("#btn-login")
-    
+
     # Wait for the redirection and the app shell to render
     print("[E2E] Waiting for redirection and app shell...")
     page.wait_for_selector("#app-shell", state="visible", timeout=15000)
@@ -122,7 +122,9 @@ def test_record_full_app_workflow(page: Page):
 
     # Reset simulation clock to 0 using the exposed window.app instance
     print("[E2E] Resetting simulation clock to 0...")
-    page.evaluate("() => { if(window.app && window.app.simulationController) { window.app.simulationController.scrub(0); } }")
+    page.evaluate(
+        "() => { if(window.app && window.app.simulationController) { window.app.simulationController.scrub(0); } }"
+    )
     page.wait_for_timeout(500)
 
     # --- Step 7: Driver App Companion Emulator Interaction ---

@@ -12,7 +12,7 @@ def _two_opt_best(route: list[int], inst: Inst) -> list[int]:
     best, best_cost = route[:], _route_cost_list(route, inst)
     for i in range(len(route) - 2):
         for j in range(i + 2, len(route)):
-            cand = route[:i] + list(reversed(route[i:j + 1])) + route[j + 1:]
+            cand = route[:i] + list(reversed(route[i : j + 1])) + route[j + 1 :]
             if not _check_route(cand, inst):
                 continue
             cc = _route_cost_list(cand, inst)
@@ -27,7 +27,7 @@ def _best_relocate(plan: Plan, nv_ceiling: int | None = None):
     for si, source_route in enumerate(plan.routes):
         sc = _route_cost_list(source_route, inst)
         for sp, node in enumerate(source_route):
-            sn  = source_route[:sp] + source_route[sp + 1:]
+            sn = source_route[:sp] + source_route[sp + 1 :]
             if sn and not _check_route(sn, inst):
                 continue
             snc = _route_cost_list(sn, inst)
@@ -36,7 +36,7 @@ def _best_relocate(plan: Plan, nv_ceiling: int | None = None):
                     continue
                 dc = _route_cost_list(dest_route, inst)
                 for ip in range(len(dest_route) + 1):
-                    dn  = dest_route[:ip] + [node] + dest_route[ip:]
+                    dn = dest_route[:ip] + [node] + dest_route[ip:]
                     if not _check_route(dn, inst):
                         continue
                     new_nv = plan.nv - (1 if not sn else 0)
@@ -53,7 +53,7 @@ def _best_relocate(plan: Plan, nv_ceiling: int | None = None):
 def _apply_relocate(plan: Plan, move: tuple[int, int, int, int]) -> Plan:
     si, sp, di, ip = move
     routes = [r[:] for r in plan.routes]
-    node   = routes[si].pop(sp)
+    node = routes[si].pop(sp)
     if si < di and len(routes[si]) == 0:
         di -= 1
     routes = [r for r in routes if r]
@@ -94,9 +94,9 @@ def _cross_exchange(plan: Plan, nv_ceiling: int | None = None) -> Plan | None:
     inst = plan.inst
     if nv_ceiling is not None and plan.nv > nv_ceiling:
         return None
-    max_dist       = max(inst.max_dist, 1.0)
-    granular_radius= max(10.0, 0.18 * max_dist)
-    best_delta     = -1e-9
+    max_dist = max(inst.max_dist, 1.0)
+    granular_radius = max(10.0, 0.18 * max_dist)
+    best_delta = -1e-9
     best_routes: list[list[int]] | None = None
 
     def interval_overlap(a0, a1, b0, b1):
@@ -104,15 +104,11 @@ def _cross_exchange(plan: Plan, nv_ceiling: int | None = None) -> Plan | None:
 
     def route_meta(route):
         coords = inst.coords[np.array(route, dtype=np.int64)]
-        return (coords.mean(axis=0),
-                float(np.min(inst.ready_times[route])),
-                float(np.max(inst.due_times[route])))
+        return (coords.mean(axis=0), float(np.min(inst.ready_times[route])), float(np.max(inst.due_times[route])))
 
     def seg_meta(seg):
         coords = inst.coords[np.array(seg, dtype=np.int64)]
-        return (coords.mean(axis=0),
-                float(np.min(inst.ready_times[seg])),
-                float(np.max(inst.due_times[seg])))
+        return (coords.mean(axis=0), float(np.min(inst.ready_times[seg])), float(np.max(inst.due_times[seg])))
 
     route_info = [route_meta(r) if r else None for r in plan.routes]
 
@@ -126,8 +122,9 @@ def _cross_exchange(plan: Plan, nv_ceiling: int | None = None) -> Plan | None:
                 continue
             c1, r1_ready, r1_due = info1
             c2, r2_ready, r2_due = info2
-            if (float(np.linalg.norm(c1 - c2)) > 0.55 * max_dist and
-                    not interval_overlap(r1_ready, r1_due, r2_ready, r2_due)):
+            if float(np.linalg.norm(c1 - c2)) > 0.55 * max_dist and not interval_overlap(
+                r1_ready, r1_due, r2_ready, r2_due
+            ):
                 continue
             old_pair = _route_cost_list(r1, inst) + _route_cost_list(r2, inst)
             lc1 = (1, 2, 3) if len(r1) >= 12 else (1, 2)
@@ -139,16 +136,17 @@ def _cross_exchange(plan: Plan, nv_ceiling: int | None = None) -> Plan | None:
                     if len(r2) < len2:
                         continue
                     for p1 in range(len(r1) - len1 + 1):
-                        seg1 = r1[p1:p1 + len1]
+                        seg1 = r1[p1 : p1 + len1]
                         s1c, s1r, s1d = seg_meta(seg1)
                         for p2 in range(len(r2) - len2 + 1):
-                            seg2 = r2[p2:p2 + len2]
+                            seg2 = r2[p2 : p2 + len2]
                             s2c, s2r, s2d = seg_meta(seg2)
-                            if (float(np.linalg.norm(s1c - s2c)) > granular_radius and
-                                    not interval_overlap(s1r, s1d, s2r, s2d)):
+                            if float(np.linalg.norm(s1c - s2c)) > granular_radius and not interval_overlap(
+                                s1r, s1d, s2r, s2d
+                            ):
                                 continue
-                            nr1 = r1[:p1] + seg2 + r1[p1 + len1:]
-                            nr2 = r2[:p2] + seg1 + r2[p2 + len2:]
+                            nr1 = r1[:p1] + seg2 + r1[p1 + len1 :]
+                            nr2 = r2[:p2] + seg1 + r2[p2 + len2 :]
                             if not _check_route(nr1, inst) or not _check_route(nr2, inst):
                                 continue
                             delta = _route_cost_list(nr1, inst) + _route_cost_list(nr2, inst) - old_pair
@@ -156,23 +154,22 @@ def _cross_exchange(plan: Plan, nv_ceiling: int | None = None) -> Plan | None:
                                 routes = [r[:] for r in plan.routes]
                                 routes[i], routes[j] = nr1, nr2
                                 best_routes = routes
-                                best_delta  = delta
+                                best_delta = delta
     return Plan(best_routes, inst, plan.algo) if best_routes is not None else None
 
 
 def _try_route_compact(plan: Plan, nv_ceiling: int | None = None) -> Plan | None:
     if len(plan.routes) <= 1:
         return None
-    inst   = plan.inst
+    inst = plan.inst
     ranked = sorted(
         range(len(plan.routes)),
-        key=lambda i: (len(plan.routes[i]), _route_load(plan.routes[i], inst),
-                       _route_cost_list(plan.routes[i], inst)),
+        key=lambda i: (len(plan.routes[i]), _route_load(plan.routes[i], inst), _route_cost_list(plan.routes[i], inst)),
     )
     for ridx in ranked:
         source = plan.routes[ridx]
         others = [r[:] for i, r in enumerate(plan.routes) if i != ridx]
-        ok     = True
+        ok = True
         for node in sorted(source, key=lambda n: (inst.due_times[n] - inst.ready_times[n], -inst.demands[n])):
             best_c, best_r, best_p = float("inf"), None, None
             for oi, route in enumerate(others):
@@ -203,7 +200,7 @@ def _best_or_opt(plan: Plan, nv_ceiling: int | None = None):
         for L in (2, 3):
             for sp in range(len(source_route) - L + 1):
                 seg = source_route[sp : sp + L]
-                sn = source_route[:sp] + source_route[sp + L:]
+                sn = source_route[:sp] + source_route[sp + L :]
                 if sn and not _check_route(sn, inst):
                     continue
                 snc = _route_cost_list(sn, inst) if sn else 0.0
@@ -307,7 +304,7 @@ def local_search(
     max_passes: int = 1,
     nv_ceiling: int | None = None,
     max_ls_moves: int = 5,
-    pool=None,                  # RoutePool | None — seeds pool with every improvement
+    pool=None,  # RoutePool | None — seeds pool with every improvement
 ) -> Plan:
     """
     pool: when provided, each improvement along the LS trajectory is added to
@@ -330,8 +327,7 @@ def local_search(
             move = _best_relocate(best, nv_ceiling=nv_ceiling)
             if move is not None:
                 cand = _apply_relocate(best, move)
-                if cand.feasible and (cand.dominates(best) or
-                        (cand.nv == best.nv and cand.cost + 1e-9 < best.cost)):
+                if cand.feasible and (cand.dominates(best) or (cand.nv == best.nv and cand.cost + 1e-9 < best.cost)):
                     best, improved = cand, True
                     if pool is not None:
                         pool.add_plan(best)
@@ -349,8 +345,7 @@ def local_search(
             move = _best_or_opt(best, nv_ceiling=nv_ceiling)
             if move is not None:
                 cand = _apply_or_opt(best, move)
-                if cand.feasible and (cand.dominates(best) or
-                        (cand.nv == best.nv and cand.cost + 1e-9 < best.cost)):
+                if cand.feasible and (cand.dominates(best) or (cand.nv == best.nv and cand.cost + 1e-9 < best.cost)):
                     best, improved = cand, True
                     if pool is not None:
                         pool.add_plan(best)
@@ -383,6 +378,7 @@ def local_search(
 
     return best
 
+
 def _try_chain_elimination(plan: Plan, target_idx: int) -> Plan | None:
     """
     Single-target ejection chain.  Processes each customer in the target route;
@@ -396,7 +392,6 @@ def _try_chain_elimination(plan: Plan, target_idx: int) -> Plan | None:
 
     # Tightest TW first — hardest-to-place customers block everything downstream
     for c in sorted(target, key=lambda n: inst.due_times[n] - inst.ready_times[n]):
-
         # --- Level 1: direct best-insertion ---
         best_delta, best_ri, best_pos = float("inf"), None, None
         for ri, route in enumerate(routes):
@@ -410,12 +405,12 @@ def _try_chain_elimination(plan: Plan, target_idx: int) -> Plan | None:
 
         # --- Level 2: ejection chain  (c ejects d from Ri, d moves to Rj) ---
         best_chain_cost = float("inf")
-        best_chain: tuple | None = None   # (ri, eject_pos, d, rj)
+        best_chain: tuple | None = None  # (ri, eject_pos, d, rj)
 
         for ri, route in enumerate(routes):
             for eject_pos, d in enumerate(route):
                 # Temporary route with d removed
-                stripped = route[:eject_pos] + route[eject_pos + 1:]
+                stripped = route[:eject_pos] + route[eject_pos + 1 :]
                 delta_c, pos_c = _best_insert_position(c, stripped, inst)
                 if pos_c is None:
                     continue
@@ -435,7 +430,7 @@ def _try_chain_elimination(plan: Plan, target_idx: int) -> Plan | None:
 
         ri, eject_pos, d, rj = best_chain
         # Apply: remove d, insert c into Ri, insert d into Rj
-        stripped_ri = routes[ri][:eject_pos] + routes[ri][eject_pos + 1:]
+        stripped_ri = routes[ri][:eject_pos] + routes[ri][eject_pos + 1 :]
         _, pos_c = _best_insert_position(c, stripped_ri, inst)
         if pos_c is None:
             return None
@@ -465,8 +460,7 @@ def _ejection_chain_eliminate(plan: Plan) -> Plan | None:
 
     ranked = sorted(
         range(len(plan.routes)),
-        key=lambda i: (len(plan.routes[i]),
-                       sum(plan.inst.demands[n] for n in plan.routes[i])),
+        key=lambda i: (len(plan.routes[i]), sum(plan.inst.demands[n] for n in plan.routes[i])),
     )
     for target_idx in ranked[:4]:
         result = _try_chain_elimination(plan, target_idx)
@@ -479,7 +473,7 @@ def _iterative_route_elimination(
     plan: Plan,
     inst: Inst,
     max_rounds: int = 6,
-    pool=None,                  # RoutePool | None — seeds pool after each success
+    pool=None,  # RoutePool | None — seeds pool after each success
 ) -> Plan:
     best = plan.copy()
     for _ in range(max_rounds):
@@ -523,4 +517,3 @@ def _iterative_route_elimination(
         if not eliminated:
             break
     return best
-

@@ -68,9 +68,7 @@ async def lifespan(_: FastAPI):
                 "Set DEMO_AUTH_BYPASS=false in production."
             )
         else:
-            logger.warning(
-                "Firebase Admin disabled and demo bypass OFF - protected endpoints will return 503."
-            )
+            logger.warning("Firebase Admin disabled and demo bypass OFF - protected endpoints will return 503.")
 
     worker_task = asyncio.create_task(job_service.worker_loop())
     try:
@@ -81,6 +79,7 @@ async def lifespan(_: FastAPI):
             await worker_task
         try:
             from services.solver_service import shutdown_executor
+
             shutdown_executor()
         except Exception as exc:
             logger.warning("Failed to shutdown solver executor: %s", exc)
@@ -105,6 +104,7 @@ class NoCacheHTMLMiddleware(BaseHTTPMiddleware):
             response.headers["Expires"] = "0"
         return response
 
+
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """Apply baseline security headers to every response.
 
@@ -117,40 +117,40 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     DEFAULT_CSP = (
         "default-src 'self'; "
         "script-src 'self' 'unsafe-inline' 'unsafe-eval' "
-            "https://unpkg.com "
-            "https://cdn.jsdelivr.net "
-            "https://apis.google.com "
-            "https://www.gstatic.com "
-            "https://browser.sentry-cdn.com "
-            "https://plausible.io "
-            "https://cdn.tailwindcss.com; "
+        "https://unpkg.com "
+        "https://cdn.jsdelivr.net "
+        "https://apis.google.com "
+        "https://www.gstatic.com "
+        "https://browser.sentry-cdn.com "
+        "https://plausible.io "
+        "https://cdn.tailwindcss.com; "
         "style-src 'self' 'unsafe-inline' "
-            "https://unpkg.com "
-            "https://cdn.jsdelivr.net "
-            "https://fonts.googleapis.com; "
+        "https://unpkg.com "
+        "https://cdn.jsdelivr.net "
+        "https://fonts.googleapis.com; "
         "font-src 'self' https://fonts.gstatic.com; "
         "connect-src 'self' "
-            "https://*.firebaseio.com "
-            "https://*.googleapis.com "
-            "https://*.sentry.io "
-            "https://plausible.io "
-            "https://www.gstatic.com "
-            "wss://*.firebaseio.com "
-            "http://127.0.0.1:* "
-            "http://localhost:* "
-            "ws://127.0.0.1:* "
-            "ws://localhost:*; "
+        "https://*.firebaseio.com "
+        "https://*.googleapis.com "
+        "https://*.sentry.io "
+        "https://plausible.io "
+        "https://www.gstatic.com "
+        "wss://*.firebaseio.com "
+        "http://127.0.0.1:* "
+        "http://localhost:* "
+        "ws://127.0.0.1:* "
+        "ws://localhost:*; "
         "img-src 'self' data: blob: "
-            "https://*.openstreetmap.org "
-            "https://*.basemaps.cartocdn.com "
-            "https://unpkg.com/leaflet@* "
-            "https://www.google.com "
-            "https://*.gstatic.com; "
+        "https://*.openstreetmap.org "
+        "https://*.basemaps.cartocdn.com "
+        "https://unpkg.com/leaflet@* "
+        "https://www.google.com "
+        "https://*.gstatic.com; "
         "frame-src 'self' "
-            "http://127.0.0.1:* "
-            "http://localhost:* "
-            "https://*.firebase.app "
-            "https://*.google.com;"
+        "http://127.0.0.1:* "
+        "http://localhost:* "
+        "https://*.firebase.app "
+        "https://*.google.com;"
     )
 
     async def dispatch(self, request: Request, call_next):

@@ -172,7 +172,9 @@ async def import_csv_file(
     lng_idx = find_col_index(headers, ["lng", "lon", "long", "longitude", "x", "geo lng", "geo lon"])
     demand_idx = find_col_index(headers, ["demand", "qty", "quantity", "load", "order size", "weight"])
     ready_idx = find_col_index(headers, ["ready", "readytime", "open", "tw start", "twstart", "earliest", "start"])
-    due_idx = find_col_index(headers, ["due", "duedate", "duetime", "close", "tw end", "twend", "latest", "end", "deadline"])
+    due_idx = find_col_index(
+        headers, ["due", "duedate", "duetime", "close", "tw end", "twend", "latest", "end", "deadline"]
+    )
     service_idx = find_col_index(headers, ["service", "servicetime", "svc", "dwell", "stoptime"])
 
     if (lat_idx >= 0 or lng_idx >= 0 or addr_idx >= 0) and (name_idx >= 0 or demand_idx >= 0):
@@ -184,6 +186,7 @@ async def import_csv_file(
     customers = []
     for idx, row in enumerate(data_rows):
         row_len = len(row)
+
         def val_at(col_idx: int, default: str = "", row=row, row_len=row_len) -> str:
             if 0 <= col_idx < row_len:
                 return str(row[col_idx]).strip()
@@ -237,20 +240,22 @@ async def import_csv_file(
             service = 10.0
 
         is_depot = idx == 0 and demand == 0
-        customers.append({
-            "id": idx,
-            "name": name,
-            "address": address or f"Point {idx}",
-            "lat": lat,
-            "lng": lng,
-            "demand": 0 if is_depot else demand,
-            "ready": ready,
-            "due": due,
-            "service": service,
-            "isDepot": is_depot,
-            "priority": "Normal",
-            "skill": "None"
-        })
+        customers.append(
+            {
+                "id": idx,
+                "name": name,
+                "address": address or f"Point {idx}",
+                "lat": lat,
+                "lng": lng,
+                "demand": 0 if is_depot else demand,
+                "ready": ready,
+                "due": due,
+                "service": service,
+                "isDepot": is_depot,
+                "priority": "Normal",
+                "skill": "None",
+            }
+        )
 
     return {"customers": customers}
 
@@ -381,21 +386,19 @@ class BenchmarkSubmitRequest(BaseModel):
     max_wall_hours: float
     algorithms: list[str]
 
+
 class DRTrainSubmitRequest(BaseModel):
     epochs: int
+
 
 class TransferTrainSubmitRequest(BaseModel):
     dataset: str
     epochs: int
 
+
 class TaskManager:
     def __init__(self):
-        self.benchmark_state = {
-            "status": "idle",
-            "progress": 0.0,
-            "error": None,
-            "results": []
-        }
+        self.benchmark_state = {"status": "idle", "progress": 0.0, "error": None, "results": []}
         self.training_state = {
             "status": "idle",
             "type": None,
@@ -403,16 +406,14 @@ class TaskManager:
             "error": None,
             "logs": [],
             "epochs_completed": 0,
-            "total_epochs": 0
+            "total_epochs": 0,
         }
-        self.smoke_test_state = {
-            "status": "idle",
-            "error": None,
-            "results": None
-        }
+        self.smoke_test_state = {"status": "idle", "error": None, "results": None}
         self.lock = threading.Lock()
 
+
 task_manager = TaskManager()
+
 
 class LogCapture:
     def __init__(self, log_list):
@@ -427,8 +428,10 @@ class LogCapture:
     def flush(self):
         self.stdout.flush()
 
+
 def load_weights_for_algo(algo: str, cfg: vrptw.Config) -> dict | None:
     import vrptw
+
     if algo == "hybrid_ddqn_transfer_rc1":
         label = "rc1"
     elif algo == "hybrid_ddqn_transfer_rc2":
@@ -471,10 +474,12 @@ def load_weights_for_algo(algo: str, cfg: vrptw.Config) -> dict | None:
     print(f"No weights found for {algo}. Running with default weights.")
     return None
 
+
 def run_benchmark_thread(dataset_key: str, algorithms: list[str], n_runs: int, max_wall_hours: float):
     import numpy as np
 
     import vrptw
+
     global task_manager
     try:
         cfg = vrptw.Config()
@@ -548,13 +553,19 @@ def run_benchmark_thread(dataset_key: str, algorithms: list[str], n_runs: int, m
 
                 transfer_weights = weights_by_algo.get(algo)
                 worker_args = [
-                    (inst, algo_canonical, cfg, cfg.seed + i,
-                     transfer_weights, vrptw._diversified_init(i, inst, archive, cfg))
+                    (
+                        inst,
+                        algo_canonical,
+                        cfg,
+                        cfg.seed + i,
+                        transfer_weights,
+                        vrptw._diversified_init(i, inst, archive, cfg),
+                    )
                     for i in range(n_runs_eff)
                 ]
 
                 _n_workers = 1 if algo_canonical == vrptw.ALGO_ORTOOLS else n_workers
-                ctx = mp.get_context('spawn')
+                ctx = mp.get_context("spawn")
                 with ProcessPoolExecutor(max_workers=_n_workers, mp_context=ctx) as ex:
                     run_results = list(ex.map(vrptw._benchmark_worker, worker_args))
 
@@ -571,10 +582,12 @@ def run_benchmark_thread(dataset_key: str, algorithms: list[str], n_runs: int, m
 
                 if nv_v:
                     bks = vrptw.BKS.get(inst.name)
-                    nv_inflated = (bks is not None
-                                   and float(np.mean(nv_v)) > bks["nv"] + 0.4
-                                   and gap_v[0] is not None
-                                   and float(np.mean(gap_v)) < 0)
+                    nv_inflated = (
+                        bks is not None
+                        and float(np.mean(nv_v)) > bks["nv"] + 0.4
+                        and gap_v[0] is not None
+                        and float(np.mean(gap_v)) < 0
+                    )
 
                     row = {
                         "dataset": dataset_name,
@@ -600,13 +613,16 @@ def run_benchmark_thread(dataset_key: str, algorithms: list[str], n_runs: int, m
             task_manager.benchmark_state["progress"] = 100.0
     except Exception as e:
         import traceback
+
         print(f"Error in benchmark execution: {e}\n{traceback.format_exc()}")
         with task_manager.lock:
             task_manager.benchmark_state["status"] = "failed"
             task_manager.benchmark_state["error"] = str(e)
 
+
 def run_training_thread(train_type: str, dataset_key: str | None = None, epochs: int = 1):
     import vrptw
+
     global task_manager
     try:
         cfg = vrptw.Config()
@@ -622,6 +638,7 @@ def run_training_thread(train_type: str, dataset_key: str | None = None, epochs:
                 if not stripped:
                     return
                 import re
+
                 match = re.search(r"Epoch\s+(\d+)/(\d+)", stripped, re.IGNORECASE)
                 if match:
                     completed = int(match.group(1))
@@ -637,7 +654,7 @@ def run_training_thread(train_type: str, dataset_key: str | None = None, epochs:
         try:
             if train_type == "dr":
                 cfg.domain_randomization_epochs = epochs
-                cfg.domain_randomization_batch = 4 # moderate batch for testing
+                cfg.domain_randomization_batch = 4  # moderate batch for testing
                 with task_manager.lock:
                     task_manager.training_state["status"] = "running"
                     task_manager.training_state["type"] = "dr"
@@ -672,6 +689,7 @@ def run_training_thread(train_type: str, dataset_key: str | None = None, epochs:
                 task_manager.training_state["progress"] = 100.0
         except Exception as e:
             import traceback
+
             err_str = f"Error in training: {e}\n{traceback.format_exc()}"
             print(err_str)
             with task_manager.lock:
@@ -684,8 +702,10 @@ def run_training_thread(train_type: str, dataset_key: str | None = None, epochs:
             task_manager.training_state["status"] = "failed"
             task_manager.training_state["error"] = str(e)
 
+
 def run_smoke_test_thread():
     import vrptw
+
     global task_manager
     try:
         cfg = vrptw.Config()
@@ -705,21 +725,19 @@ def run_smoke_test_thread():
         results = vrptw.smoke_test(inst, seed=42)
         serializable_results = []
         for algo, (gap, elapsed) in results.items():
-            serializable_results.append({
-                "algorithm": algo,
-                "gap": gap,
-                "time": round(elapsed, 2)
-            })
+            serializable_results.append({"algorithm": algo, "gap": gap, "time": round(elapsed, 2)})
 
         with task_manager.lock:
             task_manager.smoke_test_state["status"] = "done"
             task_manager.smoke_test_state["results"] = serializable_results
     except Exception as e:
         import traceback
+
         print(f"Error in smoke test: {e}\n{traceback.format_exc()}")
         with task_manager.lock:
             task_manager.smoke_test_state["status"] = "failed"
             task_manager.smoke_test_state["error"] = str(e)
+
 
 @router.post("/benchmark")
 async def start_benchmark(
@@ -732,12 +750,11 @@ async def start_benchmark(
             raise HTTPException(status_code=400, detail="Benchmark is already running")
 
     thread = threading.Thread(
-        target=run_benchmark_thread,
-        args=(body.dataset, body.algorithms, body.n_runs, body.max_wall_hours),
-        daemon=True
+        target=run_benchmark_thread, args=(body.dataset, body.algorithms, body.n_runs, body.max_wall_hours), daemon=True
     )
     thread.start()
     return {"message": "Benchmark started successfully"}
+
 
 @router.get("/benchmark/status")
 async def get_benchmark_status(
@@ -746,6 +763,7 @@ async def get_benchmark_status(
     global task_manager
     with task_manager.lock:
         return task_manager.benchmark_state
+
 
 @router.post("/train/dr")
 async def start_train_dr(
@@ -757,13 +775,10 @@ async def start_train_dr(
         if task_manager.training_state["status"] == "running":
             raise HTTPException(status_code=400, detail="Training is already running")
 
-    thread = threading.Thread(
-        target=run_training_thread,
-        args=("dr", None, body.epochs),
-        daemon=True
-    )
+    thread = threading.Thread(target=run_training_thread, args=("dr", None, body.epochs), daemon=True)
     thread.start()
     return {"message": "Domain randomization training started"}
+
 
 @router.post("/train/transfer")
 async def start_train_transfer(
@@ -775,13 +790,10 @@ async def start_train_transfer(
         if task_manager.training_state["status"] == "running":
             raise HTTPException(status_code=400, detail="Training is already running")
 
-    thread = threading.Thread(
-        target=run_training_thread,
-        args=("transfer", body.dataset, body.epochs),
-        daemon=True
-    )
+    thread = threading.Thread(target=run_training_thread, args=("transfer", body.dataset, body.epochs), daemon=True)
     thread.start()
     return {"message": "Transfer learning training started"}
+
 
 @router.get("/train/status")
 async def get_train_status(
@@ -790,6 +802,7 @@ async def get_train_status(
     global task_manager
     with task_manager.lock:
         return task_manager.training_state
+
 
 @router.post("/smoke-test")
 async def start_smoke_test(
@@ -800,12 +813,10 @@ async def start_smoke_test(
         if task_manager.smoke_test_state["status"] == "running":
             raise HTTPException(status_code=400, detail="Smoke test is already running")
 
-    thread = threading.Thread(
-        target=run_smoke_test_thread,
-        daemon=True
-    )
+    thread = threading.Thread(target=run_smoke_test_thread, daemon=True)
     thread.start()
     return {"message": "Smoke test started"}
+
 
 @router.get("/smoke-test/status")
 async def get_smoke_test_status(

@@ -10,7 +10,6 @@ import { FleetController } from './FleetController.js';
 import { SettingsController } from './SettingsController.js';
 import { GanttController } from './GanttController.js';
 
-
 const APP_COPY = {
   en: {
     langButton: 'VN',
@@ -42,17 +41,33 @@ const APP_COPY = {
     heroCopy: 'Focus on core data and operational decisions.',
     demoKicker: 'VRPTW Inference Demo',
     customerTitle: 'Customer List',
-    customerNote: 'Each row has a time window (Ready / Due) and Service duration. Units are consistent with distance (~1 km ≈ 1 time unit).',
+    customerNote:
+      'Each row has a time window (Ready / Due) and Service duration. Units are consistent with distance (~1 km ≈ 1 time unit).',
     tabs: ['Overview', 'Split Map', 'Results', 'Archive'],
     helpTitle: 'How to drive the VRPTW demo',
     helpSubtitle: 'Five steps from sample data to a side-by-side DDQN vs. ALNS comparison.',
     helpClose: 'Close',
     helpSteps: [
-      ['Pick a data mode', 'Toggle Solomon RC (built-in demo instance, 12 customers around HCMC) or Real Data to upload your own.'],
-      ['Edit the table inline', 'Double-click any cell to update name, lat/lng, demand, or the time window (ready / due / service). Add rows with + or import from .csv/.xlsx.'],
-      ['Tune the fleet', 'Use the sliders for vehicles and capacity. The first row (id 0) is the depot and is non-editable.'],
-      ['Run Model', 'Click Run Model. The backend solves twice: DDQN-ALNS and the ALNS baseline. Progress streams to the loading panel - you can minimize it.'],
-      ['Read the comparison', 'Switch to the Maps tab for routes side-by-side, or the Results tab for runtime, total distance, vehicles used, and fleet utilisation deltas.'],
+      [
+        'Pick a data mode',
+        'Toggle Solomon RC (built-in demo instance, 12 customers around HCMC) or Real Data to upload your own.',
+      ],
+      [
+        'Edit the table inline',
+        'Double-click any cell to update name, lat/lng, demand, or the time window (ready / due / service). Add rows with + or import from .csv/.xlsx.',
+      ],
+      [
+        'Tune the fleet',
+        'Use the sliders for vehicles and capacity. The first row (id 0) is the depot and is non-editable.',
+      ],
+      [
+        'Run Model',
+        'Click Run Model. The backend solves twice: DDQN-ALNS and the ALNS baseline. Progress streams to the loading panel - you can minimize it.',
+      ],
+      [
+        'Read the comparison',
+        'Switch to the Maps tab for routes side-by-side, or the Results tab for runtime, total distance, vehicles used, and fleet utilisation deltas.',
+      ],
     ],
     helpTips: [
       'Click the map to drop a customer pin (Real Data mode only).',
@@ -60,7 +75,13 @@ const APP_COPY = {
       'Demo / Guest mode: when Firebase is not configured, your data lives in memory only.',
       'Shortcut: press Shift + ? to reopen this guide.',
     ],
-    analysisHeadings: ['Convergence Snapshot', 'Operator Policy Heatmap', 'Hourly Activity', 'Instance Leaderboard', 'Transfer Snapshot'],
+    analysisHeadings: [
+      'Convergence Snapshot',
+      'Operator Policy Heatmap',
+      'Hourly Activity',
+      'Instance Leaderboard',
+      'Transfer Snapshot',
+    ],
     analysisStatus: 'Analysis data is loading...',
     analysisLoadStatus: 'Loading analysis for',
     analysisReady: 'Analysis ready. Open Deep Analysis for full diagnostics.',
@@ -110,17 +131,33 @@ const APP_COPY = {
     heroCopy: 'Tập trung vào dữ liệu lõi và quyết định vận hành.',
     demoKicker: 'Demo suy luận VRPTW',
     customerTitle: 'Danh sách khách hàng',
-    customerNote: 'Mỗi dòng có khung giờ (Ready / Due) và thời lượng Service. Đơn vị đồng nhất với khoảng cách (~1 km ≈ 1 đơn vị thời gian).',
+    customerNote:
+      'Mỗi dòng có khung giờ (Ready / Due) và thời lượng Service. Đơn vị đồng nhất với khoảng cách (~1 km ≈ 1 đơn vị thời gian).',
     tabs: ['Tổng quan', 'Bản đồ tách đôi', 'Kết quả', 'Lưu trữ'],
     helpTitle: 'Cách dùng demo VRPTW',
     helpSubtitle: '5 bước từ dữ liệu mẫu tới so sánh DDQN và ALNS.',
     helpClose: 'Đóng',
     helpSteps: [
-      ['Chọn chế độ dữ liệu', 'Chuyển giữa Solomon RC (demo có sẵn, 12 khách ở HCMC) hoặc Real Data để tải dữ liệu riêng.'],
-      ['Sửa bảng trực tiếp', 'Nháy đúp bất kỳ ô nào để sửa name, lat/lng, demand hoặc khung giờ (ready / due / service). Có thể thêm dòng bằng + hoặc import .csv/.xlsx.'],
-      ['Tinh chỉnh đội xe', 'Dùng thanh trượt cho vehicles và capacity. Dòng đầu tiên (id 0) là depot và không được sửa.'],
-      ['Chạy mô hình', 'Bấm Run Model. Backend chạy hai lần: DDQN-ALNS và ALNS baseline. Tiến trình hiển thị ở khung loading - có thể thu nhỏ.'],
-      ['Đọc phần so sánh', 'Chuyển sang tab Maps để xem tuyến song song, hoặc tab Results để xem runtime, tổng quãng đường, số xe và chênh lệch tải.'],
+      [
+        'Chọn chế độ dữ liệu',
+        'Chuyển giữa Solomon RC (demo có sẵn, 12 khách ở HCMC) hoặc Real Data để tải dữ liệu riêng.',
+      ],
+      [
+        'Sửa bảng trực tiếp',
+        'Nháy đúp bất kỳ ô nào để sửa name, lat/lng, demand hoặc khung giờ (ready / due / service). Có thể thêm dòng bằng + hoặc import .csv/.xlsx.',
+      ],
+      [
+        'Tinh chỉnh đội xe',
+        'Dùng thanh trượt cho vehicles và capacity. Dòng đầu tiên (id 0) là depot và không được sửa.',
+      ],
+      [
+        'Chạy mô hình',
+        'Bấm Run Model. Backend chạy hai lần: DDQN-ALNS và ALNS baseline. Tiến trình hiển thị ở khung loading - có thể thu nhỏ.',
+      ],
+      [
+        'Đọc phần so sánh',
+        'Chuyển sang tab Maps để xem tuyến song song, hoặc tab Results để xem runtime, tổng quãng đường, số xe và chênh lệch tải.',
+      ],
     ],
     helpTips: [
       'Bấm vào bản đồ để thả pin khách hàng (chỉ ở chế độ Real Data).',
@@ -128,7 +165,13 @@ const APP_COPY = {
       'Demo / Guest mode: khi chưa cấu hình Firebase, dữ liệu chỉ nằm trong bộ nhớ.',
       'Phím tắt: bấm Shift + ? để mở lại hướng dẫn này.',
     ],
-    analysisHeadings: ['Ảnh chụp hội tụ', 'Heatmap chính sách operator', 'Hoạt động theo giờ', 'Bảng xếp hạng instance', 'Tổng quan transfer'],
+    analysisHeadings: [
+      'Ảnh chụp hội tụ',
+      'Heatmap chính sách operator',
+      'Hoạt động theo giờ',
+      'Bảng xếp hạng instance',
+      'Tổng quan transfer',
+    ],
     analysisStatus: 'Đang tải dữ liệu phân tích...',
     analysisLoadStatus: 'Đang tải phân tích cho',
     analysisReady: 'Phân tích sẵn sàng. Mở Deep Analysis để xem đầy đủ.',
@@ -185,12 +228,12 @@ export class App {
       progress: 0,
       stage: 0,
       stageStartedAt: 0,
-      lastTickAt: 0
+      lastTickAt: 0,
     };
     this.runSession = {
       token: 0,
       cancelled: false,
-      abortController: null
+      abortController: null,
     };
     this.registerOtpCountdownTimer = 0;
     this.registerSuccessCountdownTimer = 0;
@@ -224,7 +267,6 @@ export class App {
     } else {
       this.leaveApp();
     }
-
   }
 
   bindElements() {
@@ -364,7 +406,7 @@ export class App {
       loadingDevice: document.getElementById('loading-device'),
       loadingConsole: document.getElementById('loading-console'),
       toastRoot: document.getElementById('toast-root'),
-      status: document.getElementById('status')
+      status: document.getElementById('status'),
     };
   }
 
@@ -631,9 +673,9 @@ export class App {
         this.startRegisterOtpCountdown();
       } else {
         this.stopRegisterOtpCountdown();
-        this.updateRegisterOtpCountdownText(this.lang === 'vn'
-          ? 'Bấm Gửi OTP để nhận mã xác thực.'
-          : 'Click Send OTP to receive a verification code.');
+        this.updateRegisterOtpCountdownText(
+          this.lang === 'vn' ? 'Bấm Gửi OTP để nhận mã xác thực.' : 'Click Send OTP to receive a verification code.'
+        );
       }
       this.updateRegisterButtonState();
     } else {
@@ -665,7 +707,7 @@ export class App {
       this.el.registerOtp,
       this.el.forgotEmail,
       this.el.resetPassword,
-      this.el.resetPasswordConfirm
+      this.el.resetPasswordConfirm,
     ].forEach((field) => this.clearFieldError(field));
     if (this.el.authHint) this.el.authHint.style.display = 'none';
   }
@@ -918,7 +960,7 @@ export class App {
 
       const res = await this.request('/auth/register/request-otp', {
         method: 'POST',
-        body: JSON.stringify({ email })
+        body: JSON.stringify({ email }),
       });
 
       this.state.registerOtpApprovedEmail = email;
@@ -982,7 +1024,7 @@ export class App {
 
       await this.request('/auth/register/verify-otp', {
         method: 'POST',
-        body: JSON.stringify({ email, otp })
+        body: JSON.stringify({ email, otp }),
       });
 
       this.state.registerOtpVerified = true;
@@ -1032,7 +1074,7 @@ export class App {
 
   setupViewSwitching() {
     const navItems = document.querySelectorAll('.saas-nav .nav-item');
-    navItems.forEach(item => {
+    navItems.forEach((item) => {
       const viewName = item.getAttribute('data-view');
       if (!viewName) return;
       item.addEventListener('click', (e) => {
@@ -1048,14 +1090,14 @@ export class App {
 
     // 1. Navigation items state
     const navItems = document.querySelectorAll('.saas-nav .nav-item');
-    navItems.forEach(item => {
+    navItems.forEach((item) => {
       const itemView = item.getAttribute('data-view');
       item.classList.toggle('active', itemView === viewName);
     });
 
     // 2. Toggle panels
     const viewPanels = document.querySelectorAll('.view-panel');
-    viewPanels.forEach(panel => {
+    viewPanels.forEach((panel) => {
       const panelId = panel.id;
       const isTarget = panelId === `view-${viewName}`;
       panel.classList.toggle('hidden', !isTarget);
@@ -1077,7 +1119,8 @@ export class App {
         if (pageTitleEl) pageTitleEl.textContent = this.lang === 'vn' ? 'Cấu hình Đội xe' : 'Fleet Configuration';
         this.fleetController.render();
       } else if (viewName === 'analytics') {
-        if (pageTitleEl) pageTitleEl.textContent = this.lang === 'vn' ? 'Phân tích Mô hình & AI' : 'Model Analytics & AI Diagnostics';
+        if (pageTitleEl)
+          pageTitleEl.textContent = this.lang === 'vn' ? 'Phân tích Mô hình & AI' : 'Model Analytics & AI Diagnostics';
         if (!this.state.analysisData) {
           this.bootstrapAnalysis(true);
         }
@@ -1131,7 +1174,7 @@ export class App {
         if (this.state.customers.length > 1 && !this.state.lastResult) {
           this.setStatus('Auto-optimizing demo fleet...', 'ok');
           this.toast('Demo Pipeline', 'Running full optimization pipeline automatically.', 'ok');
-          await new Promise(r => setTimeout(r, 800));
+          await new Promise((r) => setTimeout(r, 800));
           this.submitJob();
         }
       });
@@ -1153,9 +1196,10 @@ export class App {
     this.el.appShell?.classList.add('hidden');
     this.el.authScreen?.classList.remove('hidden');
     if (this.el.authHint) {
-      this.el.authHint.textContent = this.lang === 'vn'
-        ? 'Đăng ký một lần rồi đăng nhập để nhận token.'
-        : 'Register once, then log in to receive your token.';
+      this.el.authHint.textContent =
+        this.lang === 'vn'
+          ? 'Đăng ký một lần rồi đăng nhập để nhận token.'
+          : 'Register once, then log in to receive your token.';
     }
     this.showAuthView('login');
   }
@@ -1246,7 +1290,6 @@ export class App {
     this.renderCustomers();
     this.mapController.renderMarkers();
   }
-
 
   wireEvents() {
     this.setupDirectPasteImport();
@@ -1389,7 +1432,7 @@ export class App {
         service: Number.isFinite(Number(c.service)) ? Number(c.service) : 10,
         isDepot: Boolean(c.isDepot),
         priority: c.priority || (idx === 0 ? 'Normal' : ['Normal', 'High', 'Low'][idx % 3]),
-        skill: c.skill || (idx === 0 ? 'None' : idx % 5 === 1 ? 'Refrigerated' : idx % 5 === 2 ? 'Hazmat' : 'None')
+        skill: c.skill || (idx === 0 ? 'None' : idx % 5 === 1 ? 'Refrigerated' : idx % 5 === 2 ? 'Hazmat' : 'None'),
       }));
 
       // Sync the dataset dropdown if available
@@ -1443,9 +1486,11 @@ export class App {
   async bootstrapAnalysis(forceReload = false) {
     if (!this.el.analysisVersion) return;
     if (!this.state.token) {
-      this.clearAnalysisViews(this.lang === 'vn'
-        ? 'Cần đăng nhập để tải phần phân tích huấn luyện.'
-        : 'Login is required to load training analysis.');
+      this.clearAnalysisViews(
+        this.lang === 'vn'
+          ? 'Cần đăng nhập để tải phần phân tích huấn luyện.'
+          : 'Login is required to load training analysis.'
+      );
       return;
     }
 
@@ -1463,9 +1508,11 @@ export class App {
       }
 
       if (!selectedVersion) {
-        this.clearAnalysisViews(this.lang === 'vn'
-          ? 'Không tìm thấy nexus_demo.json trong logs/results.'
-          : 'No nexus_demo.json found in logs results folders.');
+        this.clearAnalysisViews(
+          this.lang === 'vn'
+            ? 'Không tìm thấy nexus_demo.json trong logs/results.'
+            : 'No nexus_demo.json found in logs results folders.'
+        );
         return;
       }
 
@@ -1503,9 +1550,11 @@ export class App {
       if (this.el.analysisLastUpdated) {
         this.el.analysisLastUpdated.textContent = `Version ${String(version).toUpperCase()} • updated ${stamp}`;
       }
-      this.setAnalysisStatus(this.lang === 'vn'
-        ? 'Phân tích sẵn sàng. Mở Deep Analysis để xem đầy đủ.'
-        : 'Analysis ready. Open Deep Analysis for full diagnostics.');
+      this.setAnalysisStatus(
+        this.lang === 'vn'
+          ? 'Phân tích sẵn sàng. Mở Deep Analysis để xem đầy đủ.'
+          : 'Analysis ready. Open Deep Analysis for full diagnostics.'
+      );
     } catch (error) {
       this.clearAnalysisViews(this.parseApiError(error));
       this.toast('Analysis Version Failed', this.parseApiError(error), 'error');
@@ -1538,14 +1587,25 @@ export class App {
     }
     if (this.el.analysisSummaryKpis) this.el.analysisSummaryKpis.innerHTML = '';
     if (this.el.analysisInstance) this.el.analysisInstance.innerHTML = '';
-    if (this.el.analysisConvergenceChart) this.el.analysisConvergenceChart.textContent = this.lang === 'vn' ? 'Chưa có dữ liệu hội tụ.' : 'No convergence data yet.';
-    if (this.el.analysisActivityChart) this.el.analysisActivityChart.textContent = this.state.analysisNoData || (this.lang === 'vn' ? 'Chưa có dữ liệu gantt job.' : 'No job timeline data yet.');
-    if (this.el.analysisPolicyGrid) this.el.analysisPolicyGrid.textContent = this.lang === 'vn' ? 'Chưa có policy matrix.' : 'No policy matrix available.';
+    if (this.el.analysisConvergenceChart)
+      this.el.analysisConvergenceChart.textContent =
+        this.lang === 'vn' ? 'Chưa có dữ liệu hội tụ.' : 'No convergence data yet.';
+    if (this.el.analysisActivityChart)
+      this.el.analysisActivityChart.textContent =
+        this.state.analysisNoData || (this.lang === 'vn' ? 'Chưa có dữ liệu gantt job.' : 'No job timeline data yet.');
+    if (this.el.analysisPolicyGrid)
+      this.el.analysisPolicyGrid.textContent =
+        this.lang === 'vn' ? 'Chưa có policy matrix.' : 'No policy matrix available.';
     if (this.el.analysisLeaderboardBody) this.el.analysisLeaderboardBody.innerHTML = '';
     if (this.el.analysisTransferBody) this.el.analysisTransferBody.innerHTML = '';
-    if (this.el.analysisModalMeta) this.el.analysisModalMeta.textContent = this.lang === 'vn' ? 'Chưa có metadata.' : 'No metadata available.';
-    if (this.el.analysisModalConvergence) this.el.analysisModalConvergence.textContent = this.lang === 'vn' ? 'Chưa có lịch sử hội tụ.' : 'No convergence history.';
-    if (this.el.analysisModalTransferPlot) this.el.analysisModalTransferPlot.textContent = this.lang === 'vn' ? 'Chưa có dữ liệu transfer.' : 'No transfer data.';
+    if (this.el.analysisModalMeta)
+      this.el.analysisModalMeta.textContent = this.lang === 'vn' ? 'Chưa có metadata.' : 'No metadata available.';
+    if (this.el.analysisModalConvergence)
+      this.el.analysisModalConvergence.textContent =
+        this.lang === 'vn' ? 'Chưa có lịch sử hội tụ.' : 'No convergence history.';
+    if (this.el.analysisModalTransferPlot)
+      this.el.analysisModalTransferPlot.textContent =
+        this.lang === 'vn' ? 'Chưa có dữ liệu transfer.' : 'No transfer data.';
     if (this.el.analysisModalTransferBody) this.el.analysisModalTransferBody.innerHTML = '';
   }
 
@@ -1568,13 +1628,21 @@ export class App {
     this.renderAnalysisInstanceOptions(availableInstances);
 
     const selectedInstance = this.state.analysisInstance || 'ALL';
-    const filteredInstances = selectedInstance === 'ALL' ? instances : instances.filter(([name]) => name === selectedInstance);
-    const preferred = selectedInstance === 'ALL'
-      ? pairMap.get(String(data?.meta?.instance || '')) || filteredInstances[0]?.[1] || null
-      : pairMap.get(selectedInstance) || null;
+    const filteredInstances =
+      selectedInstance === 'ALL' ? instances : instances.filter(([name]) => name === selectedInstance);
+    const preferred =
+      selectedInstance === 'ALL'
+        ? pairMap.get(String(data?.meta?.instance || '')) || filteredInstances[0]?.[1] || null
+        : pairMap.get(selectedInstance) || null;
 
     this.renderAnalysisKpis(filteredInstances, preferred, selectedInstance);
-    this.renderConvergence(this.el.analysisConvergenceChart, data?.alns?.history, data?.rl_alns?.history, selectedInstance, String(data?.meta?.instance || ''));
+    this.renderConvergence(
+      this.el.analysisConvergenceChart,
+      data?.alns?.history,
+      data?.rl_alns?.history,
+      selectedInstance,
+      String(data?.meta?.instance || '')
+    );
     this.renderPolicyHeatmap(data?.op_matrix, data?.destroy_ops, data?.repair_ops);
     this.renderLeaderboard(summaryRows, selectedInstance);
     this.renderTransferRows(transferRows, selectedInstance);
@@ -1617,7 +1685,9 @@ export class App {
     const map = new Map();
     rows.forEach((row) => {
       const instance = String(row?.instance || '').trim();
-      const algo = String(row?.algo || '').trim().toUpperCase();
+      const algo = String(row?.algo || '')
+        .trim()
+        .toUpperCase();
       if (!instance || !algo) return;
       if (!map.has(instance)) map.set(instance, {});
       const entry = map.get(instance);
@@ -1643,29 +1713,31 @@ export class App {
       .filter((value) => value !== null);
     const avgSpeedup = speedups.length ? speedups.reduce((sum, value) => sum + value, 0) / speedups.length : 0;
     const stabilityWins = valid.filter(([, pair]) => Number(pair.ddqn.td_cv) < Number(pair.alns.td_cv)).length;
-    const preferredGapDelta = preferredPair ? Number(preferredPair.ddqn.gap_pct) - Number(preferredPair.alns.gap_pct) : 0;
+    const preferredGapDelta = preferredPair
+      ? Number(preferredPair.ddqn.gap_pct) - Number(preferredPair.alns.gap_pct)
+      : 0;
 
     const cards = [
       {
         label: `Gap Delta (${preferredInstance || 'N/A'})`,
         value: `${preferredGapDelta >= 0 ? '+' : ''}${preferredGapDelta.toFixed(2)}%`,
-        note: 'Negative means DDQN is closer to BKS'
+        note: 'Negative means DDQN is closer to BKS',
       },
       {
         label: 'DDQN Gap Wins',
         value: `${gapWins}/${total || 0}`,
-        note: 'Instances where DDQN gap < ALNS gap'
+        note: 'Instances where DDQN gap < ALNS gap',
       },
       {
         label: 'Average Speedup',
         value: `${avgSpeedup.toFixed(1)}%`,
-        note: 'Runtime reduction of DDQN vs ALNS'
+        note: 'Runtime reduction of DDQN vs ALNS',
       },
       {
         label: 'Stability Wins',
         value: `${stabilityWins}/${total || 0}`,
-        note: 'Instances where DDQN TD_CV is lower'
-      }
+        note: 'Instances where DDQN TD_CV is lower',
+      },
     ];
 
     this.el.analysisSummaryKpis.innerHTML = cards
@@ -1683,8 +1755,12 @@ export class App {
 
   renderConvergence(container, alnsHistory, ddqnHistory, selectedInstance = 'ALL', historyInstance = '') {
     if (!container) return;
-    const a = Array.isArray(alnsHistory) ? alnsHistory.map((value) => Number(value)).filter((value) => Number.isFinite(value)) : [];
-    const b = Array.isArray(ddqnHistory) ? ddqnHistory.map((value) => Number(value)).filter((value) => Number.isFinite(value)) : [];
+    const a = Array.isArray(alnsHistory)
+      ? alnsHistory.map((value) => Number(value)).filter((value) => Number.isFinite(value))
+      : [];
+    const b = Array.isArray(ddqnHistory)
+      ? ddqnHistory.map((value) => Number(value)).filter((value) => Number.isFinite(value))
+      : [];
     if (a.length < 2 && b.length < 2) {
       container.textContent = 'No convergence data yet.';
       return;
@@ -1737,7 +1813,9 @@ export class App {
     const failed = Array.isArray(data?.failed) ? data.failed.map((value) => Number(value) || 0) : [];
 
     if (!labels.length || (!submitted.length && !completed.length && !failed.length)) {
-      container.textContent = this.state.analysisNoData || (this.lang === 'vn' ? 'Chưa có dữ liệu hoạt động theo giờ.' : 'No activity data yet.');
+      container.textContent =
+        this.state.analysisNoData ||
+        (this.lang === 'vn' ? 'Chưa có dữ liệu hoạt động theo giờ.' : 'No activity data yet.');
       return;
     }
 
@@ -1749,13 +1827,14 @@ export class App {
     const bandWidth = (width - paddingX * 2) / Math.max(labels.length, 1);
     const barWidth = Math.min(14, bandWidth / 4);
 
-    const bars = labels.map((label, index) => {
-      const baseX = paddingX + index * bandWidth + bandWidth / 2;
-      const submittedHeight = ((submitted[index] || 0) / maxCount) * (height - paddingY * 2 - 24);
-      const completedHeight = ((completed[index] || 0) / maxCount) * (height - paddingY * 2 - 24);
-      const failedHeight = ((failed[index] || 0) / maxCount) * (height - paddingY * 2 - 24);
-      const yBase = height - paddingY - 18;
-      return `
+    const bars = labels
+      .map((label, index) => {
+        const baseX = paddingX + index * bandWidth + bandWidth / 2;
+        const submittedHeight = ((submitted[index] || 0) / maxCount) * (height - paddingY * 2 - 24);
+        const completedHeight = ((completed[index] || 0) / maxCount) * (height - paddingY * 2 - 24);
+        const failedHeight = ((failed[index] || 0) / maxCount) * (height - paddingY * 2 - 24);
+        const yBase = height - paddingY - 18;
+        return `
         <g>
           <rect x="${(baseX - barWidth * 1.8).toFixed(2)}" y="${(yBase - submittedHeight).toFixed(2)}" width="${barWidth.toFixed(2)}" height="${Math.max(submittedHeight, 1).toFixed(2)}" rx="3" fill="#2563eb" />
           <rect x="${baseX.toFixed(2)}" y="${(yBase - completedHeight).toFixed(2)}" width="${barWidth.toFixed(2)}" height="${Math.max(completedHeight, 1).toFixed(2)}" rx="3" fill="#0b8a65" />
@@ -1763,15 +1842,17 @@ export class App {
           <text x="${baseX.toFixed(2)}" y="${(height - 8).toFixed(2)}" text-anchor="middle" font-size="10" fill="#54708a">${this.escapeHtml(String(label))}</text>
         </g>
       `;
-    }).join('');
+      })
+      .join('');
 
     const totalSubmitted = submitted.reduce((sum, value) => sum + value, 0);
     const totalCompleted = completed.reduce((sum, value) => sum + value, 0);
     const totalFailed = failed.reduce((sum, value) => sum + value, 0);
     const rangeLabel = `${String(data?.hours || labels.length)}h ${this.lang === 'vn' ? 'gần nhất' : 'latest'}`;
-    const seriesText = this.lang === 'vn'
-      ? { submitted: 'Đã gửi', completed: 'Hoàn thành', failed: 'Lỗi' }
-      : { submitted: 'Submitted', completed: 'Completed', failed: 'Failed' };
+    const seriesText =
+      this.lang === 'vn'
+        ? { submitted: 'Đã gửi', completed: 'Hoàn thành', failed: 'Lỗi' }
+        : { submitted: 'Submitted', completed: 'Completed', failed: 'Failed' };
 
     container.innerHTML = `
       <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Hourly activity chart">
@@ -1830,9 +1911,10 @@ export class App {
     if (!this.el.analysisLeaderboardBody) return;
     this.el.analysisLeaderboardBody.innerHTML = '';
 
-    const filtered = selectedInstance === 'ALL'
-      ? summaryRows
-      : summaryRows.filter((r) => String(r?.instance || '') === selectedInstance);
+    const filtered =
+      selectedInstance === 'ALL'
+        ? summaryRows
+        : summaryRows.filter((r) => String(r?.instance || '') === selectedInstance);
 
     // Group by instance, then sort each group by gap_pct ascending
     const byInstance = new Map();
@@ -1845,7 +1927,7 @@ export class App {
 
     const ALGO_COLORS = {
       'DDQN-ALNS': '#059669',
-      'ALNS': '#2563eb',
+      ALNS: '#2563eb',
       'OR-TOOLS': '#7c3aed',
       'HYBRID-FIXED': '#d97706',
       'HYBRID-RULE': '#ea6c00',
@@ -1886,8 +1968,8 @@ export class App {
     if (!this.el.analysisTransferBody) return;
     this.el.analysisTransferBody.innerHTML = '';
 
-    const filtered = rows.filter((row) =>
-      selectedInstance === 'ALL' || String(row?.instance || '') === selectedInstance
+    const filtered = rows.filter(
+      (row) => selectedInstance === 'ALL' || String(row?.instance || '') === selectedInstance
     );
 
     filtered.forEach((row) => {
@@ -1957,11 +2039,20 @@ export class App {
         ['Version', meta.version || source.version],
       ];
       this.el.analysisModalMeta.innerHTML = entries
-        .map(([label, value]) => `<div class="analysis-meta-item"><strong>${label}:</strong> ${this.escapeHtml(String(value ?? '-'))}</div>`)
+        .map(
+          ([label, value]) =>
+            `<div class="analysis-meta-item"><strong>${label}:</strong> ${this.escapeHtml(String(value ?? '-'))}</div>`
+        )
         .join('');
     }
 
-    this.renderConvergence(this.el.analysisModalConvergence, data?.alns?.history, data?.rl_alns?.history, selectedInstance, String(meta?.instance || ''));
+    this.renderConvergence(
+      this.el.analysisModalConvergence,
+      data?.alns?.history,
+      data?.rl_alns?.history,
+      selectedInstance,
+      String(meta?.instance || '')
+    );
     this.renderTransferPlot(data?.transfer, data?.summary, selectedInstance);
     this.renderModalTransferTable(data?.transfer, selectedInstance);
   }
@@ -2264,7 +2355,7 @@ export class App {
 
     if (field === 'skill') {
       const allowed = ['None', 'Refrigerated', 'Hazmat'];
-      const matched = allowed.find(a => a.toLowerCase() === nextValue.toLowerCase()) || 'None';
+      const matched = allowed.find((a) => a.toLowerCase() === nextValue.toLowerCase()) || 'None';
       customer.skill = matched;
       this.renderCustomers();
       this.setStatus('Customer skill requirement updated.', 'ok');
@@ -2319,7 +2410,7 @@ export class App {
   }
 
   tabLabel(tabName) {
-    return ({ overview: 'Overview', maps: 'Split Map', results: 'Results', archive: 'Archive' })[tabName] ?? tabName;
+    return { overview: 'Overview', maps: 'Split Map', results: 'Results', archive: 'Archive' }[tabName] ?? tabName;
   }
 
   async request(path, options = {}) {
@@ -2386,7 +2477,7 @@ export class App {
 
       await this.request('/auth/register', {
         method: 'POST',
-        body: JSON.stringify({ email, password, otp })
+        body: JSON.stringify({ email, password, otp }),
       });
       this.toast('Registration Successful', 'Account created successfully.', 'ok');
       this.el.loginEmail.value = email;
@@ -2422,9 +2513,7 @@ export class App {
       const data = await response.json().catch(() => ({}));
       const safe = data && typeof data === 'object' ? data : {};
       const firebaseEnabled = 'firebase_enabled' in safe ? Boolean(safe.firebase_enabled) : true;
-      const demoMode = 'demo_mode' in safe
-        ? Boolean(safe.demo_mode)
-        : !firebaseEnabled;
+      const demoMode = 'demo_mode' in safe ? Boolean(safe.demo_mode) : !firebaseEnabled;
       this.backendMode.firebase_enabled = firebaseEnabled;
       this.backendMode.demo_mode = demoMode;
       this.backendMode.torch = safe && typeof safe.torch === 'object' ? safe.torch : null;
@@ -2476,14 +2565,16 @@ export class App {
       this.el.btnLogin.textContent = APP_COPY[this.lang]?.loginButton || 'Login';
     }
     if (this.el.authHint && localAuthDisabled && !this.state.unlocked) {
-      this.el.authHint.textContent = this.lang === 'vn'
-        ? 'Đăng nhập bằng email đang tắt vì Firebase chưa được cấu hình trên máy này. Dùng Demo để chạy solver.'
-        : 'Email login is disabled because Firebase is not configured on this machine. Use Demo to run the solver.';
+      this.el.authHint.textContent =
+        this.lang === 'vn'
+          ? 'Đăng nhập bằng email đang tắt vì Firebase chưa được cấu hình trên máy này. Dùng Demo để chạy solver.'
+          : 'Email login is disabled because Firebase is not configured on this machine. Use Demo to run the solver.';
       this.el.authHint.style.display = 'block';
     }
     if (this.el.guestHint) {
       if (demo === true) {
-        this.el.guestHint.textContent = 'Local demo mode is active. Real email/password login needs Firebase credentials.';
+        this.el.guestHint.textContent =
+          'Local demo mode is active. Real email/password login needs Firebase credentials.';
       } else if (demo === null) {
         this.el.guestHint.textContent = 'Backend reachability unknown - guest mode kept available as fallback.';
       } else if (fb === true) {
@@ -2584,16 +2675,19 @@ export class App {
       this.updateConnectionPill();
       this.updateSessionInfo();
       this.toast('Login Successful', 'Authenticated via Firebase.', 'ok');
-
     } catch (err) {
-      console.error("[Login Failed]:", err);
+      console.error('[Login Failed]:', err);
 
       if (this.el.authHint) {
-        let errorMsg = "Invalid credentials or server error.";
-        if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
-          errorMsg = "Incorrect email or password. Please try again.";
+        let errorMsg = 'Invalid credentials or server error.';
+        if (
+          err.code === 'auth/invalid-credential' ||
+          err.code === 'auth/user-not-found' ||
+          err.code === 'auth/wrong-password'
+        ) {
+          errorMsg = 'Incorrect email or password. Please try again.';
         } else if (err.code === 'auth/too-many-requests') {
-          errorMsg = "Account temporarily locked due to many failed attempts.";
+          errorMsg = 'Account temporarily locked due to many failed attempts.';
         } else if (err.message) {
           errorMsg = err.message;
         }
@@ -2624,12 +2718,16 @@ export class App {
 
       const res = await this.request('/auth/forgot-password/request', {
         method: 'POST',
-        body: JSON.stringify({ email })
+        body: JSON.stringify({ email }),
       });
 
       this.el.forgotEmail.value = '';
       this.el.loginEmail.value = email;
-      this.toast('Temporary Password Sent', `Delivery method: ${res.delivery}. Check your email for the temporary password.`, 'ok');
+      this.toast(
+        'Temporary Password Sent',
+        `Delivery method: ${res.delivery}. Check your email for the temporary password.`,
+        'ok'
+      );
       this.showAuthView('login');
     } catch (error) {
       const message = this.parseApiError(error);
@@ -2664,7 +2762,7 @@ export class App {
       if (this.state.mustChangePassword) {
         await this.request('/auth/password/change-required', {
           method: 'POST',
-          body: JSON.stringify({ new_password: password })
+          body: JSON.stringify({ new_password: password }),
         });
 
         const loginEmail = this.state.email;
@@ -2688,7 +2786,7 @@ export class App {
 
         await this.request('/auth/forgot-password/reset', {
           method: 'POST',
-          body: JSON.stringify({ token, new_password: password })
+          body: JSON.stringify({ token, new_password: password }),
         });
 
         this.toast('Password Updated', 'You can now log in with your new password.', 'ok');
@@ -2823,14 +2921,14 @@ export class App {
 
   async saveAdminRole(email) {
     if (!email || !this.el.adminUserRows) return;
-    const select = Array.from(
-      this.el.adminUserRows.querySelectorAll('select.admin-role-select')
-    ).find((node) => node.dataset.email === email);
+    const select = Array.from(this.el.adminUserRows.querySelectorAll('select.admin-role-select')).find(
+      (node) => node.dataset.email === email
+    );
     if (!select) return;
     try {
       await this.request(`/admin/users/${encodeURIComponent(email)}/role`, {
         method: 'PATCH',
-        body: JSON.stringify({ role: select.value })
+        body: JSON.stringify({ role: select.value }),
       });
       this.toast('Role Updated', `${email} -> ${select.value}`, 'ok');
     } catch (error) {
@@ -2885,7 +2983,7 @@ export class App {
       demand: 10,
       ready: 0,
       due: 1000,
-      service: 10
+      service: 10,
     });
     this.el.addressInput.value = '';
     this.state.selectedSuggest = null;
@@ -2939,27 +3037,27 @@ export class App {
         this.setStatus('Uploading and parsing CSV on the server...', 'info');
         const formData = new FormData();
         formData.append('file', file);
-        
+
         const headers = {};
         if (this.state.token) headers.Authorization = `Bearer ${this.state.token}`;
-        
+
         const response = await fetch(`${API_BASE}/solomon/import-csv`, {
           method: 'POST',
           headers,
-          body: formData
+          body: formData,
         });
-        
+
         if (!response.ok) {
           const errData = await response.json().catch(() => null);
           throw new Error(errData?.detail || `HTTP ${response.status}`);
         }
-        
+
         const data = await response.json();
         const incoming = Array.isArray(data?.customers) ? data.customers : [];
         if (!incoming.length) {
           throw new Error('No valid customer rows found in uploaded CSV.');
         }
-        
+
         incoming.forEach((c) => {
           this.pushCustomer({
             name: c.name,
@@ -2972,10 +3070,10 @@ export class App {
             service: c.service,
             isDepot: c.isDepot,
             priority: c.priority || 'Normal',
-            skill: c.skill || 'None'
+            skill: c.skill || 'None',
           });
         });
-        
+
         this.setStatus(`Successfully imported ${incoming.length} customers from CSV file.`, 'ok');
         this.toast('Import Successful', `Loaded ${incoming.length} rows from CSV.`, 'ok');
       } else {
@@ -3025,9 +3123,27 @@ export class App {
       lat: this.findHeaderIndex(headerCells, ['lat', 'latitude', 'y', 'geo lat']),
       lng: this.findHeaderIndex(headerCells, ['lng', 'lon', 'long', 'longitude', 'x', 'geo lng', 'geo lon']),
       demand: this.findHeaderIndex(headerCells, ['demand', 'qty', 'quantity', 'load', 'order size', 'weight']),
-      ready: this.findHeaderIndex(headerCells, ['ready', 'readytime', 'open', 'tw start', 'twstart', 'earliest', 'start']),
-      due: this.findHeaderIndex(headerCells, ['due', 'duedate', 'duetime', 'close', 'tw end', 'twend', 'latest', 'end', 'deadline']),
-      service: this.findHeaderIndex(headerCells, ['service', 'servicetime', 'svc', 'dwell', 'stoptime'])
+      ready: this.findHeaderIndex(headerCells, [
+        'ready',
+        'readytime',
+        'open',
+        'tw start',
+        'twstart',
+        'earliest',
+        'start',
+      ]),
+      due: this.findHeaderIndex(headerCells, [
+        'due',
+        'duedate',
+        'duetime',
+        'close',
+        'tw end',
+        'twend',
+        'latest',
+        'end',
+        'deadline',
+      ]),
+      service: this.findHeaderIndex(headerCells, ['service', 'servicetime', 'svc', 'dwell', 'stoptime']),
     };
 
     const matchedCount = Object.values(map).filter((index) => index >= 0).length;
@@ -3053,7 +3169,7 @@ export class App {
       demandRaw: base[4] || '10',
       readyRaw: base[5] || '',
       dueRaw: base[6] || '',
-      serviceRaw: base[7] || ''
+      serviceRaw: base[7] || '',
     };
 
     const latA = Number(candidate.latRaw);
@@ -3069,7 +3185,7 @@ export class App {
       demandRaw: base[5] || '10',
       readyRaw: base[6] || '',
       dueRaw: base[7] || '',
-      serviceRaw: base[8] || ''
+      serviceRaw: base[8] || '',
     };
     const latB = Number(candidateWithId.latRaw);
     const lngB = Number(candidateWithId.lngRaw);
@@ -3079,7 +3195,9 @@ export class App {
   }
 
   isDepotLabel(value) {
-    const normalized = String(value || '').trim().toLowerCase();
+    const normalized = String(value || '')
+      .trim()
+      .toLowerCase();
     if (!normalized) return false;
     return ['depot', 'warehouse', 'hub', 'kho'].some((token) => normalized === token || normalized.includes(token));
   }
@@ -3139,11 +3257,7 @@ export class App {
       const isDepot =
         this.isDepotLabel(name) ||
         this.isDepotLabel(address) ||
-        (
-          this.state.customers.length === 0 &&
-          newItems.length === 0 &&
-          numericDemand === 0
-        );
+        (this.state.customers.length === 0 && newItems.length === 0 && numericDemand === 0);
 
       const readyNum = Number(readyRaw);
       const dueNum = Number(dueRaw);
@@ -3159,11 +3273,11 @@ export class App {
         address,
         lat,
         lng,
-        demand: isDepot ? 0 : (Number.isFinite(parsedDemand) ? parsedDemand : 10),
+        demand: isDepot ? 0 : Number.isFinite(parsedDemand) ? parsedDemand : 10,
         ready,
         due,
         service,
-        isDepot
+        isDepot,
       });
     }
     return newItems;
@@ -3181,7 +3295,10 @@ export class App {
 
   async tryReverseGeocode(lat, lng) {
     try {
-      const result = await this.request(`/reverse-geocode?lat=${encodeURIComponent(lat)}&lng=${encodeURIComponent(lng)}`, { method: 'GET' });
+      const result = await this.request(
+        `/reverse-geocode?lat=${encodeURIComponent(lat)}&lng=${encodeURIComponent(lng)}`,
+        { method: 'GET' }
+      );
       const shortAddress = result?.short_address?.trim();
       const fullAddress = result?.address?.trim();
       return shortAddress || fullAddress || '';
@@ -3191,7 +3308,9 @@ export class App {
   }
 
   async addMapPoint(latlng) {
-    const address = (await this.tryReverseGeocode(latlng.lat, latlng.lng)) || `Lat ${latlng.lat.toFixed(5)}, Lng ${latlng.lng.toFixed(5)}`;
+    const address =
+      (await this.tryReverseGeocode(latlng.lat, latlng.lng)) ||
+      `Lat ${latlng.lat.toFixed(5)}, Lng ${latlng.lng.toFixed(5)}`;
     const isFirst = this.state.customers.length === 0;
     this.pushCustomer({
       name: isFirst ? 'Depot' : `Pin-${this.state.customers.length}`,
@@ -3202,7 +3321,7 @@ export class App {
       ready: 0,
       due: 1000,
       service: isFirst ? 0 : 10,
-      isDepot: isFirst
+      isDepot: isFirst,
     });
     this.setStatus('Dropped a new delivery pin.', 'ok');
     this.toast('Pin Added', 'Point was added directly on the map.', 'ok');
@@ -3220,8 +3339,10 @@ export class App {
   }
 
   updateDraftCoordCells() {
-    if (this.tableInputRefs.latCell) this.tableInputRefs.latCell.textContent = this.formatDraftCoord(this.tableInputDraft.lat);
-    if (this.tableInputRefs.lngCell) this.tableInputRefs.lngCell.textContent = this.formatDraftCoord(this.tableInputDraft.lng);
+    if (this.tableInputRefs.latCell)
+      this.tableInputRefs.latCell.textContent = this.formatDraftCoord(this.tableInputDraft.lat);
+    if (this.tableInputRefs.lngCell)
+      this.tableInputRefs.lngCell.textContent = this.formatDraftCoord(this.tableInputDraft.lng);
   }
 
   async resolveTableInputAddress() {
@@ -3466,7 +3587,10 @@ export class App {
       input.addEventListener('keydown', (event) => {
         if (field === 'address' && event.key === 'ArrowDown' && this.tableAddressSuggest.length > 0) {
           event.preventDefault();
-          this.tableAddressSuggestActive = Math.min(this.tableAddressSuggest.length - 1, this.tableAddressSuggestActive + 1);
+          this.tableAddressSuggestActive = Math.min(
+            this.tableAddressSuggest.length - 1,
+            this.tableAddressSuggestActive + 1
+          );
           this.renderTableAddressSuggest();
           return;
         }
@@ -3556,7 +3680,7 @@ export class App {
     const ready = Number.isFinite(Number(item.ready)) ? Number(item.ready) : 0;
     let due = Number.isFinite(Number(item.due)) ? Number(item.due) : 1000;
     if (due <= ready) due = ready + 1;
-    const service = Number.isFinite(Number(item.service)) ? Number(item.service) : (isDepot ? 0 : 10);
+    const service = Number.isFinite(Number(item.service)) ? Number(item.service) : isDepot ? 0 : 10;
     this.state.customers.push({ ...item, id, isDepot, ready, due, service });
     this.selectedCustomerIds.clear();
     this.renderCustomers();
@@ -3600,7 +3724,7 @@ export class App {
         { field: 'due', value: fmtTime(c.due, 1000), editable: true },
         { field: 'service', value: fmtTime(c.service, c.isDepot ? 0 : 10), editable: true },
         { field: 'priority', value: c.priority || 'Normal', editable: true },
-        { field: 'skill', value: c.skill || 'None', editable: true }
+        { field: 'skill', value: c.skill || 'None', editable: true },
       ];
 
       values.forEach(({ field, value, editable }) => {
@@ -3630,11 +3754,14 @@ export class App {
           badge.className = 'priority-badge';
           badge.textContent = value;
           if (value === 'High') {
-            badge.style = 'background: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid rgba(239,68,68,0.2); font-weight: 700; padding: 2px 6px; border-radius: 4px; font-size: 10px; display: inline-block; text-align: center; width: 55px;';
+            badge.style =
+              'background: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid rgba(239,68,68,0.2); font-weight: 700; padding: 2px 6px; border-radius: 4px; font-size: 10px; display: inline-block; text-align: center; width: 55px;';
           } else if (value === 'Low') {
-            badge.style = 'background: rgba(107, 114, 128, 0.1); color: var(--text-muted); border: 1px solid rgba(107,114,128,0.2); font-weight: 500; padding: 2px 6px; border-radius: 4px; font-size: 10px; display: inline-block; text-align: center; width: 55px;';
+            badge.style =
+              'background: rgba(107, 114, 128, 0.1); color: var(--text-muted); border: 1px solid rgba(107,114,128,0.2); font-weight: 500; padding: 2px 6px; border-radius: 4px; font-size: 10px; display: inline-block; text-align: center; width: 55px;';
           } else {
-            badge.style = 'background: rgba(59, 130, 246, 0.1); color: var(--primary); border: 1px solid rgba(59,130,246,0.2); font-weight: 600; padding: 2px 6px; border-radius: 4px; font-size: 10px; display: inline-block; text-align: center; width: 55px;';
+            badge.style =
+              'background: rgba(59, 130, 246, 0.1); color: var(--primary); border: 1px solid rgba(59,130,246,0.2); font-weight: 600; padding: 2px 6px; border-radius: 4px; font-size: 10px; display: inline-block; text-align: center; width: 55px;';
           }
           td.appendChild(badge);
         } else if (field === 'skill' && !c.isDepot) {
@@ -3642,7 +3769,8 @@ export class App {
           const badge = document.createElement('span');
           badge.textContent = value;
           if (value !== 'None') {
-            badge.style = 'background: rgba(16, 185, 129, 0.1); color: var(--success); border: 1px solid rgba(16,185,129,0.2); font-weight: 600; padding: 2px 6px; border-radius: 4px; font-size: 10px; display: inline-block;';
+            badge.style =
+              'background: rgba(16, 185, 129, 0.1); color: var(--success); border: 1px solid rgba(16,185,129,0.2); font-weight: 600; padding: 2px 6px; border-radius: 4px; font-size: 10px; display: inline-block;';
           } else {
             badge.style = 'color: var(--text-muted); font-size: 10px;';
           }
@@ -3658,7 +3786,6 @@ export class App {
     if (this.tableInputVisible) this.renderTableInputRow();
     this.showEmptyStates();
   }
-
 
   showEmptyStates() {
     const hasCustomers = this.state.customers.length > 0;
@@ -3696,14 +3823,14 @@ export class App {
       const payload = {
         mode: this.state.mode,
         fleet: { vehicles: this.state.vehicles, capacity: this.state.capacity },
-        customers: this.state.customers
+        customers: this.state.customers,
       };
       this.state.lastRunFleet = { ...payload.fleet };
 
       const submit = await this.request('/jobs', {
         method: 'POST',
         body: JSON.stringify(payload),
-        signal: this.runSession.abortController.signal
+        signal: this.runSession.abortController.signal,
       });
 
       if (typeof window.vrptwTrack === 'function') {
@@ -3719,7 +3846,7 @@ export class App {
         mode: this.state.mode,
         fleet: payload.fleet,
         customerCount: this.state.customers.length,
-        customers: this.state.customers
+        customers: this.state.customers,
       });
 
       const pollLimitMs = this.estimatePollTimeoutMs(this.state.customers.length);
@@ -3737,7 +3864,12 @@ export class App {
         try {
           this.setStatus('Backend unavailable — running client-side solver...', 'warn');
           this.toast('Local Solver', 'Backend is offline. Running in-browser ALNS solver.', 'ok');
-          const demoResult = solveDemo(this.state.customers, this.state.vehicles, this.state.capacity, this.state.fleet);
+          const demoResult = solveDemo(
+            this.state.customers,
+            this.state.vehicles,
+            this.state.capacity,
+            this.state.fleet
+          );
           this.state.lastResult = demoResult;
           this.paintResult();
           await this.completeLoading();
@@ -3781,15 +3913,15 @@ export class App {
       if (this.runSession.cancelled || sessionToken !== this.runSession.token) return;
       const data = await this.request(`/jobs/${jobId}`, {
         method: 'GET',
-        signal: this.runSession.abortController?.signal
+        signal: this.runSession.abortController?.signal,
       });
       if (this.runSession.cancelled || sessionToken !== this.runSession.token) return;
-      
+
       const phase = data?.debug?.phase || data.status;
       this.loadingAnim.backendPhase = phase;
 
       const events = data?.debug?.events || [];
-      events.forEach(evt => {
+      events.forEach((evt) => {
         if (evt && evt.message) {
           this.addConsoleLog(evt.message);
         }
@@ -3850,7 +3982,7 @@ export class App {
       hybrid_ddqn: '#7c3aed',
       hybrid_ddqn_transfer_rc1: '#0284c7',
       hybrid_ddqn_transfer_dr: '#4f46e5',
-      hybrid: '#0b8a65'
+      hybrid: '#0b8a65',
     };
 
     for (const algoName in result) {
@@ -3874,7 +4006,7 @@ export class App {
         hybrid_fixed: 'Hybrid Fixed',
         hybrid_ddqn: 'Hybrid DDQN (Random)',
         hybrid_ddqn_transfer_rc1: 'Hybrid DDQN (RC1)',
-        hybrid_ddqn_transfer_dr: 'Hybrid DDQN (DR)'
+        hybrid_ddqn_transfer_dr: 'Hybrid DDQN (DR)',
       };
 
       let html = '';
@@ -3900,11 +4032,14 @@ export class App {
     const initialView = result.ddqn ? 'ddqn' : Object.keys(result)[0];
     this.mapController.switchView(initialView);
 
-    this.mapController.fetchRoadGeometries(result).then(() => {
-      this.setStatus('Road geometry loaded — routes now follow actual roads.', 'ok');
-    }).catch((err) => {
-      console.warn('OSRM road geometry fetch failed, keeping straight-line routes:', err);
-    });
+    this.mapController
+      .fetchRoadGeometries(result)
+      .then(() => {
+        this.setStatus('Road geometry loaded — routes now follow actual roads.', 'ok');
+      })
+      .catch((err) => {
+        console.warn('OSRM road geometry fetch failed, keeping straight-line routes:', err);
+      });
 
     let maxTime = 120;
     const findMax = (algo) => {
@@ -3948,7 +4083,7 @@ export class App {
       hybrid_fixed: 'Hybrid Fixed',
       hybrid_ddqn: 'Hybrid DDQN (Random)',
       hybrid_ddqn_transfer_rc1: 'Hybrid DDQN (RC1)',
-      hybrid_ddqn_transfer_dr: 'Hybrid DDQN (DR)'
+      hybrid_ddqn_transfer_dr: 'Hybrid DDQN (DR)',
     };
     const testLabel = labels[testAlgo] || testAlgo;
 
@@ -4024,7 +4159,7 @@ export class App {
       alns: controlResult.runtime_sec,
       unit: 's',
       decimals: 2,
-      lowerIsBetter: true
+      lowerIsBetter: true,
     });
 
     this.updateCompareMetric({
@@ -4038,7 +4173,7 @@ export class App {
       alns: controlResult.total_distance_km,
       unit: 'km',
       decimals: 2,
-      lowerIsBetter: true
+      lowerIsBetter: true,
     });
 
     this.updateCompareMetric({
@@ -4052,7 +4187,7 @@ export class App {
       alns: controlResult.vehicles_used,
       unit: '',
       decimals: 0,
-      lowerIsBetter: true
+      lowerIsBetter: true,
     });
 
     this.updateLoadInsight(testResult, controlResult, routeCapacity);
@@ -4106,14 +4241,11 @@ export class App {
       this.el.metricLoadAlnsState.textContent = 'No data';
     }
 
-    [
-      this.el.metricRuntimeCard,
-      this.el.metricDistanceCard,
-      this.el.metricVehiclesCard,
-      this.el.metricLoadCard,
-    ].forEach((card) => {
-      if (card) card.dataset.winner = 'tie';
-    });
+    [this.el.metricRuntimeCard, this.el.metricDistanceCard, this.el.metricVehiclesCard, this.el.metricLoadCard].forEach(
+      (card) => {
+        if (card) card.dataset.winner = 'tie';
+      }
+    );
 
     this.showEmptyStates();
   }
@@ -4178,7 +4310,19 @@ export class App {
     }
   }
 
-  updateCompareMetric({ card, ddqnNode, alnsNode, deltaNode, barDdqn, barAlns, ddqn, alns, unit, decimals, lowerIsBetter }) {
+  updateCompareMetric({
+    card,
+    ddqnNode,
+    alnsNode,
+    deltaNode,
+    barDdqn,
+    barAlns,
+    ddqn,
+    alns,
+    unit,
+    decimals,
+    lowerIsBetter,
+  }) {
     const ddqnValue = Number(ddqn);
     const alnsValue = Number(alns);
     const tieThreshold = 1e-9;
@@ -4228,7 +4372,6 @@ export class App {
     const fixed = Number(value).toFixed(decimals);
     return `${fixed}${unit}`;
   }
-
 
   clearConsoleLog() {
     if (this.el.loadingConsole) {
@@ -4292,7 +4435,7 @@ export class App {
     if (this.el.loadingCard) {
       this.el.loadingCard.style.setProperty('--truck-speed', Number(normalizedSpeed || 0).toFixed(3));
       this.el.loadingCard.dataset.algo = algo;
-      
+
       const activePhase = this.loadingAnim.backendPhase || 'queued';
       this.el.loadingCard.setAttribute('data-phase', activePhase);
 
@@ -4342,11 +4485,11 @@ export class App {
     this.el.loadingLauncher?.classList.add('hidden');
 
     const phasesConfig = {
-      'queued': { label: 'Queueing job...', until: 15, baseSpeed: 0.08, algo: 'idle' },
-      'processing': { label: 'Worker picked up the job...', until: 30, baseSpeed: 0.06, algo: 'idle' },
-      'matrix': { label: 'Building distance matrix...', until: 50, baseSpeed: 0.05, algo: 'idle' },
-      'solving': { label: 'Running solvers in parallel...', until: 95, baseSpeed: 0.012, algo: 'alns' },
-      'done': { label: 'Optimization complete!', until: 100, baseSpeed: 0.4, algo: 'done' }
+      queued: { label: 'Queueing job...', until: 15, baseSpeed: 0.08, algo: 'idle' },
+      processing: { label: 'Worker picked up the job...', until: 30, baseSpeed: 0.06, algo: 'idle' },
+      matrix: { label: 'Building distance matrix...', until: 50, baseSpeed: 0.05, algo: 'idle' },
+      solving: { label: 'Running solvers in parallel...', until: 95, baseSpeed: 0.012, algo: 'alns' },
+      done: { label: 'Optimization complete!', until: 100, baseSpeed: 0.4, algo: 'done' },
     };
 
     const tick = (now) => {
@@ -4354,13 +4497,13 @@ export class App {
 
       const phaseKey = this.loadingAnim.backendPhase || 'queued';
       const config = phasesConfig[phaseKey] || phasesConfig['queued'];
-      
+
       const lastTick = this.loadingAnim.lastTickAt || now;
       const delta = Math.max(8, now - lastTick);
-      
+
       const distance = config.until - this.loadingAnim.progress;
       let step = 0;
-      
+
       if (distance > 0) {
         const factor = 0.4 + (distance / config.until) * 0.8;
         step = config.baseSpeed * factor * (delta / 16);
@@ -4413,9 +4556,8 @@ export class App {
     const start = this.loadingAnim.runStartedAt || Date.now();
     const render = () => {
       const sec = Math.max(0, (Date.now() - start) / 1000);
-      this.el.loadingElapsed.textContent = sec < 60
-        ? `${sec.toFixed(1)}s`
-        : `${Math.floor(sec / 60)}m ${Math.floor(sec % 60)}s`;
+      this.el.loadingElapsed.textContent =
+        sec < 60 ? `${sec.toFixed(1)}s` : `${Math.floor(sec / 60)}m ${Math.floor(sec % 60)}s`;
     };
     render();
     this.loadingAnim.elapsedTimer = window.setInterval(render, 200);

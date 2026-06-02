@@ -37,7 +37,14 @@ html {
 
 body {
   margin: 0;
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
   color: var(--ink);
   background: var(--page);
   line-height: 1.55;
@@ -93,7 +100,9 @@ a {
   background: rgba(248, 251, 255, 0.86);
   border-bottom: 1px solid rgba(217, 229, 238, 0.86);
   backdrop-filter: blur(18px);
-  transition: background 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    background 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .site-nav.is-scrolled {
@@ -169,7 +178,9 @@ a {
   text-decoration: none;
   font-size: 0.92rem;
   font-weight: 800;
-  transition: background 0.18s ease, color 0.18s ease;
+  transition:
+    background 0.18s ease,
+    color 0.18s ease;
 }
 
 .nav-links a:hover {
@@ -246,7 +257,11 @@ a {
   font-weight: 900;
   font-size: 0.94rem;
   cursor: pointer;
-  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    background 0.18s ease,
+    border-color 0.18s ease;
 }
 
 .btn:hover {
@@ -314,9 +329,10 @@ a {
   align-items: center;
   background:
     linear-gradient(rgba(22, 32, 51, 0.015) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(22, 32, 51, 0.015) 1px, transparent 1px),
-    var(--page);
-  background-size: 36px 36px, 36px 36px;
+    linear-gradient(90deg, rgba(22, 32, 51, 0.015) 1px, transparent 1px), var(--page);
+  background-size:
+    36px 36px,
+    36px 36px;
   border-bottom: 1px solid var(--line);
 }
 
@@ -357,9 +373,15 @@ a {
 }
 
 @keyframes floatBlob {
-  0% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(30px, -50px) scale(1.08); }
-  100% { transform: translate(-20px, 20px) scale(0.96); }
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(30px, -50px) scale(1.08);
+  }
+  100% {
+    transform: translate(-20px, 20px) scale(0.96);
+  }
 }
 
 .hero-grid {
@@ -430,9 +452,15 @@ a {
   border-radius: 50%;
 }
 
-.board-dot.red { background: #ff5f56; }
-.board-dot.yellow { background: #ffbd2e; }
-.board-dot.green { background: #27c93f; }
+.board-dot.red {
+  background: #ff5f56;
+}
+.board-dot.yellow {
+  background: #ffbd2e;
+}
+.board-dot.green {
+  background: #27c93f;
+}
 
 .board-title {
   font-size: 0.72rem;
@@ -478,26 +506,34 @@ a {
 
 .hero-vehicle-dot.alt-v {
   stroke: var(--blue);
-  offset-path: path("M 60 270 C 130 180, 200 320, 300 210 C 360 140, 400 240, 440 160");
+  offset-path: path('M 60 270 C 130 180, 200 320, 300 210 C 360 140, 400 240, 440 160');
   animation: travelHeroAlt 8s infinite linear;
   filter: drop-shadow(0 0 5px var(--blue));
 }
 
 .hero-vehicle-dot.main-v {
   stroke: var(--teal-2);
-  offset-path: path("M 60 270 C 160 160, 240 240, 320 120 C 360 60, 400 200, 440 160");
+  offset-path: path('M 60 270 C 160 160, 240 240, 320 120 C 360 60, 400 200, 440 160');
   animation: travelHeroMain 6s infinite linear;
   filter: drop-shadow(0 0 5px var(--teal-2));
 }
 
 @keyframes travelHeroAlt {
-  0% { offset-distance: 0%; }
-  100% { offset-distance: 100%; }
+  0% {
+    offset-distance: 0%;
+  }
+  100% {
+    offset-distance: 100%;
+  }
 }
 
 @keyframes travelHeroMain {
-  0% { offset-distance: 0%; }
-  100% { offset-distance: 100%; }
+  0% {
+    offset-distance: 0%;
+  }
+  100% {
+    offset-distance: 100%;
+  }
 }
 
 .hero-node .pulse {
@@ -576,7 +612,8 @@ a {
 }
 
 @keyframes heroFloatCard {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0);
   }
   50% {
@@ -676,7 +713,7 @@ a {
 }
 
 .mini-proof span::before {
-  content: "";
+  content: '';
   width: 6px;
   height: 6px;
   border-radius: 50%;
@@ -698,8 +735,7 @@ a {
 .section-soft {
   background:
     linear-gradient(rgba(22, 32, 51, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(22, 32, 51, 0.035) 1px, transparent 1px),
-    var(--page);
+    linear-gradient(90deg, rgba(22, 32, 51, 0.035) 1px, transparent 1px), var(--page);
   background-size: 42px 42px;
 }
 
@@ -783,23 +819,37 @@ a {
 
 /* Step animations */
 @keyframes bounceArrow {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(4px); }
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(4px);
+  }
 }
 .step:hover .bouncing-arrow {
   animation: bounceArrow 1.2s infinite ease-in-out;
 }
 
 @keyframes compareBars {
-  0%, 100% { height: 32px; y: 32px; }
-  50% { height: 16px; y: 48px; }
+  0%,
+  100% {
+    height: 32px;
+    y: 32px;
+  }
+  50% {
+    height: 16px;
+    y: 48px;
+  }
 }
 .step:hover .bar-right {
   animation: compareBars 1.5s infinite ease-in-out;
 }
 
 @keyframes pathDraw {
-  to { stroke-dashoffset: 0; }
+  to {
+    stroke-dashoffset: 0;
+  }
 }
 .draw-path {
   stroke-dasharray: 100;
@@ -811,8 +861,14 @@ a {
 }
 
 @keyframes pinPulse {
-  0% { transform: scale(1); opacity: 1; }
-  100% { transform: scale(2.2); opacity: 0; }
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
 }
 .pin-ring {
   transform-origin: center;
@@ -899,7 +955,7 @@ a {
 }
 
 .tab-button::before {
-  content: "";
+  content: '';
   position: absolute;
   left: 0;
   top: 15%;
@@ -923,7 +979,9 @@ a {
   border-color: var(--teal);
   background: linear-gradient(135deg, #f0fdfa 0%, #e6fffa 100%);
   transform: scale(1.02) translateY(-2px);
-  box-shadow: 0 12px 30px rgba(16, 168, 156, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  box-shadow:
+    0 12px 30px rgba(16, 168, 156, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
 .tab-button.active::before {
@@ -981,7 +1039,7 @@ a {
 }
 
 .planner-screen::after {
-  content: "";
+  content: '';
   position: absolute;
   inset: 0;
   background: linear-gradient(110deg, transparent 0%, rgba(255, 255, 255, 0.05) 42%, transparent 58%);
@@ -1000,7 +1058,10 @@ a {
 .screen-route {
   fill: none;
   stroke-linecap: round;
-  transition: opacity 0.6s ease, stroke-width 0.6s ease, stroke-dasharray 0.6s ease;
+  transition:
+    opacity 0.6s ease,
+    stroke-width 0.6s ease,
+    stroke-dasharray 0.6s ease;
 }
 
 .screen-route.route-a {
@@ -1021,26 +1082,34 @@ a {
 
 .screen-vehicle.vehicle-a {
   stroke: #3977f6;
-  offset-path: path("M 80 320 C 180 320, 280 280, 380 280 C 480 280, 560 240, 660 240");
+  offset-path: path('M 80 320 C 180 320, 280 280, 380 280 C 480 280, 560 240, 660 240');
   animation: travelA 5s infinite linear;
   filter: drop-shadow(0 0 6px #3977f6);
 }
 
 .screen-vehicle.vehicle-b {
   stroke: var(--teal-2);
-  offset-path: path("M 80 320 C 130 240, 180 160, 240 160 C 330 160, 430 120, 520 120 C 570 120, 620 180, 660 240");
+  offset-path: path('M 80 320 C 130 240, 180 160, 240 160 C 330 160, 430 120, 520 120 C 570 120, 620 180, 660 240');
   animation: travelB 5s infinite linear;
   filter: drop-shadow(0 0 6px var(--teal-2));
 }
 
 @keyframes travelA {
-  0% { offset-distance: 0%; }
-  100% { offset-distance: 100%; }
+  0% {
+    offset-distance: 0%;
+  }
+  100% {
+    offset-distance: 100%;
+  }
 }
 
 @keyframes travelB {
-  0% { offset-distance: 0%; }
-  100% { offset-distance: 100%; }
+  0% {
+    offset-distance: 0%;
+  }
+  100% {
+    offset-distance: 100%;
+  }
 }
 
 .screen-node .pulse {
@@ -1051,7 +1120,10 @@ a {
 }
 
 .screen-node .core {
-  transition: fill 0.4s ease, stroke 0.4s ease, filter 0.4s ease;
+  transition:
+    fill 0.4s ease,
+    stroke 0.4s ease,
+    filter 0.4s ease;
 }
 
 .screen-node.depot .core {
@@ -1092,10 +1164,18 @@ a {
 .state-upload .screen-node.stop .pulse {
   animation: nodePulseEffect 4s infinite ease-out;
 }
-.state-upload .node-stop1 .pulse { animation-delay: 0.5s; }
-.state-upload .node-stop2 .pulse { animation-delay: 1.0s; }
-.state-upload .node-stop3 .pulse { animation-delay: 1.5s; }
-.state-upload .node-stop4 .pulse { animation-delay: 2.0s; }
+.state-upload .node-stop1 .pulse {
+  animation-delay: 0.5s;
+}
+.state-upload .node-stop2 .pulse {
+  animation-delay: 1s;
+}
+.state-upload .node-stop3 .pulse {
+  animation-delay: 1.5s;
+}
+.state-upload .node-stop4 .pulse {
+  animation-delay: 2s;
+}
 
 /* State 2: Compare (Both Routes Shown as Dashed, Vehicles Hidden to Simplify View) */
 .state-compare .screen-route {
@@ -1126,11 +1206,22 @@ a {
   opacity: 0.35;
 }
 @keyframes nodeCheck {
-  from { fill: rgba(255, 255, 255, 0.15); stroke: rgba(255, 255, 255, 0.4); filter: none; }
-  to { fill: var(--green); stroke: #fff; filter: drop-shadow(0 0 8px var(--green)); }
+  from {
+    fill: rgba(255, 255, 255, 0.15);
+    stroke: rgba(255, 255, 255, 0.4);
+    filter: none;
+  }
+  to {
+    fill: var(--green);
+    stroke: #fff;
+    filter: drop-shadow(0 0 8px var(--green));
+  }
 }
 @keyframes labelActive {
-  to { fill: #fff; font-weight: 900; }
+  to {
+    fill: #fff;
+    font-weight: 900;
+  }
 }
 .state-dispatch .node-stop1 .core {
   animation: nodeCheck 0.4s forwards;
@@ -1150,18 +1241,20 @@ a {
 }
 .state-dispatch .node-stop4 .core {
   animation: nodeCheck 0.4s forwards;
-  animation-delay: 5.0s;
+  animation-delay: 5s;
 }
 .state-dispatch .node-stop4 .label {
   animation: labelActive 0.4s forwards;
-  animation-delay: 5.0s;
+  animation-delay: 5s;
 }
 
 @keyframes screenSweep {
-  0%, 42% {
+  0%,
+  42% {
     transform: translateX(-110%);
   }
-  72%, 100% {
+  72%,
+  100% {
     transform: translateX(110%);
   }
 }
@@ -1189,7 +1282,7 @@ a {
 }
 
 .screen-panel div::before {
-  content: "";
+  content: '';
   position: absolute;
   top: 0;
   left: 0;
@@ -1331,26 +1424,34 @@ a {
 
 .nami-board-vehicle.sec-v {
   stroke: #8bb5ff;
-  offset-path: path("M 90 410 C 150 350, 200 450, 300 350 C 400 250, 500 350, 600 250 C 700 150, 750 300, 830 200");
+  offset-path: path('M 90 410 C 150 350, 200 450, 300 350 C 400 250, 500 350, 600 250 C 700 150, 750 300, 830 200');
   animation: travelBoardSec 10s infinite linear;
   filter: drop-shadow(0 0 5px #8bb5ff);
 }
 
 .nami-board-vehicle.prim-v {
   stroke: var(--teal-2);
-  offset-path: path("M 90 410 C 180 280, 250 350, 350 200 C 450 50, 550 250, 650 150 C 730 70, 780 180, 830 200");
+  offset-path: path('M 90 410 C 180 280, 250 350, 350 200 C 450 50, 550 250, 650 150 C 730 70, 780 180, 830 200');
   animation: travelBoardPrim 8s infinite linear;
   filter: drop-shadow(0 0 6px var(--teal-2));
 }
 
 @keyframes travelBoardSec {
-  0% { offset-distance: 0%; }
-  100% { offset-distance: 100%; }
+  0% {
+    offset-distance: 0%;
+  }
+  100% {
+    offset-distance: 100%;
+  }
 }
 
 @keyframes travelBoardPrim {
-  0% { offset-distance: 0%; }
-  100% { offset-distance: 100%; }
+  0% {
+    offset-distance: 0%;
+  }
+  100% {
+    offset-distance: 100%;
+  }
 }
 
 .board-svg-node .pulse {
@@ -1589,7 +1690,7 @@ a {
   padding: 24px;
   overflow-x: auto;
   color: #e7edf3;
-  font-family: "SFMono-Regular", Consolas, monospace;
+  font-family: 'SFMono-Regular', Consolas, monospace;
   font-size: 0.88rem;
   line-height: 1.75;
 }

@@ -43,7 +43,7 @@ export class SimulationController {
 
     // Sync radio buttons to update simulation layers immediately
     const mapToggles = document.querySelectorAll('input[name="map_view"]');
-    mapToggles.forEach(radio => {
+    mapToggles.forEach((radio) => {
       radio.addEventListener('change', () => {
         this.updateFrame();
       });
@@ -77,16 +77,16 @@ export class SimulationController {
     this.lastVehicleStates.clear();
 
     this.addAlert('info', 'Simulation started. Dispatch center monitoring online.');
-    
+
     if (this.slider) {
       this.slider.max = String(this.maxTime);
       this.slider.value = '0';
     }
-    
+
     this.updatePlayButton();
     this.updateTimeDisplay();
     this.showPanels(true);
-    
+
     this.stopLoop();
     this.updateFrame();
   }
@@ -144,7 +144,7 @@ export class SimulationController {
   startLoop() {
     const loop = (timestamp) => {
       if (!this.isPlaying) return;
-      
+
       const elapsedSec = (timestamp - this.lastTickTime) / 1000;
       this.lastTickTime = timestamp;
 
@@ -199,7 +199,7 @@ export class SimulationController {
 
     if (activeIncident) {
       const triggerTime = activeIncident.triggerTime;
-      
+
       if (t_sim >= triggerTime) {
         if (activeIncident.type === 'breakdown') {
           // Freeze marker coordinates at breakdown trigger point
@@ -211,14 +211,14 @@ export class SimulationController {
             status: 'Breakdown',
             detail: `⚠️ Breakdown! Delayed by ${elapsed}m. Technician active.`,
             lat: state.lat,
-            lng: state.lng
+            lng: state.lng,
           };
         } else if (activeIncident.type === 'traffic') {
           // Progress time since traffic onset at 33% rate (inducing travel time delay)
           const elapsed = t_sim - triggerTime;
           const elapsedEff = elapsed * 0.33;
           t_eff = triggerTime - offset + elapsedEff;
-          
+
           const state = this.app.mapController.getVehicleStateAtTimeDirect(route, t_eff, roadData);
           const delayMinutes = Math.round(elapsed - elapsedEff);
           return {
@@ -226,7 +226,7 @@ export class SimulationController {
             status: 'Traffic Jam',
             detail: `🛑 Congestion! Delayed: +${delayMinutes}m. Speed: 12 km/h.`,
             lat: state.lat,
-            lng: state.lng
+            lng: state.lng,
           };
         }
       }
@@ -236,7 +236,7 @@ export class SimulationController {
       const state = this.app.mapController.getVehicleStateAtTimeDirect(route, t_eff, roadData);
       return {
         ...state,
-        detail: `${state.detail} (Delayed: +${Math.round(offset)}m)`
+        detail: `${state.detail} (Delayed: +${Math.round(offset)}m)`,
       };
     }
 
@@ -254,14 +254,16 @@ export class SimulationController {
       } else {
         this.clearIncident(vehicleId);
         this.incidents.set(vehicleId, { type, triggerTime: this.t_sim });
-        this.addAlert(type === 'breakdown' ? 'error' : 'warn', 
+        this.addAlert(
+          type === 'breakdown' ? 'error' : 'warn',
           `Disruption Alert: ${driverName} reported active ${type === 'breakdown' ? 'engine breakdown' : 'severe traffic jam'}.`
         );
         this.app.toast('Incident Triggered', `${driverName} reports active ${type}.`, 'warn');
       }
     } else {
       this.incidents.set(vehicleId, { type, triggerTime: this.t_sim });
-      this.addAlert(type === 'breakdown' ? 'error' : 'warn', 
+      this.addAlert(
+        type === 'breakdown' ? 'error' : 'warn',
         `Disruption Alert: ${driverName} reported active ${type === 'breakdown' ? 'engine breakdown' : 'severe traffic jam'}.`
       );
       this.app.toast('Incident Triggered', `${driverName} reports active ${type}.`, 'warn');
@@ -289,7 +291,10 @@ export class SimulationController {
     this.delayOffsets.set(vehicleId, currentOffset + delayAdded);
     this.incidents.delete(vehicleId);
 
-    this.addAlert('success', `Resolved: ${driverName} disruption cleared. Route delay committed: +${Math.round(currentOffset + delayAdded)}m.`);
+    this.addAlert(
+      'success',
+      `Resolved: ${driverName} disruption cleared. Route delay committed: +${Math.round(currentOffset + delayAdded)}m.`
+    );
     this.app.toast('Incident Resolved', `${driverName} reports path clear.`, 'ok');
     this.updateFrame();
   }
@@ -302,7 +307,7 @@ export class SimulationController {
     this.alerts.unshift({
       time: timeStr,
       type, // 'info' | 'warn' | 'error' | 'success'
-      message
+      message,
     });
 
     if (this.alerts.length > 30) {
@@ -317,7 +322,7 @@ export class SimulationController {
     const activeAlgo = mapModeElement ? mapModeElement.value : 'ddqn';
     const algoResult = result[activeAlgo];
     if (!algoResult || !algoResult.routes) return null;
-    return algoResult.routes.find(r => r.vehicle_id === Number(vehicleId));
+    return algoResult.routes.find((r) => r.vehicle_id === Number(vehicleId));
   }
 
   getDriverName(vehicleId) {
@@ -358,15 +363,16 @@ export class SimulationController {
   }
 
   checkStateTransitions(algoResult) {
-    algoResult.routes.forEach(route => {
+    algoResult.routes.forEach((route) => {
       const vehicleId = route.vehicle_id;
       const driverName = this.getDriverName(vehicleId);
 
       // Get current location/status state (respecting active breakdown freeze if present)
       const roadKey = `${this.app.mapController.activeAlgo || 'ddqn'}_${vehicleId}`;
       const roadData = this.app.mapController.roadRoutes.get(roadKey);
-      const state = this.getIncidentState(vehicleId, this.t_sim, route, roadData) || 
-                    this.app.mapController.getVehicleStateAtTimeDirect(route, this.t_sim, roadData);
+      const state =
+        this.getIncidentState(vehicleId, this.t_sim, route, roadData) ||
+        this.app.mapController.getVehicleStateAtTimeDirect(route, this.t_sim, roadData);
 
       const activeKey = `${state.status}_${state.stopIndex}`;
       const lastState = this.lastVehicleStates.get(vehicleId);
@@ -379,13 +385,13 @@ export class SimulationController {
           // Arrived at Customer Stop
           const stopIdx = state.stopIndex - 1;
           const customerId = route.stops[stopIdx];
-          const customer = this.app.state.customers.find(c => c.id === customerId);
-          
+          const customer = this.app.state.customers.find((c) => c.id === customerId);
+
           const offset = this.delayOffsets.get(vehicleId) || 0;
           const activeIncident = this.incidents.get(vehicleId);
           let activeDelay = offset;
           if (activeIncident && this.t_sim >= activeIncident.triggerTime) {
-            if (activeIncident.type === 'breakdown') activeDelay += (this.t_sim - activeIncident.triggerTime);
+            if (activeIncident.type === 'breakdown') activeDelay += this.t_sim - activeIncident.triggerTime;
             else if (activeIncident.type === 'traffic') activeDelay += (this.t_sim - activeIncident.triggerTime) * 0.67;
           }
 
@@ -394,17 +400,23 @@ export class SimulationController {
             const actualArrival = step.arrival + activeDelay;
             const isLate = actualArrival > customer.due;
             if (isLate) {
-              this.addAlert('error', `🛑 Late Delivery: ${driverName} reached customer ${customer.name} LATE at ${this.formatTimeStr(actualArrival)} (Due by: ${this.formatTimeStr(customer.due)}).`);
+              this.addAlert(
+                'error',
+                `🛑 Late Delivery: ${driverName} reached customer ${customer.name} LATE at ${this.formatTimeStr(actualArrival)} (Due by: ${this.formatTimeStr(customer.due)}).`
+              );
             } else {
               this.addAlert('success', `✓ Arrived: ${driverName} reached customer ${customer.name} on time.`);
             }
 
             // Check skill mismatch
             const fleetVehicle = this.app.state.fleet?.[vehicleId];
-            const driverSkills = fleetVehicle ? (fleetVehicle.skills || 'None') : 'None';
+            const driverSkills = fleetVehicle ? fleetVehicle.skills || 'None' : 'None';
             if (customer.skill && customer.skill !== 'None') {
               if (driverSkills === 'None' || !driverSkills.includes(customer.skill)) {
-                this.addAlert('warn', `⚠️ Skill Mismatch: ${driverName} started service at customer ${customer.name} without required skill "${customer.skill}".`);
+                this.addAlert(
+                  'warn',
+                  `⚠️ Skill Mismatch: ${driverName} started service at customer ${customer.name} without required skill "${customer.skill}".`
+                );
               }
             }
           }
@@ -412,9 +424,12 @@ export class SimulationController {
           // Service Completed
           const stopIdx = lastStopIndex - 1;
           const customerId = route.stops[stopIdx];
-          const customer = this.app.state.customers.find(c => c.id === customerId);
+          const customer = this.app.state.customers.find((c) => c.id === customerId);
           if (customer) {
-            this.addAlert('info', `📦 Delivery Proof: ${driverName} completed packages verification signature at "${customer.name}".`);
+            this.addAlert(
+              'info',
+              `📦 Delivery Proof: ${driverName} completed packages verification signature at "${customer.name}".`
+            );
           }
         } else if (state.status === 'Returning' && lastStatus !== 'Returning') {
           this.addAlert('info', `↩ Dispatch Update: ${driverName} completed all drops, returning to depot.`);
@@ -427,7 +442,7 @@ export class SimulationController {
 
   updateStatusPanel(algoResult, algoName) {
     if (!this.vehicleList) return;
-    
+
     this.activeSubTab = this.activeSubTab || 'vehicles';
 
     const colors = {
@@ -438,10 +453,10 @@ export class SimulationController {
       hybrid_ddqn: '#8b5cf6',
       hybrid_ddqn_transfer_rc1: '#06b6d4',
       hybrid_ddqn_transfer_dr: '#6366f1',
-      hybrid: '#10b981'
+      hybrid: '#10b981',
     };
     const color = colors[algoName] || '#3b82f6';
-    
+
     let html = `
       <div class="sim-panel-tabs" style="display: flex; gap: 4px; background: rgba(230, 235, 245, 0.9); padding: 4px; border-radius: var(--r); margin-bottom: 12px; border: 1px solid var(--border);">
         <button class="btn-sim-tab" data-tab="vehicles" style="flex: 1; border: none; padding: 6px 10px; font-size: 11px; font-weight: 600; border-radius: 4px; cursor: pointer; transition: all 0.2s; background: ${this.activeSubTab === 'vehicles' ? '#ffffff' : 'transparent'}; color: ${this.activeSubTab === 'vehicles' ? 'var(--text-main)' : 'var(--text-muted)'}; box-shadow: ${this.activeSubTab === 'vehicles' ? 'var(--shadow-sm)' : 'none'};">Drivers</button>
@@ -457,50 +472,51 @@ export class SimulationController {
         const fleetVehicle = this.app.state.fleet?.[route.vehicle_id];
         const driverName = fleetVehicle ? fleetVehicle.driver : `Vehicle #${route.vehicle_id}`;
         const vehCap = fleetVehicle ? Number(fleetVehicle.capacity) : routeCapacity;
-        const driverSkills = fleetVehicle ? (fleetVehicle.skills || 'None') : 'None';
+        const driverSkills = fleetVehicle ? fleetVehicle.skills || 'None' : 'None';
 
         const roadKey = `${algoName}_${route.vehicle_id}`;
         const roadData = this.app.mapController.roadRoutes.get(roadKey);
-        const state = this.getIncidentState(route.vehicle_id, this.t_sim, route, roadData) || 
-                      this.app.mapController.getVehicleStateAtTimeDirect(route, this.t_sim, roadData);
+        const state =
+          this.getIncidentState(route.vehicle_id, this.t_sim, route, roadData) ||
+          this.app.mapController.getVehicleStateAtTimeDirect(route, this.t_sim, roadData);
 
         const stopsDone = route.stops.filter((stopId, idx) => {
           const step = route.schedule[idx];
           const offset = this.delayOffsets.get(route.vehicle_id) || 0;
-          
+
           const activeIncident = this.incidents.get(route.vehicle_id);
           let activeDelay = offset;
           if (activeIncident && this.t_sim >= activeIncident.triggerTime) {
-            if (activeIncident.type === 'breakdown') activeDelay += (this.t_sim - activeIncident.triggerTime);
+            if (activeIncident.type === 'breakdown') activeDelay += this.t_sim - activeIncident.triggerTime;
             else if (activeIncident.type === 'traffic') activeDelay += (this.t_sim - activeIncident.triggerTime) * 0.67;
           }
-          
-          return step && this.t_sim >= (step.departure + activeDelay);
+
+          return step && this.t_sim >= step.departure + activeDelay;
         }).length;
-        
+
         const totalStops = route.stops.length;
         const percent = totalStops > 0 ? Math.round((stopsDone / totalStops) * 100) : 100;
         const loadPercent = vehCap > 0 ? Math.round((route.load / vehCap) * 100) : 0;
-        
+
         // Dynamic Telemetry Math
         const fuelLevel = Math.max(0, Math.round(100 - (stopsDone / totalStops) * 45));
         const co2Value = (stopsDone * 2.8).toFixed(1);
 
         const mismatches = [];
         route.stops.forEach((stopId) => {
-          const customer = this.app.state.customers.find(c => c.id === stopId);
+          const customer = this.app.state.customers.find((c) => c.id === stopId);
           if (customer && customer.skill && customer.skill !== 'None') {
             if (driverSkills === 'None' || !driverSkills.includes(customer.skill)) {
               mismatches.push(customer.skill);
             }
           }
         });
-        
+
         // Incident indicators check
         const activeIncident = this.incidents.get(route.vehicle_id);
         const isBreakdown = activeIncident?.type === 'breakdown';
         const isTraffic = activeIncident?.type === 'traffic';
-        const cardClass = isBreakdown ? 'has-breakdown' : (isTraffic ? 'has-traffic' : '');
+        const cardClass = isBreakdown ? 'has-breakdown' : isTraffic ? 'has-traffic' : '';
 
         let statusClass = 'sim-status-parked';
         if (state.status === 'Traveling') statusClass = 'sim-status-traveling';
@@ -521,11 +537,12 @@ export class SimulationController {
             </div>
             <div class="sim-card-body">
               <p class="sim-detail-text" style="font-size: 11px; margin-bottom: 8px; color: var(--text-muted); line-height: 1.4;">${state.detail}</p>
-              ${mismatches.length > 0 
-                ? `<div style="background: rgba(239, 68, 68, 0.1); color: var(--danger); font-size: 10px; margin-bottom: 8px; padding: 4px 8px; border-radius: 4px; display: flex; align-items: center; gap: 4px; border: 1px solid rgba(239, 68, 68, 0.2); font-weight: 600;">
+              ${
+                mismatches.length > 0
+                  ? `<div style="background: rgba(239, 68, 68, 0.1); color: var(--danger); font-size: 10px; margin-bottom: 8px; padding: 4px 8px; border-radius: 4px; display: flex; align-items: center; gap: 4px; border: 1px solid rgba(239, 68, 68, 0.2); font-weight: 600;">
                      ⚠️ Skill Gap: Needs ${[...new Set(mismatches)].join(', ')}
                    </div>`
-                : ''
+                  : ''
               }
 
               <!-- Telemetry indicators row -->
@@ -565,7 +582,7 @@ export class SimulationController {
           </div>
         `;
       } else {
-        this.alerts.forEach(alert => {
+        this.alerts.forEach((alert) => {
           alertsHtml += `
             <div class="sim-alert-item ${alert.type}">
               <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -587,15 +604,15 @@ export class SimulationController {
       algoResult.routes.forEach((route) => {
         const fleetVehicle = this.app.state.fleet?.[route.vehicle_id];
         const driverName = fleetVehicle ? fleetVehicle.driver : `Vehicle #${route.vehicle_id}`;
-        
+
         route.schedule.forEach((step, idx) => {
           if (step.customer_id === 0) return; // skip depot
-          
+
           const offset = this.delayOffsets.get(route.vehicle_id) || 0;
           const activeIncident = this.incidents.get(route.vehicle_id);
           let activeDelay = offset;
           if (activeIncident && this.t_sim >= activeIncident.triggerTime) {
-            if (activeIncident.type === 'breakdown') activeDelay += (this.t_sim - activeIncident.triggerTime);
+            if (activeIncident.type === 'breakdown') activeDelay += this.t_sim - activeIncident.triggerTime;
             else if (activeIncident.type === 'traffic') activeDelay += (this.t_sim - activeIncident.triggerTime) * 0.67;
           }
 
@@ -609,7 +626,8 @@ export class SimulationController {
               name: step.name || `Stop #${step.customer_id}`,
               timeStr: this.formatTimeStr(actDeparture),
               status: 'Completed',
-              due: actArrival <= Number(this.app.state.customers[step.customer_id]?.due || 1000) ? 'On Time' : 'Delayed'
+              due:
+                actArrival <= Number(this.app.state.customers[step.customer_id]?.due || 1000) ? 'On Time' : 'Delayed',
             });
           } else if (this.t_sim >= actArrival) {
             completedStops.push({
@@ -618,7 +636,7 @@ export class SimulationController {
               name: step.name || `Stop #${step.customer_id}`,
               timeStr: this.formatTimeStr(this.t_sim),
               status: 'Arriving / Servicing',
-              due: 'Active'
+              due: 'Active',
             });
           }
         });
@@ -633,11 +651,11 @@ export class SimulationController {
           </div>
         `;
       } else {
-        completedStops.forEach(stop => {
+        completedStops.forEach((stop) => {
           const isDone = stop.status === 'Completed';
           const badgeClass = isDone ? 'status-ready' : 'status-warn';
           const alertColor = stop.due === 'On Time' ? 'var(--success)' : 'var(--orange)';
-          
+
           html += `
             <div class="sim-vehicle-card" style="font-size: 11px; margin-bottom: 8px; border-left: 3px solid ${isDone ? 'var(--success)' : 'var(--orange)'};">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
@@ -647,16 +665,20 @@ export class SimulationController {
               <div style="color: var(--text-muted); margin-bottom: 6px;">
                 Driver: <strong>${stop.driverName}</strong>
               </div>
-              ${isDone ? `
+              ${
+                isDone
+                  ? `
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border);">
                   <span style="color: ${alertColor}; font-weight: 600; font-size: 10px;">✓ ${stop.due} (${stop.timeStr})</span>
                   <button class="btn-text btn-pod-view" data-stop-id="${stop.stopId}" data-driver="${stop.driverName}" data-time="${stop.timeStr}" data-due="${stop.due}" data-name="${stop.name}" style="font-size: 10px; font-weight: 700; color: var(--primary); text-decoration: underline; padding: 0; background: none; border: none; cursor: pointer;">View POD &rarr;</button>
                 </div>
-              ` : `
+              `
+                  : `
                 <div style="color: var(--primary); font-weight: 600; font-style: italic; font-size: 10px; margin-top: 4px;">
                   ⏳ Drop-off/Service in progress...
                 </div>
-              `}
+              `
+              }
             </div>
           `;
         });
@@ -667,11 +689,11 @@ export class SimulationController {
 
     // Bind focus click events to driver cards
     const focusCards = this.vehicleList.querySelectorAll('.btn-focus-vehicle');
-    focusCards.forEach(card => {
+    focusCards.forEach((card) => {
       card.addEventListener('click', (e) => {
         // Prevent clicks on action buttons inside the card from focusing on Leaflet
         if (e.target.closest('.btn-sim-incident')) return;
-        
+
         const vehId = card.dataset.vehicleId;
         this.app.mapController.focusOnVehicle(vehId);
       });
@@ -679,7 +701,7 @@ export class SimulationController {
 
     // Bind tab switching events
     const tabButtons = this.vehicleList.querySelectorAll('.btn-sim-tab');
-    tabButtons.forEach(btn => {
+    tabButtons.forEach((btn) => {
       btn.addEventListener('click', (e) => {
         this.activeSubTab = e.target.dataset.tab;
         this.updateFrame();
@@ -687,14 +709,14 @@ export class SimulationController {
     });
 
     // Bind incident triggers
-    this.vehicleList.querySelectorAll('.btn-trigger-breakdown').forEach(btn => {
+    this.vehicleList.querySelectorAll('.btn-trigger-breakdown').forEach((btn) => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         this.toggleIncident(btn.dataset.vehicleId, 'breakdown');
       });
     });
 
-    this.vehicleList.querySelectorAll('.btn-trigger-traffic').forEach(btn => {
+    this.vehicleList.querySelectorAll('.btn-trigger-traffic').forEach((btn) => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         this.toggleIncident(btn.dataset.vehicleId, 'traffic');
@@ -703,7 +725,7 @@ export class SimulationController {
 
     // Bind POD modal trigger clicks
     const podButtons = this.vehicleList.querySelectorAll('.btn-pod-view');
-    podButtons.forEach(btn => {
+    podButtons.forEach((btn) => {
       btn.addEventListener('click', (e) => {
         const data = e.target.dataset;
         this.showPodModal({
@@ -711,7 +733,7 @@ export class SimulationController {
           driverName: data.driver,
           timeStr: data.time,
           due: data.due,
-          name: data.name
+          name: data.name,
         });
       });
     });
@@ -741,7 +763,7 @@ export class SimulationController {
     modal.style.justifyContent = 'center';
 
     const customer = this.app.state.customers[stop.stopId] || {};
-    
+
     const signatureSvg = `
       <svg viewBox="0 0 200 60" style="width: 100%; height: 60px; stroke: #1e3a8a; stroke-width: 2.5; fill: none; stroke-linecap: round; stroke-linejoin: round;">
         <path d="M 15 32 C 35 18, 50 42, 65 22 C 80 12, 85 38, 100 28 C 115 18, 120 48, 135 32 C 150 18, 165 38, 185 28" />
@@ -812,16 +834,16 @@ export class SimulationController {
   updateDriverAppSelect() {
     const select = document.getElementById('driver-app-select');
     if (!select) return;
-    
+
     select.innerHTML = '<option value="" style="color: #000;">Select Driver...</option>';
-    
+
     const result = this.app.state.lastResult;
     if (!result) return;
     const mapModeElement = document.querySelector('input[name="map_view"]:checked');
     const activeAlgo = mapModeElement ? mapModeElement.value : 'ddqn';
     const algoResult = result[activeAlgo];
     if (!algoResult || !algoResult.routes) return;
-    
+
     algoResult.routes.forEach((route) => {
       const fleetVehicle = this.app.state.fleet?.[route.vehicle_id];
       const driverName = fleetVehicle ? fleetVehicle.driver : `Vehicle #${route.vehicle_id}`;
@@ -837,7 +859,7 @@ export class SimulationController {
     const container = document.getElementById('driver-app-content');
     const select = document.getElementById('driver-app-select');
     if (!container || !select) return;
-    
+
     const selectedVehId = select.value;
     if (selectedVehId === '') {
       container.innerHTML = `
@@ -849,23 +871,23 @@ export class SimulationController {
       `;
       return;
     }
-    
+
     const result = this.app.state.lastResult;
     if (!result) return;
     const mapModeElement = document.querySelector('input[name="map_view"]:checked');
     const activeAlgo = mapModeElement ? mapModeElement.value : 'ddqn';
     const algoResult = result[activeAlgo];
     if (!algoResult || !algoResult.routes) return;
-    
-    const route = algoResult.routes.find(r => r.vehicle_id === Number(selectedVehId));
+
+    const route = algoResult.routes.find((r) => r.vehicle_id === Number(selectedVehId));
     if (!route) {
       container.innerHTML = `<div style="text-align: center; padding: 20px; font-size: 11px; color: #71717a;">No active route found for this driver.</div>`;
       return;
     }
 
     const fleetVehicle = this.app.state.fleet?.[route.vehicle_id];
-    const driverSkills = fleetVehicle ? (fleetVehicle.skills || 'None') : 'None';
-    
+    const driverSkills = fleetVehicle ? fleetVehicle.skills || 'None' : 'None';
+
     let html = `
       <div style="display: flex; justify-content: space-between; align-items: center; background: white; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border); box-shadow: var(--shadow-sm); margin-bottom: 8px;">
         <span style="font-size: 10.5px; color: var(--text-muted); font-weight: 500;">Route Cargo: <strong>${route.load} units</strong></span>
@@ -877,14 +899,14 @@ export class SimulationController {
 
     route.stops.forEach((stopId, idx) => {
       const step = route.schedule[idx];
-      const customer = this.app.state.customers.find(c => c.id === stopId);
+      const customer = this.app.state.customers.find((c) => c.id === stopId);
       if (!customer || !step) return;
 
       const offset = this.delayOffsets.get(route.vehicle_id) || 0;
       const activeIncident = this.incidents.get(route.vehicle_id);
       let activeDelay = offset;
       if (activeIncident && this.t_sim >= activeIncident.triggerTime) {
-        if (activeIncident.type === 'breakdown') activeDelay += (this.t_sim - activeIncident.triggerTime);
+        if (activeIncident.type === 'breakdown') activeDelay += this.t_sim - activeIncident.triggerTime;
         else if (activeIncident.type === 'traffic') activeDelay += (this.t_sim - activeIncident.triggerTime) * 0.67;
       }
 
@@ -893,7 +915,9 @@ export class SimulationController {
 
       const isCompleted = this.t_sim >= depTime;
       const isServicing = this.t_sim >= arrTime && this.t_sim < depTime;
-      const isNext = this.t_sim < arrTime && (idx === 0 || (route.schedule[idx-1] && this.t_sim >= (route.schedule[idx-1].departure + activeDelay)));
+      const isNext =
+        this.t_sim < arrTime &&
+        (idx === 0 || (route.schedule[idx - 1] && this.t_sim >= route.schedule[idx - 1].departure + activeDelay));
 
       let bg = '#ffffff';
       let border = 'var(--border)';
@@ -932,18 +956,26 @@ export class SimulationController {
             <span>ETA: ${this.formatTimeStr(arrTime)}</span>
           </div>
 
-          ${isServicing ? `
+          ${
+            isServicing
+              ? `
             <div style="display: flex; gap: 6px; margin-top: 8px;">
               <button class="btn-app-action btn-complete-stop" data-stop-id="${stopId}" style="flex: 2; background: var(--success); color: white; border: none; padding: 6px; border-radius: 6px; font-size: 9px; font-weight: 700; cursor: pointer; text-align: center; box-shadow: var(--shadow-sm);">✓ Complete Delivery</button>
               <button class="btn-app-action btn-fail-stop" data-stop-id="${stopId}" style="flex: 1; background: var(--danger); color: white; border: none; padding: 6px; border-radius: 6px; font-size: 9px; font-weight: 700; cursor: pointer; text-align: center; box-shadow: var(--shadow-sm);">✕ Fail</button>
             </div>
-          ` : ''}
+          `
+              : ''
+          }
 
-          ${isNext ? `
+          ${
+            isNext
+              ? `
             <div style="margin-top: 6px;">
               <button class="btn-app-action btn-arrive-stop" data-stop-id="${stopId}" data-arrival-time="${arrTime}" style="width: 100%; background: var(--primary); color: white; border: none; padding: 6px; border-radius: 6px; font-size: 9px; font-weight: 700; cursor: pointer; text-align: center; box-shadow: var(--shadow-sm);">⚡ Arrive at Destination</button>
             </div>
-          ` : ''}
+          `
+              : ''
+          }
         </div>
       `;
     });
@@ -952,7 +984,7 @@ export class SimulationController {
     container.innerHTML = html;
 
     // Bind inner actions
-    container.querySelectorAll('.btn-arrive-stop').forEach(btn => {
+    container.querySelectorAll('.btn-arrive-stop').forEach((btn) => {
       btn.addEventListener('click', (e) => {
         const targetTime = Number(btn.dataset.arrivalTime);
         this.t_sim = targetTime;
@@ -963,21 +995,21 @@ export class SimulationController {
       });
     });
 
-    container.querySelectorAll('.btn-complete-stop').forEach(btn => {
+    container.querySelectorAll('.btn-complete-stop').forEach((btn) => {
       btn.addEventListener('click', (e) => {
         const stopId = Number(btn.dataset.stopId);
         const fleetVehicle = this.app.state.fleet?.[selectedVehId];
         const driverName = fleetVehicle ? fleetVehicle.driver : `Driver #${Number(selectedVehId) + 1}`;
-        
-        const targetRoute = algoResult.routes.find(r => r.vehicle_id === Number(selectedVehId));
+
+        const targetRoute = algoResult.routes.find((r) => r.vehicle_id === Number(selectedVehId));
         const stopIdx = targetRoute.stops.indexOf(stopId);
         const step = targetRoute.schedule[stopIdx];
-        
+
         const offset = this.delayOffsets.get(Number(selectedVehId)) || 0;
         const activeIncident = this.incidents.get(Number(selectedVehId));
         let activeDelay = offset;
         if (activeIncident && this.t_sim >= activeIncident.triggerTime) {
-          if (activeIncident.type === 'breakdown') activeDelay += (this.t_sim - activeIncident.triggerTime);
+          if (activeIncident.type === 'breakdown') activeDelay += this.t_sim - activeIncident.triggerTime;
           else if (activeIncident.type === 'traffic') activeDelay += (this.t_sim - activeIncident.triggerTime) * 0.67;
         }
 
@@ -989,7 +1021,7 @@ export class SimulationController {
           driverName: driverName,
           timeStr: this.formatTimeStr(compTime),
           due: arrTime <= Number(this.app.state.customers[stopId]?.due || 1000) ? 'On Time' : 'Delayed',
-          name: this.app.state.customers[stopId]?.name || `Stop #${stopId}`
+          name: this.app.state.customers[stopId]?.name || `Stop #${stopId}`,
         });
 
         if (step) {
@@ -1001,11 +1033,14 @@ export class SimulationController {
       });
     });
 
-    container.querySelectorAll('.btn-fail-stop').forEach(btn => {
+    container.querySelectorAll('.btn-fail-stop').forEach((btn) => {
       btn.addEventListener('click', (e) => {
         const stopId = btn.dataset.stopId;
         this.app.toast('Delivery Failed', `Stop #${stopId} marked as FAILED. Reason: Customer not home.`, 'error');
-        this.addAlert('error', `❌ Delivery Failed: Stop #${stopId} marked as FAILED by ${this.getDriverName(selectedVehId)}.`);
+        this.addAlert(
+          'error',
+          `❌ Delivery Failed: Stop #${stopId} marked as FAILED by ${this.getDriverName(selectedVehId)}.`
+        );
         this.t_sim += 15;
         if (this.slider) this.slider.value = String(this.t_sim);
         this.updateTimeDisplay();

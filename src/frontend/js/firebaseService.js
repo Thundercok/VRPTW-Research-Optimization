@@ -1,4 +1,4 @@
-import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
 
 import {
   initializeFirestore,
@@ -7,12 +7,15 @@ import {
   setDoc,
   addDoc,
   collection,
-  connectFirestoreEmulator
-} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+  connectFirestoreEmulator,
+} from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
 // Native Auth Imports
-import { getAuth, signInWithEmailAndPassword, connectAuthEmulator } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
-import { firebaseConfig, hasFirebaseConfig } from "./firebaseConfig.js";
-
+import {
+  getAuth,
+  signInWithEmailAndPassword,
+  connectAuthEmulator,
+} from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
+import { firebaseConfig, hasFirebaseConfig } from './firebaseConfig.js';
 
 class FirebaseService {
   constructor() {
@@ -25,12 +28,12 @@ class FirebaseService {
     if (hasFirebaseConfig()) {
       const app = getApps().length > 0 ? getApps()[0] : initializeApp(firebaseConfig);
       this.db = initializeFirestore(app, {
-        experimentalForceLongPolling: true
+        experimentalForceLongPolling: true,
       });
       this.auth = getAuth(app);
 
       // Route Auth and Firestore traffic to the local emulators during local development/testing
-      if (window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost") {
+      if (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost') {
         const host = window.location.hostname;
         connectAuthEmulator(this.auth, `http://${host}:9099`, { disableWarnings: true });
         connectFirestoreEmulator(this.db, host, 8080);
@@ -40,7 +43,7 @@ class FirebaseService {
 
   // NEW WRAPPER: Handles login natively inside the module
   async loginUser(email, password) {
-    if (!this.auth) throw new Error("Firebase Auth is not initialized. Check your config.");
+    if (!this.auth) throw new Error('Firebase Auth is not initialized. Check your config.');
     const userCredential = await signInWithEmailAndPassword(this.auth, email, password);
     return userCredential.user;
   }
@@ -55,11 +58,11 @@ class FirebaseService {
     this.enabled = true;
 
     await setDoc(
-      doc(this.db, "users", this.userKey),
+      doc(this.db, 'users', this.userKey),
       {
         email,
         lastLoginAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
+        updatedAt: serverTimestamp(),
       },
       { merge: true }
     );
@@ -68,35 +71,37 @@ class FirebaseService {
   }
 
   makeUserKey(email) {
-    return String(email || '').trim().toLowerCase();
+    return String(email || '')
+      .trim()
+      .toLowerCase();
   }
 
   async markLogout() {
     if (!this.enabled || !this.db || !this.userKey) return;
     try {
       await setDoc(
-        doc(this.db, "users", this.userKey),
+        doc(this.db, 'users', this.userKey),
         {
           lastLogoutAt: serverTimestamp(),
-          updatedAt: serverTimestamp()
+          updatedAt: serverTimestamp(),
         },
         { merge: true }
       );
     } catch (error) {
-      console.warn("firebase markLogout skipped:", error?.message || error);
+      console.warn('firebase markLogout skipped:', error?.message || error);
     }
   }
 
   async logEvent(type, meta = {}) {
     if (!this.enabled || !this.db || !this.userKey) return;
     try {
-      await addDoc(collection(this.db, "users", this.userKey, "events"), {
+      await addDoc(collection(this.db, 'users', this.userKey, 'events'), {
         type,
         meta,
-        createdAt: serverTimestamp()
+        createdAt: serverTimestamp(),
       });
     } catch (error) {
-      console.warn("firebase logEvent skipped:", error?.message || error);
+      console.warn('firebase logEvent skipped:', error?.message || error);
     }
   }
 
@@ -104,18 +109,18 @@ class FirebaseService {
     if (!this.enabled || !this.db || !this.userKey) return;
     try {
       await setDoc(
-        doc(this.db, "users", this.userKey, "jobs", jobId),
+        doc(this.db, 'users', this.userKey, 'jobs', jobId),
         {
           jobId,
-          status: "submitted",
+          status: 'submitted',
           input: payload,
           createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp()
+          updatedAt: serverTimestamp(),
         },
         { merge: true }
       );
     } catch (error) {
-      console.warn("firebase saveJobStart skipped:", error?.message || error);
+      console.warn('firebase saveJobStart skipped:', error?.message || error);
     }
   }
 
@@ -123,16 +128,16 @@ class FirebaseService {
     if (!this.enabled || !this.db || !this.userKey) return;
     try {
       await setDoc(
-        doc(this.db, "users", this.userKey, "jobs", jobId),
+        doc(this.db, 'users', this.userKey, 'jobs', jobId),
         {
-          status: "done",
+          status: 'done',
           output: this.toFirestoreSafe(result),
-          updatedAt: serverTimestamp()
+          updatedAt: serverTimestamp(),
         },
         { merge: true }
       );
     } catch (error) {
-      console.warn("firebase saveJobResult skipped:", error?.message || error);
+      console.warn('firebase saveJobResult skipped:', error?.message || error);
     }
   }
 
@@ -140,7 +145,7 @@ class FirebaseService {
     if (Array.isArray(value)) {
       return value.map((item) => {
         if (Array.isArray(item)) {
-          if (item.length === 2 && item.every((v) => typeof v === "number")) {
+          if (item.length === 2 && item.every((v) => typeof v === 'number')) {
             return { lat: item[0], lng: item[1] };
           }
           return { items: this.toFirestoreSafe(item) };
@@ -149,7 +154,7 @@ class FirebaseService {
       });
     }
 
-    if (value && typeof value === "object") {
+    if (value && typeof value === 'object') {
       const out = {};
       for (const [k, v] of Object.entries(value)) {
         out[k] = this.toFirestoreSafe(v);
@@ -167,4 +172,4 @@ export const firebaseService = new FirebaseService();
 
 // Named convenience exports for modules that destructure-import { auth, db }
 export const auth = firebaseService.auth;
-export const db   = firebaseService.db;
+export const db = firebaseService.db;

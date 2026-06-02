@@ -28,8 +28,8 @@ from .heuristics import build_greedy
 from .local_search import (
     _ejection_chain_eliminate,
     _iterative_route_elimination,
-    local_search,
     _try_route_merge,
+    local_search,
 )
 from .operators import DESTROY, N_D, N_R, REPAIR, accept, accept_with_nv_ceiling, destroy_size
 from .pool import RoutePool, recombine_with_route_pool
@@ -46,7 +46,8 @@ from .rl import (
 )
 
 try:
-    import ortools
+    import ortools  # noqa: F401
+
     ORTOOLS_OK = True
 except ImportError:
     ORTOOLS_OK = False
@@ -86,13 +87,13 @@ class ALNSSolver:
                 cur = cand
             else:
                 no_imp += 1
-            
+
             # Adapt q_scale based on whether search is improving or stuck
             if no_imp == 0:
                 self.q_scale = max(0.6, self.q_scale * 0.98)
             else:
                 self.q_scale = min(1.6, self.q_scale * 1.005)
-                
+
             self.bandit.update(di, ri, score, cfg.sigma1)
             if (it + 1) % cfg.segment_size == 0:
                 self.bandit.decay(cfg.bandit_decay)
@@ -119,7 +120,7 @@ class HybridDDQNSolver:
         self.reward_norm = WelfordRewardNormalizer(clip_sigma=8.0, warmup=128)
         self.mode_bandits: list[ThompsonBandit] = [ThompsonBandit(N_D, N_R) for _ in MODES]
         self._segment_recombine_used = False
-        self._pool_seeding_done: bool = False   # guard: fires once per solve()
+        self._pool_seeding_done: bool = False  # guard: fires once per solve()
         self._init_nv = 1
         self.archive = EliteArchive(k=cfg.elite_archive_k)
 
@@ -204,18 +205,18 @@ class HybridDDQNSolver:
                 padded_mu = np.zeros(self.ucb_aug.n, dtype=np.float64)
                 padded_cnt = np.ones(self.ucb_aug.n, dtype=np.float64) * 0.5
                 padded_m2 = np.ones(self.ucb_aug.n, dtype=np.float64) * 0.5
-                
-                padded_mu[:len(loaded_mu)] = loaded_mu
-                padded_cnt[:len(loaded_cnt)] = loaded_cnt
-                padded_m2[:len(loaded_m2)] = loaded_m2
-                
+
+                padded_mu[: len(loaded_mu)] = loaded_mu
+                padded_cnt[: len(loaded_cnt)] = loaded_cnt
+                padded_m2[: len(loaded_m2)] = loaded_m2
+
                 for new_act in range(len(loaded_mu), self.ucb_aug.n):
                     rep_idx = new_act % 5
                     src_act = 5 * 5 + rep_idx
                     padded_mu[new_act] = loaded_mu[src_act]
                     padded_cnt[new_act] = loaded_cnt[src_act]
                     padded_m2[new_act] = loaded_m2[src_act]
-                
+
                 self.ucb_aug._mu = padded_mu
                 self.ucb_aug._cnt = padded_cnt
                 self.ucb_aug._m2 = padded_m2
@@ -367,7 +368,9 @@ class HybridDDQNSolver:
             nv_cap = min(best.nv, refined.nv)
             recombined = recombine_with_route_pool(refined, pool, self.cfg, nv_ceiling=nv_cap)
             if recombined.dominates(refined):
-                refined = local_search(recombined, max_passes=1, nv_ceiling=recombined.nv, max_ls_moves=self.cfg.max_ls_moves)
+                refined = local_search(
+                    recombined, max_passes=1, nv_ceiling=recombined.nv, max_ls_moves=self.cfg.max_ls_moves
+                )
         return refined
 
     def _fixed_nv_polish(self, start: Plan, pool: RoutePool, inherited_bandit: ThompsonBandit | None = None) -> Plan:
@@ -425,7 +428,6 @@ class HybridDDQNSolver:
         NEVER updates best. Only seeds pool with individual routes and full plans.
         """
         inst = self.inst
-        cfg = self.cfg
 
         for it in range(n_seeds):
             # Stagger ratios: 60% (large) and 42% (medium-large)
@@ -433,11 +435,11 @@ class HybridDDQNSolver:
             size = max(5, int(ratio * inst.n))
 
             # Alternate shaw (spatial clustering) and route_eliminate (full route removal)
-            di = 2 if it % 2 == 0 else 5   # DESTROY[2]=op_shaw, DESTROY[5]=op_route_eliminate
+            di = 2 if it % 2 == 0 else 5  # DESTROY[2]=op_shaw, DESTROY[5]=op_route_eliminate
             destroyed, removed = DESTROY[di](best.copy(), size)
 
             # regret-3 repair: tends to build fewer, longer routes than greedy
-            candidate = REPAIR[2](destroyed, removed)   # REPAIR[2] = op_regret_3
+            candidate = REPAIR[2](destroyed, removed)  # REPAIR[2] = op_regret_3
 
             # Add individual routes unconditionally (each route is self-contained feasible)
             for route in candidate.routes:
@@ -615,7 +617,9 @@ class HybridDDQNSolver:
                         prior_strength=self.cfg.bandit_prior_strength,
                     )
                     op_action = di * N_R + ri
-                size = destroy_size(it, cfg.hybrid_iterations, cfg, self.inst.n, scale=mode.destroy_scale * self.q_scale)
+                size = destroy_size(
+                    it, cfg.hybrid_iterations, cfg, self.inst.n, scale=mode.destroy_scale * self.q_scale
+                )
                 cur_before = cur.copy()
                 best_before = best.copy()
                 dest, removed = DESTROY[di](cur.copy(), size)
@@ -669,7 +673,9 @@ class HybridDDQNSolver:
                             if action in (MODE_INTENSIFY, MODE_TW_RESCUE, MODE_POOL_RECOMBINE, MODE_ROUTE_REDUCE)
                             else None
                         )
-                        cand = local_search(cand, max_passes=MODES[action].ls_passes, nv_ceiling=nv_cap, max_ls_moves=cfg.max_ls_moves)
+                        cand = local_search(
+                            cand, max_passes=MODES[action].ls_passes, nv_ceiling=nv_cap, max_ls_moves=cfg.max_ls_moves
+                        )
                         self.ls_budget.record(time.time() - t_ls, cost_pre, cand.cost)
                     improved = cand.dominates(cur)
                     pool.add_plan(cand)
@@ -707,13 +713,13 @@ class HybridDDQNSolver:
                         )
                     if (it + 1) % 4 == 0:
                         self.op_ctrl.train_step()
-                
+
                 # Adapt q_scale based on whether search is improving or stuck
                 if no_imp == 0:
                     self.q_scale = max(0.6, self.q_scale * 0.98)
                 else:
                     self.q_scale = min(1.6, self.q_scale * 1.005)
-                    
+
                 temp *= cfg.temp_decay * mode.temp_decay_scale
                 history.append(best.cost)
                 if no_imp >= cfg.early_stop_patience:
@@ -764,7 +770,9 @@ class HybridDDQNSolver:
         if cfg.recombine_after_polish:
             recombined = recombine_with_route_pool(best, pool, cfg, nv_ceiling=best.nv)
             if recombined.dominates(best):
-                best = local_search(recombined, max_passes=cfg.polish_ls_passes, nv_ceiling=recombined.nv, max_ls_moves=cfg.max_ls_moves)
+                best = local_search(
+                    recombined, max_passes=cfg.polish_ls_passes, nv_ceiling=recombined.nv, max_ls_moves=cfg.max_ls_moves
+                )
                 history.append(best.cost)
 
         # Enrich pool before MILP queries: large-destroy seeds cover the 7-9 customer
@@ -783,7 +791,7 @@ class HybridDDQNSolver:
                 max_passes=cfg.polish_ls_passes + 1,
                 nv_ceiling=_rec.nv,
                 max_ls_moves=cfg.max_ls_moves * 2,
-                pool=pool,          # seed intermediates into pool
+                pool=pool,  # seed intermediates into pool
             )
             if _rec.feasible and _rec.nv <= _target_nv:
                 best = _rec
@@ -793,8 +801,10 @@ class HybridDDQNSolver:
 
         # Pass 1: depth-2 ejection chain (handles TW-blocked direct insertions)
         chain_result = _ejection_chain_eliminate(best)
-        if chain_result is not None and chain_result.feasible and (
-            chain_result.nv < best.nv or chain_result.dominates(best)
+        if (
+            chain_result is not None
+            and chain_result.feasible
+            and (chain_result.nv < best.nv or chain_result.dominates(best))
         ):
             best = chain_result
             pool.add_plan(best)
@@ -809,21 +819,18 @@ class HybridDDQNSolver:
 
         # Pass 3: committed NV search — only if still above target
         from .config import BKS as _BKS
+
         _bks = _BKS.get(self.inst.name)
         _bks_nv = int(_bks["nv"]) if _bks else max(1, best.nv - 1)
         if best.nv > _bks_nv:
             committed = self._committed_nv_search(best, pool, target_nv=best.nv - 1)
-            if committed is not None and committed.feasible and (
-                committed.nv < best.nv or committed.dominates(best)
-            ):
+            if committed is not None and committed.feasible and (committed.nv < best.nv or committed.dominates(best)):
                 best = committed
                 pool.add_plan(best)
                 history.append(best.cost)
                 # One more ejection attempt at the new, lower NV
                 chain2 = _ejection_chain_eliminate(best)
-                if chain2 is not None and chain2.feasible and (
-                    chain2.nv < best.nv or chain2.dominates(best)
-                ):
+                if chain2 is not None and chain2.feasible and (chain2.nv < best.nv or chain2.dominates(best)):
                     best = chain2
                     pool.add_plan(best)
                     history.append(best.cost)

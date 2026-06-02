@@ -14,13 +14,13 @@
  *     without caring which analytics tool is wired up.
  */
 (function () {
-  "use strict";
+  'use strict';
 
-  var CONFIG_ENDPOINT = "/api/config";
-  var DEFAULT_SENTRY_BUNDLE = "https://browser.sentry-cdn.com/8.34.0/bundle.tracing.min.js";
+  var CONFIG_ENDPOINT = '/api/config';
+  var DEFAULT_SENTRY_BUNDLE = 'https://browser.sentry-cdn.com/8.34.0/bundle.tracing.min.js';
 
   function loadScript(src, onload, onerror, attrs) {
-    var s = document.createElement("script");
+    var s = document.createElement('script');
     s.src = src;
     s.async = true;
     s.defer = true;
@@ -30,10 +30,10 @@
       });
     }
     s.onload = function () {
-      if (typeof onload === "function") onload();
+      if (typeof onload === 'function') onload();
     };
     s.onerror = function () {
-      if (typeof onerror === "function") onerror();
+      if (typeof onerror === 'function') onerror();
     };
     document.head.appendChild(s);
   }
@@ -42,13 +42,13 @@
 
   function initSentry(cfg) {
     if (!cfg || !cfg.enabled || !cfg.dsn) return;
-    if (window.Sentry && typeof window.Sentry.init === "function") {
+    if (window.Sentry && typeof window.Sentry.init === 'function') {
       try {
         window.Sentry.init({
           dsn: cfg.dsn,
-          environment: cfg.environment || "development",
+          environment: cfg.environment || 'development',
           tracesSampleRate: cfg.tracesSampleRate || 0.0,
-          release: (window.__VRPTW_VERSION__ || "dev"),
+          release: window.__VRPTW_VERSION__ || 'dev',
         });
         return;
       } catch (e) {
@@ -58,47 +58,92 @@
     loadScript(
       DEFAULT_SENTRY_BUNDLE,
       function () {
-        if (window.Sentry && typeof window.Sentry.init === "function") {
+        if (window.Sentry && typeof window.Sentry.init === 'function') {
           try {
             window.Sentry.init({
               dsn: cfg.dsn,
-              environment: cfg.environment || "development",
+              environment: cfg.environment || 'development',
               tracesSampleRate: cfg.tracesSampleRate || 0.0,
             });
           } catch (e) {
-            console.warn("Sentry init failed", e);
+            console.warn('Sentry init failed', e);
           }
         }
       },
       function () {
-        console.warn("Could not load Sentry browser SDK");
+        console.warn('Could not load Sentry browser SDK');
       },
-      { crossorigin: "anonymous" }
+      { crossorigin: 'anonymous' }
     );
   }
 
   function initPlausible(cfg) {
     if (!cfg || !cfg.enabled || !cfg.domain) return;
-    var src = cfg.src || "https://plausible.io/js/script.js";
-    loadScript(src, noop, function () {
-      console.warn("Plausible script blocked or unreachable");
-    }, { "data-domain": cfg.domain });
+    var src = cfg.src || 'https://plausible.io/js/script.js';
+    loadScript(
+      src,
+      noop,
+      function () {
+        console.warn('Plausible script blocked or unreachable');
+      },
+      { 'data-domain': cfg.domain }
+    );
   }
 
   function initPostHog(cfg) {
     if (!cfg || !cfg.enabled || !cfg.apiKey) return;
     /* eslint-disable */
-    !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.async=!0,p.src=s.api_host+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="capture identify alias people.set people.set_once set_config register register_once unregister opt_out_capturing has_opted_out_capturing opt_in_capturing reset isFeatureEnabled onFeatureFlags getFeatureFlag getFeatureFlagPayload reloadFeatureFlags group updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures getActiveMatchingSurveys getSurveys".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+    !(function (t, e) {
+      var o, n, p, r;
+      e.__SV ||
+        ((window.posthog = e),
+        (e._i = []),
+        (e.init = function (i, s, a) {
+          function g(t, e) {
+            var o = e.split('.');
+            (2 == o.length && ((t = t[o[0]]), (e = o[1])),
+              (t[e] = function () {
+                t.push([e].concat(Array.prototype.slice.call(arguments, 0)));
+              }));
+          }
+          (((p = t.createElement('script')).type = 'text/javascript'),
+            (p.async = !0),
+            (p.src = s.api_host + '/static/array.js'),
+            (r = t.getElementsByTagName('script')[0]).parentNode.insertBefore(p, r));
+          var u = e;
+          for (
+            void 0 !== a ? (u = e[a] = []) : (a = 'posthog'),
+              u.people = u.people || [],
+              u.toString = function (t) {
+                var e = 'posthog';
+                return ('posthog' !== a && (e += '.' + a), t || (e += ' (stub)'), e);
+              },
+              u.people.toString = function () {
+                return u.toString(1) + '.people (stub)';
+              },
+              o =
+                'capture identify alias people.set people.set_once set_config register register_once unregister opt_out_capturing has_opted_out_capturing opt_in_capturing reset isFeatureEnabled onFeatureFlags getFeatureFlag getFeatureFlagPayload reloadFeatureFlags group updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures getActiveMatchingSurveys getSurveys'.split(
+                  ' '
+                ),
+              n = 0;
+            n < o.length;
+            n++
+          )
+            g(u, o[n]);
+          e._i.push([i, s, a]);
+        }),
+        (e.__SV = 1));
+    })(document, window.posthog || []);
     /* eslint-enable */
     try {
       window.posthog.init(cfg.apiKey, {
-        api_host: cfg.apiHost || "https://app.posthog.com",
+        api_host: cfg.apiHost || 'https://app.posthog.com',
         capture_pageview: true,
         autocapture: true,
-        person_profiles: "identified_only",
+        person_profiles: 'identified_only',
       });
     } catch (e) {
-      console.warn("PostHog init failed", e);
+      console.warn('PostHog init failed', e);
     }
   }
 
@@ -115,16 +160,16 @@
     } catch (e) {}
     try {
       if (window.Sentry && window.Sentry.addBreadcrumb) {
-        window.Sentry.addBreadcrumb({ category: "event", message: event, data: props || {}, level: "info" });
+        window.Sentry.addBreadcrumb({ category: 'event', message: event, data: props || {}, level: 'info' });
       }
     } catch (e) {}
   }
   window.vrptwTrack = track;
 
   function bootstrap() {
-    fetch(CONFIG_ENDPOINT, { credentials: "same-origin" })
+    fetch(CONFIG_ENDPOINT, { credentials: 'same-origin' })
       .then(function (resp) {
-        if (!resp.ok) throw new Error("config " + resp.status);
+        if (!resp.ok) throw new Error('config ' + resp.status);
         return resp.json();
       })
       .then(function (cfg) {
@@ -135,12 +180,12 @@
         initPostHog(cfg.posthog);
       })
       .catch(function (err) {
-        console.debug("observability disabled:", err && err.message);
+        console.debug('observability disabled:', err && err.message);
       });
   }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", bootstrap);
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootstrap);
   } else {
     bootstrap();
   }

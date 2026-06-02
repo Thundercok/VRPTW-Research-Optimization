@@ -24,6 +24,6 @@ export function createInitialState() {
     adminFeedback: [],
     lastResult: null,
     activeTab: 'overview',
-    unlocked: Boolean(localStorage.getItem('vrptw_token'))
+    unlocked: Boolean(localStorage.getItem('vrptw_token')),
   };
 }

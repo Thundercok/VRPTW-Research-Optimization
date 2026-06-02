@@ -11,28 +11,30 @@ from .heuristics import _insert_customer, _route_avg_slack, _route_cost_list, _r
 try:
     from scipy.optimize import Bounds, LinearConstraint
     from scipy.optimize import milp as _scipy_milp
+
     milp = _scipy_milp
     MILP_OK = True
 except Exception:
     Bounds = LinearConstraint = milp = None
     MILP_OK = False
 
+
 @dataclass(frozen=True)
 class RouteRecord:
     nodes: tuple[int, ...]
-    cost:  float
-    load:  float
+    cost: float
+    load: float
     slack: float
 
 
 class RoutePool:
     def __init__(self, inst: Inst, cfg: Config):
         self.inst = inst
-        self.cfg  = cfg
+        self.cfg = cfg
         self._routes: dict[tuple[int, ...], RouteRecord] = {}
 
     def _priority(self, rec: RouteRecord) -> tuple[float, ...]:
-        lr  = rec.load / max(self.inst.capacity, 1)
+        lr = rec.load / max(self.inst.capacity, 1)
         cps = rec.cost / max(len(rec.nodes), 1)
         return (-len(rec.nodes), cps, -lr, -rec.slack)
 
@@ -41,7 +43,7 @@ class RoutePool:
         if len(self._routes) <= limit:
             return
         usage: dict[int, int] = {}
-        kept:  dict[tuple[int, ...], RouteRecord] = {}
+        kept: dict[tuple[int, ...], RouteRecord] = {}
         ranked = sorted(self._routes.values(), key=self._priority)
         for rec in ranked:
             if len(kept) >= limit:
@@ -67,8 +69,8 @@ class RoutePool:
             return
         self._routes[key] = RouteRecord(
             nodes=key,
-            cost =_route_cost_list(route, self.inst),
-            load =_route_load(route, self.inst),
+            cost=_route_cost_list(route, self.inst),
+            load=_route_load(route, self.inst),
             slack=_route_avg_slack(route, self.inst),
         )
         self._trim()
@@ -84,8 +86,8 @@ class RoutePool:
                 key = tuple(r)
                 recs[key] = RouteRecord(
                     nodes=key,
-                    cost =_route_cost_list(r, incumbent.inst),
-                    load =_route_load(r, incumbent.inst),
+                    cost=_route_cost_list(r, incumbent.inst),
+                    load=_route_load(r, incumbent.inst),
                     slack=_route_avg_slack(r, incumbent.inst),
                 )
         return sorted(recs.values(), key=self._priority)
@@ -95,13 +97,17 @@ def _sp_vehicle_penalty(inst: Inst, cfg: Config) -> float:
     return cfg.sp_vehicle_penalty_scale * max(inst.max_dist, 1.0) * max(inst.n, 1)
 
 
-def _milp_recombine(route_records: list[RouteRecord], inst: Inst, cfg: Config,
-                    nv_ceiling: int | None = None,
-                    vehicle_penalty: float | None = None) -> Plan | None:
+def _milp_recombine(
+    route_records: list[RouteRecord],
+    inst: Inst,
+    cfg: Config,
+    nv_ceiling: int | None = None,
+    vehicle_penalty: float | None = None,
+) -> Plan | None:
     if not MILP_OK or not route_records:
         return None
     n_routes = len(route_records)
-    cover    = np.zeros((inst.n, n_routes), dtype=float)
+    cover = np.zeros((inst.n, n_routes), dtype=float)
     for ridx, rec in enumerate(route_records):
         for node in rec.nodes:
             cover[node - 1, ridx] = 1.0
@@ -109,13 +115,14 @@ def _milp_recombine(route_records: list[RouteRecord], inst: Inst, cfg: Config,
         return None
     constraints = [LinearConstraint(cover, lb=np.ones(inst.n), ub=np.ones(inst.n))]
     if nv_ceiling is not None:
-        constraints.append(LinearConstraint(
-            np.ones((1, n_routes)), lb=np.array([0.0]), ub=np.array([float(nv_ceiling)])
-        ))
+        constraints.append(
+            LinearConstraint(np.ones((1, n_routes)), lb=np.array([0.0]), ub=np.array([float(nv_ceiling)]))
+        )
     penalty = vehicle_penalty if vehicle_penalty is not None else _sp_vehicle_penalty(inst, cfg)
-    costs  = np.array([penalty + rec.cost for rec in route_records])
+    costs = np.array([penalty + rec.cost for rec in route_records])
     result = milp(
-        c=costs, constraints=constraints,
+        c=costs,
+        constraints=constraints,
         integrality=np.ones(n_routes, dtype=int),
         bounds=Bounds(np.zeros(n_routes), np.ones(n_routes)),
         options={"time_limit": float(cfg.sp_time_limit), "disp": False},
@@ -123,12 +130,11 @@ def _milp_recombine(route_records: list[RouteRecord], inst: Inst, cfg: Config,
     if result is None or not getattr(result, "success", False) or result.x is None:
         return None
     chosen = [list(route_records[i].nodes) for i, v in enumerate(result.x) if v >= 0.5]
-    plan   = Plan(chosen, inst, "SP-RECOMBINE")
+    plan = Plan(chosen, inst, "SP-RECOMBINE")
     return plan if plan.feasible else None
 
 
-def _greedy_recombine(route_records: list[RouteRecord], incumbent: Plan,
-                      nv_ceiling: int | None = None) -> Plan:
+def _greedy_recombine(route_records: list[RouteRecord], incumbent: Plan, nv_ceiling: int | None = None) -> Plan:
     uncovered = set(range(1, incumbent.inst.n + 1))
     selected: list[list[int]] = []
     used: set = set()
@@ -174,8 +180,7 @@ def recombine_with_route_pool(
 
     if not use_penalty:
         # Standard recombination: no NV pressure
-        candidate = _milp_recombine(recs, incumbent.inst, cfg,
-                                     nv_ceiling=effective_ceiling, vehicle_penalty=0.0)
+        candidate = _milp_recombine(recs, incumbent.inst, cfg, nv_ceiling=effective_ceiling, vehicle_penalty=0.0)
         if candidate is None:
             candidate = _greedy_recombine(recs, incumbent, nv_ceiling=effective_ceiling)
         return candidate if candidate.dominates(incumbent) else incumbent.copy()
@@ -192,29 +197,29 @@ def recombine_with_route_pool(
             if name == "sp_time_limit":
                 return per_query_limit
             return getattr(cfg, name)
+
     tmp_cfg = _TmpCfg()
 
     for scale in penalty_scales:
         penalty = max(cfg.sp_vehicle_penalty_scale, mean_cost * scale)
         candidate = _milp_recombine(
-            recs, incumbent.inst, tmp_cfg,
+            recs,
+            incumbent.inst,
+            tmp_cfg,
             nv_ceiling=effective_ceiling,
             vehicle_penalty=penalty,
         )
-        if candidate is not None and (
-            effective_ceiling is None or candidate.nv <= effective_ceiling
-        ):
+        if candidate is not None and (effective_ceiling is None or candidate.nv <= effective_ceiling):
             # Run LS at the new NV to recover TD
             from .local_search import local_search
+
             candidate = local_search(
                 candidate,
                 max_passes=1,
                 nv_ceiling=candidate.nv,
                 max_ls_moves=10,
             )
-            if candidate.feasible and (
-                effective_ceiling is None or candidate.nv <= effective_ceiling
-            ):
+            if candidate.feasible and (effective_ceiling is None or candidate.nv <= effective_ceiling):
                 return candidate
 
     # All scales failed: greedy fallback
@@ -222,4 +227,3 @@ def recombine_with_route_pool(
     if effective_ceiling is not None and candidate.nv > effective_ceiling:
         return incumbent.copy()
     return candidate if candidate.dominates(incumbent) else incumbent.copy()
-

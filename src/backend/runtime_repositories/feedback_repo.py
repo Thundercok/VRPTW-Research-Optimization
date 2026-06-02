@@ -22,12 +22,7 @@ class FeedbackRepository:
     def list(self, limit: int = 100) -> list[FeedbackEntry]:
         if self.persistence_enabled and is_firebase_enabled():
             try:
-                snaps = (
-                    self._feedback_collection()
-                    .order_by("created_at", direction="DESCENDING")
-                    .limit(limit)
-                    .stream()
-                )
+                snaps = self._feedback_collection().order_by("created_at", direction="DESCENDING").limit(limit).stream()
                 items = [FeedbackEntry.model_validate(snap.to_dict() or {}) for snap in snaps]
                 for entry in items:
                     self.items[entry.id] = entry

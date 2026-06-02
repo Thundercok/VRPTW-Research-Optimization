@@ -13,8 +13,7 @@ def send_email(to_email: str, subject: str, body: str, html_body: str | None = N
     smtp_from = os.getenv("SMTP_FROM", smtp_user or "noreply@vrptw.local")
 
     if not smtp_host:
-        print(
-            f"[MAIL-CONSOLE] To: {to_email}\\nSubject: {subject}\\n{body}\\n")
+        print(f"[MAIL-CONSOLE] To: {to_email}\\nSubject: {subject}\\n{body}\\n")
         if html_body:
             print(f"[MAIL-CONSOLE-HTML] {html_body}\\n")
         return "console"

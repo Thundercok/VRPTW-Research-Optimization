@@ -6,11 +6,11 @@ from dotenv import load_dotenv
 from playwright.sync_api import APIRequestContext, Page
 
 load_dotenv(".env.test")
-HOSTING_BASE   = "http://127.0.0.1:5050"      # Firebase Hosting emulator (SPA)
-AUTH_EMULATOR   = "http://127.0.0.1:9099"      # Firebase Auth emulator
-API_BASE        = "http://127.0.0.1:8000"      # FastAPI backend
-TEST_EMAIL      = os.getenv("TEST_EMAIL", "test@vrptw.local")
-TEST_PASSWORD   = os.getenv("TEST_PASSWORD", "testpass123")
+HOSTING_BASE = "http://127.0.0.1:5050"  # Firebase Hosting emulator (SPA)
+AUTH_EMULATOR = "http://127.0.0.1:9099"  # Firebase Auth emulator
+API_BASE = "http://127.0.0.1:8000"  # FastAPI backend
+TEST_EMAIL = os.getenv("TEST_EMAIL", "test@vrptw.local")
+TEST_PASSWORD = os.getenv("TEST_PASSWORD", "testpass123")
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -31,10 +31,7 @@ def seed_emulator_user():
         else:
             print(f"\n[Emulator] Seed response: {resp.status_code} {resp.text}")
     except requests.ConnectionError:
-        pytest.fail(
-            "Firebase Auth Emulator is not running on port 9099.\n"
-            "Start it with: make emulators"
-        )
+        pytest.fail("Firebase Auth Emulator is not running on port 9099.\nStart it with: make emulators")
     yield
 
 

@@ -92,7 +92,9 @@ body {
   box-shadow: var(--shadow);
   padding: 16px;
   margin-bottom: 24px;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 .saas-card:hover {
   transform: translateY(-2px);
@@ -105,7 +107,8 @@ body {
   border-collapse: separate;
   border-spacing: 0 8px;
 }
-.saas-table th, .saas-table td {
+.saas-table th,
+.saas-table td {
   padding: 8px 12px;
   text-align: left;
   background: var(--bg-surface);
@@ -130,9 +133,18 @@ body {
   font-weight: 600;
   text-transform: uppercase;
 }
-.analysis-pill.good { background: var(--success); color: #fff; }
-.analysis-pill.bad { background: var(--danger); color: #fff; }
-.analysis-pill.neutral { background: var(--warning); color: #fff; }
+.analysis-pill.good {
+  background: var(--success);
+  color: #fff;
+}
+.analysis-pill.bad {
+  background: var(--danger);
+  color: #fff;
+}
+.analysis-pill.neutral {
+  background: var(--warning);
+  color: #fff;
+}
 
 /* KPI cards */
 .analysis-kpi {
