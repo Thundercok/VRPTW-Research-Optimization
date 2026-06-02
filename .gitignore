@@ -70,3 +70,13 @@ CLAUDE.md
 node_modules
 dist/
 /dist/
+
+# ---------------------------------------------------------------
+# Firebase & Local Run Logs
+# ---------------------------------------------------------------
+*debug.log
+logs_test_oropt/
+benchmark_clean.csv
+src/benchmark_clean.csv
+src/dr_training.log
+*.log
