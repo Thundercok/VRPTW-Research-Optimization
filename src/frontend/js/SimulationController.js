@@ -15,6 +15,12 @@ export class SimulationController {
     this.speedSelect = null;
     this.vehicleList = null;
     this.controlPanel = null;
+
+    // Dispatch incident controls
+    this.incidents = new Map(); // vehicleId -> { type: 'breakdown' | 'traffic', triggerTime: number }
+    this.delayOffsets = new Map(); // vehicleId -> number (accumulated permanent delay in minutes)
+    this.alerts = []; // array of { time: string, type: string, message: string }
+    this.lastVehicleStates = new Map(); // vehicleId -> string (status_stopIndex transition state indicator)
   }
 
   init() {
@@ -64,6 +70,13 @@ export class SimulationController {
     this.maxTime = Math.max(1, maxTime || 240);
     this.t_sim = 0;
     this.isPlaying = false;
+
+    this.incidents.clear();
+    this.delayOffsets.clear();
+    this.alerts = [];
+    this.lastVehicleStates.clear();
+
+    this.addAlert('info', 'Simulation started. Dispatch center monitoring online.');
     
     if (this.slider) {
       this.slider.max = String(this.maxTime);
@@ -106,6 +119,9 @@ export class SimulationController {
   play() {
     if (this.t_sim >= this.maxTime) {
       this.t_sim = 0; // wrap around
+      this.lastVehicleStates.clear();
+      this.alerts = [];
+      this.addAlert('info', 'Simulation restarted.');
     }
     this.isPlaying = true;
     this.lastTickTime = performance.now();
@@ -173,6 +189,142 @@ export class SimulationController {
     this.btnPlay.textContent = this.isPlaying ? '⏸ Pause' : '▶ Play';
   }
 
+  // Intercept the geospatial vehicle position during update checks
+  getIncidentState(vehicleId, t_sim, route, roadData) {
+    const offset = this.delayOffsets.get(vehicleId) || 0;
+    const activeIncident = this.incidents.get(vehicleId);
+
+    // Calculate effective time progression
+    let t_eff = t_sim - offset;
+
+    if (activeIncident) {
+      const triggerTime = activeIncident.triggerTime;
+      
+      if (t_sim >= triggerTime) {
+        if (activeIncident.type === 'breakdown') {
+          // Freeze marker coordinates at breakdown trigger point
+          const freezeTime = Math.max(0, triggerTime - offset);
+          const state = this.app.mapController.getVehicleStateAtTimeDirect(route, freezeTime, roadData);
+          const elapsed = Math.round(t_sim - triggerTime);
+          return {
+            ...state,
+            status: 'Breakdown',
+            detail: `⚠️ Breakdown! Delayed by ${elapsed}m. Technician active.`,
+            lat: state.lat,
+            lng: state.lng
+          };
+        } else if (activeIncident.type === 'traffic') {
+          // Progress time since traffic onset at 33% rate (inducing travel time delay)
+          const elapsed = t_sim - triggerTime;
+          const elapsedEff = elapsed * 0.33;
+          t_eff = triggerTime - offset + elapsedEff;
+          
+          const state = this.app.mapController.getVehicleStateAtTimeDirect(route, t_eff, roadData);
+          const delayMinutes = Math.round(elapsed - elapsedEff);
+          return {
+            ...state,
+            status: 'Traffic Jam',
+            detail: `🛑 Congestion! Delayed: +${delayMinutes}m. Speed: 12 km/h.`,
+            lat: state.lat,
+            lng: state.lng
+          };
+        }
+      }
+    }
+
+    if (offset > 0) {
+      const state = this.app.mapController.getVehicleStateAtTimeDirect(route, t_eff, roadData);
+      return {
+        ...state,
+        detail: `${state.detail} (Delayed: +${Math.round(offset)}m)`
+      };
+    }
+
+    return null; // let normal map coordinate interpolation proceed
+  }
+
+  toggleIncident(vehicleId, type) {
+    vehicleId = Number(vehicleId);
+    const active = this.incidents.get(vehicleId);
+    const driverName = this.getDriverName(vehicleId);
+
+    if (active) {
+      if (active.type === type) {
+        this.clearIncident(vehicleId);
+      } else {
+        this.clearIncident(vehicleId);
+        this.incidents.set(vehicleId, { type, triggerTime: this.t_sim });
+        this.addAlert(type === 'breakdown' ? 'error' : 'warn', 
+          `Disruption Alert: ${driverName} reported active ${type === 'breakdown' ? 'engine breakdown' : 'severe traffic jam'}.`
+        );
+        this.app.toast('Incident Triggered', `${driverName} reports active ${type}.`, 'warn');
+      }
+    } else {
+      this.incidents.set(vehicleId, { type, triggerTime: this.t_sim });
+      this.addAlert(type === 'breakdown' ? 'error' : 'warn', 
+        `Disruption Alert: ${driverName} reported active ${type === 'breakdown' ? 'engine breakdown' : 'severe traffic jam'}.`
+      );
+      this.app.toast('Incident Triggered', `${driverName} reports active ${type}.`, 'warn');
+    }
+
+    this.updateFrame();
+  }
+
+  clearIncident(vehicleId) {
+    vehicleId = Number(vehicleId);
+    const active = this.incidents.get(vehicleId);
+    if (!active) return;
+
+    const driverName = this.getDriverName(vehicleId);
+    const elapsed = this.t_sim - active.triggerTime;
+    let delayAdded = 0;
+
+    if (active.type === 'breakdown') {
+      delayAdded = elapsed;
+    } else if (active.type === 'traffic') {
+      delayAdded = elapsed * 0.67; // 33% progress means 67% loss rate
+    }
+
+    const currentOffset = this.delayOffsets.get(vehicleId) || 0;
+    this.delayOffsets.set(vehicleId, currentOffset + delayAdded);
+    this.incidents.delete(vehicleId);
+
+    this.addAlert('success', `Resolved: ${driverName} disruption cleared. Route delay committed: +${Math.round(currentOffset + delayAdded)}m.`);
+    this.app.toast('Incident Resolved', `${driverName} reports path clear.`, 'ok');
+    this.updateFrame();
+  }
+
+  addAlert(type, message) {
+    const minutes = Math.floor(this.t_sim);
+    const secs = Math.floor((this.t_sim % 1) * 60);
+    const timeStr = `${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+
+    this.alerts.unshift({
+      time: timeStr,
+      type, // 'info' | 'warn' | 'error' | 'success'
+      message
+    });
+
+    if (this.alerts.length > 30) {
+      this.alerts.pop();
+    }
+  }
+
+  getRouteForVehicle(vehicleId) {
+    const result = this.app.state.lastResult;
+    if (!result) return null;
+    const mapModeElement = document.querySelector('input[name="map_view"]:checked');
+    const activeAlgo = mapModeElement ? mapModeElement.value : 'ddqn';
+    const algoResult = result[activeAlgo];
+    if (!algoResult || !algoResult.routes) return null;
+    return algoResult.routes.find(r => r.vehicle_id === Number(vehicleId));
+  }
+
+  getDriverName(vehicleId) {
+    const fleetVehicle = this.app.state.fleet?.[vehicleId];
+    return fleetVehicle ? fleetVehicle.driver : `Vehicle #${vehicleId}`;
+  }
+
   updateFrame() {
     const result = this.app.state.lastResult;
     if (!result) return;
@@ -183,6 +335,9 @@ export class SimulationController {
     const algoResult = result[activeAlgo];
 
     if (!algoResult || !algoResult.routes) return;
+
+    // Run transition checks and auto-log alerts
+    this.checkStateTransitions(algoResult);
 
     // Update vehicle markers positions on Map
     this.app.mapController.updateSimulation(this.t_sim, algoResult, activeAlgo);
@@ -202,13 +357,78 @@ export class SimulationController {
     }
   }
 
-  updateStatusPanel(algoResult, isDdqnOrAlgoName) {
+  checkStateTransitions(algoResult) {
+    algoResult.routes.forEach(route => {
+      const vehicleId = route.vehicle_id;
+      const driverName = this.getDriverName(vehicleId);
+
+      // Get current location/status state (respecting active breakdown freeze if present)
+      const roadKey = `${this.app.mapController.activeAlgo || 'ddqn'}_${vehicleId}`;
+      const roadData = this.app.mapController.roadRoutes.get(roadKey);
+      const state = this.getIncidentState(vehicleId, this.t_sim, route, roadData) || 
+                    this.app.mapController.getVehicleStateAtTimeDirect(route, this.t_sim, roadData);
+
+      const activeKey = `${state.status}_${state.stopIndex}`;
+      const lastState = this.lastVehicleStates.get(vehicleId);
+
+      if (lastState && lastState !== activeKey) {
+        const lastStatus = lastState.split('_')[0];
+        const lastStopIndex = Number(lastState.split('_')[1]);
+
+        if (lastStatus === 'Traveling' && (state.status === 'Servicing' || state.status === 'Waiting')) {
+          // Arrived at Customer Stop
+          const stopIdx = state.stopIndex - 1;
+          const customerId = route.stops[stopIdx];
+          const customer = this.app.state.customers.find(c => c.id === customerId);
+          
+          const offset = this.delayOffsets.get(vehicleId) || 0;
+          const activeIncident = this.incidents.get(vehicleId);
+          let activeDelay = offset;
+          if (activeIncident && this.t_sim >= activeIncident.triggerTime) {
+            if (activeIncident.type === 'breakdown') activeDelay += (this.t_sim - activeIncident.triggerTime);
+            else if (activeIncident.type === 'traffic') activeDelay += (this.t_sim - activeIncident.triggerTime) * 0.67;
+          }
+
+          const step = route.schedule[stopIdx];
+          if (customer && step) {
+            const actualArrival = step.arrival + activeDelay;
+            const isLate = actualArrival > customer.due;
+            if (isLate) {
+              this.addAlert('error', `🛑 Late Delivery: ${driverName} reached customer ${customer.name} LATE at ${this.formatTimeStr(actualArrival)} (Due by: ${this.formatTimeStr(customer.due)}).`);
+            } else {
+              this.addAlert('success', `✓ Arrived: ${driverName} reached customer ${customer.name} on time.`);
+            }
+
+            // Check skill mismatch
+            const fleetVehicle = this.app.state.fleet?.[vehicleId];
+            const driverSkills = fleetVehicle ? (fleetVehicle.skills || 'None') : 'None';
+            if (customer.skill && customer.skill !== 'None') {
+              if (driverSkills === 'None' || !driverSkills.includes(customer.skill)) {
+                this.addAlert('warn', `⚠️ Skill Mismatch: ${driverName} started service at customer ${customer.name} without required skill "${customer.skill}".`);
+              }
+            }
+          }
+        } else if (lastStatus === 'Servicing' && (state.status === 'Traveling' || state.status === 'Returning')) {
+          // Service Completed
+          const stopIdx = lastStopIndex - 1;
+          const customerId = route.stops[stopIdx];
+          const customer = this.app.state.customers.find(c => c.id === customerId);
+          if (customer) {
+            this.addAlert('info', `📦 Delivery Proof: ${driverName} completed packages verification signature at "${customer.name}".`);
+          }
+        } else if (state.status === 'Returning' && lastStatus !== 'Returning') {
+          this.addAlert('info', `↩ Dispatch Update: ${driverName} completed all drops, returning to depot.`);
+        }
+      }
+
+      this.lastVehicleStates.set(vehicleId, activeKey);
+    });
+  }
+
+  updateStatusPanel(algoResult, algoName) {
     if (!this.vehicleList) return;
     
     this.activeSubTab = this.activeSubTab || 'vehicles';
-    const algoName = (typeof isDdqnOrAlgoName === 'boolean')
-      ? (isDdqnOrAlgoName ? 'ddqn' : 'alns')
-      : isDdqnOrAlgoName;
 
     const colors = {
       ddqn: '#10b981',
@@ -225,7 +445,8 @@ export class SimulationController {
     let html = `
       <div class="sim-panel-tabs" style="display: flex; gap: 4px; background: rgba(230, 235, 245, 0.9); padding: 4px; border-radius: var(--r); margin-bottom: 12px; border: 1px solid var(--border);">
         <button class="btn-sim-tab" data-tab="vehicles" style="flex: 1; border: none; padding: 6px 10px; font-size: 11px; font-weight: 600; border-radius: 4px; cursor: pointer; transition: all 0.2s; background: ${this.activeSubTab === 'vehicles' ? '#ffffff' : 'transparent'}; color: ${this.activeSubTab === 'vehicles' ? 'var(--text-main)' : 'var(--text-muted)'}; box-shadow: ${this.activeSubTab === 'vehicles' ? 'var(--shadow-sm)' : 'none'};">Drivers</button>
-        <button class="btn-sim-tab" data-tab="pod" style="flex: 1; border: none; padding: 6px 10px; font-size: 11px; font-weight: 600; border-radius: 4px; cursor: pointer; transition: all 0.2s; background: ${this.activeSubTab === 'pod' ? '#ffffff' : 'transparent'}; color: ${this.activeSubTab === 'pod' ? 'var(--text-main)' : 'var(--text-muted)'}; box-shadow: ${this.activeSubTab === 'pod' ? 'var(--shadow-sm)' : 'none'};">Proof of Delivery</button>
+        <button class="btn-sim-tab" data-tab="alerts" style="flex: 1; border: none; padding: 6px 10px; font-size: 11px; font-weight: 600; border-radius: 4px; cursor: pointer; transition: all 0.2s; background: ${this.activeSubTab === 'alerts' ? '#ffffff' : 'transparent'}; color: ${this.activeSubTab === 'alerts' ? 'var(--text-main)' : 'var(--text-muted)'}; box-shadow: ${this.activeSubTab === 'alerts' ? 'var(--shadow-sm)' : 'none'};">Alerts</button>
+        <button class="btn-sim-tab" data-tab="pod" style="flex: 1; border: none; padding: 6px 10px; font-size: 11px; font-weight: 600; border-radius: 4px; cursor: pointer; transition: all 0.2s; background: ${this.activeSubTab === 'pod' ? '#ffffff' : 'transparent'}; color: ${this.activeSubTab === 'pod' ? 'var(--text-main)' : 'var(--text-muted)'}; box-shadow: ${this.activeSubTab === 'pod' ? 'var(--shadow-sm)' : 'none'};">POD Logs</button>
       </div>
     `;
 
@@ -238,17 +459,33 @@ export class SimulationController {
         const vehCap = fleetVehicle ? Number(fleetVehicle.capacity) : routeCapacity;
         const driverSkills = fleetVehicle ? (fleetVehicle.skills || 'None') : 'None';
 
-        const state = this.app.mapController.getVehicleStateAtTime(route, this.t_sim);
+        const roadKey = `${algoName}_${route.vehicle_id}`;
+        const roadData = this.app.mapController.roadRoutes.get(roadKey);
+        const state = this.getIncidentState(route.vehicle_id, this.t_sim, route, roadData) || 
+                      this.app.mapController.getVehicleStateAtTimeDirect(route, this.t_sim, roadData);
+
         const stopsDone = route.stops.filter((stopId, idx) => {
           const step = route.schedule[idx];
-          return step && this.t_sim >= step.departure;
+          const offset = this.delayOffsets.get(route.vehicle_id) || 0;
+          
+          const activeIncident = this.incidents.get(route.vehicle_id);
+          let activeDelay = offset;
+          if (activeIncident && this.t_sim >= activeIncident.triggerTime) {
+            if (activeIncident.type === 'breakdown') activeDelay += (this.t_sim - activeIncident.triggerTime);
+            else if (activeIncident.type === 'traffic') activeDelay += (this.t_sim - activeIncident.triggerTime) * 0.67;
+          }
+          
+          return step && this.t_sim >= (step.departure + activeDelay);
         }).length;
-        const totalStops = route.stops.length;
         
+        const totalStops = route.stops.length;
         const percent = totalStops > 0 ? Math.round((stopsDone / totalStops) * 100) : 100;
         const loadPercent = vehCap > 0 ? Math.round((route.load / vehCap) * 100) : 0;
         
-        // Find skills mismatch
+        // Dynamic Telemetry Math
+        const fuelLevel = Math.max(0, Math.round(100 - (stopsDone / totalStops) * 45));
+        const co2Value = (stopsDone * 2.8).toFixed(1);
+
         const mismatches = [];
         route.stops.forEach((stopId) => {
           const customer = this.app.state.customers.find(c => c.id === stopId);
@@ -259,20 +496,27 @@ export class SimulationController {
           }
         });
         
-        // Determine status class
+        // Incident indicators check
+        const activeIncident = this.incidents.get(route.vehicle_id);
+        const isBreakdown = activeIncident?.type === 'breakdown';
+        const isTraffic = activeIncident?.type === 'traffic';
+        const cardClass = isBreakdown ? 'has-breakdown' : (isTraffic ? 'has-traffic' : '');
+
         let statusClass = 'sim-status-parked';
         if (state.status === 'Traveling') statusClass = 'sim-status-traveling';
         if (state.status === 'Waiting') statusClass = 'sim-status-waiting';
         if (state.status === 'Servicing') statusClass = 'sim-status-servicing';
         if (state.status === 'Returning') statusClass = 'sim-status-returning';
+        if (state.status === 'Breakdown') statusClass = 'sim-status-parked'; // use red styling override via cardClass
+        if (state.status === 'Traffic Jam') statusClass = 'sim-status-waiting';
 
         html += `
-          <div class="sim-vehicle-card btn-focus-vehicle" data-vehicle-id="${route.vehicle_id}" style="margin-bottom: 8px; cursor: pointer; transition: all 0.2s; border: 1px solid var(--border); border-radius: var(--r); padding: 10px; background: rgba(255,255,255,0.7);" onmouseover="this.style.background='rgba(255,255,255,0.95)'" onmouseout="this.style.background='rgba(255,255,255,0.7)'">
-            <div class="sim-card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-              <span class="sim-veh-id" style="border-left: 3px solid ${color}; padding-left: 8px; font-weight: 700; font-size: 12px; color: var(--text-main);">${driverName}</span>
+          <div class="sim-vehicle-card ${cardClass} btn-focus-vehicle" data-vehicle-id="${route.vehicle_id}">
+            <div class="sim-card-header">
+              <span class="sim-veh-id" style="border-left: 3px solid ${color}; padding-left: 8px;">${driverName}</span>
               <div style="display: flex; align-items: center; gap: 6px;">
-                <span class="focus-lbl" style="font-size: 9px; font-weight: 600; color: var(--text-muted); background: rgba(0,0,0,0.05); padding: 2px 6px; border-radius: 4px; transition: all 0.2s;">🔍 Focus</span>
-                <span class="sim-badge ${statusClass}" style="font-size: 9px; padding: 2px 6px;">${state.status}</span>
+                <span class="focus-lbl" style="font-size: 9px; font-weight: 600; color: var(--text-muted); background: rgba(0,0,0,0.05); padding: 2px 6px; border-radius: 4px;">🔍 Focus</span>
+                <span class="sim-badge ${statusClass}">${state.status}</span>
               </div>
             </div>
             <div class="sim-card-body">
@@ -283,17 +527,60 @@ export class SimulationController {
                    </div>`
                 : ''
               }
+
+              <!-- Telemetry indicators row -->
+              <div style="display: flex; justify-content: space-between; font-size: 10px; color: var(--text-muted); margin-bottom: 6px; margin-top: 4px; border-top: 1px solid rgba(0,0,0,0.04); padding-top: 4px;">
+                <span>🔋 Fuel: <strong>${fuelLevel}%</strong></span>
+                <span>🌱 CO2: <strong>${co2Value} kg</strong></span>
+              </div>
+
               <div class="sim-stat-row" style="display: flex; justify-content: space-between; font-size: 10px; color: var(--text-muted); margin-bottom: 4px;">
                 <span>Stops: ${stopsDone}/${totalStops}</span>
                 <span>Load: ${route.load}/${vehCap} (${loadPercent}%)</span>
               </div>
-              <div class="sim-progress-bar" style="background: rgba(0,0,0,0.06); height: 4px; border-radius: 2px; overflow: hidden;">
+              <div class="sim-progress-bar" style="background: rgba(0,0,0,0.06); height: 4px; border-radius: 2px; overflow: hidden; margin-bottom: 6px;">
                 <div class="sim-progress-fill" style="width: ${percent}%; background-color: ${color}; height: 100%;"></div>
+              </div>
+
+              <!-- Interactive disruption buttons -->
+              <div class="sim-card-actions" style="display: flex; gap: 4px; margin-top: 8px; border-top: 1px dashed var(--border); padding-top: 8px;">
+                <button class="btn-sim-incident btn-trigger-breakdown" data-vehicle-id="${route.vehicle_id}" style="flex: 1; font-size: 9px; padding: 4px 6px; background: ${isBreakdown ? '#ef4444' : 'rgba(239, 68, 68, 0.08)'}; color: ${isBreakdown ? '#ffffff' : '#ef4444'}; border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 4px; cursor: pointer; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 3px;">
+                  ⚠️ ${isBreakdown ? 'Clear incident' : 'Breakdown'}
+                </button>
+                <button class="btn-sim-incident btn-trigger-traffic" data-vehicle-id="${route.vehicle_id}" style="flex: 1; font-size: 9px; padding: 4px 6px; background: ${isTraffic ? '#f59e0b' : 'rgba(245, 158, 11, 0.08)'}; color: ${isTraffic ? '#ffffff' : '#f59e0b'}; border: 1px solid rgba(245, 158, 11, 0.2); border-radius: 4px; cursor: pointer; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 3px;">
+                  🚦 ${isTraffic ? 'Clear congestion' : 'Traffic Jam'}
+                </button>
               </div>
             </div>
           </div>
         `;
       });
+    } else if (this.activeSubTab === 'alerts') {
+      // Alerts log
+      let alertsHtml = `<div class="sim-alerts-container">`;
+      if (this.alerts.length === 0) {
+        alertsHtml += `
+          <div class="text-center text-muted" style="padding: 24px 16px; font-size: 11px; background: rgba(255,255,255,0.9); border-radius: var(--r); border: 1px solid var(--border);">
+            No dispatcher alerts logged yet. Run simulation to stream live updates.
+          </div>
+        `;
+      } else {
+        this.alerts.forEach(alert => {
+          alertsHtml += `
+            <div class="sim-alert-item ${alert.type}">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span class="sim-alert-time">${alert.time}</span>
+                <span style="font-weight: 700; text-transform: uppercase; font-size: 8px;">${alert.type}</span>
+              </div>
+              <div style="font-size: 11.5px; color: var(--text-main); font-weight: 500;">
+                ${alert.message}
+              </div>
+            </div>
+          `;
+        });
+      }
+      alertsHtml += `</div>`;
+      html += alertsHtml;
     } else {
       // POD Sub-Tab
       const completedStops = [];
@@ -304,16 +591,27 @@ export class SimulationController {
         route.schedule.forEach((step, idx) => {
           if (step.customer_id === 0) return; // skip depot
           
-          if (this.t_sim >= step.departure) {
+          const offset = this.delayOffsets.get(route.vehicle_id) || 0;
+          const activeIncident = this.incidents.get(route.vehicle_id);
+          let activeDelay = offset;
+          if (activeIncident && this.t_sim >= activeIncident.triggerTime) {
+            if (activeIncident.type === 'breakdown') activeDelay += (this.t_sim - activeIncident.triggerTime);
+            else if (activeIncident.type === 'traffic') activeDelay += (this.t_sim - activeIncident.triggerTime) * 0.67;
+          }
+
+          const actArrival = step.arrival + activeDelay;
+          const actDeparture = step.departure + activeDelay;
+
+          if (this.t_sim >= actDeparture) {
             completedStops.push({
               driverName,
               stopId: step.customer_id,
               name: step.name || `Stop #${step.customer_id}`,
-              timeStr: this.formatTimeStr(step.departure),
+              timeStr: this.formatTimeStr(actDeparture),
               status: 'Completed',
-              due: step.departure <= Number(this.app.state.customers[step.customer_id]?.due || 1000) ? 'On Time' : 'Delayed'
+              due: actArrival <= Number(this.app.state.customers[step.customer_id]?.due || 1000) ? 'On Time' : 'Delayed'
             });
-          } else if (this.t_sim >= step.arrival) {
+          } else if (this.t_sim >= actArrival) {
             completedStops.push({
               driverName,
               stopId: step.customer_id,
@@ -326,7 +624,6 @@ export class SimulationController {
         });
       });
 
-      // Sort chronologically or by ID
       completedStops.sort((a, b) => b.stopId - a.stopId);
 
       if (completedStops.length === 0) {
@@ -372,6 +669,9 @@ export class SimulationController {
     const focusCards = this.vehicleList.querySelectorAll('.btn-focus-vehicle');
     focusCards.forEach(card => {
       card.addEventListener('click', (e) => {
+        // Prevent clicks on action buttons inside the card from focusing on Leaflet
+        if (e.target.closest('.btn-sim-incident')) return;
+        
         const vehId = card.dataset.vehicleId;
         this.app.mapController.focusOnVehicle(vehId);
       });
@@ -383,6 +683,21 @@ export class SimulationController {
       btn.addEventListener('click', (e) => {
         this.activeSubTab = e.target.dataset.tab;
         this.updateFrame();
+      });
+    });
+
+    // Bind incident triggers
+    this.vehicleList.querySelectorAll('.btn-trigger-breakdown').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.toggleIncident(btn.dataset.vehicleId, 'breakdown');
+      });
+    });
+
+    this.vehicleList.querySelectorAll('.btn-trigger-traffic').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.toggleIncident(btn.dataset.vehicleId, 'traffic');
       });
     });
 
@@ -455,17 +770,17 @@ export class SimulationController {
             </div>
             <div>
               <span style="color: var(--text-muted); font-size: 11px;">Delivery Status</span>
-              <div style="font-weight: 600; color: var(--success);">${stop.due} (${stop.timeStr})</div>
+              <div style="font-weight: 600; color: ${stop.due === 'On Time' ? 'var(--success)' : 'var(--orange)'};">${stop.due} (${stop.timeStr})</div>
             </div>
           </div>
-
-          <div style="margin-top: 6px; border: 1px solid var(--border); border-radius: var(--r); padding: 10px; background: rgba(0,0,0,0.01);">
+ 
+          <div class="signature-pad-container">
             <span style="font-size: 9px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Customer Signature Verification</span>
-            <div style="margin-top: 6px; background: #ffffff; border-radius: 4px; border: 1px dashed var(--border); padding: 2px;">
+            <div class="signature-pad-box">
               ${signatureSvg}
             </div>
           </div>
-
+ 
           <div style="margin-top: 4px; border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; background: #222; position: relative; height: 130px; display: flex; align-items: center; justify-content: center;">
             <div style="position: absolute; top: 6px; left: 6px; background: var(--success); color: white; padding: 2px 6px; font-size: 8px; font-weight: 700; border-radius: 2px; letter-spacing: 0.5px;">
               AI TIMESTAMP CONFIRMED
@@ -498,7 +813,6 @@ export class SimulationController {
     const select = document.getElementById('driver-app-select');
     if (!select) return;
     
-    // Clear and add placeholder
     select.innerHTML = '<option value="" style="color: #000;">Select Driver...</option>';
     
     const result = this.app.state.lastResult;
@@ -528,9 +842,9 @@ export class SimulationController {
     if (selectedVehId === '') {
       container.innerHTML = `
         <div style="text-align: center; margin-top: 100px; padding: 0 16px;">
-            <div style="font-size: 32px; margin-bottom: 12px;">🚚</div>
-            <h4 style="margin: 0 0 6px; font-size: 13px; color: #27272a;">Driver Companion Emulator</h4>
-            <p style="margin: 0; font-size: 10px; color: #71717a; line-height: 1.4;">Select an active driver above to simulate mobile deliveries, log signatures, and track live routes.</p>
+            <div style="font-size: 32px; margin-bottom: 12px; animation: bounce 2s infinite;">🚚</div>
+            <h4 style="margin: 0 0 6px; font-size: 13px; color: #27272a; font-weight: 700;">Driver Companion Emulator</h4>
+            <p style="margin: 0; font-size: 10.5px; color: #71717a; line-height: 1.45;">Select an active driver above to simulate mobile deliveries, log signatures, and track live routes.</p>
         </div>
       `;
       return;
@@ -553,11 +867,12 @@ export class SimulationController {
     const driverSkills = fleetVehicle ? (fleetVehicle.skills || 'None') : 'None';
     
     let html = `
-      <div style="display: flex; justify-content: space-between; align-items: center; background: white; padding: 8px 12px; border-radius: var(--r); border: 1px solid var(--border); box-shadow: var(--shadow-sm); margin-bottom: 4px;">
-        <span style="font-size: 10px; color: var(--text-muted);">Route Load: <strong>${route.load} units</strong></span>
-        <span style="font-size: 9px; background: rgba(59,130,246,0.1); color: var(--primary); padding: 1px 4px; border-radius: 3px; font-weight: 700;">Skills: ${driverSkills}</span>
+      <div style="display: flex; justify-content: space-between; align-items: center; background: white; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border); box-shadow: var(--shadow-sm); margin-bottom: 8px;">
+        <span style="font-size: 10.5px; color: var(--text-muted); font-weight: 500;">Route Cargo: <strong>${route.load} units</strong></span>
+        <span style="font-size: 9px; background: rgba(59,130,246,0.1); color: var(--primary); padding: 2px 6px; border-radius: 4px; font-weight: 700;">Skills: ${driverSkills}</span>
       </div>
-      <div style="font-size: 11px; font-weight: 700; color: #27272a; margin-top: 6px; margin-bottom: 4px;">Manifest Stops Queue:</div>
+      <div style="font-size: 11px; font-weight: 700; color: #27272a; margin-top: 6px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.03em;">Manifest Queue:</div>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
     `;
 
     route.stops.forEach((stopId, idx) => {
@@ -565,9 +880,20 @@ export class SimulationController {
       const customer = this.app.state.customers.find(c => c.id === stopId);
       if (!customer || !step) return;
 
-      const isCompleted = this.t_sim >= step.departure;
-      const isServicing = this.t_sim >= step.arrival && this.t_sim < step.departure;
-      const isNext = this.t_sim < step.arrival && (idx === 0 || (route.schedule[idx-1] && this.t_sim >= route.schedule[idx-1].departure));
+      const offset = this.delayOffsets.get(route.vehicle_id) || 0;
+      const activeIncident = this.incidents.get(route.vehicle_id);
+      let activeDelay = offset;
+      if (activeIncident && this.t_sim >= activeIncident.triggerTime) {
+        if (activeIncident.type === 'breakdown') activeDelay += (this.t_sim - activeIncident.triggerTime);
+        else if (activeIncident.type === 'traffic') activeDelay += (this.t_sim - activeIncident.triggerTime) * 0.67;
+      }
+
+      const arrTime = step.arrival + activeDelay;
+      const depTime = step.departure + activeDelay;
+
+      const isCompleted = this.t_sim >= depTime;
+      const isServicing = this.t_sim >= arrTime && this.t_sim < depTime;
+      const isNext = this.t_sim < arrTime && (idx === 0 || (route.schedule[idx-1] && this.t_sim >= (route.schedule[idx-1].departure + activeDelay)));
 
       let bg = '#ffffff';
       let border = 'var(--border)';
@@ -592,10 +918,10 @@ export class SimulationController {
       }
 
       html += `
-        <div style="background: ${bg}; border: 1px solid ${border}; border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 4px; position: relative; box-shadow: var(--shadow-sm); text-align: left;">
+        <div class="driver-app-card" style="background: ${bg}; border-color: ${border};">
           <div style="display: flex; justify-content: space-between; align-items: center;">
-            <strong style="color: #27272a; font-size: 11px;">Stop #${stopId} - ${this.app.escapeHtml(customer.name)}</strong>
-            <span style="font-size: 9px; font-weight: 700; color: ${statusColor};">${statusText}</span>
+            <strong style="color: #18181b; font-size: 11px;">Stop #${stopId} - ${this.app.escapeHtml(customer.name)}</strong>
+            <span style="font-size: 9px; font-weight: 700; color: ${statusColor}; text-transform: uppercase;">${statusText}</span>
           </div>
           <div style="font-size: 10px; color: #71717a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
             📍 ${this.app.escapeHtml(customer.address || 'Delivered Destination')}
@@ -603,25 +929,26 @@ export class SimulationController {
           
           <div style="font-size: 9px; color: #a1a1aa; margin-top: 2px; display: flex; justify-content: space-between;">
             <span>Window: ${this.formatTimeStr(customer.ready)} - ${this.formatTimeStr(customer.due)}</span>
-            <span>ETA: ${this.formatTimeStr(step.arrival)}</span>
+            <span>ETA: ${this.formatTimeStr(arrTime)}</span>
           </div>
 
           ${isServicing ? `
             <div style="display: flex; gap: 6px; margin-top: 8px;">
-              <button class="btn-app-action btn-complete-stop" data-stop-id="${stopId}" style="flex: 2; background: var(--success); color: white; border: none; padding: 6px; border-radius: 4px; font-size: 9px; font-weight: 700; cursor: pointer; text-align: center;">✓ Complete Delivery</button>
-              <button class="btn-app-action btn-fail-stop" data-stop-id="${stopId}" style="flex: 1; background: var(--danger); color: white; border: none; padding: 6px; border-radius: 4px; font-size: 9px; font-weight: 700; cursor: pointer; text-align: center;">✕ Fail</button>
+              <button class="btn-app-action btn-complete-stop" data-stop-id="${stopId}" style="flex: 2; background: var(--success); color: white; border: none; padding: 6px; border-radius: 6px; font-size: 9px; font-weight: 700; cursor: pointer; text-align: center; box-shadow: var(--shadow-sm);">✓ Complete Delivery</button>
+              <button class="btn-app-action btn-fail-stop" data-stop-id="${stopId}" style="flex: 1; background: var(--danger); color: white; border: none; padding: 6px; border-radius: 6px; font-size: 9px; font-weight: 700; cursor: pointer; text-align: center; box-shadow: var(--shadow-sm);">✕ Fail</button>
             </div>
           ` : ''}
 
           ${isNext ? `
             <div style="margin-top: 6px;">
-              <button class="btn-app-action btn-arrive-stop" data-stop-id="${stopId}" data-arrival-time="${step.arrival}" style="width: 100%; background: var(--primary); color: white; border: none; padding: 6px; border-radius: 4px; font-size: 9px; font-weight: 700; cursor: pointer; text-align: center;">⚡ Trigger Arrival Now</button>
+              <button class="btn-app-action btn-arrive-stop" data-stop-id="${stopId}" data-arrival-time="${arrTime}" style="width: 100%; background: var(--primary); color: white; border: none; padding: 6px; border-radius: 6px; font-size: 9px; font-weight: 700; cursor: pointer; text-align: center; box-shadow: var(--shadow-sm);">⚡ Arrive at Destination</button>
             </div>
           ` : ''}
         </div>
       `;
     });
 
+    html += `</div>`;
     container.innerHTML = html;
 
     // Bind inner actions
@@ -646,16 +973,27 @@ export class SimulationController {
         const stopIdx = targetRoute.stops.indexOf(stopId);
         const step = targetRoute.schedule[stopIdx];
         
+        const offset = this.delayOffsets.get(Number(selectedVehId)) || 0;
+        const activeIncident = this.incidents.get(Number(selectedVehId));
+        let activeDelay = offset;
+        if (activeIncident && this.t_sim >= activeIncident.triggerTime) {
+          if (activeIncident.type === 'breakdown') activeDelay += (this.t_sim - activeIncident.triggerTime);
+          else if (activeIncident.type === 'traffic') activeDelay += (this.t_sim - activeIncident.triggerTime) * 0.67;
+        }
+
+        const compTime = step ? step.departure + activeDelay : this.t_sim;
+        const arrTime = step ? step.arrival + activeDelay : this.t_sim;
+
         this.showPodModal({
           stopId: stopId,
           driverName: driverName,
-          timeStr: this.formatTimeStr(step ? step.departure : this.t_sim),
-          due: (step ? step.departure : this.t_sim) <= Number(this.app.state.customers[stopId]?.due || 1000) ? 'On Time' : 'Delayed',
+          timeStr: this.formatTimeStr(compTime),
+          due: arrTime <= Number(this.app.state.customers[stopId]?.due || 1000) ? 'On Time' : 'Delayed',
           name: this.app.state.customers[stopId]?.name || `Stop #${stopId}`
         });
 
         if (step) {
-          this.t_sim = step.departure;
+          this.t_sim = compTime;
           if (this.slider) this.slider.value = String(this.t_sim);
           this.updateTimeDisplay();
           this.updateFrame();
@@ -667,6 +1005,7 @@ export class SimulationController {
       btn.addEventListener('click', (e) => {
         const stopId = btn.dataset.stopId;
         this.app.toast('Delivery Failed', `Stop #${stopId} marked as FAILED. Reason: Customer not home.`, 'error');
+        this.addAlert('error', `❌ Delivery Failed: Stop #${stopId} marked as FAILED by ${this.getDriverName(selectedVehId)}.`);
         this.t_sim += 15;
         if (this.slider) this.slider.value = String(this.t_sim);
         this.updateTimeDisplay();

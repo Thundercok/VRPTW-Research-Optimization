@@ -66,6 +66,10 @@
 
 <body>
   <section id="auth-screen" class="auth-screen hidden">
+    <!-- Ambient Backdrop Glows -->
+    <div class="auth-blob blob-1" aria-hidden="true"></div>
+    <div class="auth-blob blob-2" aria-hidden="true"></div>
+
     <div class="auth-card">
 
       <p class="tag">NAMI</p>
@@ -87,10 +91,17 @@
               <stop offset="0%" stop-color="#93c5fd" />
               <stop offset="100%" stop-color="#2563eb" />
             </linearGradient>
+            <filter id="neonGlow" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="3.5" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
           </defs>
           <!-- Route path -->
           <path class="route-path" d="M24 72 C90 18, 170 92, 250 44 S360 52, 396 26" fill="none"
-            stroke="url(#routeGrad)" stroke-width="4" stroke-linecap="round" stroke-dasharray="6 8" />
+            stroke="url(#routeGrad)" stroke-width="4" stroke-linecap="round" stroke-dasharray="6 8" filter="url(#neonGlow)" />
           <!-- Depot -->
           <circle class="route-node route-node-1" cx="24" cy="72" r="6" fill="#2563eb" />
           <!-- Waypoints -->
@@ -111,11 +122,15 @@
 
         <!-- LOGIN -->
         <div id="auth-view-login" class="auth-form auth-view active">
-          <label for="login-email">Email</label>
-          <input id="login-email" type="email" placeholder="you@company.com" autocomplete="email" />
+          <div class="form-group">
+            <label for="login-email">Email</label>
+            <input id="login-email" type="email" placeholder="you@company.com" autocomplete="email" />
+          </div>
 
-          <label for="login-password">Password</label>
-          <input id="login-password" type="password" placeholder="Enter password" autocomplete="current-password" />
+          <div class="form-group">
+            <label for="login-password">Password</label>
+            <input id="login-password" type="password" placeholder="Enter password" autocomplete="current-password" />
+          </div>
 
           <button id="btn-login" class="btn" type="button">Sign In</button>
 
@@ -139,17 +154,23 @@
 
         <!-- REGISTER -->
         <div id="auth-view-register" class="auth-form auth-view hidden">
-          <label for="register-email">Email</label>
-          <input id="register-email" type="email" placeholder="you@company.com" autocomplete="email" />
+          <div class="form-group">
+            <label for="register-email">Email</label>
+            <input id="register-email" type="email" placeholder="you@company.com" autocomplete="email" />
+          </div>
 
-          <label for="register-password">Password</label>
-          <input id="register-password" type="password" placeholder="Choose a password" autocomplete="new-password" />
+          <div class="form-group">
+            <label for="register-password">Password</label>
+            <input id="register-password" type="password" placeholder="Choose a password" autocomplete="new-password" />
+          </div>
 
-          <label>One-time code</label>
-          <div class="otp-row">
-            <input id="register-otp" class="otp-input" type="text" inputmode="numeric" placeholder="6-digit OTP"
-              maxlength="6" autocomplete="one-time-code" />
-            <button id="btn-request-otp" class="btn ghost otp-send-btn" type="button">Send OTP</button>
+          <div class="form-group">
+            <label>One-time code</label>
+            <div class="otp-row">
+              <input id="register-otp" class="otp-input" type="text" inputmode="numeric" placeholder="6-digit OTP"
+                maxlength="6" autocomplete="one-time-code" />
+              <button id="btn-request-otp" class="btn ghost otp-send-btn" type="button">Send OTP</button>
+            </div>
           </div>
           <p id="register-otp-countdown" class="otp-countdown">
             Click Send OTP to receive a verification code.
@@ -163,8 +184,10 @@
 
         <!-- FORGOT PASSWORD -->
         <div id="auth-view-forgot" class="auth-form auth-view hidden">
-          <label for="forgot-email">Email</label>
-          <input id="forgot-email" type="email" placeholder="you@company.com" autocomplete="email" />
+          <div class="form-group">
+            <label for="forgot-email">Email</label>
+            <input id="forgot-email" type="email" placeholder="you@company.com" autocomplete="email" />
+          </div>
           <p class="hint">
             We'll send a reset link to this address.
           </p>
@@ -177,12 +200,16 @@
 
         <!-- RESET PASSWORD -->
         <div id="auth-view-reset" class="auth-form auth-view hidden">
-          <label for="reset-password">New password</label>
-          <input id="reset-password" type="password" placeholder="Enter new password" autocomplete="new-password" />
+          <div class="form-group">
+            <label for="reset-password">New password</label>
+            <input id="reset-password" type="password" placeholder="Enter new password" autocomplete="new-password" />
+          </div>
 
-          <label for="reset-password-confirm">Confirm password</label>
-          <input id="reset-password-confirm" type="password" placeholder="Re-enter new password"
-            autocomplete="new-password" />
+          <div class="form-group">
+            <label for="reset-password-confirm">Confirm password</label>
+            <input id="reset-password-confirm" type="password" placeholder="Re-enter new password"
+              autocomplete="new-password" />
+          </div>
 
           <div class="inline-row auth-actions">
             <button id="btn-reset-password" class="btn" type="button">Update Password</button>

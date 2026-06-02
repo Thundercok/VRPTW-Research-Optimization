@@ -506,6 +506,11 @@ export class MapController {
             const state = this.getVehicleStateAtTime(route, t_sim, roadData);
             marker.setLatLng([state.lat, state.lng]);
 
+            // Dynamically update marker icon graphics to reflect active incidents
+            const routeColor = this.colorForRoute(routeIndex, route, baseColor);
+            const activeIncident = this.app.simulationController?.incidents?.get(route.vehicle_id);
+            marker.setIcon(this.buildVehicleIcon(routeColor, activeIncident?.type));
+
             const fleetVehicle = this.app.state.fleet?.[route.vehicle_id];
             const driverName = fleetVehicle ? fleetVehicle.driver : `Vehicle #${route.vehicle_id}`;
 
@@ -556,6 +561,14 @@ export class MapController {
     }
 
     getVehicleStateAtTime(route, t_sim, roadData = null) {
+        if (this.app.simulationController) {
+            const incidentState = this.app.simulationController.getIncidentState(route.vehicle_id, t_sim, route, roadData);
+            if (incidentState) return incidentState;
+        }
+        return this.getVehicleStateAtTimeDirect(route, t_sim, roadData);
+    }
+
+    getVehicleStateAtTimeDirect(route, t_sim, roadData = null) {
         if (!route.path || route.path.length === 0) {
             return { lat: 0, lng: 0, status: 'Completed', detail: 'No route path', legIndex: 0, frac: 0, stopIndex: 0 };
         }
@@ -671,15 +684,26 @@ export class MapController {
         });
     }
 
-    buildVehicleIcon(color = '#0b8a65') {
+    buildVehicleIcon(color = '#0b8a65', incidentType = null) {
         const darkColor = darkenHex(color, 0.4);
         const shadowColor = hexToRgba(color, 0.35);
+        let glyph = '🚚';
+        let styleOverride = '';
+
+        if (incidentType === 'breakdown') {
+            glyph = '⚠️';
+            styleOverride = 'border-color:#ef4444;box-shadow:0 0 10px #ef4444;background:#fee2e2;color:#ef4444;animation:card-pulse-danger 1s infinite alternate;';
+        } else if (incidentType === 'traffic') {
+            glyph = '🚦';
+            styleOverride = 'border-color:#f59e0b;box-shadow:0 0 10px #f59e0b;background:#fef3c7;color:#b45309;animation:card-pulse-warning 1s infinite alternate;';
+        }
+
         return L.divIcon({
             className: 'map-marker-wrap',
             iconSize: [40, 40],
             iconAnchor: [20, 20],
             popupAnchor: [0, -20],
-            html: `<div class="map-icon-3d vehicle" style="--icon-main:${color};--icon-dark:${darkColor};--icon-shadow:${shadowColor}"><span class="map-icon-glyph">🚚</span></div>`
+            html: `<div class="map-icon-3d vehicle" style="--icon-main:${color};--icon-dark:${darkColor};--icon-shadow:${shadowColor};${styleOverride}"><span class="map-icon-glyph">${glyph}</span></div>`
         });
     }
 
