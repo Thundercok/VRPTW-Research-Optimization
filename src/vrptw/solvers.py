@@ -26,6 +26,7 @@ from .config import (
 from .core import Inst, Plan, _avg_slack, _fleet_fill, _plan_spread
 from .heuristics import build_greedy
 from .local_search import (
+    _buffered_route_elimination,
     _ejection_chain_eliminate,
     _iterative_route_elimination,
     _try_route_merge,
@@ -810,14 +811,21 @@ class HybridDDQNSolver:
             pool.add_plan(best)
             history.append(best.cost)
 
-        # Pass 2: iterative greedy elimination (unchanged, catches easier cases)
+        # Pass 2: buffered elimination (bounded multi-route rebalancing)
+        buffered = _buffered_route_elimination(best, pool=pool)
+        if buffered.feasible and (buffered.nv < best.nv or buffered.dominates(best)):
+            best = buffered
+            pool.add_plan(best)
+            history.append(best.cost)
+
+        # Pass 3: iterative greedy elimination (catches easier direct insertions)
         eliminated = _iterative_route_elimination(best, self.inst, pool=pool)
         if eliminated.feasible and (eliminated.nv < best.nv or eliminated.dominates(best)):
             best = eliminated
             pool.add_plan(best)
             history.append(best.cost)
 
-        # Pass 3: committed NV search — only if still above target
+        # Pass 4: committed NV search -- only if still above target
         from .config import BKS as _BKS
 
         _bks = _BKS.get(self.inst.name)

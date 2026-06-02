@@ -27,6 +27,23 @@ class RouteRecord:
     slack: float
 
 
+def _cover_key(nodes: tuple[int, ...] | list[int]) -> tuple[int, ...]:
+    return tuple(sorted(nodes))
+
+
+def _same_cover_priority(rec: RouteRecord) -> tuple[float, float]:
+    return (rec.cost, -rec.slack)
+
+
+def _is_exact_cover(plan: Plan) -> bool:
+    nodes = [n for route in plan.routes for n in route]
+    return (
+        len(nodes) == plan.inst.n
+        and len(set(nodes)) == plan.inst.n
+        and all(1 <= node <= plan.inst.n for node in nodes)
+    )
+
+
 class RoutePool:
     def __init__(self, inst: Inst, cfg: Config):
         self.inst = inst
@@ -40,6 +57,15 @@ class RoutePool:
 
     def _trim(self) -> None:
         limit = self.cfg.route_pool_limit
+        best_by_cover: dict[tuple[int, ...], RouteRecord] = {}
+        for rec in self._routes.values():
+            cover = _cover_key(rec.nodes)
+            incumbent = best_by_cover.get(cover)
+            if incumbent is None or _same_cover_priority(rec) < _same_cover_priority(incumbent):
+                best_by_cover[cover] = rec
+        if len(best_by_cover) < len(self._routes):
+            self._routes = {rec.nodes: rec for rec in best_by_cover.values()}
+
         if len(self._routes) <= limit:
             return
         usage: dict[int, int] = {}
@@ -67,12 +93,20 @@ class RoutePool:
         key = tuple(route)
         if key in self._routes:
             return
-        self._routes[key] = RouteRecord(
+        rec = RouteRecord(
             nodes=key,
             cost=_route_cost_list(route, self.inst),
             load=_route_load(route, self.inst),
             slack=_route_avg_slack(route, self.inst),
         )
+        cover = _cover_key(key)
+        for old_key, old_rec in list(self._routes.items()):
+            if _cover_key(old_rec.nodes) != cover:
+                continue
+            if _same_cover_priority(old_rec) <= _same_cover_priority(rec):
+                return
+            del self._routes[old_key]
+        self._routes[key] = rec
         self._trim()
 
     def add_plan(self, plan: Plan) -> None:
@@ -90,7 +124,13 @@ class RoutePool:
                     load=_route_load(r, incumbent.inst),
                     slack=_route_avg_slack(r, incumbent.inst),
                 )
-        return sorted(recs.values(), key=self._priority)
+        best_by_cover: dict[tuple[int, ...], RouteRecord] = {}
+        for rec in recs.values():
+            cover = _cover_key(rec.nodes)
+            incumbent_rec = best_by_cover.get(cover)
+            if incumbent_rec is None or _same_cover_priority(rec) < _same_cover_priority(incumbent_rec):
+                best_by_cover[cover] = rec
+        return sorted(best_by_cover.values(), key=self._priority)
 
 
 def _sp_vehicle_penalty(inst: Inst, cfg: Config) -> float:
@@ -131,21 +171,22 @@ def _milp_recombine(
         return None
     chosen = [list(route_records[i].nodes) for i, v in enumerate(result.x) if v >= 0.5]
     plan = Plan(chosen, inst, "SP-RECOMBINE")
-    return plan if plan.feasible else None
+    return plan if plan.feasible and _is_exact_cover(plan) else None
 
 
 def _greedy_recombine(route_records: list[RouteRecord], incumbent: Plan, nv_ceiling: int | None = None) -> Plan:
     uncovered = set(range(1, incumbent.inst.n + 1))
     selected: list[list[int]] = []
-    used: set = set()
+    used: set[tuple[int, ...]] = set()
     while uncovered:
         best_rec, best_score = None, -float("inf")
         for rec in route_records:
             if rec.nodes in used:
                 continue
-            gain = len(set(rec.nodes) & uncovered)
-            if gain == 0:
+            rec_nodes = set(rec.nodes)
+            if not rec_nodes or not rec_nodes.issubset(uncovered):
                 continue
+            gain = len(rec_nodes)
             score = gain * 10.0 + len(rec.nodes) - rec.cost / max(len(rec.nodes), 1)
             if score > best_score:
                 best_score, best_rec = score, rec
@@ -159,7 +200,9 @@ def _greedy_recombine(route_records: list[RouteRecord], incumbent: Plan, nv_ceil
     plan = Plan(selected, incumbent.inst, "SP-GREEDY")
     for node in sorted(uncovered):
         _insert_customer(plan, node, incumbent.inst)
-    return plan if plan.feasible else incumbent.copy()
+    if nv_ceiling is not None and plan.nv > nv_ceiling:
+        return incumbent.copy()
+    return plan if plan.feasible and _is_exact_cover(plan) else incumbent.copy()
 
 
 def recombine_with_route_pool(
@@ -219,11 +262,15 @@ def recombine_with_route_pool(
                 nv_ceiling=candidate.nv,
                 max_ls_moves=10,
             )
-            if candidate.feasible and (effective_ceiling is None or candidate.nv <= effective_ceiling):
+            if (
+                candidate.feasible
+                and _is_exact_cover(candidate)
+                and (effective_ceiling is None or candidate.nv <= effective_ceiling)
+            ):
                 return candidate
 
     # All scales failed: greedy fallback
     candidate = _greedy_recombine(recs, incumbent, nv_ceiling=effective_ceiling)
     if effective_ceiling is not None and candidate.nv > effective_ceiling:
         return incumbent.copy()
-    return candidate if candidate.dominates(incumbent) else incumbent.copy()
+    return candidate if candidate.feasible and _is_exact_cover(candidate) and candidate.dominates(incumbent) else incumbent.copy()

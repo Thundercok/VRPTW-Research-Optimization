@@ -247,7 +247,7 @@ def _apply_or_opt(plan: Plan, move: tuple[int, int, int, int, int, bool]) -> Pla
     return Plan(routes, plan.inst, plan.algo)
 
 
-def _try_route_merge(plan: Plan) -> Plan | None:
+def _try_route_merge(plan: Plan, max_pairs: int = 24) -> Plan | None:
     """
     Route Consolidation Move.
 
@@ -297,6 +297,211 @@ def _try_route_merge(plan: Plan) -> Plan | None:
                 best_merged = cand
 
     return best_merged
+
+
+def _covers_all_customers(routes: list[list[int]], inst: Inst) -> bool:
+    nodes = [n for route in routes for n in route]
+    return len(nodes) == inst.n and len(set(nodes)) == inst.n and all(1 <= n <= inst.n for n in nodes)
+
+
+def _insertion_options(
+    node: int,
+    routes: list[list[int]],
+    inst: Inst,
+    max_options: int = 3,
+) -> list[tuple[float, int, int]]:
+    options: list[tuple[float, int, int]] = []
+    for ri, route in enumerate(routes):
+        delta, pos = _best_insert_position(node, route, inst)
+        if pos is not None:
+            options.append((float(delta), ri, pos))
+    options.sort(key=lambda x: x[0])
+    return options[:max_options]
+
+
+def _select_buffered_pending_node(pending: list[int], routes: list[list[int]], inst: Inst) -> int:
+    best_idx = 0
+    best_key: tuple[float, ...] | None = None
+    for idx, node in enumerate(pending):
+        options = 0
+        best_delta = float("inf")
+        for route in routes:
+            delta, pos = _best_insert_position(node, route, inst)
+            if pos is not None:
+                options += 1
+                best_delta = min(best_delta, float(delta))
+        width = float(inst.due_times[node] - inst.ready_times[node])
+        key = (float(options), width, float(inst.due_times[node]), -float(inst.demands[node]), best_delta)
+        if best_key is None or key < best_key:
+            best_key = key
+            best_idx = idx
+    return best_idx
+
+
+def _buffered_ejection_options(
+    node: int,
+    routes: list[list[int]],
+    inst: Inst,
+    max_options: int = 3,
+) -> list[tuple[float, int, list[int], int]]:
+    options: list[tuple[float, int, list[int], int]] = []
+    max_dist = max(inst.max_dist, 1.0)
+    horizon = max(inst.horizon, 1.0)
+
+    for ri, route in enumerate(routes):
+        old_cost = _route_cost_list(route, inst)
+        for eject_pos, ejected in enumerate(route):
+            stripped = route[:eject_pos] + route[eject_pos + 1 :]
+            _, pos_node = _best_insert_position(node, stripped, inst)
+            if pos_node is None:
+                continue
+
+            new_route = stripped[:pos_node] + [node] + stripped[pos_node:]
+            if not _check_route(new_route, inst):
+                continue
+
+            trial_routes = [r[:] for r in routes]
+            trial_routes[ri] = new_route
+            landing = _insertion_options(ejected, trial_routes, inst, max_options=1)
+            if landing:
+                landing_score = landing[0][0]
+                orphan_penalty = 0.0
+            else:
+                landing_score = max_dist
+                orphan_penalty = max_dist
+
+            width_penalty = (inst.due_times[ejected] - inst.ready_times[ejected]) / horizon
+            route_delta = _route_cost_list(new_route, inst) - old_cost
+            score = float(route_delta + 0.35 * landing_score + orphan_penalty + 0.05 * width_penalty * max_dist)
+            options.append((score, ri, new_route, ejected))
+
+    options.sort(key=lambda x: x[0])
+    return options[:max_options]
+
+
+def _try_buffered_route_elimination(
+    plan: Plan,
+    target_idx: int,
+    max_ejections: int = 4,
+    beam_width: int = 8,
+) -> Plan | None:
+    """
+    Eliminate one route with a bounded ejection buffer.
+
+    Direct route elimination fails on random/mixed instances when the target
+    customers need a few recipient-route customers to move first. This beam
+    search keeps those displaced customers in a pending buffer and reinserts
+    them without ever creating a new route.
+    """
+    if len(plan.routes) <= 1:
+        return None
+
+    inst = plan.inst
+    target = sorted(
+        plan.routes[target_idx],
+        key=lambda n: (inst.due_times[n] - inst.ready_times[n], inst.due_times[n], -inst.demands[n]),
+    )
+    routes = [r[:] for i, r in enumerate(plan.routes) if i != target_idx]
+    states: list[tuple[list[list[int]], list[int], int, float]] = [(routes, target, 0, 0.0)]
+    max_steps = len(target) + max_ejections
+
+    def finish_if_complete(routes_: list[list[int]], pending_: list[int]) -> Plan | None:
+        if pending_:
+            return None
+        cand = Plan([r for r in routes_ if r], inst, plan.algo)
+        if cand.nv == plan.nv - 1 and cand.feasible and _covers_all_customers(cand.routes, inst):
+            return cand
+        return None
+
+    for _ in range(max_steps):
+        next_states: list[tuple[list[list[int]], list[int], int, float]] = []
+        for routes_cur, pending, ejections, score in states:
+            completed = finish_if_complete(routes_cur, pending)
+            if completed is not None:
+                return completed
+            if not pending:
+                continue
+
+            node_idx = _select_buffered_pending_node(pending, routes_cur, inst)
+            node = pending[node_idx]
+            rest = pending[:node_idx] + pending[node_idx + 1 :]
+
+            for delta, ri, pos in _insertion_options(node, routes_cur, inst):
+                new_routes = [r[:] for r in routes_cur]
+                new_routes[ri] = new_routes[ri][:pos] + [node] + new_routes[ri][pos:]
+                next_states.append((new_routes, rest[:], ejections, score + delta))
+
+            if ejections >= max_ejections:
+                continue
+
+            for eject_score, ri, new_route, ejected in _buffered_ejection_options(node, routes_cur, inst):
+                new_routes = [r[:] for r in routes_cur]
+                new_routes[ri] = new_route
+                next_states.append((new_routes, rest + [ejected], ejections + 1, score + eject_score))
+
+        if not next_states:
+            break
+
+        deduped: list[tuple[list[list[int]], list[int], int, float]] = []
+        seen: set[tuple[tuple[tuple[int, ...], ...], tuple[int, ...]]] = set()
+        for item in sorted(next_states, key=lambda s: (len(s[1]), s[2], s[3])):
+            routes_cur, pending, _, _ = item
+            signature = (tuple(tuple(route) for route in routes_cur), tuple(sorted(pending)))
+            if signature in seen:
+                continue
+            seen.add(signature)
+            deduped.append(item)
+            if len(deduped) >= beam_width:
+                break
+        states = deduped
+
+    for routes_cur, pending, _, _ in states:
+        completed = finish_if_complete(routes_cur, pending)
+        if completed is not None:
+            return completed
+    return None
+
+
+def _buffered_route_elimination(
+    plan: Plan,
+    max_rounds: int = 2,
+    max_ejections: int = 4,
+    beam_width: int = 8,
+    pool=None,
+) -> Plan:
+    best = plan.copy()
+    for _ in range(max_rounds):
+        if len(best.routes) <= 1:
+            break
+        ranked = sorted(
+            range(len(best.routes)),
+            key=lambda i: (
+                len(best.routes[i]),
+                _route_load(best.routes[i], best.inst),
+                _route_cost_list(best.routes[i], best.inst),
+            ),
+        )
+        improved = False
+        for target_idx in ranked[:6]:
+            local_ejections = max(2, min(max_ejections, len(best.routes[target_idx]) // 2 + 1))
+            cand = _try_buffered_route_elimination(
+                best,
+                target_idx,
+                max_ejections=local_ejections,
+                beam_width=beam_width,
+            )
+            if cand is None:
+                continue
+            cand = local_search(cand, max_passes=1, nv_ceiling=cand.nv, max_ls_moves=10, pool=pool)
+            if cand.feasible and cand.nv < best.nv and _covers_all_customers(cand.routes, best.inst):
+                best = cand
+                if pool is not None:
+                    pool.add_plan(best)
+                improved = True
+                break
+        if not improved:
+            break
+    return best
 
 
 def local_search(
