@@ -28,7 +28,6 @@ def op_worst(plan: Plan, size: int) -> tuple[Plan, list[int]]:
             nxt = route[idx + 1] if idx < len(route) - 1 else 0
             gains.append((inst.dist[prev, node] + inst.dist[node, nxt] - inst.dist[prev, nxt], node))
     gains.sort(reverse=True)
-    # ALNS power-law randomized selection to introduce search diversity
     p = 3.0
     removed: list[int] = []
     rs = set()
@@ -53,7 +52,6 @@ def op_shaw(plan: Plan, size: int) -> tuple[Plan, list[int]]:
     max_dist = inst.max_dist + 1e-9
     max_tw = max(inst.due_times - inst.ready_times) + 1e-9
     while len(removed) < size:
-        # Dynamically select a reference node from the already removed set
         ref_node = random.choice(removed)
         neighbors = inst.neighbors_k[ref_node]
         candidates = [
@@ -67,7 +65,6 @@ def op_shaw(plan: Plan, size: int) -> tuple[Plan, list[int]]:
             if n not in rs
         ]
         if not candidates:
-            # Fallback to all remaining nodes if neighbors are exhausted
             candidates = [
                 (
                     n,
@@ -81,7 +78,6 @@ def op_shaw(plan: Plan, size: int) -> tuple[Plan, list[int]]:
         if not candidates:
             break
         candidates.sort(key=lambda x: x[1])
-        # Use power law selection (p = 3.0) to select similar nodes with high probability
         p = 3.0
         idx = int((random.random() ** p) * len(candidates))
         chosen = candidates[idx][0]
@@ -137,7 +133,6 @@ def op_route_portion_removal(plan: Plan, size: int) -> tuple[Plan, list[int]]:
             tw_width = inst.due_times[node] - inst.ready_times[node]
             urgency = 1.0 - min(tw_width / max(inst.max_tw_width, 1.0), 1.0)
             strain.append((arc / max_dist + 0.35 * urgency, pos))
-        # Use randomized selection for the pivot to prevent determinism
         strain.sort(reverse=True, key=lambda x: x[0])
         p = 2.0
         idx = int((random.random() ** p) * len(strain))
@@ -157,7 +152,6 @@ def op_tw_urgent(plan: Plan, size: int) -> tuple[Plan, list[int]]:
     nodes = [n for r in plan.routes for n in r]
     if not nodes:
         return plan, []
-    # Add random noise to the time window width to vary the selection of tight windows
     candidates = sorted(nodes, key=lambda n: (inst.due_times[n] - inst.ready_times[n]) * (1.0 + random.random() * 0.3))
     removed = candidates[:size]
     rs = set(removed)
@@ -170,7 +164,6 @@ def op_route_eliminate(plan: Plan, size: int) -> tuple[Plan, list[int]]:
     if len(plan.routes) <= 1:
         return op_random(plan, size)
     inst = plan.inst
-    # Add small random noise to route length and load fraction to vary route choices
     ranked = sorted(
         enumerate(plan.routes),
         key=lambda x: (
@@ -204,7 +197,6 @@ def op_route_dispersion_eliminate(plan: Plan, size: int) -> tuple[Plan, list[int
         centroid = coords.mean(axis=0)
         spatial = float(np.sqrt(((coords - centroid) ** 2).sum(axis=1)).mean()) / max_dist
         temporal = _route_duration_no_return(route, inst) / avg_dur
-        # Add random noise to increase variety
         noise = random.random() * 0.25
         scored.append((1.5 * spatial + 0.5 * temporal + noise, idx))
     removed: list[int] = []
@@ -230,7 +222,7 @@ def op_cross_route_shaw(plan: Plan, size: int) -> tuple[Plan, list[int]]:
     max_dist = inst.max_dist + 1e-9
     max_tw = max(inst.due_times - inst.ready_times) + 1e-9
     while len(removed) < size:
-        ref_node = random.choice(removed)  # ← once per outer iteration
+        ref_node = random.choice(removed)
         ref_route = node_to_route.get(ref_node, -1)
         candidates = []
         for n in nodes:
@@ -323,23 +315,10 @@ def op_route_costly_eliminate(plan: Plan, size: int) -> tuple[Plan, list[int]]:
 
 
 def op_route_merge_sample(plan: Plan, size: int) -> tuple[Plan, list[int]]:
-    """
-    Route Merge Sampling (10th destroy operator).
-
-    Selects the capacity-compatible route pair with the smallest combined customer
-    count and removes the smaller route's customers. The repair operator must then
-    insert them back — often into the surviving route, producing a longer merged
-    route that the pool otherwise under-represents.
-
-    Key difference from op_route_eliminate: this operator explicitly verifies
-    combined capacity compatibility before selection, maximising the probability
-    that repair produces a single consolidated route rather than creating a new one.
-    """
     if len(plan.routes) <= 1:
         return op_random(plan, size)
     inst = plan.inst
 
-    # Find capacity-compatible pairs sorted by combined customer count
     candidates = []
     for i, r1 in enumerate(plan.routes):
         load1 = sum(inst.demands[n] for n in r1)
@@ -351,14 +330,12 @@ def op_route_merge_sample(plan: Plan, size: int) -> tuple[Plan, list[int]]:
                 continue
             combined_len = len(r1) + len(r2)
             load_fill = (load1 + load2) / max(inst.capacity, 1)
-            # Prefer denser pairs (high fill = fewer wasted seats after merge)
             score = combined_len - load_fill * 4.0 + random.random() * 1.5
             candidates.append((score, i, j))
 
     if not candidates:
         return op_route_eliminate(plan, size)
 
-    # Power-law selection: bias toward lower-score (denser / smaller) pairs
     candidates.sort()
     p = 3.0
     idx = int((random.random() ** p) * len(candidates))
@@ -367,6 +344,23 @@ def op_route_merge_sample(plan: Plan, size: int) -> tuple[Plan, list[int]]:
     small_idx = i if len(plan.routes[i]) <= len(plan.routes[j]) else j
     removed = list(plan.routes[small_idx])
     plan.routes = [r for k, r in enumerate(plan.routes) if k != small_idx]
+    return _invalidate(plan), removed
+
+
+def op_two_route_eliminate(plan: Plan, size: int) -> tuple[Plan, list[int]]:
+    if len(plan.routes) <= 2:
+        return op_route_eliminate(plan, size)
+    inst = plan.inst
+    ranked = sorted(
+        enumerate(plan.routes),
+        key=lambda x: (len(x[1]) + random.random() * 0.5,),
+    )
+    removed: list[int] = []
+    drop_ids: set = set()
+    for idx, route in ranked[:2]:
+        removed.extend(route)
+        drop_ids.add(idx)
+    plan.routes = [r for i, r in enumerate(plan.routes) if i not in drop_ids]
     return _invalidate(plan), removed
 
 
@@ -380,7 +374,8 @@ DESTROY = [
     op_route_dispersion_eliminate,
     op_route_costly_eliminate,
     op_cross_route_shaw,
-    op_route_merge_sample,  # idx 9 — new
+    op_route_merge_sample,
+    op_two_route_eliminate,
 ]
 
 
@@ -405,8 +400,6 @@ def _regret(plan: Plan, removed: list[int], k: int) -> Plan:
             )
             if not options:
                 continue
-            # sum-of-gaps variant of regret-k: penalises nodes with multiple
-            # poor alternatives more aggressively than classical Δ_{k-1} - Δ_0
             regret = (
                 sum(options[i][0] - options[0][0] for i in range(1, k))
                 if len(options) >= k
@@ -419,7 +412,7 @@ def _regret(plan: Plan, removed: list[int], k: int) -> Plan:
             if pos is not None:
                 plan.routes[ri].insert(pos, chosen)
             plan.invalidate()
-            remaining.discard(chosen)  # ← O(1)
+            remaining.discard(chosen)
         else:
             for node in remaining:
                 plan.routes.append([node])
@@ -481,20 +474,17 @@ def _fts_best_insert_position(node: int, route: list[int], inst: Inst) -> tuple[
     long_route_pressure = min((len(route) + 1) / 30.0, 1.0)
     fts_weight = 0.15 + 0.45 * inst.tw_tight_frac + 0.25 * long_route_pressure
 
-    # precompute once — O(route_len)
     base_arrivals, base_wait = _route_arrivals_wait(route, inst)
 
     for pos in range(len(route) + 1):
         prev = route[pos - 1] if pos > 0 else 0
         nxt = route[pos] if pos < len(route) else 0
 
-        # incremental feasibility: check node insertion only
         t_prev = base_arrivals[pos - 1] if pos > 0 else 0.0
         t_arrive = t_prev + inst.dist[prev, node]
         if t_arrive > inst.due_times[node]:
             continue
         t_depart = max(t_arrive, inst.ready_times[node]) + inst.service_times[node]
-        # check downstream propagation: time push at nxt
         if nxt != 0:
             t_nxt_new = t_depart + inst.dist[node, nxt]
             t_nxt_old = base_arrivals[pos] if pos < len(base_arrivals) else None
@@ -503,11 +493,9 @@ def _fts_best_insert_position(node: int, route: list[int], inst: Inst) -> tuple[
 
         dist_added = inst.dist[prev, node] + inst.dist[node, nxt] - inst.dist[prev, nxt]
 
-        # approximate wait_added from time push at insertion point
         wait_node = max(0.0, inst.ready_times[node] - (t_prev + inst.dist[prev, node]))
-        wait_added = wait_node  # dominant contribution; downstream wait unchanged to first order
+        wait_added = wait_node
 
-        # downstream FTS: min slack from pos onward in base route
         if pos < len(base_arrivals):
             downstream_fts = min(max(0.0, inst.due_times[route[i]] - base_arrivals[i]) for i in range(pos, len(route)))
         else:
@@ -545,7 +533,7 @@ REPAIR = [op_greedy, op_regret_2, op_regret_3, op_tw_greedy, op_fts_greedy]
 N_D, N_R = len(DESTROY), len(REPAIR)
 N_ACTIONS = N_D * N_R
 
-assert N_D == 10
+assert N_D == 11
 assert N_R == 5
 for _m in MODES:
     assert len(_m.destroy_bias) == N_D

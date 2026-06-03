@@ -23,14 +23,16 @@ from .config import (
     MODES,
     Config,
 )
-from .core import Inst, Plan, _avg_slack, _fleet_fill, _plan_spread
-from .heuristics import build_greedy
+from .core import Inst, Plan, _avg_slack, _fleet_fill, _plan_spread, _check_route
+from .heuristics import build_greedy, _best_insert_position
 from .local_search import (
     _buffered_route_elimination,
     _ejection_chain_eliminate,
     _iterative_route_elimination,
     _try_route_merge,
     local_search,
+    merged_route_candidates,
+    _two_opt_best,
 )
 from .operators import DESTROY, N_D, N_R, REPAIR, accept, accept_with_nv_ceiling, destroy_size
 from .pool import RoutePool, recombine_with_route_pool
@@ -166,12 +168,12 @@ class HybridDDQNSolver:
                     bare = k.split(".", 1)[1]
                     if bare in operator_sd:
                         if tuple(v.shape) != tuple(operator_sd[bare].shape):
-                            # Pad shape from (40, hid2) to (45, hid2) to support the 9th destroy operator
+                            # Pad shape from (40, hid2) to (55, hid2) to support the 11 destroy operators
                             if "adv_head.2.weight" in bare:
                                 padded = operator_sd[bare].clone()
                                 loaded_n = v.shape[0]
                                 padded[:loaded_n] = v
-                                # Copy weights of actions 25..29 (route_eliminate) to actions 35..39 (costly_route_eliminate)
+                                # Copy weights of actions 25..29 (route_eliminate) to actions 50..54 (two_route_eliminate)
                                 for new_act in range(loaded_n, padded.shape[0]):
                                     rep_idx = new_act % 5
                                     src_act = 5 * 5 + rep_idx
@@ -451,30 +453,166 @@ class HybridDDQNSolver:
 
             # Every 5th seed: attempt explicit route merges on best for direct NV-1 seeds
             if it % 5 == 0:
+                for route in merged_route_candidates(best):
+                    pool.add_route(route)
                 merged = _try_route_merge(best)
                 if merged is not None:
                     pool.add_plan(merged)
                     for route in merged.routes:
                         pool.add_route(route)
 
-    def _committed_nv_search(
+    def _seed_savings_routes(self, pool: RoutePool, n_randomizations: int = 12) -> None:
+        """
+        Clarke-Wright savings algorithm with randomised merge-order restarts.
+
+        Produces route topologies fundamentally different from ALNS:
+        - Savings criterion merges by distance saved, not insertion cost
+        - Naturally produces longer routes that cross spatial cluster boundaries
+        - Four merge orientations (forward/reverse each route) maximise feasible merges
+
+        Academic rationale: RC101's BKS NV=14 likely requires 'temporal bridge routes'
+        connecting spatially distant customers via overlapping time windows. ALNS with
+        Shaw removal never generates these because Shaw similarity penalises spatial
+        distance. Savings-based construction is indifferent to spatial distance.
+
+        Never modifies best. Pool-seeding only.
+        """
+        inst = self.inst
+
+        for run in range(n_randomizations):
+            # ── savings computation with run-scaled perturbation ──────────────
+            savings: list[tuple[float, int, int]] = []
+            for i in range(1, inst.n + 1):
+                for j in range(i + 1, inst.n + 1):
+                    s = float(inst.dist[0, i] + inst.dist[0, j] - inst.dist[i, j])
+                    if run > 0:
+                        # Bounded perturbation: scale grows with run to explore wider
+                        s *= 1.0 + (random.random() - 0.5) * 0.08 * run
+                    savings.append((s, i, j))
+            savings.sort(key=lambda x: -x[0])
+
+            # ── initialise: one singleton route per customer ──────────────────
+            routes: list[list[int]] = [[i] for i in range(inst.n + 1)]  # 1-indexed
+            loads: list[float] = [0.0] + [float(inst.demands[i]) for i in range(1, inst.n + 1)]
+            which_route: dict[int, int] = {i: i for i in range(1, inst.n + 1)}
+
+            # ── greedy merge loop ─────────────────────────────────────────────
+            for _, i, j in savings:
+                ri = which_route.get(i)
+                rj = which_route.get(j)
+                if ri is None or rj is None or ri == rj:
+                    continue
+                r1 = routes[ri]
+                r2 = routes[rj]
+                if not r1 or not r2:
+                    continue
+                if loads[ri] + loads[rj] > inst.capacity:
+                    continue
+
+                # Try all four orientation combinations (forward/reverse × 2 routes)
+                merged: list[int] | None = None
+                for a, b in (
+                    (r1, r2),
+                    (r1[::-1], r2),
+                    (r1, r2[::-1]),
+                    (r1[::-1], r2[::-1]),
+                ):
+                    candidate = a + b
+                    if _check_route(candidate, inst):
+                        merged = candidate
+                        break
+
+                if merged is None:
+                    continue
+
+                # Apply merge: absorb rj into ri slot
+                routes[ri] = merged
+                loads[ri] += loads[rj]
+                routes[rj] = []
+                loads[rj] = 0.0
+                for c in r2:
+                    which_route[c] = ri
+
+            # ── add all non-empty routes to pool ──────────────────────────────
+            for idx, route in enumerate(routes):
+                if idx > 0 and route:
+                    pool.add_route(route)
+
+    def _seed_nv_targeted_construction(
         self,
-        start: Plan,
         pool: RoutePool,
         target_nv: int,
-        n_iters: int = 300,
-    ) -> Plan | None:
+        n_trials: int = 40,
+    ) -> None:
         """
-        Focused ALNS with hard NV ceiling = target_nv.
+        Direct construction targeting exactly target_nv routes.
 
-        Mechanism:
-        - 4× initial temperature: accepts up to ~20% TD regression for NV gain
-        - Accepts NV=target_nv+1 candidates and immediately applies LS with
-          nv_ceiling=target_nv, catching solutions 'one step away'
-        - Always seeds pool with individual routes regardless of acceptance
-        - Never modifies self.best or persistent solver state
+        Seeds the pool with longer routes (8-10 customers) by partitioning
+        customers into target_nv groups and building one feasible route per group.
+        ALNS and savings under-generate these because:
+          - ALNS repair creates new routes for hard-to-insert customers
+          - Savings stops merging once TW/capacity constraints tighten
 
-        Returns best feasible plan at target_nv found, or None.
+        Strategy: TW-midpoint seed selection ensures each seed 'anchors' a
+        distinct temporal region, then EDF-ordered insertion fills each group.
+        Multiple trials sweep different seed offsets for coverage.
+
+        Pool-seeding only. Never modifies best.
+        """
+        inst = self.inst
+        customers = list(range(1, inst.n + 1))
+        # Sort once by TW midpoint for reproducible seed spacing
+        tw_sorted = sorted(customers,
+                           key=lambda n: (inst.ready_times[n] + inst.due_times[n]) / 2.0)
+        step = max(1, inst.n // target_nv)
+
+        for trial in range(n_trials):
+            # Sweep offset across [0, step) so every trial has distinct seeds
+            offset = trial % step
+            seeds = []
+            seen_seeds = set()
+            for i in range(target_nv):
+                idx = min(i * step + offset, inst.n - 1)
+                s = tw_sorted[idx]
+                if s not in seen_seeds:
+                    seeds.append(s)
+                    seen_seeds.add(s)
+
+            route_lists: list[list[int]] = [[s] for s in seeds]
+            route_loads: list[float] = [float(inst.demands[s]) for s in seeds]
+
+            # Insert remaining customers; EDF order = tightest TW first
+            unassigned = [c for c in customers if c not in seeds]
+            unassigned.sort(key=lambda n: inst.due_times[n] - inst.ready_times[n])
+
+            for c in unassigned:
+                best_delta, best_ri, best_pos = float("inf"), None, None
+                for ri, route in enumerate(route_lists):
+                    if route_loads[ri] + inst.demands[c] > inst.capacity:
+                        continue
+                    delta, pos = _best_insert_position(c, route, inst)
+                    if pos is not None and delta < best_delta:
+                        best_delta, best_ri, best_pos = delta, ri, pos
+                if best_ri is not None:
+                    route_lists[best_ri].insert(best_pos, c)
+                    route_loads[best_ri] += inst.demands[c]
+                # Unplaceable: dropped (individual routes are still valid pool seeds)
+
+            for route in route_lists:
+                if route:
+                    pool.add_route(route)
+
+            # Bonus: run a post-construction 2-opt pass and add the improved route
+            for route in route_lists:
+                if len(route) >= 4:
+                    improved = _two_opt_best(route, inst)
+                    if improved != route and _check_route(improved, inst):
+                        pool.add_route(improved)
+
+    def _committed_nv_search(self, start: Plan, pool: RoutePool, target_nv: int, n_iters: int = 500) -> Plan | None:
+        """
+        Focused ALNS với phân vùng mục tiêu cứng: nv_ceiling = target_nv.
+        Cải tiến: Tự động nạp EliteArchive và tự động reheat nhiệt độ tại mốc 50%.
         """
         cfg = self.cfg
         inst = self.inst
@@ -482,51 +620,79 @@ class HybridDDQNSolver:
         if start.nv <= target_nv:
             return start.copy()
 
+        # Nạp trước các giải pháp tốt nhất từ EliteArchive vào Route Pool
+        archive_plans = self.archive._plans.get(inst.name, [])
+        for ap in archive_plans:
+            pool.add_plan(ap)
+
         cur = start.copy()
         best_found: Plan | None = None
-        # High temperature: prioritise NV over TD for this search phase
         temp = cfg.temp_control * cur.cost / math.log(2) * 4.0
         bandit = ThompsonBandit(N_D, N_R)
+        half = n_iters // 2
 
         for it in range(n_iters):
+            # Khởi động lại động (Adaptive Restart): Nếu đi được nửa đường
+            # mà chưa tìm thấy nghiệm mục tiêu, kích hoạt sốc nhiệt 8x temp
+            if it == half and best_found is None:
+                temp = cfg.temp_control * cur.cost / math.log(2) * 8.0
+                cur = start.copy()  # Reset về cấu trúc gốc để đi nhánh khác
+
             di, ri = bandit.select()
             size = destroy_size(it, n_iters, cfg, inst.n, scale=1.0)
             dest, removed = DESTROY[di](cur.copy(), size)
             cand = REPAIR[ri](dest, removed)
 
-            # Unconditional pool seeding — every route encountered is valuable
             for route in cand.routes:
                 pool.add_route(route)
 
             score = 0
             if cand.feasible and cand.nv <= target_nv:
                 pool.add_plan(cand)
-                # SA acceptance within the hard NV ceiling
-                if (
-                    cand.nv < cur.nv
-                    or (cand.nv == cur.nv and cand.cost <= cur.cost)
-                    or random.random() < math.exp(-(cand.cost - cur.cost) / max(temp, 1e-6))
-                ):
-                    cur = cand
+                cur = cand
                 if best_found is None or cand.dominates(best_found) or cand.nv < best_found.nv:
                     best_found = cand.copy()
                     score = cfg.sigma1
 
             elif cand.feasible and cand.nv == target_nv + 1:
-                # One vehicle over target — cheap LS pass may close the gap
-                cand_ls = local_search(
+                # 1. Try local search reduction (fast)
+                reduced = local_search(
                     cand,
                     max_passes=1,
                     nv_ceiling=target_nv,
                     max_ls_moves=cfg.max_ls_moves,
                     pool=pool,
                 )
-                if cand_ls.feasible and cand_ls.nv <= target_nv:
-                    pool.add_plan(cand_ls)
-                    cur = cand_ls
-                    if best_found is None or cand_ls.dominates(best_found) or cand_ls.nv < best_found.nv:
-                        best_found = cand_ls.copy()
+                
+                # 2. Try ejection chains (if local search failed and candidate is high-quality or periodically)
+                if not (reduced.feasible and reduced.nv <= target_nv):
+                    if cand.cost <= cur.cost or it % 5 == 0:
+                        chain = _ejection_chain_eliminate(cand)
+                        if chain is not None and chain.feasible and chain.nv <= target_nv:
+                            reduced = chain
+                
+                # 3. Try MILP recombination (periodically or on improving costs)
+                if not (reduced.feasible and reduced.nv <= target_nv):
+                    if cand.cost <= cur.cost or it % 15 == 0:
+                        rec = recombine_with_route_pool(cand, pool, cfg, nv_target=target_nv)
+                        if rec.feasible and rec.nv <= target_nv:
+                            reduced = rec
+
+                # If we successfully dropped to target_nv vehicles:
+                if reduced.feasible and reduced.nv <= target_nv:
+                    pool.add_plan(reduced)
+                    cur = reduced
+                    if best_found is None or reduced.dominates(best_found) or reduced.nv < best_found.nv:
+                        best_found = reduced.copy()
                         score = cfg.sigma1
+                else:
+                    # If we failed to reduce vehicles, we still accept the 15-vehicle candidate
+                    # to walk the 15-vehicle search space using Simulated Annealing.
+                    if (
+                        cand.cost <= cur.cost
+                        or random.random() < math.exp(-(cand.cost - cur.cost) / max(temp, 1e-6))
+                    ):
+                        cur = cand
 
             bandit.update(di, ri, score, cfg.sigma1)
             temp *= cfg.temp_decay
@@ -776,8 +942,20 @@ class HybridDDQNSolver:
                 )
                 history.append(best.cost)
 
-        # Enrich pool before MILP queries: large-destroy seeds cover the 7-9 customer
-        # route types that normal search under-generates.
+        # ── Phase A: savings seeding (topology diversity ALNS can't generate) ──
+        self._seed_savings_routes(pool, n_randomizations=10)
+
+        # ── Phase B: direct NV-targeted construction ──────────────────────────
+        from .config import BKS as _BKS
+        _bks_entry = _BKS.get(self.inst.name)
+        _bks_nv = int(_bks_entry["nv"]) if _bks_entry else max(1, best.nv - 1)
+
+        if best.nv > _bks_nv:
+            # Seed for both target and one above target (richer pool = better MILP)
+            self._seed_nv_targeted_construction(pool, target_nv=_bks_nv, n_trials=35)
+            self._seed_nv_targeted_construction(pool, target_nv=best.nv - 1, n_trials=20)
+
+        # ── Phase C: large-destroy seeding (existing, unchanged) ──────────────
         self._seed_pool_large_destroy(best, pool, n_seeds=20)
 
         # Explicit NV-reduction loop: try MILP with nv_target = best.nv-1, best.nv-2

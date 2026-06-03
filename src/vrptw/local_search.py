@@ -209,7 +209,6 @@ def _best_or_opt(plan: Plan, nv_ceiling: int | None = None):
                         continue
                     dc = _route_cost_list(dest_route, inst)
                     for ip in range(len(dest_route) + 1):
-                        # Try original segment order
                         dn = dest_route[:ip] + seg + dest_route[ip:]
                         if _check_route(dn, inst):
                             new_nv = plan.nv - (1 if not sn else 0)
@@ -220,7 +219,6 @@ def _best_or_opt(plan: Plan, nv_ceiling: int | None = None):
                                 if delta < best_delta:
                                     best_delta, best_move = delta, (si, sp, L, di, ip, False)
 
-                        # Try reversed segment order
                         dn_rev = dest_route[:ip] + list(reversed(seg)) + dest_route[ip:]
                         if _check_route(dn_rev, inst):
                             new_nv = plan.nv - (1 if not sn else 0)
@@ -247,45 +245,104 @@ def _apply_or_opt(plan: Plan, move: tuple[int, int, int, int, int, bool]) -> Pla
     return Plan(routes, plan.inst, plan.algo)
 
 
+def _merge_orderings(r1: list[int], r2: list[int], inst: Inst) -> list[list[int]]:
+    combined = list(r1) + list(r2)
+    depot = 0
+    center = inst.coords[np.array(combined, dtype=np.int64)].mean(axis=0)
+    polar = sorted(
+        combined,
+        key=lambda n: np.arctan2(inst.coords[n][1] - center[1], inst.coords[n][0] - center[0]),
+    )
+    nearest_seed = min(combined, key=lambda n: inst.dist[depot, n])
+    farthest_seed = max(combined, key=lambda n: inst.dist[depot, n])
+
+    orderings = [
+        sorted(combined, key=lambda n: (inst.due_times[n], inst.ready_times[n], inst.dist[depot, n])),
+        sorted(combined, key=lambda n: (inst.ready_times[n], inst.due_times[n], inst.dist[depot, n])),
+        sorted(combined, key=lambda n: inst.dist[depot, n]),
+        sorted(combined, key=lambda n: inst.dist[depot, n], reverse=True),
+        polar,
+        list(reversed(polar)),
+        sorted(combined, key=lambda n: (inst.dist[nearest_seed, n], inst.due_times[n])),
+        sorted(combined, key=lambda n: (inst.dist[farthest_seed, n], inst.due_times[n])),
+    ]
+
+    deduped: list[list[int]] = []
+    seen: set[tuple[int, ...]] = set()
+    for ordering in orderings:
+        key = tuple(ordering)
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(ordering)
+    return deduped
+
+
+def _build_merged_route(ordering: list[int], inst: Inst) -> list[int] | None:
+    route: list[int] = []
+    for node in ordering:
+        _, pos = _best_insert_position(node, route, inst)
+        if pos is None:
+            return None
+        route.insert(pos, node)
+    return route if _check_route(route, inst) else None
+
+
+def _ranked_merge_pairs(plan: Plan, max_pairs: int) -> list[tuple[int, int]]:
+    inst = plan.inst
+    route_stats = []
+    for i, route in enumerate(plan.routes):
+        route_stats.append((i, _route_load(route, inst), _route_cost_list(route, inst), len(route)))
+
+    candidates: list[tuple[float, int, int]] = []
+    for pos_i, (i, load_i, cost_i, len_i) in enumerate(route_stats):
+        for j, load_j, cost_j, len_j in route_stats[pos_i + 1 :]:
+            if load_i + load_j > inst.capacity:
+                continue
+            depot_saving = inst.dist[0, plan.routes[i][0]] + inst.dist[plan.routes[i][-1], 0]
+            depot_saving += inst.dist[0, plan.routes[j][0]] + inst.dist[plan.routes[j][-1], 0]
+            size_bias = len_i + len_j
+            pair_score = cost_i + cost_j - 0.15 * depot_saving - 2.0 * size_bias
+            candidates.append((float(pair_score), i, j))
+    candidates.sort(key=lambda x: x[0])
+    return [(i, j) for _, i, j in candidates[:max_pairs]]
+
+
+def merged_route_candidates(plan: Plan, max_pairs: int = 24, max_routes: int = 32) -> list[list[int]]:
+    if len(plan.routes) <= 1:
+        return []
+
+    inst = plan.inst
+    candidates: list[list[int]] = []
+    seen: set[tuple[int, ...]] = set()
+    for i, j in _ranked_merge_pairs(plan, max_pairs=max_pairs):
+        for ordering in _merge_orderings(plan.routes[i], plan.routes[j], inst):
+            merged_route = _build_merged_route(ordering, inst)
+            if merged_route is None:
+                continue
+            key = tuple(merged_route)
+            if key in seen:
+                continue
+            seen.add(key)
+            candidates.append(merged_route)
+            if len(candidates) >= max_routes:
+                return candidates
+    return candidates
+
+
 def _try_route_merge(plan: Plan, max_pairs: int = 24) -> Plan | None:
-    """
-    Route Consolidation Move.
-
-    Attempts to merge any two capacity-compatible routes into a single feasible
-    route via EDF-ordered best-insertion. Unlike _try_route_compact (which
-    scatters customers across many routes), this produces ONE longer route —
-    exactly the route type MILP needs to assemble an NV-1 partition.
-
-    Checks at most the 4 shortest routes for O(k * n^2) tractability.
-    Returns the best merged plan (nv-1), or None if no merge is feasible.
-    """
     inst = plan.inst
     if len(plan.routes) <= 1:
         return None
 
-    ranked = sorted(range(len(plan.routes)), key=lambda i: len(plan.routes[i]))
-    check_idxs = ranked[: min(4, len(ranked))]
     best_merged: Plan | None = None
 
-    for pos_i, i in enumerate(check_idxs):
+    for i, j in _ranked_merge_pairs(plan, max_pairs=max_pairs):
         r1 = plan.routes[i]
-        load1 = sum(inst.demands[n] for n in r1)
-        for j in check_idxs[pos_i + 1 :]:
-            r2 = plan.routes[j]
-            if load1 + sum(inst.demands[n] for n in r2) > inst.capacity:
-                continue  # capacity gate
-
-            # EDF ordering minimises downstream TW violations
-            combined = sorted(list(r1) + list(r2), key=lambda n: inst.due_times[n])
-            merged_route: list[int] = []
-            ok = True
-            for node in combined:
-                _, pos = _best_insert_position(node, merged_route, inst)
-                if pos is None:
-                    ok = False
-                    break
-                merged_route.insert(pos, node)
-            if not ok or not _check_route(merged_route, inst):
+        r2 = plan.routes[j]
+        for ordering in _merge_orderings(r1, r2, inst):
+            merged_route = _build_merged_route(ordering, inst)
+            if merged_route is None:
                 continue
 
             surviving = [r[:] for k, r in enumerate(plan.routes) if k != i and k != j]
@@ -385,14 +442,6 @@ def _try_buffered_route_elimination(
     max_ejections: int = 4,
     beam_width: int = 8,
 ) -> Plan | None:
-    """
-    Eliminate one route with a bounded ejection buffer.
-
-    Direct route elimination fails on random/mixed instances when the target
-    customers need a few recipient-route customers to move first. This beam
-    search keeps those displaced customers in a pending buffer and reinserts
-    them without ever creating a new route.
-    """
     if len(plan.routes) <= 1:
         return None
 
@@ -442,18 +491,18 @@ def _try_buffered_route_elimination(
         if not next_states:
             break
 
-        deduped: list[tuple[list[list[int]], list[int], int, float]] = []
-        seen: set[tuple[tuple[tuple[int, ...], ...], tuple[int, ...]]] = set()
-        for item in sorted(next_states, key=lambda s: (len(s[1]), s[2], s[3])):
-            routes_cur, pending, _, _ = item
-            signature = (tuple(tuple(route) for route in routes_cur), tuple(sorted(pending)))
-            if signature in seen:
-                continue
-            seen.add(signature)
-            deduped.append(item)
-            if len(deduped) >= beam_width:
-                break
-        states = deduped
+    deduped: list[tuple[list[list[int]], list[int], int, float]] = []
+    seen: set[tuple[tuple[tuple[int, ...], ...], tuple[int, ...]]] = set()
+    for item in sorted(next_states, key=lambda s: (len(s[1]), s[2], s[3])):
+        routes_cur, pending, _, _ = item
+        signature = (tuple(tuple(route) for route in routes_cur), tuple(sorted(pending)))
+        if signature in seen:
+            continue
+        seen.add(signature)
+        deduped.append(item)
+        if len(deduped) >= beam_width:
+            break
+    states = deduped
 
     for routes_cur, pending, _, _ in states:
         completed = finish_if_complete(routes_cur, pending)
@@ -504,6 +553,52 @@ def _buffered_route_elimination(
     return best
 
 
+def _intra_route_or_opt(plan: Plan, nv_ceiling: int | None = None) -> Plan | None:
+    """
+    Intra-Route Or-Opt.
+    Dịch chuyển các phân đoạn khách hàng (độ dài 1-3) đến vị trí tốt hơn
+    trong NỘI BỘ của cùng một tuyến đường để tối ưu hóa quãng đường (TD).
+    """
+    inst = plan.inst
+    improved = False
+    routes = [r[:] for r in plan.routes]
+
+    for ri, route in enumerate(routes):
+        if len(route) < 4:
+            continue
+        base_cost = _route_cost_list(route, inst)
+        best_route = route[:]
+        best_cost = base_cost
+
+        for L in (1, 2, 3):
+            for sp in range(len(route) - L + 1):
+                seg = route[sp : sp + L]
+                remainder = route[:sp] + route[sp + L :]
+                for ip in range(len(remainder) + 1):
+                    for rev in (False, True):
+                        s = list(reversed(seg)) if rev else seg[:]
+                        candidate = remainder[:ip] + s + remainder[ip:]
+                        if candidate == route:
+                            continue
+                        if not _check_route(candidate, inst):
+                            continue
+                        cc = _route_cost_list(candidate, inst)
+                        if cc + 1e-9 < best_cost:
+                            best_cost = cc
+                            best_route = candidate
+                            improved = True
+        routes[ri] = best_route
+
+    if not improved:
+        return None
+    cand = Plan(routes, inst, plan.algo)
+    if not cand.feasible:
+        return None
+    if nv_ceiling is not None and cand.nv > nv_ceiling:
+        return None
+    return cand if cand.dominates(plan) else None
+
+
 def local_search(
     plan: Plan,
     max_passes: int = 1,
@@ -538,6 +633,12 @@ def local_search(
                         pool.add_plan(best)
                     moves += 1
                     continue
+            intra = _intra_route_or_opt(best, nv_ceiling=nv_ceiling)
+            if intra is not None:
+                best = intra
+                improved = True
+                moves += 1
+                continue
             move = _best_swap(best)
             if move is not None:
                 cand = _apply_swap(best, move)
@@ -577,6 +678,8 @@ def local_search(
 
     # Pool-seeding bonus: generate merged-route type not produced by normal LS
     if pool is not None:
+        for route in merged_route_candidates(best):
+            pool.add_route(route)
         merged = _try_route_merge(best)
         if merged is not None:
             pool.add_plan(merged)
