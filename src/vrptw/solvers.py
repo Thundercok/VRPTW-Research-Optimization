@@ -757,9 +757,13 @@ class HybridDDQNSolver:
         if target_nv < min_nv_cap:
             return None
 
+        # Scale iterations with hybrid_iterations budget
+        budget_scale = max(0.005, cfg.hybrid_iterations / 1200.0)
+        base_iters = max(1, int(n_iters * budget_scale))
         # Boost iterations for hard instances (RC-type with gap >= 1 vehicle)
         is_hard = inst.name.startswith("RC") and start.nv - target_nv >= 1
-        effective_iters = max(n_iters, 1500) if is_hard else n_iters
+        effective_iters = max(base_iters, int(1500 * budget_scale)) if is_hard else base_iters
+        effective_iters = max(1, effective_iters)
 
         # Pre-load elite archive solutions into pool
         archive_plans = self.archive._plans.get(inst.name, [])
@@ -1108,82 +1112,92 @@ class HybridDDQNSolver:
                 )
                 history.append(best.cost)
 
+        # Scale post-processing search effort based on hybrid_iterations budget
+        budget_scale = max(0.005, cfg.hybrid_iterations / 1200.0)
+        n_rand = max(1, int(10 * budget_scale))
+        n_seeds_phc = max(1, int(20 * budget_scale))
+        n_trials_1 = max(1, int(35 * budget_scale))
+        n_trials_2 = max(1, int(20 * budget_scale))
+
         # ── Phase 0: dense column generation (generalized topology injection) ───
-        self._generate_dense_pool_columns(best, pool)
+        if budget_scale > 0.05:
+            self._generate_dense_pool_columns(best, pool)
 
         # ── Phase A: savings seeding (topology diversity ALNS can't generate) ──
-        self._seed_savings_routes(pool, n_randomizations=10)
+        self._seed_savings_routes(pool, n_randomizations=n_rand)
 
         # ── Phase B: direct NV-targeted construction ──────────────────────
         _target_nv_floor = max(1, best.nv - 1)
 
         if best.nv > _target_nv_floor:
             # Seed for both target and one above target (richer pool = better MILP)
-            self._seed_nv_targeted_construction(pool, target_nv=_target_nv_floor, n_trials=35)
-            self._seed_nv_targeted_construction(pool, target_nv=best.nv - 1, n_trials=20)
+            self._seed_nv_targeted_construction(pool, target_nv=_target_nv_floor, n_trials=n_trials_1)
+            self._seed_nv_targeted_construction(pool, target_nv=best.nv - 1, n_trials=n_trials_2)
 
         # ── Phase C: large-destroy seeding (existing, unchanged) ──────────────
-        self._seed_pool_large_destroy(best, pool, n_seeds=20)
+        self._seed_pool_large_destroy(best, pool, n_seeds=n_seeds_phc)
 
-        # Explicit NV-reduction loop: try MILP with nv_target = best.nv-1, best.nv-2
-        # Accept any feasible result with fewer vehicles (BKS has *worse* TD for fewer NV).
-        for _target_nv in range(best.nv - 1, max(best.nv - 3, 0), -1):
-            _rec = recombine_with_route_pool(best, pool, cfg, nv_target=_target_nv)
-            if not _rec.feasible or _rec.nv > _target_nv:
-                break  # pool lacks routes to cover at this NV; lower targets will also fail
-            # Deep LS to improve TD at the new NV (2x default moves)
-            _rec = local_search(
-                _rec,
-                max_passes=cfg.polish_ls_passes + 1,
-                nv_ceiling=_rec.nv,
-                max_ls_moves=cfg.max_ls_moves * 2,
-                pool=pool,  # seed intermediates into pool
-            )
-            if _rec.feasible and _rec.nv <= _target_nv:
-                best = _rec
-                pool.add_plan(best)
-                history.append(best.cost)
-                # Don't break — try to go one lower
-
-        # Pass 1: depth-2 ejection chain (handles TW-blocked direct insertions)
-        chain_result = _ejection_chain_eliminate(best)
-        if (
-            chain_result is not None
-            and chain_result.feasible
-            and (chain_result.nv < best.nv or chain_result.dominates(best))
-        ):
-            best = chain_result
-            pool.add_plan(best)
-            history.append(best.cost)
-
-        # Pass 2: buffered elimination (bounded multi-route rebalancing)
-        buffered = _buffered_route_elimination(best, pool=pool)
-        if buffered.feasible and (buffered.nv < best.nv or buffered.dominates(best)):
-            best = buffered
-            pool.add_plan(best)
-            history.append(best.cost)
-
-        # Pass 3: iterative greedy elimination (catches easier direct insertions)
-        eliminated = _iterative_route_elimination(best, self.inst, pool=pool)
-        if eliminated.feasible and (eliminated.nv < best.nv or eliminated.dominates(best)):
-            best = eliminated
-            pool.add_plan(best)
-            history.append(best.cost)
-
-        # Pass 4: committed NV search — only if NV can still be reduced
-        _committed_nv_target = max(1, best.nv - 1)
-        if best.nv > _committed_nv_target:
-            committed = self._committed_nv_search(best, pool, target_nv=best.nv - 1)
-            if committed is not None and committed.feasible and (committed.nv < best.nv or committed.dominates(best)):
-                best = committed
-                pool.add_plan(best)
-                history.append(best.cost)
-                # One more ejection attempt at the new, lower NV
-                chain2 = _ejection_chain_eliminate(best)
-                if chain2 is not None and chain2.feasible and (chain2.nv < best.nv or chain2.dominates(best)):
-                    best = chain2
+        # For very small iteration limits (e.g. smoke tests/quick checks), skip the heavy NV-reduction heuristics
+        if cfg.hybrid_iterations > 5:
+            # Explicit NV-reduction loop: try MILP with nv_target = best.nv-1, best.nv-2
+            # Accept any feasible result with fewer vehicles (BKS has *worse* TD for fewer NV).
+            for _target_nv in range(best.nv - 1, max(best.nv - 3, 0), -1):
+                _rec = recombine_with_route_pool(best, pool, cfg, nv_target=_target_nv)
+                if not _rec.feasible or _rec.nv > _target_nv:
+                    break  # pool lacks routes to cover at this NV; lower targets will also fail
+                # Deep LS to improve TD at the new NV (2x default moves)
+                _rec = local_search(
+                    _rec,
+                    max_passes=cfg.polish_ls_passes + 1,
+                    nv_ceiling=_rec.nv,
+                    max_ls_moves=cfg.max_ls_moves * 2,
+                    pool=pool,  # seed intermediates into pool
+                )
+                if _rec.feasible and _rec.nv <= _target_nv:
+                    best = _rec
                     pool.add_plan(best)
                     history.append(best.cost)
+                    # Don't break — try to go one lower
+
+            # Pass 1: depth-2 ejection chain (handles TW-blocked direct insertions)
+            chain_result = _ejection_chain_eliminate(best)
+            if (
+                chain_result is not None
+                and chain_result.feasible
+                and (chain_result.nv < best.nv or chain_result.dominates(best))
+            ):
+                best = chain_result
+                pool.add_plan(best)
+                history.append(best.cost)
+
+            # Pass 2: buffered elimination (bounded multi-route rebalancing)
+            buffered = _buffered_route_elimination(best, pool=pool)
+            if buffered.feasible and (buffered.nv < best.nv or buffered.dominates(best)):
+                best = buffered
+                pool.add_plan(best)
+                history.append(best.cost)
+
+            # Pass 3: iterative greedy elimination (catches easier direct insertions)
+            eliminated = _iterative_route_elimination(best, self.inst, pool=pool)
+            if eliminated.feasible and (eliminated.nv < best.nv or eliminated.dominates(best)):
+                best = eliminated
+                pool.add_plan(best)
+                history.append(best.cost)
+
+            # Pass 4: committed NV search — only if NV can still be reduced
+            _committed_nv_target = max(1, best.nv - 1)
+            if best.nv > _committed_nv_target:
+                committed = self._committed_nv_search(best, pool, target_nv=best.nv - 1)
+                if committed is not None and committed.feasible and (committed.nv < best.nv or committed.dominates(best)):
+                    best = committed
+                    pool.add_plan(best)
+                    history.append(best.cost)
+                    # One more ejection attempt at the new, lower NV
+                    chain2 = _ejection_chain_eliminate(best)
+                    if chain2 is not None and chain2.feasible and (chain2.nv < best.nv or chain2.dominates(best)):
+                        best = chain2
+                        pool.add_plan(best)
+                        history.append(best.cost)
 
         best.algo = self.algo_name
         self.archive.update(best)

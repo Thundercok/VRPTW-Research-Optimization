@@ -50,6 +50,7 @@ class RoutePool:
         self.inst = inst
         self.cfg = cfg
         self._routes: dict[tuple[int, ...], RouteRecord] = {}
+        self._cover_to_key: dict[tuple[int, ...], tuple[int, ...]] = {}
 
     def _priority(self, rec: RouteRecord) -> tuple[float, ...]:
         lr = rec.load / max(self.inst.capacity, 1)
@@ -58,16 +59,7 @@ class RoutePool:
 
     def _trim(self) -> None:
         limit = self.cfg.route_pool_limit
-        best_by_cover: dict[tuple[int, ...], RouteRecord] = {}
-        for rec in self._routes.values():
-            cover = _cover_key(rec.nodes)
-            incumbent = best_by_cover.get(cover)
-            if incumbent is None or _same_cover_priority(rec) < _same_cover_priority(incumbent):
-                best_by_cover[cover] = rec
-        if len(best_by_cover) < len(self._routes):
-            self._routes = {rec.nodes: rec for rec in best_by_cover.values()}
-
-        if len(self._routes) <= limit:
+        if len(self._routes) <= limit + 100:
             return
 
         kept: dict[tuple[int, ...], RouteRecord] = {}
@@ -98,6 +90,7 @@ class RoutePool:
                 if len(kept) >= limit:
                     break
         self._routes = kept
+        self._cover_to_key = {_cover_key(k): k for k in kept}
 
     def add_route(self, route: list[int], protected: bool = False) -> None:
         if not route or not _check_route(route, self.inst):
@@ -121,13 +114,15 @@ class RoutePool:
             protected=protected,
         )
         cover = _cover_key(key)
-        for old_key, old_rec in list(self._routes.items()):
-            if _cover_key(old_rec.nodes) != cover:
-                continue
+        old_key = self._cover_to_key.get(cover)
+        if old_key is not None:
+            old_rec = self._routes[old_key]
             if _same_cover_priority(old_rec) <= _same_cover_priority(rec):
                 return
             del self._routes[old_key]
+            del self._cover_to_key[cover]
         self._routes[key] = rec
+        self._cover_to_key[cover] = key
         self._trim()
 
     def add_plan(self, plan: Plan) -> None:
