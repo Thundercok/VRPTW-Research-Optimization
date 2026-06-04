@@ -62,18 +62,23 @@ class RoutePool:
         if len(self._routes) <= limit + 100:
             return
 
-        # ── Dual retention strategy ───────────────────────────────────────────
-        # Slot A (75%): cost-efficiency ranking (existing behaviour)
-        # Slot B (25%): route-length ranking   (new — preserves long routes for
-        #               NV-1 MILP partitions that efficiency-only pruning evicts)
-        slot_b = max(limit // 4, 8)
-        slot_a = limit - slot_b
+        slot_b = max(limit // 4, 8)   # 25% → longest routes (NV-1 MILP)
+        slot_a = limit - slot_b        # 75% → cheapest-per-stop routes
 
         usage: dict[int, int] = {}
         kept: dict[tuple[int, ...], RouteRecord] = {}
 
-        eff_ranked = sorted(self._routes.values(), key=self._priority)
+        # Slot B: sorted by route LENGTH only (decoupled from cost)
         len_ranked = sorted(self._routes.values(), key=lambda r: -len(r.nodes))
+
+        # Slot A: sorted by cost PER CUSTOMER only (short efficient routes survive here)
+        # Previously _priority used (-len, cps, ...) making both slots sort by length first.
+        # Now Slot A explicitly ignores length so long routes don't crowd out efficient ones.
+        eff_ranked = sorted(
+            self._routes.values(),
+            key=lambda r: r.cost / max(len(r.nodes), 1),
+        )
+
         max_per = self.cfg.route_pool_max_per_customer
 
         def _admit(rec: RouteRecord) -> bool:
@@ -87,21 +92,18 @@ class RoutePool:
                 usage[n] = usage.get(n, 0) + 1
             return True
 
-        # Fill Slot B: longest routes first
-        for rec in len_ranked:
+        for rec in len_ranked:      # Fill Slot B with longest routes
             if len(kept) >= slot_b:
                 break
             _admit(rec)
 
-        # Fill Slot A: most efficient routes
-        for rec in eff_ranked:
+        for rec in eff_ranked:      # Fill Slot A with cheapest-per-stop routes
             if len(kept) >= limit:
                 break
             _admit(rec)
 
-        # Backfill if either slot didn't saturate
-        if len(kept) < limit:
-            for rec in eff_ranked:
+        if len(kept) < limit:       # Backfill if either slot undersaturated
+            for rec in len_ranked:
                 if len(kept) >= limit:
                     break
                 _admit(rec)

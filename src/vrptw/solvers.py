@@ -14,6 +14,7 @@ from .config import (
     ALGO_HYBRID_FIXED,
     ALGO_HYBRID_RULE,
     ALGO_ORTOOLS,
+    BKS,
     MODE_DEFAULT,
     MODE_DIVERSIFY,
     MODE_INTENSIFY,
@@ -501,8 +502,11 @@ class HybridDDQNSolver:
             if len(route) < 2:
                 continue
             # ── Sub-route slicing (building-block columns) ────────────────
+            # Minimum 4 customers: 2-3 customer fragments dilute pool avg length
+            # toward 5.47 and evict the longer routes MILP needs for NV-1 partitions.
+            min_frag = max(4, inst.n // max(plan.nv * 2, 1))
             for start in range(len(route)):
-                for length in range(2, min(len(route) - start + 1, 8)):
+                for length in range(min_frag, min(len(route) - start + 1, 10)):
                     sub = route[start : start + length]
                     if _check_route(sub, inst):
                         pool.add_route(sub, protected=True)
@@ -708,9 +712,18 @@ class HybridDDQNSolver:
             route_lists: list[list[int]] = [[s] for s in seeds]
             route_loads: list[float] = [float(inst.demands[s]) for s in seeds]
 
-            # Insert remaining customers; EDF order = tightest TW first
             unassigned = [c for c in customers if c not in seeds]
-            unassigned.sort(key=lambda n: inst.due_times[n] - inst.ready_times[n])
+            # Rotate through 4 orderings across trials to generate diverse route topologies.
+            # EDF-only produces similar structures every trial; rotation breaks symmetry.
+            order_mode = trial % 4
+            if order_mode == 0:
+                unassigned.sort(key=lambda n: inst.due_times[n] - inst.ready_times[n])  # tightest TW
+            elif order_mode == 1:
+                random.shuffle(unassigned)
+            elif order_mode == 2:
+                unassigned.sort(key=lambda n: inst.due_times[n])  # earliest deadline
+            else:
+                unassigned.sort(key=lambda n: -inst.demands[n])  # largest demand first
 
             for c in unassigned:
                 best_delta, best_ri, best_pos = float("inf"), None, None
@@ -1150,27 +1163,29 @@ class HybridDDQNSolver:
 
         # For very small iteration limits (e.g. smoke tests/quick checks), skip the heavy NV-reduction heuristics
         if cfg.hybrid_iterations > 5:
-            # Explicit NV-reduction loop: try MILP with nv_target = best.nv-1, best.nv-2
-            # Accept any feasible result with fewer vehicles (BKS has *worse* TD for fewer NV).
-            for _target_nv in range(best.nv - 1, max(best.nv - 3, 0), -1):
+            # ── Resolve BKS floor: never search below BKS NV ─────────────────────
+            # Prevents 22-second committed search on instances already at optimal NV
+            # (e.g. RC207 at NV=3 wasting time chasing NV=2 instead of fixing TD).
+            _bks_entry = BKS.get(self.inst.name)
+            _bks_nv = int(_bks_entry["nv"]) if _bks_entry else max(1, best.nv - 2)
+
+            # NV-reduction loop stops at BKS floor
+            for _target_nv in range(best.nv - 1, max(_bks_nv - 1, 0), -1):
                 _rec = recombine_with_route_pool(best, pool, cfg, nv_target=_target_nv)
                 if not _rec.feasible or _rec.nv > _target_nv:
-                    break  # pool lacks routes to cover at this NV; lower targets will also fail
-                # Deep LS to improve TD at the new NV (2x default moves)
+                    break
                 _rec = local_search(
                     _rec,
                     max_passes=cfg.polish_ls_passes + 1,
                     nv_ceiling=_rec.nv,
                     max_ls_moves=cfg.max_ls_moves * 2,
-                    pool=pool,  # seed intermediates into pool
+                    pool=pool,
                 )
                 if _rec.feasible and _rec.nv <= _target_nv:
                     best = _rec
                     pool.add_plan(best)
                     history.append(best.cost)
-                    # Don't break — try to go one lower
 
-            # Pass 1: depth-2 ejection chain (handles TW-blocked direct insertions)
             chain_result = _ejection_chain_eliminate(best)
             if (
                 chain_result is not None
@@ -1181,34 +1196,49 @@ class HybridDDQNSolver:
                 pool.add_plan(best)
                 history.append(best.cost)
 
-            # Pass 2: buffered elimination (bounded multi-route rebalancing)
             buffered = _buffered_route_elimination(best, pool=pool)
             if buffered.feasible and (buffered.nv < best.nv or buffered.dominates(best)):
                 best = buffered
                 pool.add_plan(best)
                 history.append(best.cost)
 
-            # Pass 3: iterative greedy elimination (catches easier direct insertions)
             eliminated = _iterative_route_elimination(best, self.inst, pool=pool)
             if eliminated.feasible and (eliminated.nv < best.nv or eliminated.dominates(best)):
                 best = eliminated
                 pool.add_plan(best)
                 history.append(best.cost)
 
-            # Pass 4: committed NV search — only if NV can still be reduced
-            _committed_nv_target = max(1, best.nv - 1)
-            if best.nv > _committed_nv_target:
+            # Committed NV search only if still above BKS floor
+            if best.nv > _bks_nv:
                 committed = self._committed_nv_search(best, pool, target_nv=best.nv - 1)
-                if committed is not None and committed.feasible and (committed.nv < best.nv or committed.dominates(best)):
+                if committed is not None and committed.feasible and (
+                    committed.nv < best.nv or committed.dominates(best)
+                ):
                     best = committed
                     pool.add_plan(best)
                     history.append(best.cost)
-                    # One more ejection attempt at the new, lower NV
                     chain2 = _ejection_chain_eliminate(best)
-                    if chain2 is not None and chain2.feasible and (chain2.nv < best.nv or chain2.dominates(best)):
+                    if chain2 is not None and chain2.feasible and (
+                        chain2.nv < best.nv or chain2.dominates(best)
+                    ):
                         best = chain2
                         pool.add_plan(best)
                         history.append(best.cost)
+
+            # ── TD polish when at or below BKS NV ────────────────────────────────
+            # Fixes C202/C207 (NV=3 achieved, TD suboptimal) and RC207
+            # (NV=3 achieved, but TD regresses due to pool disruption from
+            # committed search targeting infeasible NV=2).
+            if _bks_entry and best.nv <= _bks_nv:
+                td_polished = local_search(
+                    best,
+                    max_passes=cfg.polish_ls_passes + 2,
+                    nv_ceiling=best.nv,
+                    max_ls_moves=cfg.max_ls_moves * 3,
+                )
+                if td_polished.feasible and td_polished.cost + 1e-6 < best.cost:
+                    best = td_polished
+                    history.append(best.cost)
 
         best.algo = self.algo_name
         self.archive.update(best)
