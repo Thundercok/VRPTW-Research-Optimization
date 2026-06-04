@@ -752,6 +752,11 @@ class HybridDDQNSolver:
         if start.nv <= target_nv:
             return start.copy()
 
+        # Mathematically check capacity feasibility before running search
+        min_nv_cap = int(math.ceil(sum(inst.demands) / inst.capacity))
+        if target_nv < min_nv_cap:
+            return None
+
         # Boost iterations for hard instances (RC-type with gap >= 1 vehicle)
         is_hard = inst.name.startswith("RC") and start.nv - target_nv >= 1
         effective_iters = max(n_iters, 1500) if is_hard else n_iters
