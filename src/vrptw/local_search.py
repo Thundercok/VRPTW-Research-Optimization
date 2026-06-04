@@ -701,65 +701,110 @@ def local_search(
 
 def _try_chain_elimination(plan: Plan, target_idx: int) -> Plan | None:
     """
-    Single-target ejection chain.  Processes each customer in the target route;
-    for customers that fail direct insertion, attempts a depth-2 chain:
-      c → Ri  (displacing d from Ri)  →  d → Rj
-    Returns a feasible Plan with nv-1, or None if any customer is unplaceable.
+    Depth-3 ejection chain: c → Ri (displacing d) → d → Rj (displacing e) → e → Rk.
+    Falls back to depth-2 then depth-1 per customer; depth-3 only fires when
+    shallower levels fail, keeping average runtime close to depth-2.
+
+    Branching cap: at depth-3, only the top-3 displacement candidates per route
+    are evaluated to bound worst-case complexity at O(k × r × L × r × 3 × r).
     """
     inst = plan.inst
     target = plan.routes[target_idx]
     routes = [r[:] for i, r in enumerate(plan.routes) if i != target_idx]
 
-    # Tightest TW first — hardest-to-place customers block everything downstream
     for c in sorted(target, key=lambda n: inst.due_times[n] - inst.ready_times[n]):
-        # --- Level 1: direct best-insertion ---
+
+        # ── Level 1: direct insertion ─────────────────────────────────────────
         best_delta, best_ri, best_pos = float("inf"), None, None
         for ri, route in enumerate(routes):
             delta, pos = _best_insert_position(c, route, inst)
             if pos is not None and delta < best_delta:
                 best_delta, best_ri, best_pos = delta, ri, pos
-
         if best_ri is not None:
             routes[best_ri].insert(best_pos, c)
             continue
 
-        # --- Level 2: ejection chain  (c ejects d from Ri, d moves to Rj) ---
-        best_chain_cost = float("inf")
-        best_chain: tuple | None = None  # (ri, eject_pos, d, rj)
-
+        # ── Level 2: single ejection  c → Ri (ejects d) → d → Rj ────────────
+        chain2: tuple | None = None
+        best2 = float("inf")
         for ri, route in enumerate(routes):
             for eject_pos, d in enumerate(route):
-                # Temporary route with d removed
-                stripped = route[:eject_pos] + route[eject_pos + 1 :]
-                delta_c, pos_c = _best_insert_position(c, stripped, inst)
-                if pos_c is None:
+                stripped = route[:eject_pos] + route[eject_pos + 1:]
+                dc, pc = _best_insert_position(c, stripped, inst)
+                if pc is None:
                     continue
-                # Check if d can land anywhere else
-                for rj, other in enumerate(routes):
+                for rj in range(len(routes)):
                     if rj == ri:
                         continue
-                    delta_d, pos_d = _best_insert_position(d, other, inst)
-                    if pos_d is not None:
-                        total = delta_c + delta_d
-                        if total < best_chain_cost:
-                            best_chain_cost = total
-                            best_chain = (ri, eject_pos, d, rj)
+                    dd, pd = _best_insert_position(d, routes[rj], inst)
+                    if pd is not None and dc + dd < best2:
+                        best2 = dc + dd
+                        chain2 = (ri, eject_pos, d, rj)
 
-        if best_chain is None:
-            return None  # c unplaceable even with chain
+        if chain2 is not None:
+            ri, ep, d, rj = chain2
+            stripped_ri = routes[ri][:ep] + routes[ri][ep + 1:]
+            _, pc = _best_insert_position(c, stripped_ri, inst)
+            if pc is None:
+                return None
+            routes[ri] = stripped_ri[:pc] + [c] + stripped_ri[pc:]
+            _, pd = _best_insert_position(d, routes[rj], inst)
+            if pd is None:
+                return None
+            routes[rj].insert(pd, d)
+            continue
 
-        ri, eject_pos, d, rj = best_chain
-        # Apply: remove d, insert c into Ri, insert d into Rj
-        stripped_ri = routes[ri][:eject_pos] + routes[ri][eject_pos + 1 :]
-        _, pos_c = _best_insert_position(c, stripped_ri, inst)
-        if pos_c is None:
+        # ── Level 3: double ejection  c→Ri(d)→Rj(e)→Rk ─────────────────────
+        # Capped branching: only top-3 (ri, d) pairs by marginal insertion cost
+        depth3_candidates: list[tuple[float, int, int, int]] = []  # (cost_c, ri, eject_pos, d)
+        for ri, route in enumerate(routes):
+            for eject_pos, d in enumerate(route):
+                stripped = route[:eject_pos] + route[eject_pos + 1:]
+                dc, pc = _best_insert_position(c, stripped, inst)
+                if pc is not None:
+                    depth3_candidates.append((dc, ri, eject_pos, d))
+        depth3_candidates.sort()
+
+        chain3: tuple | None = None
+        best3 = float("inf")
+        for dc, ri, eject_pos, d in depth3_candidates[:3]:   # cap at 3
+            for rj in range(len(routes)):
+                if rj == ri:
+                    continue
+                for eject_pos_j, e in enumerate(routes[rj]):
+                    stripped_j = routes[rj][:eject_pos_j] + routes[rj][eject_pos_j + 1:]
+                    dd, pd = _best_insert_position(d, stripped_j, inst)
+                    if pd is None:
+                        continue
+                    for rk in range(len(routes)):
+                        if rk in (ri, rj):
+                            continue
+                        de, pe = _best_insert_position(e, routes[rk], inst)
+                        if pe is not None and dc + dd + de < best3:
+                            best3 = dc + dd + de
+                            chain3 = (ri, eject_pos, d, rj, eject_pos_j, e, rk)
+
+        if chain3 is None:
+            return None   # c unplaceable at depth-3; this target route cannot be eliminated
+
+        ri, ep_i, d, rj, ep_j, e, rk = chain3
+        # Apply depth-3 chain
+        stripped_ri = routes[ri][:ep_i] + routes[ri][ep_i + 1:]
+        _, pc = _best_insert_position(c, stripped_ri, inst)
+        if pc is None:
             return None
-        routes[ri] = stripped_ri[:pos_c] + [c] + stripped_ri[pos_c:]
+        routes[ri] = stripped_ri[:pc] + [c] + stripped_ri[pc:]
 
-        _, pos_d = _best_insert_position(d, routes[rj], inst)
-        if pos_d is None:
+        stripped_rj = routes[rj][:ep_j] + routes[rj][ep_j + 1:]
+        _, pd = _best_insert_position(d, stripped_rj, inst)
+        if pd is None:
             return None
-        routes[rj].insert(pos_d, d)
+        routes[rj] = stripped_rj[:pd] + [d] + stripped_rj[pd:]
+
+        _, pe = _best_insert_position(e, routes[rk], inst)
+        if pe is None:
+            return None
+        routes[rk].insert(pe, e)
 
     cand = Plan([r for r in routes if r], inst, plan.algo)
     return cand if cand.feasible else None

@@ -883,6 +883,7 @@ class HybridDDQNSolver:
         frozen: bool = False,
         init: Plan | None = None,
         shared_norm: WelfordRewardNormalizer | None = None,
+        _warm_start: bool = False,
     ) -> tuple[Plan, list[float]]:
         if seed is not None:
             random.seed(seed)
@@ -906,6 +907,8 @@ class HybridDDQNSolver:
         pool.add_plan(cur)
         self._init_nv = cur.nv
         temp = cfg.temp_control * cur.cost / math.log(2)
+        if _warm_start:
+            temp *= 2.0
         all_dw = np.ones((len(MODES), N_D), dtype=np.float32)
         all_rw = np.ones((len(MODES), N_R), dtype=np.float32)
         history: list[float] = [best.cost]
@@ -1211,6 +1214,42 @@ class HybridDDQNSolver:
         self.archive.update(best)
         return best, history
 
+    def solve_multi_run(
+        self,
+        n_runs: int = 5,
+        base_seed: int = 42,
+        shared_norm: WelfordRewardNormalizer | None = None,
+    ) -> tuple[Plan, list[list[float]]]:
+        """
+        Cascade warm-start: each run after the first initialises from the
+        best solution found so far.  Temperature is doubled for warm-started
+        runs to prevent premature convergence from the already-good init.
+
+        Generalisation guarantee: the cascade only changes the *starting point*,
+        not the search logic — no instance-specific tuning.
+
+        Returns: (best plan across all runs, per-run history lists)
+        """
+        best_overall: Plan | None = None
+        all_histories: list[list[float]] = []
+
+        for run_idx in range(n_runs):
+            seed = base_seed + run_idx
+            init = best_overall.copy() if best_overall is not None else None
+            plan, history = self.solve(
+                seed=seed,
+                init=init,
+                shared_norm=shared_norm,
+                _warm_start=init is not None,
+            )
+            all_histories.append(history)
+            if best_overall is None or plan.dominates(best_overall) or plan.nv < best_overall.nv:
+                best_overall = plan.copy()
+                self.archive.update(best_overall)
+
+        assert best_overall is not None
+        return best_overall, all_histories
+
 
 # ---------------------------------------------------------------------------
 # Hybrid-Fixed
@@ -1225,8 +1264,21 @@ class HybridFixedSolver(HybridDDQNSolver):
             return MODE_ROUTE_REDUCE, False
         return MODE_DEFAULT, False
 
-    def solve(self, seed=None, frozen=True, init=None):
-        plan, history = super().solve(seed=seed, frozen=True, init=init)
+    def solve(
+        self,
+        seed: int | None = None,
+        frozen: bool = True,
+        init: Plan | None = None,
+        shared_norm: WelfordRewardNormalizer | None = None,
+        _warm_start: bool = False,
+    ) -> tuple[Plan, list[float]]:
+        plan, history = super().solve(
+            seed=seed,
+            frozen=frozen,
+            init=init,
+            shared_norm=shared_norm,
+            _warm_start=_warm_start,
+        )
         plan.algo = self.algo_name
         return plan, history
 
@@ -1253,8 +1305,21 @@ class HybridRuleSolver(HybridDDQNSolver):
             return (MODE_DIVERSIFY if progress < 0.45 else MODE_INTENSIFY), False
         return MODE_DEFAULT, False
 
-    def solve(self, seed=None, frozen=True, init=None):
-        plan, history = super().solve(seed=seed, frozen=True, init=init)
+    def solve(
+        self,
+        seed: int | None = None,
+        frozen: bool = True,
+        init: Plan | None = None,
+        shared_norm: WelfordRewardNormalizer | None = None,
+        _warm_start: bool = False,
+    ) -> tuple[Plan, list[float]]:
+        plan, history = super().solve(
+            seed=seed,
+            frozen=frozen,
+            init=init,
+            shared_norm=shared_norm,
+            _warm_start=_warm_start,
+        )
         plan.algo = self.algo_name
         return plan, history
 

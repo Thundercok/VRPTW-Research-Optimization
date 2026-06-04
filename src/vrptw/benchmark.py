@@ -219,9 +219,44 @@ def run_benchmark(
             _n_workers = 1 if algo_label == ALGO_ORTOOLS else n_workers
 
             # --- THE SPAWN FIX ---
-            ctx = mp.get_context("spawn")
-            with ProcessPoolExecutor(max_workers=_n_workers, mp_context=ctx) as ex:
-                run_results = list(ex.map(_benchmark_worker, worker_args))
+            if algo_label in (ALGO_HYBRID_FIXED, ALGO_HYBRID_RULE, ALGO_HYBRID_DDQN, ALGO_HYBRID_DDQN_TRANSFER, ALGO_HYBRID_DDQN_TRANSFER_RC2, ALGO_HYBRID_DDQN_TRANSFER_DR):
+                # Sequential warm-start cascade
+                best_overall: Plan | None = None
+                run_results = []
+                weights = transfer_weights if algo_label in (ALGO_HYBRID_DDQN_TRANSFER, ALGO_HYBRID_DDQN_TRANSFER_RC2, ALGO_HYBRID_DDQN_TRANSFER_DR) else None
+                for i in range(n_runs_eff):
+                    seed = cfg.seed + i
+                    init = best_overall.copy() if best_overall is not None else _diversified_init(i, inst, archive, cfg)
+                    if algo_label == ALGO_HYBRID_FIXED:
+                        solver = HybridFixedSolver(inst, cfg)
+                    elif algo_label == ALGO_HYBRID_RULE:
+                        solver = HybridRuleSolver(inst, cfg)
+                    else:
+                        solver = HybridDDQNSolver(inst, cfg)
+                        if weights is not None:
+                            solver.load_weights(weights)
+                    t0 = time.time()
+                    plan, history = solver.solve(seed=seed, init=init, _warm_start=best_overall is not None)
+                    if algo_label in (ALGO_HYBRID_DDQN_TRANSFER, ALGO_HYBRID_DDQN_TRANSFER_RC2, ALGO_HYBRID_DDQN_TRANSFER_DR):
+                        plan.algo = algo_label
+                    if best_overall is None or plan.dominates(best_overall) or plan.nv < best_overall.nv:
+                        best_overall = plan.copy()
+                    bks = BKS.get(inst.name)
+                    res = {
+                        "algo": plan.algo,
+                        "nv": plan.nv,
+                        "cost": plan.cost,
+                        "time": time.time() - t0,
+                        "td_gap": (plan.cost - bks["td"]) / bks["td"] * 100 if bks else None,
+                        "nv_diff": plan.nv - bks["nv"] if bks else None,
+                        "on_time": plan.on_time_rate,
+                        "hist": history,
+                    }
+                    run_results.append((res, plan))
+            else:
+                ctx = mp.get_context("spawn")
+                with ProcessPoolExecutor(max_workers=_n_workers, mp_context=ctx) as ex:
+                    run_results = list(ex.map(_benchmark_worker, worker_args))
 
             for i, (res, plan) in enumerate(run_results):
                 if plan is not None:

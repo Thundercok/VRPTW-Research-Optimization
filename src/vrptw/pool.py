@@ -62,33 +62,50 @@ class RoutePool:
         if len(self._routes) <= limit + 100:
             return
 
-        kept: dict[tuple[int, ...], RouteRecord] = {}
-        usage: dict[int, int] = {}
-        # First, keep all protected routes
-        for rec in self._routes.values():
-            if rec.protected:
-                kept[rec.nodes] = rec
-                for n in rec.nodes:
-                    usage[n] = usage.get(n, 0) + 1
+        # ── Dual retention strategy ───────────────────────────────────────────
+        # Slot A (75%): cost-efficiency ranking (existing behaviour)
+        # Slot B (25%): route-length ranking   (new — preserves long routes for
+        #               NV-1 MILP partitions that efficiency-only pruning evicts)
+        slot_b = max(limit // 4, 8)
+        slot_a = limit - slot_b
 
-        # Fill the rest with high-priority routes
-        ranked = sorted(self._routes.values(), key=self._priority)
-        for rec in ranked:
+        usage: dict[int, int] = {}
+        kept: dict[tuple[int, ...], RouteRecord] = {}
+
+        eff_ranked = sorted(self._routes.values(), key=self._priority)
+        len_ranked = sorted(self._routes.values(), key=lambda r: -len(r.nodes))
+        max_per = self.cfg.route_pool_max_per_customer
+
+        def _admit(rec: RouteRecord) -> bool:
+            if rec.nodes in kept:
+                return False
+            under = all(usage.get(n, 0) < max_per for n in rec.nodes)
+            if not under and len(kept) >= limit // 3:
+                return False
+            kept[rec.nodes] = rec
+            for n in rec.nodes:
+                usage[n] = usage.get(n, 0) + 1
+            return True
+
+        # Fill Slot B: longest routes first
+        for rec in len_ranked:
+            if len(kept) >= slot_b:
+                break
+            _admit(rec)
+
+        # Fill Slot A: most efficient routes
+        for rec in eff_ranked:
             if len(kept) >= limit:
                 break
-            if rec.nodes in kept:
-                continue
-            under = all(usage.get(n, 0) < self.cfg.route_pool_max_per_customer for n in rec.nodes)
-            if under or len(kept) < limit // 3:
-                kept[rec.nodes] = rec
-                for n in rec.nodes:
-                    usage[n] = usage.get(n, 0) + 1
+            _admit(rec)
+
+        # Backfill if either slot didn't saturate
         if len(kept) < limit:
-            for rec in ranked:
-                if rec.nodes not in kept:
-                    kept[rec.nodes] = rec
+            for rec in eff_ranked:
                 if len(kept) >= limit:
                     break
+                _admit(rec)
+
         self._routes = kept
         self._cover_to_key = {_cover_key(k): k for k in kept}
 
