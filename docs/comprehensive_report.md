@@ -79,11 +79,14 @@ The runtimes for some runs were unusually long (e.g. 918s for OR-Tools on `C101`
 
 ---
 
-## 4. Recommended "Fast Comprehensive Sweep" Settings
+## 4. Current Execution Status: Optimized Fast Sweep
 
-To allow the full sweep of 56 Solomon instances + 6 Gehring & Homberger instances to complete within a reasonable window (~5 to 6 hours total), we recommend restarting the run with the following adjustments:
+We have implemented the recommended thread and time constraints, modified the runner script, and **successfully relaunched the overnight benchmark run**. The new configuration is running under the following active settings:
 
-1. **Reduce Runs to 2** (instead of 3): Cuts execution time by 33% while still calculating mean and std-dev.
-2. **Limit Iterations to 600** (instead of 1200): Doubles execution speed. Because ALNS/DDQN converge rapidly, this has minimal impact on quality.
-3. **Limit OR-Tools Time to 15s** (instead of 60s): Solomon instances are small enough that OR-Tools finds its elite solutions in the first few seconds; restricting the search time prevents wasting time in Guided Local Search.
-4. **Enforce OR-Tools Thread limit (`number_of_threads = 1`)**: Stops OR-Tools from starving concurrent solvers.
+1. **OR-Tools Thread limit (`number_of_threads = 1`)**: Stops OR-Tools from starving concurrent solver processes. (Committed & Active)
+2. **OR-Tools Time Limit (`15s` default)**: Cuts OR-Tools search overhead on small instances. (Committed & Active)
+3. **Runs reduced to 2** (instead of 3): Saves 33% of execution time while still tracking mean and variance.
+4. **Iterations reduced to 600** (instead of 1200): Doubles solving speed; early stop patience is set to 120, and local search polish to 40 iterations.
+
+With this optimized setup, the entire sweep (56 Solomon + 6 Gehring & Homberger) is running on 2 parallel worker processes and is estimated to complete in **~5.5 hours**.
+
