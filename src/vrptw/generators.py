@@ -149,9 +149,12 @@ class SyntheticVRPTWGenerator:
 def load_datasets(base_path: str) -> dict[str, list[Inst]]:
     datasets: dict[str, list[Inst]] = {}
     for group in ("c1", "c2", "r1", "r2", "rc1", "rc2"):
-        pat_lower = os.path.join(base_path, f"{group.lower()}*.txt")
-        pat_upper = os.path.join(base_path, f"{group.upper()}*.txt")
-        files = sorted(list(set(glob.glob(pat_lower) + glob.glob(pat_upper))))
+        files = []
+        for ext in (".txt", ".TXT"):
+            pat_lower = os.path.join(base_path, f"{group.lower()}*{ext}")
+            pat_upper = os.path.join(base_path, f"{group.upper()}*{ext}")
+            files.extend(glob.glob(pat_lower) + glob.glob(pat_upper))
+        files = sorted(list(set(files)))
         insts: list[Inst] = []
         for path in files:
             with open(path, encoding="utf-8") as fh:
