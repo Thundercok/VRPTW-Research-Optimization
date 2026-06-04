@@ -772,6 +772,7 @@ class HybridDDQNSolver:
 
         cur = start.copy()
         best_found: Plan | None = None
+        best_cost_at_target_nv_plus_1 = start.cost
         temp = cfg.temp_control * cur.cost / math.log(2) * 4.0
         bandit = ThompsonBandit(N_D, N_R)
 
@@ -818,33 +819,40 @@ class HybridDDQNSolver:
                     score = cfg.sigma1
 
             elif cand.feasible and cand.nv == target_nv + 1:
-                # 1. Try local search reduction (fast)
-                reduced = local_search(
-                    cand,
-                    max_passes=1,
-                    nv_ceiling=cand.nv,
-                    max_ls_moves=cfg.max_ls_moves,
-                    pool=pool,
-                )
+                is_improving = cand.cost < best_cost_at_target_nv_plus_1
+                if is_improving:
+                    best_cost_at_target_nv_plus_1 = cand.cost
+
+                # 1. Try local search reduction (run only if improving or periodically)
+                if is_improving or it % 15 == 0:
+                    reduced = local_search(
+                        cand,
+                        max_passes=1,
+                        nv_ceiling=cand.nv,
+                        max_ls_moves=cfg.max_ls_moves,
+                        pool=pool,
+                    )
+                else:
+                    reduced = cand.copy()
 
                 # 2. Try ejection chains (if local search failed)
                 if not (reduced.feasible and reduced.nv <= target_nv):
-                    if cand.cost <= cur.cost or it % 5 == 0:
+                    if is_improving or it % 30 == 0:
                         chain = _ejection_chain_eliminate(cand)
                         if chain is not None and chain.feasible and chain.nv <= target_nv:
                             reduced = chain
 
                 # 2.5. Try buffered route elimination (multi-route beam search)
                 if not (reduced.feasible and reduced.nv <= target_nv):
-                    if cand.cost <= cur.cost or it % 8 == 0:
+                    if is_improving or it % 40 == 0:
                         from .local_search import _buffered_route_elimination
                         buff = _buffered_route_elimination(cand, pool=pool)
                         if buff.feasible and buff.nv <= target_nv:
                             reduced = buff
 
-                # 3. Try MILP recombination (more frequently: every 10 iters)
+                # 3. Try MILP recombination
                 if not (reduced.feasible and reduced.nv <= target_nv):
-                    if cand.cost <= cur.cost or it % 10 == 0:
+                    if is_improving or it % 50 == 0:
                         rec = recombine_with_route_pool(cand, pool, cfg, nv_target=target_nv)
                         if rec.feasible and rec.nv <= target_nv:
                             reduced = rec
