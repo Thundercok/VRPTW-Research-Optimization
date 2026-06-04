@@ -491,18 +491,18 @@ def _try_buffered_route_elimination(
         if not next_states:
             break
 
-    deduped: list[tuple[list[list[int]], list[int], int, float]] = []
-    seen: set[tuple[tuple[tuple[int, ...], ...], tuple[int, ...]]] = set()
-    for item in sorted(next_states, key=lambda s: (len(s[1]), s[2], s[3])):
-        routes_cur, pending, _, _ = item
-        signature = (tuple(tuple(route) for route in routes_cur), tuple(sorted(pending)))
-        if signature in seen:
-            continue
-        seen.add(signature)
-        deduped.append(item)
-        if len(deduped) >= beam_width:
-            break
-    states = deduped
+        deduped: list[tuple[list[list[int]], list[int], int, float]] = []
+        seen: set[tuple[tuple[tuple[int, ...], ...], tuple[int, ...]]] = set()
+        for item in sorted(next_states, key=lambda s: (len(s[1]), s[2], s[3])):
+            routes_cur, pending, _, _ = item
+            signature = (tuple(tuple(route) for route in routes_cur), tuple(sorted(pending)))
+            if signature in seen:
+                continue
+            seen.add(signature)
+            deduped.append(item)
+            if len(deduped) >= beam_width:
+                break
+        states = deduped
 
     for routes_cur, pending, _, _ in states:
         completed = finish_if_complete(routes_cur, pending)
@@ -514,8 +514,8 @@ def _try_buffered_route_elimination(
 def _buffered_route_elimination(
     plan: Plan,
     max_rounds: int = 2,
-    max_ejections: int = 4,
-    beam_width: int = 8,
+    max_ejections: int = 6,
+    beam_width: int = 16,
     pool=None,
 ) -> Plan:
     best = plan.copy()
@@ -530,8 +530,12 @@ def _buffered_route_elimination(
                 _route_cost_list(best.routes[i], best.inst),
             ),
         )
+        # Try all routes as targets when the smallest route has ≤ 4 customers
+        # (signals the instance is close to an NV drop, e.g. RC101's [61,81,90])
+        smallest_len = len(best.routes[ranked[0]]) if ranked else 0
+        n_targets = len(ranked) if smallest_len <= 4 else min(6, len(ranked))
         improved = False
-        for target_idx in ranked[:6]:
+        for target_idx in ranked[:n_targets]:
             local_ejections = max(2, min(max_ejections, len(best.routes[target_idx]) // 2 + 1))
             cand = _try_buffered_route_elimination(
                 best,
@@ -604,14 +608,17 @@ def local_search(
     max_passes: int = 1,
     nv_ceiling: int | None = None,
     max_ls_moves: int = 5,
-    pool=None,  # RoutePool | None — seeds pool with every improvement
+    pool=None,  # RoutePool | None — buffered; committed once at exit
 ) -> Plan:
     """
-    pool: when provided, each improvement along the LS trajectory is added to
-          the route pool, generating diverse intermediate routes for MILP.
-          Also triggers _try_route_merge at the end to seed merged-route types.
+    pool: when provided, improving plans along the LS trajectory are collected
+          in a memory buffer and committed to the route pool exactly **once**
+          after the search loop exits.  This avoids O(M log M) pool-trim
+          overhead on every minor move inside the hot loop.
     """
     best = plan.copy()
+    _ls_trajectory: list[Plan] = []  # buffer for pool-eligible improvements
+
     for _ in range(max_passes):
         improved = False
         routes = []
@@ -629,8 +636,7 @@ def local_search(
                 cand = _apply_relocate(best, move)
                 if cand.feasible and (cand.dominates(best) or (cand.nv == best.nv and cand.cost + 1e-9 < best.cost)):
                     best, improved = cand, True
-                    if pool is not None:
-                        pool.add_plan(best)
+                    _ls_trajectory.append(best)
                     moves += 1
                     continue
             intra = _intra_route_or_opt(best, nv_ceiling=nv_ceiling)
@@ -644,8 +650,7 @@ def local_search(
                 cand = _apply_swap(best, move)
                 if cand.feasible and cand.cost + 1e-9 < best.cost:
                     best, improved = cand, True
-                    if pool is not None:
-                        pool.add_plan(best)
+                    _ls_trajectory.append(best)
                     moves += 1
                     continue
             move = _best_or_opt(best, nv_ceiling=nv_ceiling)
@@ -653,22 +658,19 @@ def local_search(
                 cand = _apply_or_opt(best, move)
                 if cand.feasible and (cand.dominates(best) or (cand.nv == best.nv and cand.cost + 1e-9 < best.cost)):
                     best, improved = cand, True
-                    if pool is not None:
-                        pool.add_plan(best)
+                    _ls_trajectory.append(best)
                     moves += 1
                     continue
             cross = _cross_exchange(best, nv_ceiling=nv_ceiling)
             if cross is not None:
                 best, improved = cross, True
-                if pool is not None:
-                    pool.add_plan(best)
+                _ls_trajectory.append(best)
                 moves += 1
                 continue
             compact = _try_route_compact(best, nv_ceiling=nv_ceiling)
             if compact is not None:
                 best, improved = compact, True
-                if pool is not None:
-                    pool.add_plan(best)
+                _ls_trajectory.append(best)
                 moves += 1
                 continue
             break
@@ -676,8 +678,11 @@ def local_search(
         if not improved:
             break
 
-    # Pool-seeding bonus: generate merged-route type not produced by normal LS
+    # ── Batch-commit trajectory to pool (exactly once) ────────────────────
     if pool is not None:
+        for traj_plan in _ls_trajectory:
+            pool.add_plan(traj_plan)
+        pool.add_plan(best)
         for route in merged_route_candidates(best):
             pool.add_route(route)
         merged = _try_route_merge(best)

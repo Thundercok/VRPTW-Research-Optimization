@@ -307,7 +307,7 @@ class ModeSpec:
     destroy_scale: float
     temp_boost: float
     temp_decay_scale: float
-    destroy_bias: tuple[float, ...]  # length == N_D = 8
+    destroy_bias: tuple[float, ...]  # length == N_D = 11
     repair_bias: tuple[float, ...]  # length == N_R = 5
     ls_passes: int
     use_recombine: bool

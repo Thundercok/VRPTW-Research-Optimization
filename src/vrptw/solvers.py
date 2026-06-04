@@ -145,10 +145,11 @@ class HybridDDQNSolver:
         operator_sd = self.op_ctrl.q.state_dict()
         p_up: dict[str, torch.Tensor] = {}
         o_up: dict[str, torch.Tensor] = {}
+        LEGACY_OP_PREFIXES = ("op.", "operator_ctrl.", "op_ctrl.")
         legacy = not any(k.startswith(("plateau.", "operator.")) for k in weights)
+        
         if legacy:
             import warnings
-
             warnings.warn(
                 "load_weights: legacy unprefixed weight format detected. "
                 "Re-save weights using clone_weights() to suppress this warning.",
@@ -156,8 +157,34 @@ class HybridDDQNSolver:
                 stacklevel=2,
             )
             for k, v in weights.items():
-                if k in plateau_sd and tuple(v.shape) == tuple(plateau_sd[k].shape):
-                    p_up[k] = v.to(DEVICE)
+                target_key = k
+                is_op = False
+                for prefix in LEGACY_OP_PREFIXES:
+                    if k.startswith(prefix):
+                        target_key = k[len(prefix):]
+                        is_op = True
+                        break
+                if not is_op and target_key in plateau_sd and tuple(v.shape) == tuple(plateau_sd[target_key].shape):
+                    p_up[target_key] = v.to(DEVICE)
+                else:
+                    if target_key in operator_sd:
+                        if tuple(v.shape) == tuple(operator_sd[target_key].shape):
+                            o_up[target_key] = v.to(DEVICE)
+                        elif "adv_head.2" in target_key:
+                            padded = operator_sd[target_key].clone()
+                            loaded_n = v.shape[0]
+                            padded[:loaded_n] = v
+                            D_old = max(1, loaded_n // N_R)
+                            for new_act in range(loaded_n, padded.shape[0]):
+                                r = new_act % N_R
+                                stacked = torch.stack([v[i * N_R + r] for i in range(D_old)])
+                                padded[new_act] = stacked.mean(dim=0)
+                            o_up[target_key] = padded.to(DEVICE)
+                        else:
+                            raise ValueError(
+                                f"load_weights: shape mismatch for legacy key '{k}': "
+                                f"checkpoint={tuple(v.shape)}, model={tuple(operator_sd[target_key].shape)}."
+                            )
         else:
             for k, v in weights.items():
                 if k.startswith("plateau."):
@@ -168,38 +195,35 @@ class HybridDDQNSolver:
                     bare = k.split(".", 1)[1]
                     if bare in operator_sd:
                         if tuple(v.shape) != tuple(operator_sd[bare].shape):
-                            # Pad shape from (40, hid2) to (55, hid2) to support the 11 destroy operators
-                            if "adv_head.2.weight" in bare:
+                            if "adv_head.2.weight" in bare or "adv_head.2.bias" in bare:
                                 padded = operator_sd[bare].clone()
                                 loaded_n = v.shape[0]
                                 padded[:loaded_n] = v
-                                # Copy weights of actions 25..29 (route_eliminate) to actions 50..54 (two_route_eliminate)
+                                D_old = max(1, loaded_n // N_R)
                                 for new_act in range(loaded_n, padded.shape[0]):
-                                    rep_idx = new_act % 5
-                                    src_act = 5 * 5 + rep_idx
-                                    padded[new_act] = v[src_act]
+                                    r = new_act % N_R
+                                    stacked = torch.stack([v[i * N_R + r] for i in range(D_old)])
+                                    padded[new_act] = stacked.mean(dim=0)
                                 o_up[bare] = padded.to(DEVICE)
-                            elif "adv_head.2.bias" in bare:
-                                padded = operator_sd[bare].clone()
-                                loaded_n = v.shape[0]
-                                padded[:loaded_n] = v
-                                for new_act in range(loaded_n, padded.shape[0]):
-                                    rep_idx = new_act % 5
-                                    src_act = 5 * 5 + rep_idx
-                                    padded[new_act] = v[src_act]
-                                o_up[bare] = padded.to(DEVICE)
+                            else:
+                                raise ValueError(
+                                    f"load_weights: shape mismatch for operator key '{bare}': "
+                                    f"checkpoint={tuple(v.shape)}, model={tuple(operator_sd[bare].shape)}."
+                                )
                         else:
                             o_up[bare] = v.to(DEVICE)
+                            
         plateau_sd.update(p_up)
         operator_sd.update(o_up)
         self.ctrl.q.load_state_dict(plateau_sd)
         self.ctrl.q_t.load_state_dict(plateau_sd)
         self.op_ctrl.q.load_state_dict(operator_sd)
         self.op_ctrl.q_t.load_state_dict(operator_sd)
+        
         lac_weights = {k: v for k, v in weights.items() if k.startswith("lac.")}
         if lac_weights:
             self.lac.load_state_dict(lac_weights)
-
+            
         if "ucb.mu" in weights:
             loaded_mu = weights["ucb.mu"].numpy().astype(np.float64)
             loaded_cnt = weights["ucb.cnt"].numpy().astype(np.float64)
@@ -208,18 +232,16 @@ class HybridDDQNSolver:
                 padded_mu = np.zeros(self.ucb_aug.n, dtype=np.float64)
                 padded_cnt = np.ones(self.ucb_aug.n, dtype=np.float64) * 0.5
                 padded_m2 = np.ones(self.ucb_aug.n, dtype=np.float64) * 0.5
-
                 padded_mu[: len(loaded_mu)] = loaded_mu
                 padded_cnt[: len(loaded_cnt)] = loaded_cnt
                 padded_m2[: len(loaded_m2)] = loaded_m2
-
-                for new_act in range(len(loaded_mu), self.ucb_aug.n):
-                    rep_idx = new_act % 5
-                    src_act = 5 * 5 + rep_idx
-                    padded_mu[new_act] = loaded_mu[src_act]
-                    padded_cnt[new_act] = loaded_cnt[src_act]
-                    padded_m2[new_act] = loaded_m2[src_act]
-
+                loaded_len = len(loaded_mu)
+                D_old = max(1, loaded_len // N_R)
+                for new_act in range(loaded_len, self.ucb_aug.n):
+                    r = new_act % N_R
+                    padded_mu[new_act] = np.mean([loaded_mu[i * N_R + r] for i in range(D_old)])
+                    padded_cnt[new_act] = np.mean([loaded_cnt[i * N_R + r] for i in range(D_old)])
+                    padded_m2[new_act] = np.mean([loaded_m2[i * N_R + r] for i in range(D_old)])
                 self.ucb_aug._mu = padded_mu
                 self.ucb_aug._cnt = padded_cnt
                 self.ucb_aug._m2 = padded_m2
@@ -228,7 +250,7 @@ class HybridDDQNSolver:
                 self.ucb_aug._cnt = loaded_cnt
                 self.ucb_aug._m2 = loaded_m2
             self.ucb_aug._N = float(self.ucb_aug._cnt.sum())
-
+            
         norm_d = {k.split(".", 1)[1]: float(weights[k]) for k in weights if k.startswith("reward_norm.")}
         if norm_d:
             self.reward_norm.load_state_dict(norm_d)
@@ -461,6 +483,101 @@ class HybridDDQNSolver:
                     for route in merged.routes:
                         pool.add_route(route)
 
+    def _generate_dense_pool_columns(self, plan: Plan, pool: RoutePool) -> None:
+        """Algorithmically generate diverse pool columns from elite plan topology.
+        Replaces hardcoded BKS route injection with generalized column generation:
+        1. Route slicing: sub-routes as building-block columns for MILP.
+        2. Adjacent-swap perturbation variants for structural diversity.
+        3. Reversed sub-segment variants for OR-opt-style alternatives.
+        4. Cross-route boundary migration and interior crosses for novel topologies.
+        All generated routes are validated via _check_route() before insertion.
+        Pool-seeding only — never modifies the input plan.
+        """
+        inst = self.inst
+        for route in plan.routes:
+            if len(route) < 2:
+                continue
+            # ── Sub-route slicing (building-block columns) ────────────────
+            for start in range(len(route)):
+                for length in range(2, min(len(route) - start + 1, 8)):
+                    sub = route[start : start + length]
+                    if _check_route(sub, inst):
+                        pool.add_route(sub, protected=True)
+            # ── Adjacent-swap perturbation ────────────────────────────────
+            for i in range(len(route) - 1):
+                variant = route[:]
+                variant[i], variant[i + 1] = variant[i + 1], variant[i]
+                if _check_route(variant, inst):
+                    pool.add_route(variant)
+            # ── Reversed sub-segment variants ─────────────────────────────
+            if len(route) >= 4:
+                mid = len(route) // 2
+                for sub in (route[:mid], route[mid:]):
+                    rev = sub[::-1]
+                    if _check_route(rev, inst):
+                        pool.add_route(rev)
+                rev_full = route[::-1]
+                if _check_route(rev_full, inst):
+                    pool.add_route(rev_full)
+                    
+        # ── Cross-route boundary migration & interior crosses ──────────────
+        if len(plan.routes) >= 2:
+            for i in range(len(plan.routes)):
+                r1 = plan.routes[i]
+                if not r1 or len(r1) < 2:
+                    continue
+                for j in range(len(plan.routes)):
+                    if j == i:
+                        continue
+                    r2 = plan.routes[j]
+                    if not r2 or len(r2) < 2:
+                        continue
+                    # ── Swapping boundary customers ──
+                    h1 = [r2[0]] + r1[1:]
+                    h2 = [r1[0]] + r2[1:]
+                    if _check_route(h1, inst):
+                        pool.add_route(h1)
+                    if _check_route(h2, inst):
+                        pool.add_route(h2)
+                    t1 = r1[:-1] + [r2[-1]]
+                    t2 = r2[:-1] + [r1[-1]]
+                    if _check_route(t1, inst):
+                        pool.add_route(t1)
+                    if _check_route(t2, inst):
+                        pool.add_route(t2)
+                    migrated = [r1[-1]] + r2[:]
+                    if _check_route(migrated, inst):
+                        pool.add_route(migrated)
+                    donor = r1[:-1]
+                    if donor and _check_route(donor, inst):
+                        pool.add_route(donor)
+                    migrated = r2[:] + [r1[0]]
+                    if _check_route(migrated, inst):
+                        pool.add_route(migrated)
+                    donor = r1[1:]
+                    if donor and _check_route(donor, inst):
+                        pool.add_route(donor)
+                    # ── Interior crosses ──
+                    if len(r1) >= 3 and len(r2) >= 3:
+                        for idx1 in range(1, len(r1) - 1):
+                            for idx2 in range(1, len(r2) - 1):
+                                if random.random() < 0.25:
+                                    ic1 = r1[:idx1] + [r2[idx2]] + r1[idx1+1:]
+                                    ic2 = r2[:idx2] + [r1[idx1]] + r2[idx2+1:]
+                                    if _check_route(ic1, inst):
+                                        pool.add_route(ic1)
+                                    if _check_route(ic2, inst):
+                                        pool.add_route(ic2)
+                        for idx1 in range(1, len(r1) - 2):
+                            for idx2 in range(1, len(r2) - 2):
+                                if random.random() < 0.15:
+                                    is1 = r1[:idx1] + r2[idx2:idx2+2] + r1[idx1+2:]
+                                    is2 = r2[:idx2] + r1[idx1:idx1+2] + r2[idx2+2:]
+                                    if _check_route(is1, inst):
+                                        pool.add_route(is1)
+                                    if _check_route(is2, inst):
+                                        pool.add_route(is2)
+
     def _seed_savings_routes(self, pool: RoutePool, n_randomizations: int = 12) -> None:
         """
         Clarke-Wright savings algorithm with randomised merge-order restarts.
@@ -536,7 +653,7 @@ class HybridDDQNSolver:
             # ── add all non-empty routes to pool ──────────────────────────────
             for idx, route in enumerate(routes):
                 if idx > 0 and route:
-                    pool.add_route(route)
+                    pool.add_route(route, protected=True)
 
     def _seed_nv_targeted_construction(
         self,
@@ -600,19 +717,24 @@ class HybridDDQNSolver:
 
             for route in route_lists:
                 if route:
-                    pool.add_route(route)
+                    pool.add_route(route, protected=True)
 
             # Bonus: run a post-construction 2-opt pass and add the improved route
             for route in route_lists:
                 if len(route) >= 4:
                     improved = _two_opt_best(route, inst)
                     if improved != route and _check_route(improved, inst):
-                        pool.add_route(improved)
+                        pool.add_route(improved, protected=True)
 
     def _committed_nv_search(self, start: Plan, pool: RoutePool, target_nv: int, n_iters: int = 500) -> Plan | None:
         """
-        Focused ALNS với phân vùng mục tiêu cứng: nv_ceiling = target_nv.
-        Cải tiến: Tự động nạp EliteArchive và tự động reheat nhiệt độ tại mốc 50%.
+        Focused ALNS with hard NV ceiling = target_nv.
+
+        Multi-start approach: 3 restarts at 25%/50%/75%, each starting from a
+        different topology obtained via pool recombination. This breaks out of
+        the structural basin of the initial solution.
+
+        For hard instances (RC-type, gap >= 1 vehicle), uses 1500 iterations.
         """
         cfg = self.cfg
         inst = self.inst
@@ -620,7 +742,11 @@ class HybridDDQNSolver:
         if start.nv <= target_nv:
             return start.copy()
 
-        # Nạp trước các giải pháp tốt nhất từ EliteArchive vào Route Pool
+        # Boost iterations for hard instances (RC-type with gap >= 1 vehicle)
+        is_hard = inst.name.startswith("RC") and start.nv - target_nv >= 1
+        effective_iters = max(n_iters, 1500) if is_hard else n_iters
+
+        # Pre-load elite archive solutions into pool
         archive_plans = self.archive._plans.get(inst.name, [])
         for ap in archive_plans:
             pool.add_plan(ap)
@@ -629,17 +755,35 @@ class HybridDDQNSolver:
         best_found: Plan | None = None
         temp = cfg.temp_control * cur.cost / math.log(2) * 4.0
         bandit = ThompsonBandit(N_D, N_R)
-        half = n_iters // 2
 
-        for it in range(n_iters):
-            # Khởi động lại động (Adaptive Restart): Nếu đi được nửa đường
-            # mà chưa tìm thấy nghiệm mục tiêu, kích hoạt sốc nhiệt 8x temp
-            if it == half and best_found is None:
-                temp = cfg.temp_control * cur.cost / math.log(2) * 8.0
-                cur = start.copy()  # Reset về cấu trúc gốc để đi nhánh khác
+        # Multi-start restart points at 25%, 50%, 75%
+        restart_points = [
+            effective_iters // 4,
+            effective_iters // 2,
+            (3 * effective_iters) // 4,
+        ]
+        restart_temps = [6.0, 8.0, 12.0]  # escalating temperature multipliers
+
+        for it in range(effective_iters):
+            # Adaptive restarts: at each restart point, rebuild cur from pool
+            # recombination to explore a different topology
+            if best_found is None and it in restart_points:
+                restart_idx = restart_points.index(it)
+                temp_mult = restart_temps[restart_idx]
+                temp = cfg.temp_control * start.cost / math.log(2) * temp_mult
+
+                # Try to build a different starting topology via pool recombination
+                restart_plan = recombine_with_route_pool(
+                    start, pool, cfg, nv_ceiling=start.nv
+                )
+                if restart_plan.feasible and restart_plan.nv <= start.nv:
+                    cur = restart_plan
+                else:
+                    cur = start.copy()
+                bandit = ThompsonBandit(N_D, N_R)  # fresh bandit for new topology
 
             di, ri = bandit.select()
-            size = destroy_size(it, n_iters, cfg, inst.n, scale=1.0)
+            size = destroy_size(it, effective_iters, cfg, inst.n, scale=1.0)
             dest, removed = DESTROY[di](cur.copy(), size)
             cand = REPAIR[ri](dest, removed)
 
@@ -659,21 +803,29 @@ class HybridDDQNSolver:
                 reduced = local_search(
                     cand,
                     max_passes=1,
-                    nv_ceiling=target_nv,
+                    nv_ceiling=cand.nv,
                     max_ls_moves=cfg.max_ls_moves,
                     pool=pool,
                 )
-                
-                # 2. Try ejection chains (if local search failed and candidate is high-quality or periodically)
+
+                # 2. Try ejection chains (if local search failed)
                 if not (reduced.feasible and reduced.nv <= target_nv):
                     if cand.cost <= cur.cost or it % 5 == 0:
                         chain = _ejection_chain_eliminate(cand)
                         if chain is not None and chain.feasible and chain.nv <= target_nv:
                             reduced = chain
-                
-                # 3. Try MILP recombination (periodically or on improving costs)
+
+                # 2.5. Try buffered route elimination (multi-route beam search)
                 if not (reduced.feasible and reduced.nv <= target_nv):
-                    if cand.cost <= cur.cost or it % 15 == 0:
+                    if cand.cost <= cur.cost or it % 8 == 0:
+                        from .local_search import _buffered_route_elimination
+                        buff = _buffered_route_elimination(cand, pool=pool)
+                        if buff.feasible and buff.nv <= target_nv:
+                            reduced = buff
+
+                # 3. Try MILP recombination (more frequently: every 10 iters)
+                if not (reduced.feasible and reduced.nv <= target_nv):
+                    if cand.cost <= cur.cost or it % 10 == 0:
                         rec = recombine_with_route_pool(cand, pool, cfg, nv_target=target_nv)
                         if rec.feasible and rec.nv <= target_nv:
                             reduced = rec
@@ -686,8 +838,7 @@ class HybridDDQNSolver:
                         best_found = reduced.copy()
                         score = cfg.sigma1
                 else:
-                    # If we failed to reduce vehicles, we still accept the 15-vehicle candidate
-                    # to walk the 15-vehicle search space using Simulated Annealing.
+                    # Accept the near-miss candidate via SA to keep exploring
                     if (
                         cand.cost <= cur.cost
                         or random.random() < math.exp(-(cand.cost - cur.cost) / max(temp, 1e-6))
@@ -942,17 +1093,18 @@ class HybridDDQNSolver:
                 )
                 history.append(best.cost)
 
+        # ── Phase 0: dense column generation (generalized topology injection) ───
+        self._generate_dense_pool_columns(best, pool)
+
         # ── Phase A: savings seeding (topology diversity ALNS can't generate) ──
         self._seed_savings_routes(pool, n_randomizations=10)
 
-        # ── Phase B: direct NV-targeted construction ──────────────────────────
-        from .config import BKS as _BKS
-        _bks_entry = _BKS.get(self.inst.name)
-        _bks_nv = int(_bks_entry["nv"]) if _bks_entry else max(1, best.nv - 1)
+        # ── Phase B: direct NV-targeted construction ──────────────────────
+        _target_nv_floor = max(1, best.nv - 1)
 
-        if best.nv > _bks_nv:
+        if best.nv > _target_nv_floor:
             # Seed for both target and one above target (richer pool = better MILP)
-            self._seed_nv_targeted_construction(pool, target_nv=_bks_nv, n_trials=35)
+            self._seed_nv_targeted_construction(pool, target_nv=_target_nv_floor, n_trials=35)
             self._seed_nv_targeted_construction(pool, target_nv=best.nv - 1, n_trials=20)
 
         # ── Phase C: large-destroy seeding (existing, unchanged) ──────────────
@@ -1003,12 +1155,9 @@ class HybridDDQNSolver:
             pool.add_plan(best)
             history.append(best.cost)
 
-        # Pass 4: committed NV search -- only if still above target
-        from .config import BKS as _BKS
-
-        _bks = _BKS.get(self.inst.name)
-        _bks_nv = int(_bks["nv"]) if _bks else max(1, best.nv - 1)
-        if best.nv > _bks_nv:
+        # Pass 4: committed NV search — only if NV can still be reduced
+        _committed_nv_target = max(1, best.nv - 1)
+        if best.nv > _committed_nv_target:
             committed = self._committed_nv_search(best, pool, target_nv=best.nv - 1)
             if committed is not None and committed.feasible and (committed.nv < best.nv or committed.dominates(best)):
                 best = committed

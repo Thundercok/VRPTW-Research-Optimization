@@ -214,19 +214,22 @@ class EliteArchive:
             import json
 
             try:
+                clean_routes = [[int(node) for node in r] for r in new_best.routes]
                 with open(path, "w") as f:
                     json.dump(
                         {
                             "instance": key,
                             "cost": new_best.cost,
                             "nv": new_best.nv,
-                            "routes": new_best.routes,
+                            "routes": clean_routes,
                             "algo": new_best.algo,
                         },
                         f,
+                        indent=2,
                     )
-            except Exception:
-                pass
+            except Exception as e:
+                import sys
+                print(f"Error saving plan to {path}: {e}", file=sys.stderr)
 
     def best(self, inst_name: str) -> Plan | None:
         bucket = self._plans.get(inst_name, [])

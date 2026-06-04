@@ -347,20 +347,53 @@ def op_route_merge_sample(plan: Plan, size: int) -> tuple[Plan, list[int]]:
     return _invalidate(plan), removed
 
 
-def op_two_route_eliminate(plan: Plan, size: int) -> tuple[Plan, list[int]]:
-    if len(plan.routes) <= 2:
-        return op_route_eliminate(plan, size)
+def op_route_absorb_disrupt(plan: Plan, size: int) -> tuple[Plan, list[int]]:
+    """Absorb the smallest route and disrupt border zones of neighboring routes.
+
+    1. Select the route with fewest customers.
+    2. Remove all customers from that route.
+    3. For each absorbed customer, identify the nearest customers still in
+       other routes and remove those 'border zone' neighbors.
+    4. Cap total removals at ``size``.
+    """
+    if len(plan.routes) <= 1:
+        return op_random(plan, size)
     inst = plan.inst
+    # Find smallest route
     ranked = sorted(
         enumerate(plan.routes),
         key=lambda x: (len(x[1]) + random.random() * 0.5,),
     )
-    removed: list[int] = []
-    drop_ids: set = set()
-    for idx, route in ranked[:2]:
-        removed.extend(route)
-        drop_ids.add(idx)
-    plan.routes = [r for i, r in enumerate(plan.routes) if i not in drop_ids]
+    target_idx, target_route = ranked[0]
+    removed: list[int] = list(target_route)
+    drop_ids: set = {target_idx}
+
+    # Build remaining node list for border-zone disruption
+    remaining_nodes = [n for i, r in enumerate(plan.routes) if i != target_idx for n in r]
+
+    # For each absorbed customer, find nearest border-zone neighbors
+    if remaining_nodes and len(removed) < size:
+        absorbed_set = set(removed)
+        border_candidates: list[tuple[float, int]] = []
+        for node in removed:
+            for rn in remaining_nodes:
+                if rn not in absorbed_set:
+                    dist_score = float(inst.dist[node, rn]) + random.random() * 0.1
+                    border_candidates.append((dist_score, rn))
+
+        # Sort by proximity and select unique border nodes
+        border_candidates.sort(key=lambda x: x[0])
+        seen = set(removed)
+        for _, rn in border_candidates:
+            if len(removed) >= size:
+                break
+            if rn not in seen:
+                removed.append(rn)
+                seen.add(rn)
+
+    rs = set(removed)
+    plan.routes = [[n for n in r if n not in rs] for r in plan.routes]
+    plan.routes = [r for r in plan.routes if r]
     return _invalidate(plan), removed
 
 
@@ -375,7 +408,7 @@ DESTROY = [
     op_route_costly_eliminate,
     op_cross_route_shaw,
     op_route_merge_sample,
-    op_two_route_eliminate,
+    op_route_absorb_disrupt,
 ]
 
 

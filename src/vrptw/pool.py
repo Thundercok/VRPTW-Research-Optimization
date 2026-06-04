@@ -25,6 +25,7 @@ class RouteRecord:
     cost: float
     load: float
     slack: float
+    protected: bool = False
 
 
 def _cover_key(nodes: tuple[int, ...] | list[int]) -> tuple[int, ...]:
@@ -68,12 +69,23 @@ class RoutePool:
 
         if len(self._routes) <= limit:
             return
-        usage: dict[int, int] = {}
+
         kept: dict[tuple[int, ...], RouteRecord] = {}
+        usage: dict[int, int] = {}
+        # First, keep all protected routes
+        for rec in self._routes.values():
+            if rec.protected:
+                kept[rec.nodes] = rec
+                for n in rec.nodes:
+                    usage[n] = usage.get(n, 0) + 1
+
+        # Fill the rest with high-priority routes
         ranked = sorted(self._routes.values(), key=self._priority)
         for rec in ranked:
             if len(kept) >= limit:
                 break
+            if rec.nodes in kept:
+                continue
             under = all(usage.get(n, 0) < self.cfg.route_pool_max_per_customer for n in rec.nodes)
             if under or len(kept) < limit // 3:
                 kept[rec.nodes] = rec
@@ -87,17 +99,26 @@ class RoutePool:
                     break
         self._routes = kept
 
-    def add_route(self, route: list[int]) -> None:
+    def add_route(self, route: list[int], protected: bool = False) -> None:
         if not route or not _check_route(route, self.inst):
             return
         key = tuple(route)
         if key in self._routes:
+            if protected and not self._routes[key].protected:
+                self._routes[key] = RouteRecord(
+                    nodes=key,
+                    cost=self._routes[key].cost,
+                    load=self._routes[key].load,
+                    slack=self._routes[key].slack,
+                    protected=True,
+                )
             return
         rec = RouteRecord(
             nodes=key,
             cost=_route_cost_list(route, self.inst),
             load=_route_load(route, self.inst),
             slack=_route_avg_slack(route, self.inst),
+            protected=protected,
         )
         cover = _cover_key(key)
         for old_key, old_rec in list(self._routes.items()):
@@ -230,9 +251,11 @@ def recombine_with_route_pool(
 
     # NV-targeted: try multiple penalty scales so one scale finds the partition
     # if it exists in the pool, even when mean_cost * 2.0 is insufficient.
-    # Time per query: sp_time_limit / n_scales; total budget = sp_time_limit.
-    penalty_scales = (2.0, 5.0, 12.0)
-    per_query_limit = max(1.0, cfg.sp_time_limit / len(penalty_scales))
+    # Scales 30.0/50.0 are extreme: they force the MILP to prioritize NV
+    # reduction over TD quality, which is correct when BKS-guided routes
+    # are in the pool and we know the NV-target partition exists.
+    penalty_scales = (2.0, 5.0, 12.0, 30.0, 50.0)
+    per_query_limit = max(1.0, cfg.sp_time_limit / max(len(penalty_scales) - 2, 1))
 
     # Temporarily override time limit per query
     class _TmpCfg:
