@@ -67,6 +67,13 @@ BKS: dict[str, dict[str, float]] = {
     "RC206": {"nv": 3, "td": 1146.32},
     "RC207": {"nv": 3, "td": 1061.14},
     "RC208": {"nv": 3, "td": 828.14},
+    # Gehring & Homberger 200-customer instances (representative subset)
+    "c1_2_1": {"nv": 20, "td": 2704.57},
+    "c2_2_1": {"nv": 6, "td": 1931.44},
+    "r1_2_1": {"nv": 20, "td": 4784.11},
+    "r2_2_1": {"nv": 4, "td": 4483.16},
+    "rc1_2_1": {"nv": 18, "td": 3602.80},
+    "rc2_2_1": {"nv": 6, "td": 3099.53},
 }
 
 ALGO_ORTOOLS = "OR-Tools"
