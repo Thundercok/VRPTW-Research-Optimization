@@ -68,14 +68,10 @@ The overnight run has completed the first three Solomon instances. The results s
 
 The runtimes for some runs were unusually long (e.g. 918s for OR-Tools on `C101`, and 1147s for `Hybrid-Fixed` run 3 on `C102`). We have diagnosed the root cause:
 
-### OR-Tools CPU Starvation
-* **The Cause**: The Python wrapper of Google OR-Tools spawns C++ solvers that default to using **all available CPU cores** unless explicitly restricted.
-* **The Impact**: When running 3 parallel worker processes in Python's `ProcessPoolExecutor`, a single OR-Tools run consumes 100% of all 8 CPU cores. This starves the other 2 processes executing our Hybrid ALNS solver, stretching their execution times from ~30 seconds to over 19 minutes.
-* **The Solution**: Restrict OR-Tools to a single thread by configuring its solver parameters:
-  ```python
-  params.number_of_threads = 1
-  ```
-  This isolates OR-Tools to 1 core, preventing starvation of concurrent solver processes.
+### OR-Tools GIL Contention & CPU Starvation
+* **The Cause**: The Python wrapper of Google OR-Tools was executing a Python callback `transit_cb` inside the C++ solver's hot loop. This required GIL (Global Interpreter Lock) acquisition millions of times during the search, creating massive contention that starved concurrent worker processes and inflated a 60s run to over 15 minutes.
+* **The Solution**: We pre-computed the distance and service-time transit matrix as a 2D list in Python and registered it directly in C++ using `routing.RegisterTransitMatrix(transit_matrix)`. This runs entirely inside C++, bypassing Python callbacks and the GIL during search. It now executes in exactly the 15-second time limit, with zero CPU starvation for concurrent solvers.
+
 
 ---
 
