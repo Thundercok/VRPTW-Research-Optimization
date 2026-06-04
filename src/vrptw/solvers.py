@@ -177,7 +177,8 @@ class HybridDDQNSolver:
                             D_old = max(1, loaded_n // N_R)
                             for new_act in range(loaded_n, padded.shape[0]):
                                 r = new_act % N_R
-                                stacked = torch.stack([v[i * N_R + r] for i in range(D_old)])
+                                lookup_indices = [min(i * N_R + r, loaded_n - 1) for i in range(D_old)]
+                                stacked = torch.stack([v[idx] for idx in lookup_indices])
                                 padded[new_act] = stacked.mean(dim=0)
                             o_up[target_key] = padded.to(DEVICE)
                         else:
@@ -202,7 +203,8 @@ class HybridDDQNSolver:
                                 D_old = max(1, loaded_n // N_R)
                                 for new_act in range(loaded_n, padded.shape[0]):
                                     r = new_act % N_R
-                                    stacked = torch.stack([v[i * N_R + r] for i in range(D_old)])
+                                    lookup_indices = [min(i * N_R + r, loaded_n - 1) for i in range(D_old)]
+                                    stacked = torch.stack([v[idx] for idx in lookup_indices])
                                     padded[new_act] = stacked.mean(dim=0)
                                 o_up[bare] = padded.to(DEVICE)
                             else:
@@ -239,9 +241,10 @@ class HybridDDQNSolver:
                 D_old = max(1, loaded_len // N_R)
                 for new_act in range(loaded_len, self.ucb_aug.n):
                     r = new_act % N_R
-                    padded_mu[new_act] = np.mean([loaded_mu[i * N_R + r] for i in range(D_old)])
-                    padded_cnt[new_act] = np.mean([loaded_cnt[i * N_R + r] for i in range(D_old)])
-                    padded_m2[new_act] = np.mean([loaded_m2[i * N_R + r] for i in range(D_old)])
+                    lookup_indices = [min(i * N_R + r, loaded_len - 1) for i in range(D_old)]
+                    padded_mu[new_act] = np.mean([loaded_mu[idx] for idx in lookup_indices])
+                    padded_cnt[new_act] = np.mean([loaded_cnt[idx] for idx in lookup_indices])
+                    padded_m2[new_act] = np.mean([loaded_m2[idx] for idx in lookup_indices])
                 self.ucb_aug._mu = padded_mu
                 self.ucb_aug._cnt = padded_cnt
                 self.ucb_aug._m2 = padded_m2
@@ -557,20 +560,27 @@ class HybridDDQNSolver:
                     donor = r1[1:]
                     if donor and _check_route(donor, inst):
                         pool.add_route(donor)
-                    # ── Interior crosses ──
+                    # ── Guided Interior Crosses ──
+                    max_dist = max(inst.max_dist, 1.0)
                     if len(r1) >= 3 and len(r2) >= 3:
+                        # Single customer swaps with spatio-temporal proximity gate
                         for idx1 in range(1, len(r1) - 1):
                             for idx2 in range(1, len(r2) - 1):
-                                if random.random() < 0.25:
-                                    ic1 = r1[:idx1] + [r2[idx2]] + r1[idx1+1:]
-                                    ic2 = r2[:idx2] + [r1[idx1]] + r2[idx2+1:]
+                                u, v_node = r1[idx1], r2[idx2]
+                                # Only cross if nodes are spatially close
+                                if inst.dist[u, v_node] <= 0.35 * max_dist:
+                                    ic1 = r1[:idx1] + [v_node] + r1[idx1+1:]
+                                    ic2 = r2[:idx2] + [u] + r2[idx2+1:]
                                     if _check_route(ic1, inst):
                                         pool.add_route(ic1)
                                     if _check_route(ic2, inst):
                                         pool.add_route(ic2)
+                                        
+                        # Segment swaps (length 2) with spatio-temporal proximity gate
                         for idx1 in range(1, len(r1) - 2):
                             for idx2 in range(1, len(r2) - 2):
-                                if random.random() < 0.15:
+                                u_seg, v_seg = r1[idx1], r2[idx2]
+                                if inst.dist[u_seg, v_seg] <= 0.25 * max_dist:
                                     is1 = r1[:idx1] + r2[idx2:idx2+2] + r1[idx1+2:]
                                     is2 = r2[:idx2] + r1[idx1:idx1+2] + r2[idx2+2:]
                                     if _check_route(is1, inst):

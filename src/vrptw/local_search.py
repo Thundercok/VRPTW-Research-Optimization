@@ -608,17 +608,10 @@ def local_search(
     max_passes: int = 1,
     nv_ceiling: int | None = None,
     max_ls_moves: int = 5,
-    pool=None,  # RoutePool | None — buffered; committed once at exit
+    pool=None,
 ) -> Plan:
-    """
-    pool: when provided, improving plans along the LS trajectory are collected
-          in a memory buffer and committed to the route pool exactly **once**
-          after the search loop exits.  This avoids O(M log M) pool-trim
-          overhead on every minor move inside the hot loop.
-    """
     best = plan.copy()
-    _ls_trajectory: list[Plan] = []  # buffer for pool-eligible improvements
-
+    
     for _ in range(max_passes):
         improved = False
         routes = []
@@ -628,67 +621,81 @@ def local_search(
             if nr != route:
                 improved = True
         best = Plan(routes, best.inst, best.algo)
-
+        
         moves = 0
         while moves < max_ls_moves:
+            # 1. Relocate Move
             move = _best_relocate(best, nv_ceiling=nv_ceiling)
             if move is not None:
                 cand = _apply_relocate(best, move)
                 if cand.feasible and (cand.dominates(best) or (cand.nv == best.nv and cand.cost + 1e-9 < best.cost)):
                     best, improved = cand, True
-                    _ls_trajectory.append(best)
                     moves += 1
+                    if pool is not None:
+                        pool.add_plan(best)  # Immediate hot-commit to active pool
                     continue
+            
+            # 2. Intra-Route Or-Opt
             intra = _intra_route_or_opt(best, nv_ceiling=nv_ceiling)
             if intra is not None:
-                best = intra
-                improved = True
+                best, improved = intra, True
                 moves += 1
+                if pool is not None:
+                    pool.add_plan(best)
                 continue
+            
+            # 3. Swap Move
             move = _best_swap(best)
             if move is not None:
                 cand = _apply_swap(best, move)
                 if cand.feasible and cand.cost + 1e-9 < best.cost:
                     best, improved = cand, True
-                    _ls_trajectory.append(best)
                     moves += 1
+                    if pool is not None:
+                        pool.add_plan(best)
                     continue
+            
+            # 4. Or-Opt Move
             move = _best_or_opt(best, nv_ceiling=nv_ceiling)
             if move is not None:
                 cand = _apply_or_opt(best, move)
                 if cand.feasible and (cand.dominates(best) or (cand.nv == best.nv and cand.cost + 1e-9 < best.cost)):
                     best, improved = cand, True
-                    _ls_trajectory.append(best)
                     moves += 1
+                    if pool is not None:
+                        pool.add_plan(best)
                     continue
+            
+            # 5. Cross Exchange
             cross = _cross_exchange(best, nv_ceiling=nv_ceiling)
             if cross is not None:
                 best, improved = cross, True
-                _ls_trajectory.append(best)
                 moves += 1
+                if pool is not None:
+                    pool.add_plan(best)
                 continue
+            
+            # 6. Route Compaction
             compact = _try_route_compact(best, nv_ceiling=nv_ceiling)
             if compact is not None:
                 best, improved = compact, True
-                _ls_trajectory.append(best)
                 moves += 1
+                if pool is not None:
+                    pool.add_plan(best)
                 continue
             break
-
+            
         if not improved:
             break
 
-    # ── Batch-commit trajectory to pool (exactly once) ────────────────────
+    # ── Post-Search Diversification Seeding (Executed exactly once at exit) ──
     if pool is not None:
-        for traj_plan in _ls_trajectory:
-            pool.add_plan(traj_plan)
-        pool.add_plan(best)
         for route in merged_route_candidates(best):
             pool.add_route(route)
         merged = _try_route_merge(best)
         if merged is not None:
             pool.add_plan(merged)
-
+            
     return best
 
 
