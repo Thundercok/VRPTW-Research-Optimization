@@ -1395,6 +1395,7 @@ def run_ortools(inst: Inst, cfg: Config) -> tuple[Plan | None, float]:
         routing.AddVariableMinimizedByFinalizer(time_dim.CumulVar(routing.Start(v)))
         routing.AddVariableMinimizedByFinalizer(time_dim.CumulVar(routing.End(v)))
     params = pywrapcp.DefaultRoutingSearchParameters()
+    params.number_of_threads = 1
     params.first_solution_strategy = routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC
     params.local_search_metaheuristic = routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH
     params.time_limit.seconds = int(cfg.ortools_time_limit)

@@ -258,7 +258,7 @@ class Config:
     elite_archive_k: int = 5
 
     # ── OR-Tools ──────────────────────────────────────────────────────────
-    ortools_time_limit: float = 60.0
+    ortools_time_limit: float = 15.0
 
     # ── Learned Acceptance Criterion ──────────────────────────────────────
     lac_enabled: bool = True
