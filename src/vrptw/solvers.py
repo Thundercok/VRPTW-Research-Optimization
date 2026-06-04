@@ -1229,7 +1229,7 @@ class HybridDDQNSolver:
             # Fixes C202/C207 (NV=3 achieved, TD suboptimal) and RC207
             # (NV=3 achieved, but TD regresses due to pool disruption from
             # committed search targeting infeasible NV=2).
-            if _bks_entry and best.nv <= _bks_nv:
+            if not _bks_entry or best.nv <= _bks_nv:
                 td_polished = local_search(
                     best,
                     max_passes=cfg.polish_ls_passes + 2,
