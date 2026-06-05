@@ -517,7 +517,11 @@ def _buffered_route_elimination(
     max_ejections: int = 6,
     beam_width: int = 16,
     pool=None,
+    hard_mode: bool = False,
 ) -> Plan:
+    if hard_mode:
+        beam_width = max(beam_width * 2, 32)
+        max_ejections = max(max_ejections + 4, 10)
     best = plan.copy()
     for _ in range(max_rounds):
         if len(best.routes) <= 1:
@@ -601,6 +605,63 @@ def _intra_route_or_opt(plan: Plan, nv_ceiling: int | None = None) -> Plan | Non
     if nv_ceiling is not None and cand.nv > nv_ceiling:
         return None
     return cand if cand.dominates(plan) else None
+
+
+def _intra_route_optimize(route: list[int], inst: Inst, max_passes: int = 25) -> list[int]:
+    """
+    Run 2-opt and or-opt(1,2,3) on a single route until convergence.
+    Designed for wide-TW instances where routes carry 25+ customers and
+    standard local_search() exhausts its move budget on inter-route moves
+    before intra-route quality is fully recovered.
+    """
+    best = route[:]
+    best_cost = _route_cost_list(best, inst)
+    for _ in range(max_passes):
+        improved = False
+        # 2-opt pass
+        r2 = _two_opt_best(best, inst)
+        c2 = _route_cost_list(r2, inst)
+        if c2 + 1e-9 < best_cost:
+            best, best_cost, improved = r2, c2, True
+
+        # Or-opt for segment lengths 1, 2, 3
+        for L in (1, 2, 3):
+            if len(best) < L + 2:
+                continue
+            b_route, b_cost = best[:], best_cost
+            for sp in range(len(best) - L + 1):
+                seg = best[sp : sp + L]
+                remainder = best[:sp] + best[sp + L:]
+                if not remainder:
+                    continue
+                for ip in range(len(remainder) + 1):
+                    for rev in (False, True):
+                        s = list(reversed(seg)) if rev else seg[:]
+                        candidate = remainder[:ip] + s + remainder[ip:]
+                        if candidate == best:
+                            continue
+                        if not _check_route(candidate, inst):
+                            continue
+                        cc = _route_cost_list(candidate, inst)
+                        if cc + 1e-9 < b_cost:
+                            b_route, b_cost = candidate, cc
+            if b_cost + 1e-9 < best_cost:
+                best, best_cost, improved = b_route, b_cost, True
+
+        if not improved:
+            break
+    return best
+
+
+def td_converge_polish(plan: Plan, max_passes: int = 25) -> Plan:
+    """
+    Apply _intra_route_optimize to every route independently.
+    Called during the BKS-NV TD polish phase. Unlike local_search(),
+    this never modifies route assignments — only improves sequence quality.
+    """
+    routes = [_intra_route_optimize(r, plan.inst, max_passes) for r in plan.routes]
+    cand = Plan(routes, plan.inst, plan.algo)
+    return cand if cand.feasible and cand.cost + 1e-9 < plan.cost else plan
 
 
 def local_search(

@@ -246,10 +246,28 @@ def recombine_with_route_pool(
     cfg: Config,
     nv_ceiling: int | None = None,
     nv_target: int | None = None,
+    td_only: bool = False,
 ) -> Plan:
     pool.add_plan(incumbent)
     recs = pool.records(incumbent)
     if not recs:
+        return incumbent.copy()
+
+    # ── TD-only fast path ────────────────────────────────────────────────────
+    if td_only:
+        effective_ceiling = nv_ceiling if nv_ceiling is not None else incumbent.nv
+        candidate = _milp_recombine(
+            recs, incumbent.inst, cfg,
+            nv_ceiling=effective_ceiling,
+            vehicle_penalty=0.0,
+        )
+        if candidate is None:
+            candidate = _greedy_recombine(recs, incumbent, nv_ceiling=effective_ceiling)
+        if (candidate.feasible
+                and _is_exact_cover(candidate)
+                and candidate.nv <= effective_ceiling
+                and candidate.cost + 1e-6 < incumbent.cost):
+            return candidate
         return incumbent.copy()
 
     mean_cost = float(np.mean([r.cost for r in recs])) if recs else 100.0

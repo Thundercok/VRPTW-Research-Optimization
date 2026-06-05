@@ -34,6 +34,7 @@ from .local_search import (
     local_search,
     merged_route_candidates,
     _two_opt_best,
+    td_converge_polish,
 )
 from .operators import DESTROY, N_D, N_R, REPAIR, accept, accept_with_nv_ceiling, destroy_size
 from .pool import RoutePool, recombine_with_route_pool
@@ -1196,7 +1197,8 @@ class HybridDDQNSolver:
                 pool.add_plan(best)
                 history.append(best.cost)
 
-            buffered = _buffered_route_elimination(best, pool=pool)
+            _one_over_bks = (_bks_entry is not None and best.nv == _bks_nv + 1)
+            buffered = _buffered_route_elimination(best, pool=pool, hard_mode=_one_over_bks)
             if buffered.feasible and (buffered.nv < best.nv or buffered.dominates(best)):
                 best = buffered
                 pool.add_plan(best)
@@ -1226,18 +1228,41 @@ class HybridDDQNSolver:
                         history.append(best.cost)
 
             # ── TD polish when at or below BKS NV ────────────────────────────────
-            # Fixes C202/C207 (NV=3 achieved, TD suboptimal) and RC207
-            # (NV=3 achieved, but TD regresses due to pool disruption from
-            # committed search targeting infeasible NV=2).
             if not _bks_entry or best.nv <= _bks_nv:
+                # Phase A: convergent intra-route sequence optimization
+                # Runs 2-opt + or-opt(1,2,3) per route to convergence with no move cap.
+                # Critical for wide-TW instances (RC2, R2) where routes carry 30+ customers.
+                is_wide_tw = self.inst.tw_tight_frac < 0.15
+                n_intra_passes = 35 if is_wide_tw else 20
+                best = td_converge_polish(best, max_passes=n_intra_passes)
+                if best.feasible:
+                    history.append(best.cost)
+
+                # Phase B: standard inter-route local search for cross-route improvements
+                td_scale = 4 if is_wide_tw else 2
                 td_polished = local_search(
                     best,
-                    max_passes=cfg.polish_ls_passes + 2,
+                    max_passes=cfg.polish_ls_passes + td_scale,
                     nv_ceiling=best.nv,
-                    max_ls_moves=cfg.max_ls_moves * 3,
+                    max_ls_moves=cfg.max_ls_moves * (td_scale + 1),
                 )
                 if td_polished.feasible and td_polished.cost + 1e-6 < best.cost:
                     best = td_polished
+                    history.append(best.cost)
+
+            # ── TD-only MILP recombination ────────────────────────────────────────────
+            # Pure cost-minimization pass: selects cheapest exact partition at current NV.
+            # Targets residual TD gaps in RC2/R2 where the pool contains correct routes
+            # but the penalty-scaled MILP didn't find the globally cheapest combination.
+            if not _bks_entry or best.nv <= _bks_nv:
+                td_rec = recombine_with_route_pool(
+                    best, pool, cfg,
+                    nv_ceiling=best.nv,
+                    td_only=True,
+                )
+                if td_rec.feasible and td_rec.cost + 1e-6 < best.cost:
+                    best = td_rec
+                    pool.add_plan(best)
                     history.append(best.cost)
 
         best.algo = self.algo_name
