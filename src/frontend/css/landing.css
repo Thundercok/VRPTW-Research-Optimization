@@ -42,7 +42,7 @@
   --hud-console-bg: rgba(0, 0, 0, 0.04);
   --hud-console-text: #222222;
   --wordmark-color: #111111;
-  --story-desc-color: #555555;
+  --story-desc-color: #4b5563;
   --scroll-hint-color: #888888;
   --showcase-bg: #f7f6f3;
   --route-glow-opacity: 0.22;
@@ -99,7 +99,7 @@
   --hud-console-bg: rgba(0, 0, 0, 0.35);
   --hud-console-text: rgba(255, 245, 200, 0.8);
   --wordmark-color: #ededeb;
-  --story-desc-color: rgba(220, 215, 200, 0.6);
+  --story-desc-color: #9ca3af;
   --scroll-hint-color: #777777;
   --showcase-bg: #0a0b12;
   --route-glow-opacity: 0.28;
@@ -710,12 +710,12 @@ body {
 }
 
 .hud-dot.green {
-  background-color: var(--gold);
-  box-shadow: 0 0 8px var(--gold);
-  animation: pulseGold 1.5s infinite;
+  background-color: var(--success);
+  box-shadow: 0 0 8px var(--success);
+  animation: pulseGreen 1.5s infinite;
 }
 
-@keyframes pulseGold {
+@keyframes pulseGreen {
   0% {
     transform: scale(1);
     opacity: 1;
@@ -766,11 +766,11 @@ body {
 }
 
 .hud-value.positive {
-  color: var(--gold);
+  color: var(--success);
 }
 
 .hud-value.accent {
-  color: var(--orange);
+  color: var(--primary);
 }
 
 .hud-console {
@@ -1239,7 +1239,7 @@ body {
   }
 
   .nami-wordmark {
-    font-size: 5rem;
+    font-size: 2rem;
     margin-bottom: 8px;
   }
 
