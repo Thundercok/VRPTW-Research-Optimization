@@ -2,51 +2,63 @@ from __future__ import annotations
 
 import numpy as np
 
-from .core import Inst, Plan, _check_route
-from .heuristics import _best_insert_position, _route_cost_list, _route_load
+from .core import Inst, Plan, _check_route, _route_ok, _route_cost
+from .heuristics import _best_insert_position, _best_insert_position_numba, _route_cost_list, _route_load
+from .numba_kernels import (
+    _two_opt_best_numba,
+    _or_opt_intra_numba,
+    _intra_route_optimize_numba,
+    _swap_evaluate_numba,
+    _best_segment_insert_numba,
+    _cross_exchange_pair_numba,
+)
 
 
 def _two_opt_best(route: list[int], inst: Inst) -> list[int]:
     if len(route) < 4:
         return route[:]
-    best, best_cost = route[:], _route_cost_list(route, inst)
-    for i in range(len(route) - 2):
-        for j in range(i + 2, len(route)):
-            cand = route[:i] + list(reversed(route[i : j + 1])) + route[j + 1 :]
-            if not _check_route(cand, inst):
-                continue
-            cc = _route_cost_list(cand, inst)
-            if cc + 1e-9 < best_cost:
-                best, best_cost = cand, cc
-    return best
+    route_arr = np.array(route, dtype=np.int64)
+    result, _ = _two_opt_best_numba(
+        route_arr, inst.dist, inst.demands, inst.capacity,
+        inst.ready_times, inst.due_times, inst.service_times,
+    )
+    return list(result)
 
 
 def _best_relocate(plan: Plan, nv_ceiling: int | None = None):
     inst = plan.inst
     best_delta, best_move = -1e-9, None
-    for si, source_route in enumerate(plan.routes):
-        sc = _route_cost_list(source_route, inst)
-        for sp, node in enumerate(source_route):
-            sn = source_route[:sp] + source_route[sp + 1 :]
-            if sn and not _check_route(sn, inst):
-                continue
-            snc = _route_cost_list(sn, inst)
-            for di, dest_route in enumerate(plan.routes):
+    # Pre-convert all routes to arrays once
+    route_arrays = [np.array(r, dtype=np.int64) for r in plan.routes]
+    for si in range(len(plan.routes)):
+        source_route = plan.routes[si]
+        for sp in range(len(source_route)):
+            node = source_route[sp]
+            sn_empty = len(source_route) == 1
+            # Compute removal delta in O(1) — removing a node from a feasible
+            # route always yields a feasible route (earlier arrivals, lower load)
+            prev_s = source_route[sp - 1] if sp > 0 else 0
+            next_s = source_route[sp + 1] if sp < len(source_route) - 1 else 0
+            remove_delta = inst.dist[prev_s, next_s] - inst.dist[prev_s, node] - inst.dist[node, next_s]
+            for di in range(len(plan.routes)):
                 if di == si:
                     continue
-                dc = _route_cost_list(dest_route, inst)
-                for ip in range(len(dest_route) + 1):
-                    dn = dest_route[:ip] + [node] + dest_route[ip:]
-                    if not _check_route(dn, inst):
-                        continue
-                    new_nv = plan.nv - (1 if not sn else 0)
-                    if nv_ceiling is not None and new_nv > nv_ceiling:
-                        continue
-                    delta = snc + _route_cost_list(dn, inst) - sc - dc
-                    if new_nv < plan.nv:
-                        delta -= 1000.0
-                    if delta < best_delta:
-                        best_delta, best_move = delta, (si, sp, di, ip)
+                # Use already-JIT'd insert evaluator — no array allocation per position
+                insert_delta, best_pos = _best_insert_position_numba(
+                    node, route_arrays[di],
+                    inst.dist, inst.demands, inst.capacity,
+                    inst.ready_times, inst.due_times, inst.service_times,
+                )
+                if best_pos == -1:
+                    continue
+                new_nv = plan.nv - (1 if sn_empty else 0)
+                if nv_ceiling is not None and new_nv > nv_ceiling:
+                    continue
+                delta = remove_delta + insert_delta
+                if new_nv < plan.nv:
+                    delta -= 1000.0
+                if delta < best_delta:
+                    best_delta, best_move = delta, (si, sp, di, int(best_pos))
     return best_move
 
 
@@ -64,22 +76,16 @@ def _apply_relocate(plan: Plan, move: tuple[int, int, int, int]) -> Plan:
 def _best_swap(plan: Plan):
     inst = plan.inst
     best_delta, best_move = -1e-9, None
-    for si, sr in enumerate(plan.routes):
-        sc = _route_cost_list(sr, inst)
+    route_arrays = [np.array(r, dtype=np.int64) for r in plan.routes]
+    for si in range(len(plan.routes)):
         for di in range(si + 1, len(plan.routes)):
-            dr = plan.routes[di]
-            dc = _route_cost_list(dr, inst)
-            for sp, sn in enumerate(sr):
-                for dp, dn in enumerate(dr):
-                    if sn == dn:
-                        continue
-                    srn, drn = sr[:], dr[:]
-                    srn[sp], drn[dp] = dn, sn
-                    if not _check_route(srn, inst) or not _check_route(drn, inst):
-                        continue
-                    delta = _route_cost_list(srn, inst) + _route_cost_list(drn, inst) - sc - dc
-                    if delta < best_delta:
-                        best_delta, best_move = delta, (si, sp, di, dp)
+            delta, sp, dp = _swap_evaluate_numba(
+                route_arrays[si], route_arrays[di],
+                inst.dist, inst.demands, inst.capacity,
+                inst.ready_times, inst.due_times, inst.service_times,
+            )
+            if sp >= 0 and delta < best_delta:
+                best_delta, best_move = delta, (si, int(sp), di, int(dp))
     return best_move
 
 
@@ -95,66 +101,48 @@ def _cross_exchange(plan: Plan, nv_ceiling: int | None = None) -> Plan | None:
     if nv_ceiling is not None and plan.nv > nv_ceiling:
         return None
     max_dist = max(inst.max_dist, 1.0)
-    granular_radius = max(10.0, 0.18 * max_dist)
     best_delta = -1e-9
     best_routes: list[list[int]] | None = None
 
-    def interval_overlap(a0, a1, b0, b1):
-        return min(a1, b1) >= max(a0, b0)
-
-    def route_meta(route):
-        coords = inst.coords[np.array(route, dtype=np.int64)]
-        return (coords.mean(axis=0), float(np.min(inst.ready_times[route])), float(np.max(inst.due_times[route])))
-
-    def seg_meta(seg):
-        coords = inst.coords[np.array(seg, dtype=np.int64)]
-        return (coords.mean(axis=0), float(np.min(inst.ready_times[seg])), float(np.max(inst.due_times[seg])))
-
-    route_info = [route_meta(r) if r else None for r in plan.routes]
+    # Pre-convert routes to arrays once
+    route_arrays = [np.array(r, dtype=np.int64) for r in plan.routes]
 
     for i in range(len(plan.routes)):
         for j in range(i + 1, len(plan.routes)):
             r1, r2 = plan.routes[i], plan.routes[j]
             if not r1 or not r2:
                 continue
-            info1, info2 = route_info[i], route_info[j]
-            if info1 is None or info2 is None:
-                continue
-            c1, r1_ready, r1_due = info1
-            c2, r2_ready, r2_due = info2
-            if float(np.linalg.norm(c1 - c2)) > 0.55 * max_dist and not interval_overlap(
-                r1_ready, r1_due, r2_ready, r2_due
+            r1_arr, r2_arr = route_arrays[i], route_arrays[j]
+            # Route-level spatial/temporal filter
+            c1 = inst.coords[r1_arr].mean(axis=0)
+            c2 = inst.coords[r2_arr].mean(axis=0)
+            r1_ready = float(np.min(inst.ready_times[r1_arr]))
+            r1_due = float(np.max(inst.due_times[r1_arr]))
+            r2_ready = float(np.min(inst.ready_times[r2_arr]))
+            r2_due = float(np.max(inst.due_times[r2_arr]))
+            if float(np.linalg.norm(c1 - c2)) > 0.55 * max_dist and not (
+                min(r1_due, r2_due) >= max(r1_ready, r2_ready)
             ):
                 continue
-            old_pair = _route_cost_list(r1, inst) + _route_cost_list(r2, inst)
-            lc1 = (1, 2, 3) if len(r1) >= 12 else (1, 2)
-            lc2 = (1, 2, 3) if len(r2) >= 12 else (1, 2)
-            for len1 in lc1:
-                if len(r1) < len1:
-                    continue
-                for len2 in lc2:
-                    if len(r2) < len2:
-                        continue
-                    for p1 in range(len(r1) - len1 + 1):
-                        seg1 = r1[p1 : p1 + len1]
-                        s1c, s1r, s1d = seg_meta(seg1)
-                        for p2 in range(len(r2) - len2 + 1):
-                            seg2 = r2[p2 : p2 + len2]
-                            s2c, s2r, s2d = seg_meta(seg2)
-                            if float(np.linalg.norm(s1c - s2c)) > granular_radius and not interval_overlap(
-                                s1r, s1d, s2r, s2d
-                            ):
-                                continue
-                            nr1 = r1[:p1] + seg2 + r1[p1 + len1 :]
-                            nr2 = r2[:p2] + seg1 + r2[p2 + len2 :]
-                            if not _check_route(nr1, inst) or not _check_route(nr2, inst):
-                                continue
-                            delta = _route_cost_list(nr1, inst) + _route_cost_list(nr2, inst) - old_pair
-                            if delta < best_delta:
-                                routes = [r[:] for r in plan.routes]
-                                routes[i], routes[j] = nr1, nr2
-                                best_routes = routes
-                                best_delta = delta
+            old_pair = float(_route_cost(r1_arr, inst.dist)) + float(_route_cost(r2_arr, inst.dist))
+            max_len1 = 3 if len(r1) >= 12 else 2
+            max_len2 = 3 if len(r2) >= 12 else 2
+            # Delegate entire (p1, p2, len1, len2) search to JIT
+            delta, p1, len1, p2, len2 = _cross_exchange_pair_numba(
+                r1_arr, r2_arr, max_len1, max_len2,
+                inst.dist, inst.demands, inst.capacity,
+                inst.ready_times, inst.due_times, inst.service_times,
+                old_pair,
+            )
+            if p1 >= 0 and delta < best_delta:
+                seg2 = list(r2[p2:p2 + len2])
+                seg1 = list(r1[p1:p1 + len1])
+                nr1 = r1[:p1] + seg2 + r1[p1 + len1:]
+                nr2 = r2[:p2] + seg1 + r2[p2 + len2:]
+                routes = [r[:] for r in plan.routes]
+                routes[i], routes[j] = nr1, nr2
+                best_routes = routes
+                best_delta = delta
     return Plan(best_routes, inst, plan.algo) if best_routes is not None else None
 
 
@@ -195,39 +183,42 @@ def _try_route_compact(plan: Plan, nv_ceiling: int | None = None) -> Plan | None
 def _best_or_opt(plan: Plan, nv_ceiling: int | None = None):
     inst = plan.inst
     best_delta, best_move = -1e-9, None
-    for si, source_route in enumerate(plan.routes):
-        sc = _route_cost_list(source_route, inst)
+    route_arrays = [np.array(r, dtype=np.int64) for r in plan.routes]
+    for si in range(len(plan.routes)):
+        source_route = plan.routes[si]
         for L in (2, 3):
             for sp in range(len(source_route) - L + 1):
-                seg = source_route[sp : sp + L]
-                sn = source_route[:sp] + source_route[sp + L :]
-                if sn and not _check_route(sn, inst):
-                    continue
-                snc = _route_cost_list(sn, inst) if sn else 0.0
-                for di, dest_route in enumerate(plan.routes):
+                seg_arr = np.array(source_route[sp:sp + L], dtype=np.int64)
+                sn_empty = len(source_route) == L
+                # Compute removal delta in O(1) — removing a segment from a
+                # feasible route always yields a feasible route
+                prev_s = source_route[sp - 1] if sp > 0 else 0
+                next_s = source_route[sp + L] if sp + L < len(source_route) else 0
+                # Distance of removed arc chain: prev→seg[0]→...→seg[-1]→next
+                remove_dist = inst.dist[prev_s, source_route[sp]]
+                for k in range(L - 1):
+                    remove_dist += inst.dist[source_route[sp + k], source_route[sp + k + 1]]
+                remove_dist += inst.dist[source_route[sp + L - 1], next_s]
+                remove_delta = inst.dist[prev_s, next_s] - remove_dist
+                for di in range(len(plan.routes)):
                     if di == si:
                         continue
-                    dc = _route_cost_list(dest_route, inst)
-                    for ip in range(len(dest_route) + 1):
-                        dn = dest_route[:ip] + seg + dest_route[ip:]
-                        if _check_route(dn, inst):
-                            new_nv = plan.nv - (1 if not sn else 0)
-                            if nv_ceiling is None or new_nv <= nv_ceiling:
-                                delta = snc + _route_cost_list(dn, inst) - sc - dc
-                                if new_nv < plan.nv:
-                                    delta -= 1000.0
-                                if delta < best_delta:
-                                    best_delta, best_move = delta, (si, sp, L, di, ip, False)
-
-                        dn_rev = dest_route[:ip] + list(reversed(seg)) + dest_route[ip:]
-                        if _check_route(dn_rev, inst):
-                            new_nv = plan.nv - (1 if not sn else 0)
-                            if nv_ceiling is None or new_nv <= nv_ceiling:
-                                delta = snc + _route_cost_list(dn_rev, inst) - sc - dc
-                                if new_nv < plan.nv:
-                                    delta -= 1000.0
-                                if delta < best_delta:
-                                    best_delta, best_move = delta, (si, sp, L, di, ip, True)
+                    # JIT-compiled segment insertion evaluation
+                    insert_delta, best_pos, rev_int = _best_segment_insert_numba(
+                        seg_arr, route_arrays[di],
+                        inst.dist, inst.demands, inst.capacity,
+                        inst.ready_times, inst.due_times, inst.service_times,
+                    )
+                    if best_pos == -1:
+                        continue
+                    new_nv = plan.nv - (1 if sn_empty else 0)
+                    if nv_ceiling is not None and new_nv > nv_ceiling:
+                        continue
+                    delta = remove_delta + insert_delta
+                    if new_nv < plan.nv:
+                        delta -= 1000.0
+                    if delta < best_delta:
+                        best_delta, best_move = delta, (si, sp, L, di, int(best_pos), bool(rev_int))
     return best_move
 
 
@@ -563,40 +554,25 @@ def _buffered_route_elimination(
 
 def _intra_route_or_opt(plan: Plan, nv_ceiling: int | None = None) -> Plan | None:
     """
-    Intra-Route Or-Opt.
-    Dịch chuyển các phân đoạn khách hàng (độ dài 1-3) đến vị trí tốt hơn
-    trong NỘI BỘ của cùng một tuyến đường để tối ưu hóa quãng đường (TD).
+    Intra-Route Or-Opt — JIT-accelerated.
+    Moves customer segments (length 1-3) to better positions within
+    the SAME route to minimise total distance (TD).
     """
     inst = plan.inst
     improved = False
-    routes = [r[:] for r in plan.routes]
-
-    for ri, route in enumerate(routes):
+    routes: list[list[int]] = []
+    for route in plan.routes:
         if len(route) < 4:
+            routes.append(route[:])
             continue
-        base_cost = _route_cost_list(route, inst)
-        best_route = route[:]
-        best_cost = base_cost
-
-        for L in (1, 2, 3):
-            for sp in range(len(route) - L + 1):
-                seg = route[sp : sp + L]
-                remainder = route[:sp] + route[sp + L :]
-                for ip in range(len(remainder) + 1):
-                    for rev in (False, True):
-                        s = list(reversed(seg)) if rev else seg[:]
-                        candidate = remainder[:ip] + s + remainder[ip:]
-                        if candidate == route:
-                            continue
-                        if not _check_route(candidate, inst):
-                            continue
-                        cc = _route_cost_list(candidate, inst)
-                        if cc + 1e-9 < best_cost:
-                            best_cost = cc
-                            best_route = candidate
-                            improved = True
-        routes[ri] = best_route
-
+        route_arr = np.array(route, dtype=np.int64)
+        result, imp = _or_opt_intra_numba(
+            route_arr, inst.dist, inst.demands, inst.capacity,
+            inst.ready_times, inst.due_times, inst.service_times,
+        )
+        if imp:
+            improved = True
+        routes.append(list(result))
     if not improved:
         return None
     cand = Plan(routes, inst, plan.algo)
@@ -610,47 +586,17 @@ def _intra_route_or_opt(plan: Plan, nv_ceiling: int | None = None) -> Plan | Non
 def _intra_route_optimize(route: list[int], inst: Inst, max_passes: int = 25) -> list[int]:
     """
     Run 2-opt and or-opt(1,2,3) on a single route until convergence.
-    Designed for wide-TW instances where routes carry 25+ customers and
-    standard local_search() exhausts its move budget on inter-route moves
-    before intra-route quality is fully recovered.
+    Fully JIT-compiled — designed for wide-TW instances where routes
+    carry 25+ customers.
     """
-    best = route[:]
-    best_cost = _route_cost_list(best, inst)
-    for _ in range(max_passes):
-        improved = False
-        # 2-opt pass
-        r2 = _two_opt_best(best, inst)
-        c2 = _route_cost_list(r2, inst)
-        if c2 + 1e-9 < best_cost:
-            best, best_cost, improved = r2, c2, True
-
-        # Or-opt for segment lengths 1, 2, 3
-        for L in (1, 2, 3):
-            if len(best) < L + 2:
-                continue
-            b_route, b_cost = best[:], best_cost
-            for sp in range(len(best) - L + 1):
-                seg = best[sp : sp + L]
-                remainder = best[:sp] + best[sp + L:]
-                if not remainder:
-                    continue
-                for ip in range(len(remainder) + 1):
-                    for rev in (False, True):
-                        s = list(reversed(seg)) if rev else seg[:]
-                        candidate = remainder[:ip] + s + remainder[ip:]
-                        if candidate == best:
-                            continue
-                        if not _check_route(candidate, inst):
-                            continue
-                        cc = _route_cost_list(candidate, inst)
-                        if cc + 1e-9 < b_cost:
-                            b_route, b_cost = candidate, cc
-            if b_cost + 1e-9 < best_cost:
-                best, best_cost, improved = b_route, b_cost, True
-
-        if not improved:
-            break
-    return best
+    if len(route) < 4:
+        return route[:]
+    route_arr = np.array(route, dtype=np.int64)
+    result = _intra_route_optimize_numba(
+        route_arr, inst.dist, inst.demands, inst.capacity,
+        inst.ready_times, inst.due_times, inst.service_times, max_passes,
+    )
+    return list(result)
 
 
 def td_converge_polish(plan: Plan, max_passes: int = 25) -> Plan:

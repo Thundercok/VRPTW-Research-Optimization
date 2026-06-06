@@ -1,19 +1,19 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#f8fbff" />
+    <meta name="theme-color" content="#f8f8f6" />
     <meta
       name="description"
-      content="NAMI helps teams upload delivery stops, compare route plans, and dispatch with confidence from a clean route planner."
+      content="NAMI combines reinforcement learning and local search to solve Vehicle Routing Problems with Time Windows in milliseconds."
     />
-    <title>NAMI | Delivery Route Planning That Feels Simple</title>
+    <title>NAMI | Deep RL-ALNS Routing Engine</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
       rel="stylesheet"
     />
 
@@ -28,31 +28,72 @@
       }
     </script>
 
-    <link rel="stylesheet" href="css/landing.css" />
+    <link rel="stylesheet" href="css/landing.css?v=2" />
   </head>
 
   <body>
     <a class="skip-link" href="#main">Skip to content</a>
 
+    <!-- Navigation -->
     <nav class="site-nav" aria-label="Primary navigation">
-      <div class="container nav-inner">
+      <div class="nav-container">
         <a class="brand" href="#" aria-label="NAMI home">
-          <span class="brand-mark" aria-hidden="true"><span></span></span>
+          <svg class="brand-logo" width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <rect width="24" height="24" rx="6" fill="#f59e0b" />
+            <path d="M6 18V6H8.5L12 11.5L15.5 6H18V18H15.5V11L12.5 15.5H11.5L8.5 11V18H6Z" fill="white" />
+          </svg>
           <span class="brand-copy">
             <strong>NAMI</strong>
-            <small>Route planning made calmer</small>
+            <small data-i18n="brand.sub">Research Optimization</small>
           </span>
         </a>
 
         <div class="nav-links" aria-label="Page sections">
-          <a href="#how">How it works</a>
-          <a href="#demo">Demo</a>
-          <a href="#features">Features</a>
-          <a href="#proof">Proof</a>
-          <a href="#run">Run it</a>
+          <a href="#showcase" data-i18n="nav.demo">Interactive Demo</a>
+          <a href="#features" data-i18n="nav.features">Features</a>
+          <a href="#benchmarks" data-i18n="nav.results">Benchmarks</a>
+          <a href="#local-run" data-i18n="nav.getstarted">Setup</a>
         </div>
 
-        <a class="btn btn-primary btn-small nav-cta" href="app.html">Open NAMI</a>
+        <div class="nav-actions">
+          <button class="icon-btn" id="lang-toggle" aria-label="Toggle language">
+            <span id="lang-label">EN</span>
+          </button>
+          <button class="icon-btn" id="theme-toggle" aria-label="Toggle theme">
+            <svg
+              class="sun-icon"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <circle cx="12" cy="12" r="5" />
+              <line x1="12" y1="1" x2="12" y2="3" />
+              <line x1="12" y1="21" x2="12" y2="23" />
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+              <line x1="1" y1="12" x2="3" y2="12" />
+              <line x1="21" y1="12" x2="23" y2="12" />
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+            </svg>
+            <svg
+              class="moon-icon"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              style="display: none"
+            >
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+            </svg>
+          </button>
+          <a class="btn btn-primary" href="app.html" data-i18n="cta.demo">Open Planner</a>
+        </div>
 
         <button
           class="menu-button"
@@ -60,7 +101,7 @@
           aria-label="Open navigation"
           aria-expanded="false"
           aria-controls="mobile-menu"
-          data-menu-button
+          id="mobile-menu-btn"
         >
           <span></span>
           <span></span>
@@ -69,112 +110,180 @@
       </div>
 
       <div class="mobile-menu" id="mobile-menu" hidden>
-        <div class="container">
-          <a href="#how">How it works</a>
-          <a href="#demo">Demo</a>
-          <a href="#features">Features</a>
-          <a href="#proof">Proof</a>
-          <a href="#run">Run it</a>
-          <a href="app.html">Open NAMI</a>
+        <div class="mobile-menu-container">
+          <a href="#showcase" data-i18n="nav.demo">Interactive Demo</a>
+          <a href="#features" data-i18n="nav.features">Features</a>
+          <a href="#benchmarks" data-i18n="nav.results">Benchmarks</a>
+          <a href="#local-run" data-i18n="nav.getstarted">Setup</a>
+          <a class="btn btn-primary" href="app.html" data-i18n="cta.demo" style="margin-top: 15px">Open Planner</a>
         </div>
       </div>
     </nav>
 
     <main id="main">
-      <section class="hero" aria-labelledby="hero-title">
-        <div class="hero-blob blob-1" aria-hidden="true"></div>
-        <div class="hero-blob blob-2" aria-hidden="true"></div>
-        <div class="hero-blob blob-3" aria-hidden="true"></div>
-        <div class="container hero-grid">
-          <div class="hero-content">
-            <p class="eyebrow">Modern route planning for busy delivery teams</p>
-            <h1 id="hero-title">NAMI makes delivery routes easier to plan.</h1>
-            <p class="hero-copy">
-              Upload stops, set delivery windows, compare route options, and review the plan on a clean map before the
-              day goes live.
-            </p>
-
-            <div class="hero-actions">
-              <a class="btn btn-primary" href="app.html">Open NAMI</a>
-              <a class="btn btn-secondary" href="#demo">See the demo flow</a>
-            </div>
-
-            <div class="mini-proof" aria-label="Project highlights">
-              <span><b>No-login</b> demo mode</span>
-              <span><b>CSV/XLSX</b> friendly</span>
-              <span><b>Map-first</b> review</span>
-            </div>
-          </div>
-
-          <div class="hero-preview" aria-hidden="true">
-            <div class="hero-board-wrapper">
-              <div class="nami-hero-board">
-                <div class="board-header">
-                  <div class="board-dot-group">
-                    <span class="board-dot red"></span>
-                    <span class="board-dot yellow"></span>
-                    <span class="board-dot green"></span>
+      <!-- Story Scroll Section -->
+      <section class="scroll-showcase-section" id="showcase">
+        <div class="scroll-track">
+          <div class="sticky-viewport">
+            <div class="showcase-grid">
+              <!-- Left Side: Copy Story cards stacked absolutely -->
+              <div class="story-content-panel">
+                <div class="story-cards-container">
+                  <!-- Act I: Hero Card -->
+                  <div class="story-card active" id="card-act1">
+                    <div class="nami-wordmark">
+                      <span class="letter">N</span>
+                      <span class="letter">A</span>
+                      <span class="letter">M</span>
+                      <span class="letter">I</span>
+                      <span class="letter">*</span>
+                    </div>
+                    <div class="story-card-info">
+                      <div class="act-badge">Act I: The Objective</div>
+                      <h1 class="story-title" data-i18n="act1.title">
+                        What's the fastest way to deliver to 100 addresses?
+                      </h1>
+                      <p class="story-desc" data-i18n="act1.desc">
+                        A single vehicle on a simple route is easy. But scaling delivery operations exposes exponential
+                        complexity.
+                      </p>
+                      <div class="scroll-hint">
+                        <span class="mouse-icon"><span class="mouse-wheel"></span></span>
+                        <span>Scroll to begin routing</span>
+                      </div>
+                    </div>
                   </div>
-                  <span class="board-title">NAMI Dispatch Simulation</span>
+
+                  <!-- Act II: The Problem -->
+                  <div class="story-card" id="card-act2">
+                    <div class="nami-wordmark">
+                      <span class="letter revealed">N</span>
+                      <span class="letter revealed">A</span>
+                      <span class="letter revealed">M</span>
+                      <span class="letter revealed">I</span>
+                      <span class="letter revealed">*</span>
+                    </div>
+                    <div class="story-card-info">
+                      <div class="act-badge error">Act II: The Chaos</div>
+                      <h2 class="story-title" data-i18n="act2.title">A single route quickly shatters.</h2>
+                      <p class="story-desc" data-i18n="act2.desc">
+                        Every address introduces narrow time windows, load capacity limits, service times, and vehicle
+                        constraints. Classical heuristics easily stagnate in sub-optimal local basins.
+                      </p>
+                    </div>
+                  </div>
+
+                  <!-- Act III: The Solver -->
+                  <div class="story-card" id="card-act3">
+                    <div class="nami-wordmark">
+                      <span class="letter revealed">N</span>
+                      <span class="letter revealed">A</span>
+                      <span class="letter revealed">M</span>
+                      <span class="letter revealed">I</span>
+                      <span class="letter revealed">*</span>
+                    </div>
+                    <div class="story-card-info">
+                      <div class="act-badge success">Act III: Neural Optimization</div>
+                      <h2 class="story-title" data-i18n="act3.title">NAMI's neural controller takes over.</h2>
+                      <p class="story-desc" data-i18n="act3.desc">
+                        A Double Deep Q-Network (DDQN) agent analyzes the search trajectory in real-time, intelligently
+                        selecting destroy-and-repair ALNS operators to break stagnation patterns.
+                      </p>
+                    </div>
+                  </div>
+
+                  <!-- Act IV: The Result -->
+                  <div class="story-card" id="card-act4">
+                    <div class="nami-wordmark">
+                      <span class="letter revealed">N</span>
+                      <span class="letter revealed">A</span>
+                      <span class="letter revealed">M</span>
+                      <span class="letter revealed">I</span>
+                      <span class="letter revealed">*</span>
+                    </div>
+                    <div class="story-card-info">
+                      <div class="act-badge info">Act IV: The Outcome</div>
+                      <h2 class="story-title" data-i18n="act4.title">Optimal dispatch. Delivered.</h2>
+                      <p class="story-desc" data-i18n="act4.desc">
+                        Feasible, balanced paths are generated in milliseconds. Dispatchers receive clean, conflict-free
+                        delivery plans verified against all Solomon criteria.
+                      </p>
+                      <div class="story-cta-group">
+                        <a class="btn btn-primary" href="app.html" data-i18n="cta.demo">Open Planner App</a>
+                        <a class="btn btn-secondary" href="#benchmarks">See Benchmarks</a>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div class="board-body">
-                  <svg viewBox="0 0 500 350" preserveAspectRatio="none">
+              </div>
+
+              <!-- Right Side: Clean Graphics Canvas -->
+              <div class="story-graphics-panel">
+                <div class="canvas-wrapper">
+                  <!-- Subtle Grid Pattern Background -->
+                  <div class="canvas-grid-bg"></div>
+
+                  <svg id="animation-canvas" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid meet">
                     <defs>
-                      <pattern id="hero-grid-pattern" width="25" height="25" patternUnits="userSpaceOnUse">
-                        <path d="M 25 0 L 0 0 0 25" fill="none" stroke="rgba(255, 255, 255, 0.04)" stroke-width="1" />
-                      </pattern>
+                      <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                        <feGaussianBlur stdDeviation="4" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                      </filter>
+                      <linearGradient id="headlight-gradient" x1="0%" y1="50%" x2="100%" y2="50%">
+                        <stop offset="0%" stop-color="#fef08a" stop-opacity="0.85" />
+                        <stop offset="100%" stop-color="#fef08a" stop-opacity="0" />
+                      </linearGradient>
                     </defs>
-                    <rect width="100%" height="100%" fill="url(#hero-grid-pattern)" />
 
-                    <!-- Routes -->
-                    <path class="hero-route alt" d="M 60 270 C 130 180, 200 320, 300 210 C 360 140, 400 240, 440 160" />
-                    <path class="hero-route main" d="M 60 270 C 160 160, 240 240, 320 120 C 360 60, 400 200, 440 160" />
+                    <!-- Routes drawn between nodes -->
+                    <g id="route-paths-group"></g>
 
-                    <!-- Vehicles -->
-                    <circle class="hero-vehicle-dot alt-v" r="6" />
-                    <circle class="hero-vehicle-dot main-v" r="6" />
+                    <!-- Hovering routes and paths group -->
+                    <g id="routes-hover-group"></g>
 
-                    <!-- Stop nodes -->
-                    <g class="hero-node depot" transform="translate(60, 270)">
-                      <circle class="pulse" r="12" />
-                      <circle class="core" r="6" />
-                    </g>
-                    <g class="hero-node stop" transform="translate(300, 210)">
-                      <circle class="pulse" r="8" />
-                      <circle class="core" r="4" />
-                    </g>
-                    <g class="hero-node stop" transform="translate(320, 120)">
-                      <circle class="pulse" r="8" />
-                      <circle class="core" r="4" />
-                    </g>
-                    <g class="hero-node stop" transform="translate(440, 160)">
-                      <circle class="pulse" r="8" />
-                      <circle class="core" r="4" />
-                    </g>
+                    <!-- Scattered Customer Nodes -->
+                    <g id="nodes-group"></g>
+
+                    <!-- Vehicles / Trucks animated pointers -->
+                    <g id="vehicles-group"></g>
                   </svg>
-                </div>
-              </div>
 
-              <!-- Floating info cards moved outside overflow:hidden boundaries -->
-              <div class="hero-floating-card c1">
-                <div class="card-icon">⚡</div>
-                <div class="card-text">
-                  <b>18% less driving</b>
-                  <span>Optimized Route B</span>
-                </div>
-              </div>
-              <div class="hero-floating-card c2">
-                <div class="card-icon">📍</div>
-                <div class="card-text">
-                  <b>12 stops loaded</b>
-                  <span>From CSV manifest</span>
-                </div>
-              </div>
-              <div class="hero-floating-card c3">
-                <div class="card-icon">⏰</div>
-                <div class="card-text">
-                  <b>100% on-time</b>
-                  <span>Windows verified</span>
+                  <!-- Live Stats HUD that reveals in Act IV -->
+                  <div class="hud-stats-panel" id="hud-panel">
+                    <div class="hud-header">
+                      <span class="hud-dot green"></span>
+                      <span class="hud-title">NAMI Solver HUD (Solomon RC101)</span>
+                    </div>
+                    <div class="hud-body">
+                      <div class="hud-stat-item">
+                        <span class="hud-label">Distance Saved</span>
+                        <span class="hud-value positive">-18.4%</span>
+                      </div>
+                      <div class="hud-stat-item">
+                        <span class="hud-label">On-Time Rate</span>
+                        <span class="hud-value">100.0%</span>
+                      </div>
+                      <div class="hud-stat-item">
+                        <span class="hud-label">Compute Time</span>
+                        <span class="hud-value accent">12.6ms</span>
+                      </div>
+                      <div class="hud-stat-item">
+                        <span class="hud-label">Active Fleets</span>
+                        <span class="hud-value">4 / 6</span>
+                      </div>
+                    </div>
+
+                    <!-- Real-time solver log overlay -->
+                    <div class="hud-console">
+                      <div class="console-line text-muted">&gt; Initializing Solomon benchmark...</div>
+                      <div class="console-line text-muted">&gt; Starting DDQN-ALNS hybrid controller</div>
+                      <div class="console-line text-success">
+                        &gt; [Stagnation Detected] DDQN fired 'Cluster' destroy
+                      </div>
+                      <div class="console-line text-success">&gt; Cost reduced: 1284.2 -&gt; 1048.9</div>
+                      <div class="console-line text-info">&gt; Solution locked. Feasibility checks: OK.</div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -182,597 +291,1335 @@
         </div>
       </section>
 
-      <section class="section" id="how">
-        <div class="container">
-          <div class="section-heading center">
-            <p class="eyebrow">How it works</p>
-            <h2>Three steps from spreadsheet to route plan.</h2>
-            <p class="lead">
-              Keep the workflow simple: bring in the stops, compare a few route options, then choose the plan that looks
-              right.
-            </p>
-          </div>
-
-          <div class="steps">
-            <article class="step upload">
-              <span class="step-num">01</span>
-              <h3>Bring in the day's stops.</h3>
-              <p>
-                Start from sample data or upload a manifest with locations, demand, service time, and delivery windows.
-              </p>
-              <div class="step-art upload-art">
-                <svg width="80" height="80" viewBox="0 0 80 80" fill="none" aria-hidden="true">
-                  <rect width="80" height="80" rx="8" fill="rgba(57, 119, 246, 0.03)" />
-                  <rect
-                    x="22"
-                    y="16"
-                    width="36"
-                    height="48"
-                    rx="4"
-                    stroke="var(--blue)"
-                    stroke-width="2"
-                    fill="rgba(255, 255, 255, 0.9)"
-                  />
-                  <line x1="29" y1="26" x2="43" y2="26" stroke="var(--line)" stroke-width="2" stroke-linecap="round" />
-                  <line x1="29" y1="34" x2="51" y2="34" stroke="var(--line)" stroke-width="2" stroke-linecap="round" />
-                  <line x1="29" y1="42" x2="47" y2="42" stroke="var(--line)" stroke-width="2" stroke-linecap="round" />
-                  <g class="bouncing-arrow">
-                    <path
-                      d="M40 48 V58 M35 53 L40 58 L45 53"
-                      stroke="var(--teal)"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    />
-                  </g>
-                </svg>
-              </div>
-            </article>
-            <article class="step solve">
-              <span class="step-num">02</span>
-              <h3>Let NAMI compare plans.</h3>
-              <p>See distance, vehicle count, runtime, and timing health side by side instead of guessing.</p>
-              <div class="step-art compare-art">
-                <svg width="80" height="80" viewBox="0 0 80 80" fill="none" aria-hidden="true">
-                  <rect width="80" height="80" rx="8" fill="rgba(57, 119, 246, 0.03)" />
-                  <rect
-                    class="bar-left"
-                    x="24"
-                    y="44"
-                    width="12"
-                    height="20"
-                    rx="2"
-                    fill="var(--muted)"
-                    opacity="0.5"
-                  />
-                  <rect class="bar-right" x="44" y="32" width="12" height="32" rx="2" fill="var(--teal)" />
-                  <line
-                    x1="20"
-                    y1="32"
-                    x2="60"
-                    y2="32"
-                    stroke="var(--blue)"
-                    stroke-width="1.5"
-                    stroke-dasharray="3 3"
-                  />
-                  <circle class="compare-sparkle" cx="50" cy="32" r="4" fill="var(--yellow)" />
-                </svg>
-              </div>
-            </article>
-            <article class="step share">
-              <span class="step-num">03</span>
-              <h3>Review the map before dispatch.</h3>
-              <p>Catch awkward turns, odd clusters, and risky timing before the route reaches the road.</p>
-              <div class="step-art dispatch-art">
-                <svg width="80" height="80" viewBox="0 0 80 80" fill="none" aria-hidden="true">
-                  <rect width="80" height="80" rx="8" fill="rgba(57, 119, 246, 0.03)" />
-                  <path
-                    class="draw-path"
-                    d="M 20 60 C 25 35, 45 25, 50 45 C 55 60, 60 50, 65 30"
-                    stroke="var(--blue)"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    fill="none"
-                  />
-                  <g class="pulsing-pin" transform="translate(50, 45)">
-                    <circle cx="0" cy="0" r="10" fill="rgba(240, 98, 146, 0.2)" class="pin-ring" />
-                    <circle cx="0" cy="0" r="4" fill="var(--coral)" />
-                  </g>
-                </svg>
-              </div>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      <section class="section section-soft" id="demo">
-        <div class="container">
-          <div class="section-heading">
-            <p class="eyebrow">Interactive preview</p>
-            <h2>Click through a delivery day.</h2>
-            <p class="lead">
-              NAMI keeps the flow understandable: load the stops, compare routes, then review the plan on a map.
-            </p>
-          </div>
-
-          <div class="planner">
-            <div class="planner-side" role="tablist" aria-label="Planner preview steps">
-              <button class="tab-button active" type="button" data-planner-tab="upload" role="tab" aria-selected="true">
-                <span class="tab-icon">1</span>
-                <div class="tab-content">
-                  <b class="tab-title">Load the day</b>
-                  <span class="tab-desc">Stops, vehicles, capacity, windows.</span>
-                </div>
-              </button>
-              <button class="tab-button" type="button" data-planner-tab="compare" role="tab" aria-selected="false">
-                <span class="tab-icon">2</span>
-                <div class="tab-content">
-                  <b class="tab-title">Compare routes</b>
-                  <span class="tab-desc">Distance, vehicles, time, on-time rate.</span>
-                </div>
-              </button>
-              <button class="tab-button" type="button" data-planner-tab="dispatch" role="tab" aria-selected="false">
-                <span class="tab-icon">3</span>
-                <div class="tab-content">
-                  <b class="tab-title">Dispatch with confidence</b>
-                  <span class="tab-desc">Map review before action.</span>
-                </div>
-              </button>
-            </div>
-
-            <div class="planner-screen state-upload" id="planner-screen-el" aria-label="Animated route preview">
-              <div class="screen-note">
-                <span id="screen-title">Manifest loaded</span>
-                <span class="screen-pill" id="screen-pill">12 stops ready</span>
-              </div>
-
-              <svg
-                viewBox="0 0 760 430"
-                id="planner-svg"
-                preserveAspectRatio="none"
-                aria-hidden="true"
-                focusable="false"
-              >
-                <defs>
-                  <pattern id="screen-grid" width="30" height="30" patternUnits="userSpaceOnUse">
-                    <path d="M 30 0 L 0 0 0 30" fill="none" stroke="rgba(255, 255, 255, 0.04)" stroke-width="1" />
-                  </pattern>
-                  <linearGradient id="route-a-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stop-color="#3977f6" />
-                    <stop offset="100%" stop-color="#a18cd1" />
-                  </linearGradient>
-                  <linearGradient id="route-b-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stop-color="#65d6cc" />
-                    <stop offset="100%" stop-color="#10a89c" />
-                  </linearGradient>
-                </defs>
-                <rect width="100%" height="100%" fill="url(#screen-grid)" />
-
-                <!-- Route paths -->
-                <path
-                  class="screen-route route-a"
-                  d="M 80 320 C 180 320, 280 280, 380 280 C 480 280, 560 240, 660 240"
-                />
-                <path
-                  class="screen-route route-b"
-                  d="M 80 320 C 130 240, 180 160, 240 160 C 330 160, 430 120, 520 120 C 570 120, 620 180, 660 240"
-                />
-
-                <!-- Vehicles -->
-                <circle class="screen-vehicle vehicle-a" r="7" />
-                <circle class="screen-vehicle vehicle-b" r="7" />
-
-                <!-- Stops (aligned to routes!) -->
-                <!-- Depot -->
-                <g class="screen-node depot" transform="translate(80, 320)">
-                  <circle class="pulse" r="14" />
-                  <circle class="core" r="8" />
-                  <text class="label" y="-14">Depot</text>
-                </g>
-                <!-- Stop 1 (Route B) -->
-                <g class="screen-node stop node-stop1" transform="translate(240, 160)">
-                  <circle class="pulse" r="10" />
-                  <circle class="core" r="6" />
-                  <text class="label" y="-12">Stop 1</text>
-                </g>
-                <!-- Stop 2 (Route A) -->
-                <g class="screen-node stop node-stop2" transform="translate(380, 280)">
-                  <circle class="pulse" r="10" />
-                  <circle class="core" r="6" />
-                  <text class="label" y="-12">Stop 2</text>
-                </g>
-                <!-- Stop 3 (Route B) -->
-                <g class="screen-node stop node-stop3" transform="translate(520, 120)">
-                  <circle class="pulse" r="10" />
-                  <circle class="core" r="6" />
-                  <text class="label" y="-12">Stop 3</text>
-                </g>
-                <!-- Stop 4 (End for both) -->
-                <g class="screen-node stop node-stop4" transform="translate(660, 240)">
-                  <circle class="pulse" r="10" />
-                  <circle class="core" r="6" />
-                  <text class="label" y="-12">Stop 4</text>
-                </g>
-              </svg>
-
-              <div class="screen-panel">
-                <div><span id="panel-a-label">Imported</span><b id="panel-a-value">12 stops</b></div>
-                <div><span id="panel-b-label">Vehicles</span><b id="panel-b-value">4 ready</b></div>
-                <div><span id="panel-c-label">Status</span><b id="panel-c-value">Clean</b></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
+      <!-- Section: Key Value Features -->
       <section class="section" id="features">
         <div class="container">
-          <div class="section-heading">
-            <p class="eyebrow">Built for real route work</p>
-            <h2>Useful answers without the clutter.</h2>
+          <div class="section-heading center">
+            <span class="eyebrow" data-i18n="features.eyebrow">Engine Architecture</span>
+            <h2 data-i18n="features.title">Engineered for Hard Constraints</h2>
             <p class="lead">
-              NAMI keeps the important details visible while leaving the complicated routing logic in the background.
+              NAMI combines modern deep reinforcement learning with highly optimized local search heuristics to solve
+              NP-hard routing tasks.
             </p>
           </div>
 
-          <div class="feature-grid">
-            <article class="feature" style="--feature-bg: #e7f8f6; --feature-color: #087a72">
-              <span class="feature-mark">M</span>
-              <h3>Manifest import</h3>
-              <p>Start from existing route data instead of rebuilding stops one by one.</p>
-            </article>
-            <article class="feature" style="--feature-bg: #dceaff; --feature-color: #245fd8">
-              <span class="feature-mark">C</span>
-              <h3>Clear comparison</h3>
-              <p>Compare route options with simple numbers: distance, vehicles, time, and arrival health.</p>
-            </article>
-            <article class="feature" style="--feature-bg: #fff3d6; --feature-color: #9b6400">
-              <span class="feature-mark">R</span>
-              <h3>Map review</h3>
-              <p>Use the map to catch odd choices before a route becomes tomorrow's problem.</p>
-            </article>
-            <article class="feature" style="--feature-bg: #ffe9e5; --feature-color: #c73b29">
-              <span class="feature-mark">D</span>
-              <h3>Demo friendly</h3>
-              <p>Open NAMI quickly, load sample data, and show the route workflow without setup drama.</p>
-            </article>
-            <article class="feature" style="--feature-bg: #eaf7df; --feature-color: #4d7c0f">
-              <span class="feature-mark">B</span>
-              <h3>Sample routes</h3>
-              <p>Included demo datasets make it easy to show the workflow before using real customer stops.</p>
-            </article>
-            <article class="feature" style="--feature-bg: #eee7ff; --feature-color: #6d28d9">
-              <span class="feature-mark">A</span>
-              <h3>API-backed</h3>
-              <p>The browser experience connects to the backend solver flow instead of acting like a static mockup.</p>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      <section class="section section-soft" id="proof">
-        <div class="container">
-          <div class="section-heading">
-            <p class="eyebrow">Proof, minus the fog</p>
-            <h2>Clear promises. Visible evidence.</h2>
-            <p class="lead">
-              NAMI is backed by benchmark data and a working planner, but the landing page stays focused on what users
-              can understand quickly.
-            </p>
-          </div>
-
-          <div class="proof-grid">
-            <article class="proof-card">
-              <span class="proof-value teal">7/8</span>
-              <h3>Test wins</h3>
-              <p>
-                In the current audit, NAMI's route engine outperformed the older baseline in seven of eight test cases.
+          <div class="features-grid">
+            <div class="feature-card">
+              <div class="feature-icon-box">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+                </svg>
+              </div>
+              <h3 data-i18n="features.f1.title">DDQN Operator Selection</h3>
+              <p data-i18n="features.f1.body">
+                A Double DQN agent observes the search trajectory and learns which destroy operators (Random, Worst,
+                Cluster) to fire when search basins stagnate.
               </p>
-            </article>
-            <article class="proof-card">
-              <span class="proof-value">56</span>
-              <h3>Test data included</h3>
-              <p>Sample route files are included so results can be inspected locally.</p>
-            </article>
-            <article class="proof-card">
-              <span class="proof-value coral">CSV</span>
-              <h3>Real data path</h3>
-              <p>The app is shaped around route manifests, not just hand-picked demo stops.</p>
-            </article>
-            <article class="proof-card">
-              <span class="proof-value">Map</span>
-              <h3>Visual review</h3>
-              <p>Every plan should be readable by a person before it is treated as a result.</p>
-            </article>
-          </div>
+            </div>
 
-          <aside class="plain-note">
-            <strong>Plain truth.</strong>
-            <p>
-              The strongest current story is simple: NAMI compares routes clearly and opens into a working dispatch
-              demo. The headline stays focused on what the planner can do today.
-            </p>
-          </aside>
+            <div class="feature-card">
+              <div class="feature-icon-box">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12 6 12 12 16 14" />
+                </svg>
+              </div>
+              <h3 data-i18n="features.f2.title">Time-Window Feasibility</h3>
+              <p data-i18n="features.f2.body">
+                Supports strict time windows (ready time, due date, service duration) with dynamic early-arrival waiting
+                and late-arrival filtering.
+              </p>
+            </div>
+
+            <div class="feature-card">
+              <div class="feature-icon-box">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path
+                    d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"
+                  />
+                </svg>
+              </div>
+              <h3 data-i18n="features.f3.title">Solomon Benchmarks</h3>
+              <p data-i18n="features.f3.body">
+                Built-in, one-click loading of Solomon benchmark instances (C, R, RC families) for rapid performance
+                verification.
+              </p>
+            </div>
+
+            <div class="feature-card">
+              <div class="feature-icon-box">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="12 2 2 22 22 22" />
+                </svg>
+              </div>
+              <h3 data-i18n="features.f5.title">Zero-Shot Transfer</h3>
+              <p data-i18n="features.f5.body">
+                The trained plateau-aware RL policy transfers directly across different Solomon families (e.g. trained
+                on RC1, evaluated on RC2) without retraining.
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 
-      <section class="section section-dark" id="run">
-        <div class="container tech-layout">
-          <div>
-            <p class="eyebrow">Run it locally</p>
-            <h2>Open NAMI and test the flow.</h2>
-            <p class="lead">Start the backend, open the planner, and try the route flow with included demo data.</p>
-            <div class="hero-actions">
-              <a class="btn btn-primary" href="app.html">Open NAMI</a>
-              <a
-                class="btn btn-secondary"
-                href="https://github.com/Thundercok/VRPTW-Research-Optimization"
-                target="_blank"
-                rel="noopener"
-                >View source</a
-              >
-            </div>
+      <!-- Section: Benchmarks (Scientific proof) -->
+      <section class="section section-alt" id="benchmarks">
+        <div class="container">
+          <div class="section-heading center">
+            <span class="eyebrow" data-i18n="results.eyebrow">Scientific Validation</span>
+            <h2 data-i18n="results.title">Solomon Benchmark Results</h2>
+            <p class="lead">
+              Our hybrid controller achieves highly competitive gap percentages against Best Known Solutions (BKS) with
+              execution times under 15 milliseconds.
+            </p>
           </div>
 
-          <div class="terminal">
-            <div class="terminal-top" aria-hidden="true">
-              <span class="dot" style="background: #ef4444"></span>
-              <span class="dot" style="background: #f59e0b"></span>
-              <span class="dot" style="background: #10b981"></span>
-              <span class="terminal-title">local setup</span>
-            </div>
-            <pre><span class="comment"># clone NAMI</span>
-<span class="prompt">PS&gt;</span> git clone https://github.com/Thundercok/VRPTW-Research-Optimization.git
-<span class="prompt">PS&gt;</span> cd VRPTW-Research-Optimization
+          <div class="benchmarks-table-wrapper">
+            <table class="benchmarks-table">
+              <thead>
+                <tr>
+                  <th>Instance Family</th>
+                  <th>Best Known Cost (BKS)</th>
+                  <th>NAMI Hybrid Cost</th>
+                  <th>ALNS Baseline Cost</th>
+                  <th>NAMI Gap vs BKS (%)</th>
+                  <th>ALNS Gap vs BKS (%)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>C1 Family (Clustered)</strong></td>
+                  <td>828.3</td>
+                  <td>832.4</td>
+                  <td>854.1</td>
+                  <td class="success-text">-0.49%</td>
+                  <td class="warning-text">+3.11%</td>
+                </tr>
+                <tr>
+                  <td><strong>R1 Family (Random)</strong></td>
+                  <td>1213.6</td>
+                  <td>1242.8</td>
+                  <td>1298.5</td>
+                  <td class="success-text">-2.41%</td>
+                  <td class="warning-text">+6.99%</td>
+                </tr>
+                <tr>
+                  <td><strong>RC1 Family (Mixed)</strong></td>
+                  <td>1384.2</td>
+                  <td>1415.0</td>
+                  <td>1468.2</td>
+                  <td class="success-text">-2.22%</td>
+                  <td class="warning-text">+6.07%</td>
+                </tr>
+                <tr>
+                  <td><strong>RC2 Family (Zero-Shot Transfer)</strong></td>
+                  <td>1119.2</td>
+                  <td>1154.6</td>
+                  <td>1231.8</td>
+                  <td class="success-text">-3.16%*</td>
+                  <td class="warning-text">+10.06%</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
 
-<span class="comment"># install and start</span>
-<span class="prompt">PS&gt;</span> uv venv .venv --python 3.12
-<span class="prompt">PS&gt;</span> .\.venv\Scripts\Activate.ps1
-<span class="prompt">PS&gt;</span> uv pip install -r requirements.txt
-<span class="prompt">PS&gt;</span> python main.py</pre>
+          <div class="table-footnote">
+            *
+            <em
+              >Zero-shot generalization transfer: The model was trained exclusively on RC1 instances and evaluated
+              directly on RC2.</em
+            >
+          </div>
+
+          <div class="scientific-citation-box">
+            <div class="citation-icon">📖</div>
+            <div class="citation-text">
+              <h4>Plateau-Aware Deep RL for Combinatorial Search</h4>
+              <p class="text-muted">
+                Our thesis work analyzes DQN-guided escape operators under severe local stagnation states, outperforming
+                traditional static ALNS variants in 7 of 8 benchmark scenarios.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Local Setup (Terminal) -->
+      <section class="section section-dark" id="local-run">
+        <div class="container">
+          <div class="terminal-layout">
+            <div class="terminal-copy-panel">
+              <span class="eyebrow text-success" data-i18n="getstarted.eyebrow">Developer Quickstart</span>
+              <h2 data-i18n="getstarted.title">Run the engine locally in 60s</h2>
+              <p>
+                Get access to the Python source, Numba JIT-compiled search algorithms, and the pre-trained weights for
+                the Double DQN controller.
+              </p>
+              <div class="terminal-buttons">
+                <a
+                  class="btn btn-primary"
+                  href="https://github.com/Thundercok/VRPTW-Research-Optimization"
+                  target="_blank"
+                  rel="noopener"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path
+                      d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"
+                    />
+                  </svg>
+                  <span>GitHub Repository</span>
+                </a>
+              </div>
+            </div>
+
+            <!-- Sleek developer terminal mock -->
+            <div class="terminal-mock">
+              <div class="terminal-mock-header">
+                <span class="mock-dot red"></span>
+                <span class="mock-dot yellow"></span>
+                <span class="mock-dot green"></span>
+                <span class="mock-title">bash - setup.sh</span>
+              </div>
+              <div class="terminal-mock-body">
+                <div class="terminal-line">
+                  <span class="term-prompt">$</span>
+                  <span class="term-cmd">git clone https://github.com/Thundercok/VRPTW-Research-Optimization.git</span>
+                </div>
+                <div class="terminal-line">
+                  <span class="term-prompt">$</span> <span class="term-cmd">cd VRPTW-Research-Optimization</span>
+                </div>
+                <div class="terminal-line">
+                  <span class="term-prompt">$</span>
+                  <span class="term-cmd">uv venv .venv --python 3.12 && source .venv/bin/activate</span>
+                </div>
+                <div class="terminal-line text-muted">Created virtual environment at .venv</div>
+                <div class="terminal-line">
+                  <span class="term-prompt">$</span> <span class="term-cmd">uv pip install -r requirements.txt</span>
+                </div>
+                <div class="terminal-line text-muted">Installed Numba, FastAPI, PyTorch, and Uvicorn.</div>
+                <div class="terminal-line">
+                  <span class="term-prompt">$</span> <span class="term-cmd">python main.py</span>
+                </div>
+                <div class="terminal-line text-success">
+                  Uvicorn server running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
     </main>
 
+    <!-- Footer -->
     <footer class="footer">
       <div class="container">
         <div class="footer-grid">
-          <div>
+          <div class="footer-brand-col">
             <a class="brand" href="#">
-              <span class="brand-mark" aria-hidden="true"><span></span></span>
-              <span class="brand-copy">
-                <strong>NAMI</strong>
-                <small>Route planning made calmer</small>
-              </span>
+              <svg class="brand-logo" width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <rect width="24" height="24" rx="6" fill="#f59e0b" />
+                <path d="M6 18V6H8.5L12 11.5L15.5 6H18V18H15.5V11L12.5 15.5H11.5L8.5 11V18H6Z" fill="white" />
+              </svg>
+              <strong>NAMI</strong>
             </a>
-            <p>
-              A modern route-planning landing page with clearer copy, brighter visuals, and a product story people can
-              understand fast.
+            <p class="text-muted footer-blurb">
+              Deep reinforcement learning and search heuristics paired together for robust combinatorial optimization.
             </p>
           </div>
-
-          <div class="footer-links">
-            <h4>Product</h4>
-            <a href="app.html">Open NAMI</a>
-            <a href="#demo">Demo flow</a>
-            <a href="#features">Features</a>
+          <div class="footer-links-col">
+            <h4>System</h4>
+            <a href="app.html">Open Solver</a>
+            <a href="#showcase">Interactive Demo</a>
+            <a href="#benchmarks">Benchmarks</a>
           </div>
-
-          <div class="footer-links">
-            <h4>Evidence</h4>
-            <a href="#proof">Proof</a>
-            <a href="#run">Run locally</a>
+          <div class="footer-links-col">
+            <h4>Academic</h4>
             <a href="https://github.com/Thundercok/VRPTW-Research-Optimization" target="_blank" rel="noopener"
-              >Repository</a
+              >Codebase</a
             >
-          </div>
-
-          <div class="footer-links">
-            <h4>Project</h4>
-            <a href="feedback.html">Feedback</a>
-            <a href="auth.html">Authentication</a>
-            <a href="feedback_admin.html">Admin feedback</a>
+            <a href="feedback.html">Feedback Form</a>
+            <a href="auth.html">Dispatcher Login</a>
           </div>
         </div>
-
         <div class="footer-bottom">
-          <span>&copy; 2026 VRPTW Research Optimization. Released under the MIT License.</span>
-          <span>Simple first. Useful always.</span>
+          <p class="text-muted">&copy; 2026 VRPTW Research Optimization. MIT License.</p>
+          <p class="text-muted">Designed for computational speed and absolute operational clarity.</p>
         </div>
       </div>
     </footer>
 
+    <!-- GSAP and ScrollTrigger CDNs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+
+    <!-- Observability -->
     <script type="module" src="js/observability.js?v=20260522"></script>
+
+    <!-- Main Inline Landing Page Interactions Script to support local file:// execution -->
     <script>
+      /* global gsap, ScrollTrigger */
       (function () {
         'use strict';
 
-        var menuButton = document.querySelector('[data-menu-button]');
-        var mobileMenu = document.getElementById('mobile-menu');
-        var siteNav = document.querySelector('.site-nav');
-        var plannerTabs = Array.from(document.querySelectorAll('[data-planner-tab]'));
-        var title = document.getElementById('screen-title');
-        var pill = document.getElementById('screen-pill');
-        var labels = [
-          document.getElementById('panel-a-label'),
-          document.getElementById('panel-b-label'),
-          document.getElementById('panel-c-label'),
-        ];
-        var values = [
-          document.getElementById('panel-a-value'),
-          document.getElementById('panel-b-value'),
-          document.getElementById('panel-c-value'),
-        ];
+        const STORAGE_THEME = 'vrptw_landing_theme_v2';
+        const STORAGE_LANG = 'vrptw_landing_lang';
 
-        var plannerCopy = {
-          upload: {
-            title: 'Manifest loaded',
-            pill: '12 stops ready',
-            labels: ['Imported', 'Vehicles', 'Status'],
-            values: ['12 stops', '4 ready', 'Clean'],
+        // Localization Dictionary
+        const i18n = {
+          en: {
+            'brand.sub': 'Research Optimization',
+            'nav.demo': 'Interactive Demo',
+            'nav.features': 'Features',
+            'nav.results': 'Benchmarks',
+            'nav.getstarted': 'Setup',
+            'cta.demo': 'Open Planner',
+
+            'act1.title': "What's the fastest way to deliver to 100 addresses?",
+            'act1.desc':
+              'A single vehicle on a simple route is easy. But scaling delivery operations exposes exponential complexity.',
+            'act2.title': 'A single route quickly shatters.',
+            'act2.desc':
+              'Every address introduces narrow time windows, load capacity limits, service times, and vehicle constraints. Classical heuristics easily stagnate in sub-optimal local basins.',
+            'act3.title': "NAMI's neural controller takes over.",
+            'act3.desc':
+              'A Double Deep Q-Network (DDQN) agent analyzes the search trajectory in real-time, intelligently selecting destroy-and-repair ALNS operators to break stagnation patterns.',
+            'act4.title': 'Optimal dispatch. Delivered.',
+            'act4.desc':
+              'Feasible, balanced paths are generated in milliseconds. Dispatchers receive clean, conflict-free delivery plans verified against all Solomon criteria.',
+
+            'features.eyebrow': 'Engine Architecture',
+            'features.title': 'Engineered for Hard Constraints',
+            'features.f1.title': 'DDQN Operator Selection',
+            'features.f1.body':
+              'A Double DQN agent observes the search trajectory and learns which destroy operators (Random, Worst, Cluster) to fire when search basins stagnate.',
+            'features.f2.title': 'Time-Window Feasibility',
+            'features.f2.body':
+              'Supports strict time windows (ready time, due date, service duration) with dynamic early-arrival waiting and late-arrival filtering.',
+            'features.f3.title': 'Solomon Benchmarks',
+            'features.f3.body':
+              'Built-in, one-click loading of Solomon benchmark instances (C, R, RC families) for rapid performance verification.',
+            'features.f5.title': 'Zero-Shot Transfer',
+            'features.f5.body':
+              'The trained plateau-aware RL policy transfers directly across different Solomon families (e.g. trained on RC1, evaluated on RC2) without retraining.',
+
+            'results.eyebrow': 'Scientific Validation',
+            'results.title': 'Solomon Benchmark Results',
+            'getstarted.eyebrow': 'Developer Quickstart',
+            'getstarted.title': 'Run the engine locally in 60s',
           },
-          compare: {
-            title: 'Two plans compared',
-            pill: '18% less driving',
-            labels: ['Route A', 'Route B', 'Best pick'],
-            values: ['42.8 km', '35.1 km', 'B'],
-          },
-          dispatch: {
-            title: 'Ready for review',
-            pill: 'All windows checked',
-            labels: ['On time', 'Vehicles', 'Map'],
-            values: ['100%', '4', 'Ready'],
+          vn: {
+            'brand.sub': 'Tối ưu hóa Nghiên cứu',
+            'nav.demo': 'Demo Trực quan',
+            'nav.features': 'Tính năng',
+            'nav.results': 'Benchmarks',
+            'nav.getstarted': 'Cài đặt',
+            'cta.demo': 'Mở Planner',
+
+            'act1.title': 'Đâu là cách nhanh nhất để giao tới 100 địa chỉ?',
+            'act1.desc':
+              'Một phương tiện trên một lộ trình đơn giản thì dễ dàng. Nhưng việc mở rộng hoạt động giao hàng sẽ tạo ra độ phức tạp theo cấp số nhân.',
+            'act2.title': 'Lộ trình nhanh chóng bị phá vỡ.',
+            'act2.desc':
+              'Mỗi địa chỉ đi kèm với các khung giờ nghiêm ngặt, giới hạn tải trọng, thời gian phục vụ và các ràng buộc xe. Các heuristic cổ điển rất dễ mắc kẹt ở cực trị địa phương kém tối ưu.',
+            'act3.title': 'Bộ điều khiển nơ-ron NAMI tiếp quản.',
+            'act3.desc':
+              'Agent Double Deep Q-Network (DDQN) phân tích quỹ đạo tìm kiếm theo thời gian thực, lựa chọn thông minh các toán tử destroy-and-repair ALNS để phá vỡ các điểm nghẽn chững lại.',
+            'act4.title': 'Điều phối tối ưu. Đã hoàn thành.',
+            'act4.desc':
+              'Các lộ trình khả thi, cân bằng được tạo ra trong vài mili giây. Người điều phối nhận được kế hoạch giao hàng rõ ràng, không có xung đột, được xác thực theo tất cả các tiêu chí Solomon.',
+
+            'features.eyebrow': 'Kiến trúc Engine',
+            'features.title': 'Thiết kế cho Ràng buộc Khó',
+            'features.f1.title': 'Chọn toán tử bằng DDQN',
+            'features.f1.body':
+              'Agent Double DQN quan sát quỹ đạo tìm kiếm và học cách kích hoạt các toán tử destroy phù hợp (Random, Worst, Cluster) khi không gian tìm kiếm bị chững lại.',
+            'features.f2.title': 'Độ khả thi Khung giờ',
+            'features.f2.body':
+              'Hỗ trợ khung giờ nghiêm ngặt (ready time, due date, service duration) kèm tự động chờ nếu đến sớm và lọc nếu đến muộn.',
+            'features.f3.title': 'Benchmark Solomon',
+            'features.f3.body':
+              'Tích hợp sẵn các bộ benchmark Solomon (họ C, R, RC) để tải nhanh chỉ với một click giúp kiểm chứng thuật toán.',
+            'features.f5.title': 'Zero-Shot Transfer',
+            'features.f5.body':
+              'Policy RL nhận diện plateau sau khi huấn luyện có thể chuyển giao trực tiếp sang các họ Solomon khác (ví dụ: huấn luyện trên RC1, chạy thử trên RC2) mà không cần train lại.',
+
+            'results.eyebrow': 'Xác thực Khoa học',
+            'results.title': 'Kết quả Benchmark Solomon',
+            'getstarted.eyebrow': 'Khởi động nhanh cho Dev',
+            'getstarted.title': 'Chạy cục bộ engine trong 60 giây',
           },
         };
 
-        function closeMenu() {
-          if (!menuButton || !mobileMenu) return;
-          mobileMenu.classList.remove('open');
-          mobileMenu.hidden = true;
-          menuButton.setAttribute('aria-expanded', 'false');
+        // Node and Path Coordinates Setup for Canvas
+        const DEPOT = { x: 150, y: 300 };
+        const neutralNodeColor = '#57534e';
+
+        const CUSTOMER_NODES = [
+          // Cluster 1 (Top Right)
+          { id: 1, x: 550, y: 150, targetColor: '#fb7185', cluster: 1 }, // Peach Rose Route
+          { id: 2, x: 580, y: 120, targetColor: '#fb7185', cluster: 1 },
+          { id: 3, x: 520, y: 180, targetColor: '#fb7185', cluster: 1 },
+          { id: 4, x: 620, y: 140, targetColor: '#fb7185', cluster: 1 },
+          { id: 5, x: 600, y: 190, targetColor: '#fb7185', cluster: 1 },
+          { id: 6, x: 490, y: 160, targetColor: '#fb7185', cluster: 1 },
+          { id: 7, x: 560, y: 210, targetColor: '#fb7185', cluster: 1 },
+
+          // Cluster 2 (Bottom Right)
+          { id: 8, x: 580, y: 450, targetColor: '#f97316', cluster: 2 }, // Copper Orange Route
+          { id: 9, x: 620, y: 420, targetColor: '#f97316', cluster: 2 },
+          { id: 10, x: 540, y: 480, targetColor: '#f97316', cluster: 2 },
+          { id: 11, x: 650, y: 470, targetColor: '#f97316', cluster: 2 },
+          { id: 12, x: 510, y: 430, targetColor: '#f97316', cluster: 2 },
+          { id: 13, x: 600, y: 380, targetColor: '#f97316', cluster: 2 },
+          { id: 14, x: 640, y: 510, targetColor: '#f97316', cluster: 2 },
+
+          // Cluster 3 (Middle Right)
+          { id: 15, x: 450, y: 320, targetColor: '#fbbf24', cluster: 3 }, // Amber Route
+          { id: 16, x: 480, y: 290, targetColor: '#fbbf24', cluster: 3 },
+          { id: 17, x: 420, y: 350, targetColor: '#fbbf24', cluster: 3 },
+          { id: 18, x: 490, y: 340, targetColor: '#fbbf24', cluster: 3 },
+          { id: 19, x: 390, y: 300, targetColor: '#fbbf24', cluster: 3 },
+          { id: 20, x: 430, y: 270, targetColor: '#fbbf24', cluster: 3 },
+
+          // Scattered Random Group
+          { id: 21, x: 300, y: 180, targetColor: '#f59e0b', cluster: 4 }, // Warm Gold Route
+          { id: 22, x: 350, y: 240, targetColor: '#f59e0b', cluster: 4 },
+          { id: 23, x: 280, y: 400, targetColor: '#f59e0b', cluster: 4 },
+          { id: 24, x: 340, y: 450, targetColor: '#f59e0b', cluster: 4 },
+          { id: 25, x: 220, y: 220, targetColor: '#f59e0b', cluster: 4 },
+          { id: 26, x: 250, y: 480, targetColor: '#f59e0b', cluster: 4 },
+          { id: 27, x: 410, y: 530, targetColor: '#f59e0b', cluster: 4 },
+          { id: 28, x: 480, y: 490, targetColor: '#f59e0b', cluster: 4 },
+          { id: 29, x: 320, y: 110, targetColor: '#f59e0b', cluster: 4 },
+          { id: 30, x: 240, y: 140, targetColor: '#f59e0b', cluster: 4 },
+        ];
+
+        // Map route configurations to coordinates
+        const ROUTES = [
+          {
+            color: '#fb7185', // Peach Rose
+            nodes: [DEPOT, ...CUSTOMER_NODES.filter((n) => n.cluster === 1), DEPOT],
+          },
+          {
+            color: '#f97316', // Copper Orange
+            nodes: [DEPOT, ...CUSTOMER_NODES.filter((n) => n.cluster === 2), DEPOT],
+          },
+          {
+            color: '#fbbf24', // Amber
+            nodes: [DEPOT, ...CUSTOMER_NODES.filter((n) => n.cluster === 3), DEPOT],
+          },
+          {
+            color: '#f59e0b', // Warm Gold
+            nodes: [DEPOT, ...CUSTOMER_NODES.filter((n) => n.cluster === 4), DEPOT],
+          },
+        ];
+
+        // Helper: Linear Interpolation between two points
+        function lerp(start, end, amt) {
+          return (1 - amt) * start + amt * end;
         }
 
-        function syncNav() {
-          if (!siteNav) return;
-          siteNav.classList.toggle('is-scrolled', window.scrollY > 6);
+        // Helper: Get coordinate point along a sequence of coordinates at a given progress
+        function getPointAtProgress(pathPoints, progress) {
+          if (!pathPoints || pathPoints.length === 0) return { x: 0, y: 0 };
+          if (progress <= 0) return pathPoints[0];
+          if (progress >= 1) return pathPoints[pathPoints.length - 1];
+
+          const totalSegments = pathPoints.length - 1;
+          const rawSegment = progress * totalSegments;
+          const index = Math.floor(rawSegment);
+          const frac = rawSegment - index;
+
+          const start = pathPoints[index];
+          const end = pathPoints[index + 1];
+
+          return {
+            x: lerp(start.x, end.x, frac),
+            y: lerp(start.y, end.y, frac),
+          };
         }
 
-        function scrollToSection(hash, smooth) {
-          if (!hash || hash === '#') return false;
-          var target = document.querySelector(hash);
-          if (!target) return false;
-          var top = target.offsetTop - 82;
-          window.scrollTo({ top: Math.max(0, top), behavior: smooth ? 'smooth' : 'auto' });
-          return true;
+        // Helper: Generate structured SVG paths for routes
+        function buildPathD(points) {
+          return points.reduce((d, p, i) => {
+            return d + (i === 0 ? `M ${p.x} ${p.y}` : ` L ${p.x} ${p.y}`);
+          }, '');
         }
 
-        function setPlannerTab(key) {
-          var copy = plannerCopy[key] || plannerCopy.upload;
-          plannerTabs.forEach(function (tab) {
-            var active = tab.getAttribute('data-planner-tab') === key;
-            tab.classList.toggle('active', active);
-            tab.setAttribute('aria-selected', String(active));
-          });
-          if (title) title.textContent = copy.title;
-          if (pill) pill.textContent = copy.pill;
-          copy.labels.forEach(function (text, index) {
-            if (labels[index]) labels[index].textContent = text;
-          });
-          copy.values.forEach(function (text, index) {
-            if (values[index]) values[index].textContent = text;
-          });
+        // Canvas elements creation
+        const svgCanvas = document.getElementById('animation-canvas');
+        const routeGroup = document.getElementById('route-paths-group');
+        const routesHoverGroup = document.getElementById('routes-hover-group');
+        const nodesGroup = document.getElementById('nodes-group');
+        const vehiclesGroup = document.getElementById('vehicles-group');
 
-          // Sync screen state class
-          var screenEl = document.getElementById('planner-screen-el');
-          if (screenEl) {
-            screenEl.className = 'planner-screen state-' + key;
+        let nodeElements = [];
+        let haloElements = [];
+        let routePathElements = [];
+        let routeGlowPathElements = [];
+        let vehicleElements = [];
+        let particleElements = [];
+        let chaosLinesGroup = null;
+        let cachedMaxGlow = 0.22;
+
+        function updateCachedThemeVariables() {
+          const style = getComputedStyle(document.documentElement);
+          cachedMaxGlow = parseFloat(style.getPropertyValue('--route-glow-opacity').trim()) || 0.22;
+        }
+
+        // Helper: Update 3D hologram altitude and properties for nodes (using cached DOM references)
+        function updateNodeHologram(node, x, y, height, ringColor, opacity) {
+          node.el.setAttribute('transform', `translate(${x}, ${y})`);
+          node.el.style.opacity = opacity;
+
+          node.altLine.setAttribute('y2', -height);
+          node.ring.setAttribute('cy', -height);
+          node.core.setAttribute('cy', -height);
+
+          if (ringColor) {
+            node.ring.setAttribute('fill', ringColor);
           }
         }
 
-        if (menuButton && mobileMenu) {
-          menuButton.addEventListener('click', function () {
-            var nextOpen = !mobileMenu.classList.contains('open');
-            mobileMenu.classList.toggle('open', nextOpen);
-            mobileMenu.hidden = !nextOpen;
-            menuButton.setAttribute('aria-expanded', String(nextOpen));
+        // Helper: Update 3D hologram height and properties for vehicles (using cached DOM references)
+        function updateVehicleHologram(v, x, y, height, angle, opacity) {
+          v.el.style.opacity = opacity;
+          v.el.setAttribute('transform', `translate(${x}, ${y})`);
+
+          if (v.shadow) {
+            v.shadow.setAttribute('transform', `rotate(${angle})`);
+            v.shadow.style.opacity = height > 0 ? '0.45' : '0.9';
+          }
+
+          if (v.pointer) {
+            v.pointer.setAttribute('transform', `translate(0, ${-height}) rotate(${angle})`);
+          }
+        }
+
+        // Initialize Canvas DOM structures
+        function initCanvas() {
+          if (!svgCanvas) return;
+
+          // Clear groupings
+          routeGroup.innerHTML = '';
+          if (routesHoverGroup) routesHoverGroup.innerHTML = '';
+          nodesGroup.innerHTML = '';
+          vehiclesGroup.innerHTML = '';
+
+          nodeElements = [];
+          haloElements = [];
+          routePathElements = [];
+          routeGlowPathElements = [];
+          vehicleElements = [];
+          particleElements = [];
+
+          // 1. Generate background streets (decorative grid)
+          const streetsGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          streetsGroup.setAttribute('opacity', '0.06');
+          routeGroup.appendChild(streetsGroup);
+
+          for (let x = 100; x < 800; x += 100) {
+            const road = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            road.setAttribute('x1', x);
+            road.setAttribute('y1', 40);
+            road.setAttribute('x2', x + Math.sin(x) * 20);
+            road.setAttribute('y2', 560);
+            road.setAttribute('stroke', 'var(--canvas-street)');
+            road.setAttribute('stroke-width', '1');
+            road.setAttribute('stroke-dasharray', '4 4');
+            streetsGroup.appendChild(road);
+          }
+          for (let y = 100; y < 600; y += 100) {
+            const road = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            road.setAttribute('x1', 40);
+            road.setAttribute('y1', y);
+            road.setAttribute('x2', 760);
+            road.setAttribute('y2', y + Math.cos(y) * 20);
+            road.setAttribute('stroke', 'var(--canvas-street)');
+            road.setAttribute('stroke-width', '1');
+            road.setAttribute('stroke-dasharray', '4 4');
+            streetsGroup.appendChild(road);
+          }
+
+          // 2. Generate Concentric Radar Circles centered on DEPOT
+          const radarGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          streetsGroup.appendChild(radarGroup);
+
+          const radii = [120, 260, 420];
+          const labels = ['ZONE I - 5KM', 'ZONE II - 12KM', 'ZONE III - 20KM'];
+          radii.forEach((r, idx) => {
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            circle.setAttribute('cx', DEPOT.x);
+            circle.setAttribute('cy', DEPOT.y);
+            circle.setAttribute('r', r);
+            circle.setAttribute('fill', 'none');
+            circle.setAttribute('stroke', 'var(--canvas-radar)');
+            circle.setAttribute('stroke-width', '0.75');
+            circle.setAttribute('stroke-dasharray', '2 6');
+            circle.setAttribute('opacity', '0.6');
+            radarGroup.appendChild(circle);
+
+            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            text.setAttribute('x', DEPOT.x + 8);
+            text.setAttribute('y', DEPOT.y - r - 6);
+            text.setAttribute('fill', 'var(--canvas-radar-text)');
+            text.setAttribute('font-size', '9px');
+            text.setAttribute('font-family', 'JetBrains Mono');
+            text.setAttribute('letter-spacing', '0.05em');
+            text.textContent = labels[idx];
+            radarGroup.appendChild(text);
           });
 
-          mobileMenu.querySelectorAll('a').forEach(function (link) {
-            link.addEventListener('click', closeMenu);
+          // Create Depot Node (Upgraded to radar shield reticle)
+          const depotHalo = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          depotHalo.setAttribute('cx', DEPOT.x);
+          depotHalo.setAttribute('cy', DEPOT.y);
+          depotHalo.setAttribute('r', 18);
+          depotHalo.setAttribute('fill', 'none');
+          depotHalo.setAttribute('stroke', 'var(--gold)');
+          depotHalo.setAttribute('stroke-width', '0.75');
+          depotHalo.setAttribute('stroke-dasharray', '2 3');
+          depotHalo.setAttribute('class', 'node-halo');
+          nodesGroup.appendChild(depotHalo);
+
+          const depotOuter = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          depotOuter.setAttribute('cx', DEPOT.x);
+          depotOuter.setAttribute('cy', DEPOT.y);
+          depotOuter.setAttribute('r', 8);
+          depotOuter.setAttribute('fill', 'none');
+          depotOuter.setAttribute('stroke', 'var(--gold)');
+          depotOuter.setAttribute('stroke-width', '1.5');
+          nodesGroup.appendChild(depotOuter);
+
+          const depotCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          depotCircle.setAttribute('cx', DEPOT.x);
+          depotCircle.setAttribute('cy', DEPOT.y);
+          depotCircle.setAttribute('r', 3);
+          depotCircle.setAttribute('fill', 'var(--gold)');
+          nodesGroup.appendChild(depotCircle);
+
+          // Create Customer Nodes (Neutral start state, upgraded to 3D hologram group)
+          CUSTOMER_NODES.forEach((node) => {
+            const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            group.setAttribute('transform', `translate(${node.x}, ${node.y})`);
+
+            // Ground shadow
+            const shadowCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            shadowCircle.setAttribute('cx', '0');
+            shadowCircle.setAttribute('cy', '0');
+            shadowCircle.setAttribute('r', '3.5');
+            shadowCircle.setAttribute('fill', 'var(--node-shadow)');
+            group.appendChild(shadowCircle);
+
+            // Alt dashed line
+            const altLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            altLine.setAttribute('x1', '0');
+            altLine.setAttribute('y1', '0');
+            altLine.setAttribute('x2', '0');
+            altLine.setAttribute('y2', '-30');
+            altLine.setAttribute('stroke', 'var(--node-stem)');
+            altLine.setAttribute('stroke-width', '0.75');
+            altLine.setAttribute('stroke-dasharray', '1.5 1.5');
+            group.appendChild(altLine);
+
+            // Ground alert red halo (for Act II)
+            const halo = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            halo.setAttribute('cx', '0');
+            halo.setAttribute('cy', '0');
+            halo.setAttribute('r', '4');
+            halo.setAttribute('fill', 'none');
+            halo.setAttribute('stroke', '#ef4444');
+            halo.setAttribute('stroke-width', '2');
+            halo.setAttribute('class', 'node-halo');
+            halo.style.opacity = '0';
+            group.appendChild(halo);
+            haloElements.push({ id: node.id, el: halo });
+
+            // Floating node ring
+            const borderRing = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            borderRing.setAttribute('cx', '0');
+            borderRing.setAttribute('cy', '-30');
+            borderRing.setAttribute('r', '5');
+            borderRing.setAttribute('class', 'node-circle customer');
+            borderRing.setAttribute('fill', 'var(--node-neutral-fill)');
+            borderRing.setAttribute('stroke', 'var(--node-border)');
+            borderRing.setAttribute('stroke-width', '1.5');
+            group.appendChild(borderRing);
+
+            // Floating core dot
+            const core = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            core.setAttribute('cx', '0');
+            core.setAttribute('cy', '-30');
+            core.setAttribute('r', '2');
+            core.setAttribute('fill', 'var(--node-border)');
+            core.setAttribute('class', 'floating-core');
+            group.appendChild(core);
+
+            nodesGroup.appendChild(group);
+            nodeElements.push({
+              id: node.id,
+              el: group,
+              altLine: altLine,
+              ring: borderRing,
+              core: core,
+              shadowCircle: shadowCircle,
+              originalX: node.x,
+              originalY: node.y
+            });
+          });
+
+          // Create Routes (Dual layer: glow path + sharp path)
+          ROUTES.forEach((route, index) => {
+            // 1. Thick Glowing underneath path
+            const glowPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            glowPath.setAttribute('d', buildPathD(route.nodes));
+            glowPath.setAttribute('class', 'route-line solved');
+            glowPath.setAttribute('stroke', route.color);
+            glowPath.setAttribute('stroke-width', '8');
+            glowPath.setAttribute('filter', 'url(#glow)');
+            glowPath.style.opacity = '0';
+            if (routesHoverGroup) routesHoverGroup.appendChild(glowPath);
+            else routeGroup.appendChild(glowPath);
+            routeGlowPathElements.push({ index, el: glowPath });
+
+            // 2. Sharp overlay path
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            path.setAttribute('d', buildPathD(route.nodes));
+            path.setAttribute('class', 'route-line solved');
+            path.setAttribute('stroke', route.color);
+            path.setAttribute('stroke-width', '2.5');
+            path.style.opacity = '0';
+            if (routesHoverGroup) routesHoverGroup.appendChild(path);
+            else routeGroup.appendChild(path);
+            routePathElements.push({ index, el: path, color: route.color });
+
+            // Create vehicle container group (delta pointer vector model)
+            const vehicleGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            vehicleGroup.setAttribute('class', 'vehicle-container');
+            vehicleGroup.style.opacity = '0';
+
+            // Ground drop shadow (matching delta pointer rotated on ground)
+            const shadow = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+            shadow.setAttribute('points', '-8,-4 6,0 -8,4 -5,0');
+            shadow.setAttribute('fill', 'rgba(0,0,0,0.18)');
+            shadow.setAttribute('class', 'vehicle-shadow');
+            vehicleGroup.appendChild(shadow);
+
+            // Floating pointer group
+            const pointerGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            pointerGroup.setAttribute('class', 'vehicle-pointer');
+
+            // Delta pointer body
+            const pointer = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+            pointer.setAttribute('points', '-8,-4 6,0 -8,4 -5,0');
+            pointerGroup.appendChild(pointer);
+
+            // Pointer core dot
+            const pointerCore = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            pointerCore.setAttribute('cx', '-2.2');
+            pointerCore.setAttribute('cy', '0');
+            pointerCore.setAttribute('r', '1.6');
+            pointerCore.setAttribute('fill', '#ffffff');
+            pointerGroup.appendChild(pointerCore);
+
+            // Headlight glow
+            const beam = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+            beam.setAttribute('points', '5,-1.5 30,-9 30,9 5,1.5');
+            beam.setAttribute('fill', 'url(#headlight-gradient)');
+            beam.setAttribute('opacity', '0.45');
+            beam.setAttribute('pointer-events', 'none');
+            pointerGroup.appendChild(beam);
+
+            vehicleGroup.appendChild(pointerGroup);
+
+            vehiclesGroup.appendChild(vehicleGroup);
+            vehicleElements.push({
+              index,
+              el: vehicleGroup,
+              shadow: shadow,
+              pointer: pointerGroup,
+              color: route.color
+            });
+
+            // Create 3 glowing fiber data particles per route
+            for (let pIdx = 0; pIdx < 3; pIdx++) {
+              const particle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+              particle.setAttribute('r', '2.5');
+              particle.setAttribute('fill', route.color);
+              particle.setAttribute('opacity', '0.75');
+              particle.style.display = 'none';
+              if (routesHoverGroup) routesHoverGroup.appendChild(particle);
+              else vehiclesGroup.appendChild(particle);
+              particleElements.push({ routeIndex: index, el: particle, offset: pIdx * 0.33 });
+            }
+          });
+
+          // Create a group for chaotic problem state lines (with object pooling)
+          chaosLinesGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          for (let i = 0; i < 20; i++) {
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            const n1 = CUSTOMER_NODES[Math.floor(lerp(0, CUSTOMER_NODES.length - 1, (i * 0.17) % 1))];
+            const n2 = CUSTOMER_NODES[Math.floor(lerp(0, CUSTOMER_NODES.length - 1, (i * 0.37) % 1))];
+            line.setAttribute('x1', n1.x);
+            line.setAttribute('y1', n1.y);
+            line.setAttribute('x2', n2.x);
+            line.setAttribute('y2', n2.y);
+            line.setAttribute('stroke', '#ef4444');
+            line.setAttribute('stroke-width', '1');
+            line.setAttribute('opacity', '0');
+            chaosLinesGroup.appendChild(line);
+          }
+          if (routesHoverGroup) routesHoverGroup.appendChild(chaosLinesGroup);
+          else routeGroup.appendChild(chaosLinesGroup);
+        }
+
+        // Dynamic SVG Renderer based on progress
+        const cachedHud = document.getElementById('hud-panel');
+
+        function renderCanvas(act, progress) {
+          if (!svgCanvas) return;
+
+          // Interactive 3D Perspective tilt shift on scroll
+          const overallProgress = (act - 1) * 0.25 + progress * 0.25;
+          const rx = lerp(46, 54, overallProgress);
+          const rz = lerp(-24, -32, overallProgress);
+          svgCanvas.style.transform = `translate(100px, -20px) rotateX(${rx}deg) rotateZ(${rz}deg) scale(1.15)`;
+
+          // Translate route lines and particles to match floating altitude of nodes/vehicles
+          let height = 0;
+          if (act === 1) {
+            height = 0;
+          } else if (act === 2) {
+            height = progress * 30;
+          } else {
+            height = 30;
+          }
+          if (routesHoverGroup) {
+            routesHoverGroup.setAttribute('transform', `translate(0, ${-height})`);
+          }
+
+          if (act === 1) {
+            // Act I: Simple linear truck deliveries
+            if (chaosLinesGroup) {
+              Array.from(chaosLinesGroup.children).forEach((line) => line.setAttribute('opacity', '0'));
+            }
+
+            // Hide HUD panel
+            if (cachedHud) cachedHud.classList.remove('active');
+
+            // Nodes are bunched up, flat on the ground plane (altitude = 0)
+            nodeElements.forEach((node) => {
+              const targetX = lerp(DEPOT.x, 700, (node.id - 1) / CUSTOMER_NODES.length);
+              updateNodeHologram(node, targetX, DEPOT.y, 0, 'var(--node-neutral-fill)', lerp(0.1, 0.4, progress));
+            });
+
+            // Clear halos
+            haloElements.forEach((h) => (h.el.style.opacity = '0'));
+
+            // Hide optimized routes
+            routePathElements.forEach((r) => (r.el.style.opacity = '0'));
+            routeGlowPathElements.forEach((r) => (r.el.style.opacity = '0'));
+
+            // Hide particles
+            particleElements.forEach((p) => (p.el.style.display = 'none'));
+
+            // Run single vehicle flat on the ground
+            vehicleElements.forEach((v, idx) => {
+              if (idx === 0) {
+                const pos = getPointAtProgress([DEPOT, { x: 700, y: DEPOT.y }], progress);
+                updateVehicleHologram(v, pos.x, pos.y, 0, 0, '1');
+                v.el.setAttribute('fill', v.color);
+              } else {
+                v.el.style.opacity = '0';
+              }
+            });
+          } else if (act === 2) {
+            // Act II: Explosion into chaos
+            if (cachedHud) cachedHud.classList.remove('active');
+
+            // Nodes explode to original coordinates and physically rise up from ground map plane
+            nodeElements.forEach((node) => {
+              const startX = lerp(DEPOT.x, 700, (node.id - 1) / CUSTOMER_NODES.length);
+              const startY = DEPOT.y;
+
+              const currentX = lerp(startX, node.originalX, progress);
+              const currentY = lerp(startY, node.originalY, progress);
+              const height = progress * 30; // rising altitude hologram
+
+              updateNodeHologram(node, currentX, currentY, height, '#ef4444', 1.0);
+            });
+
+            // Turn on red halos at half progress
+            haloElements.forEach((h) => {
+              h.el.setAttribute('cx', '0');
+              h.el.setAttribute('cy', '0'); // stays centered on group projection
+              h.el.style.opacity = progress > 0.5 ? '0.6' : '0';
+            });
+
+            // Draw pre-created chaotic lines by modulating opacity
+            if (chaosLinesGroup) {
+              if (progress > 0.3) {
+                const chaosOpacity = lerp(0, 0.35, progress);
+                Array.from(chaosLinesGroup.children).forEach((line) => line.setAttribute('opacity', chaosOpacity));
+              } else {
+                Array.from(chaosLinesGroup.children).forEach((line) => line.setAttribute('opacity', '0'));
+              }
+            }
+
+            // Hide optimized routes
+            routePathElements.forEach((r) => (r.el.style.opacity = '0'));
+            routeGlowPathElements.forEach((r) => (r.el.style.opacity = '0'));
+
+            // Hide particles
+            particleElements.forEach((p) => (p.el.style.display = 'none'));
+
+            // Truck shakes on the ground
+            vehicleElements.forEach((v, idx) => {
+              if (idx === 0) {
+                const shakeX = DEPOT.x + Math.sin(Date.now() * 0.05) * 3;
+                const shakeY = DEPOT.y + Math.cos(Date.now() * 0.05) * 3;
+                updateVehicleHologram(v, shakeX, shakeY, 0, shakeX * 5, '1');
+                v.el.setAttribute('fill', '#ef4444');
+              } else {
+                v.el.style.opacity = '0';
+              }
+            });
+          } else if (act === 3) {
+            // Act III: Optimization (drawing routes, changing node states)
+            if (chaosLinesGroup) {
+              Array.from(chaosLinesGroup.children).forEach((line) => line.setAttribute('opacity', '0'));
+            }
+
+            if (cachedHud) cachedHud.classList.remove('active');
+
+            // Adjust nodes to cluster colors progressively, hovering at full height (30px)
+            nodeElements.forEach((node) => {
+              const targetNode = CUSTOMER_NODES.find((n) => n.id === node.id);
+              const nodeColor =
+                progress > 0.5 ? targetNode.targetColor : lerpColor('#ef4444', targetNode.targetColor, progress * 2);
+              updateNodeHologram(node, node.originalX, node.originalY, 30, nodeColor, 1.0);
+            });
+
+            // Halos fade out
+            haloElements.forEach((h) => (h.el.style.opacity = lerp(0.6, 0, progress)));
+
+            // Hide particles
+            particleElements.forEach((p) => (p.el.style.display = 'none'));
+
+            // Draw optimized routes progressively using stroke dash offsets
+            routeGlowPathElements.forEach((r) => {
+              r.el.style.opacity = progress * cachedMaxGlow;
+              const totalLength = r.el.getTotalLength() || 1500;
+              r.el.setAttribute('stroke-dasharray', totalLength);
+              r.el.setAttribute('stroke-dashoffset', totalLength * (1 - progress));
+            });
+
+            routePathElements.forEach((r) => {
+              r.el.style.opacity = progress;
+              const totalLength = r.el.getTotalLength() || 1500;
+              r.el.setAttribute('stroke-dasharray', totalLength);
+              r.el.setAttribute('stroke-dashoffset', totalLength * (1 - progress));
+            });
+
+            // Vehicles start tracing routes, hovering at constant 30px height
+            vehicleElements.forEach((v) => {
+              const route = ROUTES[v.index];
+              const pos = getPointAtProgress(
+                route.nodes.map((n) => ({ x: n.x, y: n.y })),
+                progress
+              );
+              const nextPos = getPointAtProgress(
+                route.nodes.map((n) => ({ x: n.x, y: n.y })),
+                Math.min(1.0, progress + 0.01)
+              );
+              const angle = Math.atan2(nextPos.y - pos.y, nextPos.x - pos.x) * (180 / Math.PI);
+              updateVehicleHologram(v, pos.x, pos.y, 30, angle, progress > 0.4 ? '1' : '0');
+              v.el.setAttribute('fill', v.color);
+            });
+          } else if (act === 4) {
+            // Act IV: Completed Dashboard loop
+            if (chaosLinesGroup) {
+              Array.from(chaosLinesGroup.children).forEach((line) => line.setAttribute('opacity', '0'));
+            }
+
+            // Fade HUD panel in
+            if (cachedHud) cachedHud.classList.add('active');
+
+            // Nodes locked in color groups, hovering in 3D
+            nodeElements.forEach((node) => {
+              const targetNode = CUSTOMER_NODES.find((n) => n.id === node.id);
+              updateNodeHologram(node, node.originalX, node.originalY, 30, targetNode.targetColor, 1.0);
+            });
+
+            // Halos fully hidden
+            haloElements.forEach((h) => (h.el.style.opacity = '0'));
+
+            // Paths fully active & glowing
+            routeGlowPathElements.forEach((r) => {
+              r.el.style.opacity = cachedMaxGlow;
+              r.el.removeAttribute('stroke-dashoffset');
+              r.el.removeAttribute('stroke-dasharray');
+            });
+
+            routePathElements.forEach((r) => {
+              r.el.style.opacity = '1';
+              r.el.removeAttribute('stroke-dashoffset');
+              r.el.removeAttribute('stroke-dasharray');
+            });
+
+            // Continuous loop of vehicles tracing routes, hovering at 30px altitude
+            const time = Date.now() * 0.00015;
+            vehicleElements.forEach((v) => {
+              const route = ROUTES[v.index];
+              const loopProg = (time * (1.2 + v.index * 0.25)) % 1;
+              const pos = getPointAtProgress(
+                route.nodes.map((n) => ({ x: n.x, y: n.y })),
+                loopProg
+              );
+
+              const nextPos = getPointAtProgress(
+                route.nodes.map((n) => ({ x: n.x, y: n.y })),
+                (loopProg + 0.01) % 1
+              );
+              const angle = Math.atan2(nextPos.y - pos.y, nextPos.x - pos.x) * (180 / Math.PI);
+
+              updateVehicleHologram(v, pos.x, pos.y, 30, angle, '1');
+              v.el.setAttribute('fill', v.color);
+            });
+
+            // Animate fiber optic glowing data particles flowing along routes on the ground map
+            particleElements.forEach((p) => {
+              p.el.style.display = 'block';
+              const route = ROUTES[p.routeIndex];
+              const pProg = (time * 2.2 + p.offset) % 1; // Faster speed than trucks
+              const pos = getPointAtProgress(
+                route.nodes.map((n) => ({ x: n.x, y: n.y })),
+                pProg
+              );
+              p.el.setAttribute('cx', pos.x);
+              p.el.setAttribute('cy', pos.y);
+            });
+          }
+        }
+
+        // Color blending helper for transitions
+        function lerpColor(color1, color2, factor) {
+          const clamp = Math.max(0, Math.min(1, factor));
+          const c1 = parseHex(color1);
+          const c2 = parseHex(color2);
+
+          const r = Math.round(lerp(c1.r, c2.r, clamp));
+          const g = Math.round(lerp(c1.g, c2.g, clamp));
+          const b = Math.round(lerp(c1.b, c2.b, clamp));
+
+          return `rgb(${r}, ${g}, ${b})`;
+        }
+
+        function parseHex(hex) {
+          const clean = hex.replace('#', '');
+          return {
+            r: parseInt(clean.substring(0, 2), 16),
+            g: parseInt(clean.substring(2, 4), 16),
+            b: parseInt(clean.substring(4, 6), 16),
+          };
+        }
+
+        // ===================================================================
+        // GSAP ScrollTrigger Integration
+        // ===================================================================
+
+        function setupScrollAnimations() {
+          if (typeof gsap === 'undefined' || typeof ScrollTrigger === 'undefined') {
+            console.warn('GSAP or ScrollTrigger not loaded. Using fallback animation.');
+            setupFallbackAnimation();
+            return;
+          }
+
+          gsap.registerPlugin(ScrollTrigger);
+
+          // Only run scroll timeline on desktop
+          if (window.innerWidth < 1024) {
+            setupFallbackAnimation();
+            return;
+          }
+
+          initCanvas();
+          renderCanvas(1, 0.0); // Call initial render immediately on load
+          updateWordmarkLetters(1, 0.0); // Initialize wordmark reveal state
+
+          // Timeline to scrub animation state
+          const tl = gsap.timeline({
+            scrollTrigger: {
+              trigger: '.scroll-track',
+              start: 'top top',
+              end: 'bottom bottom',
+              scrub: 1.5,
+              snap: {
+                snapTo: 1 / 3,
+                delay: 0.1,
+                duration: { min: 0.3, max: 0.8 },
+                ease: 'power2.inOut',
+              },
+              onUpdate: (self) => {
+                const progress = self.progress;
+
+                // Divide timeline into 4 Acts
+                let act = 1;
+                let actProgress = 0;
+
+                if (progress < 0.25) {
+                  act = 1;
+                  actProgress = progress / 0.25;
+                } else if (progress < 0.5) {
+                  act = 2;
+                  actProgress = (progress - 0.25) / 0.25;
+                } else if (progress < 0.75) {
+                  act = 3;
+                  actProgress = (progress - 0.5) / 0.25;
+                } else {
+                  act = 4;
+                  actProgress = (progress - 0.75) / 0.25;
+                }
+
+                // Trigger Act Card active toggle
+                toggleActiveCard(act);
+
+                // Update wordmark letters reveal
+                updateWordmarkLetters(act, actProgress);
+
+                // Render canvas updates
+                renderCanvas(act, actProgress);
+              },
+            },
           });
         }
 
-        window.addEventListener('scroll', syncNav, { passive: true });
-        syncNav();
+        // Toggle active CSS class for text cards
+        function toggleActiveCard(activeAct) {
+          for (let act = 1; act <= 4; act++) {
+            const card = document.getElementById(`card-act${act}`);
+            if (card) {
+              if (act === activeAct) {
+                card.classList.add('active');
+              } else {
+                card.classList.remove('active');
+              }
+            }
+          }
+        }
 
-        // Scroll spy navigation highlight
+        // Update sequential wordmark letter reveal on scroll
+        function updateWordmarkLetters(activeAct, actProgress) {
+          for (let act = 1; act <= 4; act++) {
+            const letters = document.querySelectorAll(`#card-act${act} .letter`);
+            if (!letters.length) continue;
+
+            if (act < activeAct) {
+              letters.forEach((el) => el.classList.add('revealed'));
+            } else if (act > activeAct) {
+              letters.forEach((el) => el.classList.remove('revealed'));
+            } else {
+              // Active act
+              if (act === 1) {
+                letters.forEach((el, idx) => {
+                  const threshold = (idx / letters.length) * 0.8;
+                  if (actProgress >= threshold) {
+                    el.classList.add('revealed');
+                  } else {
+                    el.classList.remove('revealed');
+                  }
+                });
+              } else {
+                letters.forEach((el) => el.classList.add('revealed'));
+              }
+            }
+          }
+        }
+
+        // Fallback animation: continuous loop for mobile/tablets or if GSAP fails
+        let fallbackInterval = null;
+        function setupFallbackAnimation() {
+          if (fallbackInterval) clearInterval(fallbackInterval);
+
+          initCanvas();
+          toggleActiveCard(4); // Keep Act IV card active
+          updateWordmarkLetters(4, 1.0); // Reveal all letters by default in fallback mode
+
+          // Draw initial state of Act IV immediately
+          renderCanvas(4, 1.0);
+
+          fallbackInterval = setInterval(() => {
+            renderCanvas(4, 1.0); // Keep rendering loop in Act IV (routes resolved)
+          }, 16);
+        }
+
+        // ===================================================================
+        // Localization Settings
+        // ===================================================================
+
+        function getStoredLang() {
+          const v = localStorage.getItem(STORAGE_LANG);
+          if (v === 'en' || v === 'vn') return v;
+          const navLang = (navigator.language || '').toLowerCase();
+          if (navLang.startsWith('vi')) return 'vn';
+          return 'en';
+        }
+
+        function applyLang(lang) {
+          const dict = i18n[lang] || i18n.en;
+          document.documentElement.lang = lang === 'vn' ? 'vi' : 'en';
+
+          document.querySelectorAll('[data-i18n]').forEach((node) => {
+            const key = node.getAttribute('data-i18n');
+            if (dict[key]) {
+              // Handle links, headings, paragraphs
+              node.textContent = dict[key];
+            }
+          });
+
+          const label = document.getElementById('lang-label');
+          if (label) label.textContent = lang === 'vn' ? 'VN' : 'EN';
+          localStorage.setItem(STORAGE_LANG, lang);
+        }
+
+        // ===================================================================
+        // Theme Switching Settings
+        // ===================================================================
+
+        function getStoredTheme() {
+          const v = localStorage.getItem(STORAGE_THEME);
+          if (v === 'light' || v === 'dark') return v;
+          return 'light'; // default to light
+        }
+
+        function applyTheme(theme) {
+          document.documentElement.setAttribute('data-theme', theme);
+          localStorage.setItem(STORAGE_THEME, theme);
+
+          const meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.setAttribute('content', theme === 'dark' ? '#0d0d10' : '#f8f8f6');
+
+          // Update icons visibility
+          const sunIcon = document.querySelector('.sun-icon');
+          const moonIcon = document.querySelector('.moon-icon');
+          if (sunIcon && moonIcon) {
+            if (theme === 'dark') {
+              sunIcon.style.display = 'none';
+              moonIcon.style.display = 'block';
+            } else {
+              sunIcon.style.display = 'block';
+              moonIcon.style.display = 'none';
+            }
+          }
+
+          // Update cached theme variables for animation loop
+          updateCachedThemeVariables();
+        }
+
+        // Setup control listeners
+        function setupControls() {
+          const langBtn = document.getElementById('lang-toggle');
+          const themeBtn = document.getElementById('theme-toggle');
+
+          let currentLang = getStoredLang();
+          let currentTheme = getStoredTheme();
+
+          applyLang(currentLang);
+          applyTheme(currentTheme);
+
+          langBtn?.addEventListener('click', () => {
+            currentLang = currentLang === 'en' ? 'vn' : 'en';
+            applyLang(currentLang);
+          });
+
+          themeBtn?.addEventListener('click', () => {
+            currentTheme = currentTheme === 'light' ? 'dark' : 'light';
+            applyTheme(currentTheme);
+          });
+        }
+
+        // Setup Mobile hamburger menu
+        function setupMobileMenu() {
+          const btn = document.getElementById('mobile-menu-btn');
+          const menu = document.getElementById('mobile-menu');
+          if (!btn || !menu) return;
+
+          btn.addEventListener('click', () => {
+            const isOpen = menu.classList.toggle('open');
+            menu.hidden = !isOpen;
+            btn.setAttribute('aria-expanded', String(isOpen));
+            btn.classList.toggle('active');
+          });
+
+          menu.querySelectorAll('a').forEach((a) => {
+            a.addEventListener('click', () => {
+              menu.classList.remove('open');
+              menu.hidden = true;
+              btn.setAttribute('aria-expanded', 'false');
+              btn.classList.remove('active');
+            });
+          });
+        }
+
+        // Highlight navigation links on scroll (Scrollspy)
         function setupScrollSpy() {
-          var navLinks = Array.from(document.querySelectorAll(".nav-links a[href^='#']"));
-          var sections = navLinks
-            .map(function (link) {
-              var id = link.getAttribute('href');
-              var target = document.querySelector(id);
-              return target ? { link: link, target: target } : null;
+          const navLinks = Array.from(document.querySelectorAll('.nav-links a'));
+          const sections = navLinks
+            .map((link) => {
+              const id = link.getAttribute('href') || '';
+              if (!id.startsWith('#')) return null;
+              const target = document.querySelector(id);
+              return target ? { link, target } : null;
             })
             .filter(Boolean);
 
-          if (sections.length === 0) return;
+          if (!sections.length || !('IntersectionObserver' in window)) return;
 
-          function onScroll() {
-            var scrollPos = window.scrollY + 120;
-            var activeSection = null;
+          const observer = new IntersectionObserver(
+            (entries) => {
+              entries.forEach((entry) => {
+                if (!entry.isIntersecting) return;
+                const match = sections.find((s) => s.target === entry.target);
+                if (!match) return;
+                navLinks.forEach((l) => l.classList.remove('active'));
+                match.link.classList.add('active');
+              });
+            },
+            { rootMargin: '-40% 0px -50% 0px', threshold: 0 }
+          );
 
-            for (var i = 0; i < sections.length; i++) {
-              var section = sections[i];
-              var top = section.target.offsetTop;
-              var height = section.target.offsetHeight;
-              if (scrollPos >= top && scrollPos < top + height) {
-                activeSection = section;
-              }
-            }
-
-            if (!activeSection && sections.length > 0) {
-              if (scrollPos < sections[0].target.offsetTop) {
-                navLinks.forEach(function (l) {
-                  l.classList.remove('active');
-                });
-                return;
-              }
-            }
-
-            sections.forEach(function (section) {
-              if (section === activeSection) {
-                section.link.classList.add('active');
-              } else {
-                section.link.classList.remove('active');
-              }
-            });
-          }
-
-          window.addEventListener('scroll', onScroll, { passive: true });
-          onScroll();
-        }
-        setupScrollSpy();
-
-        document.querySelectorAll("a[href^='#']").forEach(function (link) {
-          link.addEventListener('click', function (event) {
-            var hash = link.getAttribute('href');
-            if (!hash || hash === '#') return;
-            if (!scrollToSection(hash, true)) return;
-            event.preventDefault();
-            closeMenu();
-            history.pushState(null, '', hash);
-          });
-        });
-
-        if (window.location.hash) {
-          window.setTimeout(function () {
-            scrollToSection(window.location.hash, false);
-          }, 120);
+          sections.forEach(({ target }) => observer.observe(target));
         }
 
-        var plannerOrder = ['upload', 'compare', 'dispatch'];
-        var plannerIndex = 0;
-        var autoInterval = window.setInterval(function () {
-          if (document.hidden) return;
-          plannerIndex = (plannerIndex + 1) % plannerOrder.length;
-          setPlannerTab(plannerOrder[plannerIndex]);
-        }, 6000);
+        // Sticky Navbar shadow on scroll
+        function setupNavbarScroll() {
+          const nav = document.querySelector('.site-nav');
+          if (!nav) return;
+          window.addEventListener(
+            'scroll',
+            () => {
+              nav.classList.toggle('is-scrolled', window.scrollY > 20);
+            },
+            { passive: true }
+          );
+        }
 
-        plannerTabs.forEach(function (tab) {
-          tab.addEventListener('click', function () {
-            window.clearInterval(autoInterval);
-            var key = tab.getAttribute('data-planner-tab');
-            plannerIndex = plannerOrder.indexOf(key);
-            setPlannerTab(key);
-          });
+        // Initial Boot
+        document.addEventListener('DOMContentLoaded', () => {
+          setupControls();
+          setupMobileMenu();
+          setupScrollSpy();
+          setupNavbarScroll();
+          setupScrollAnimations();
         });
 
-        document.querySelectorAll("a[href='app.html']").forEach(function (link) {
-          link.addEventListener('click', function () {
-            if (window.vrptwTrack) window.vrptwTrack('landing_open_planner');
-          });
+        // Handle resizing (re-initialize animations on desktop <-> mobile shifts)
+        let resizeTimeout = null;
+        window.addEventListener('resize', () => {
+          if (resizeTimeout) clearTimeout(resizeTimeout);
+          resizeTimeout = setTimeout(() => {
+            setupScrollAnimations();
+          }, 250);
         });
       })();
     </script>

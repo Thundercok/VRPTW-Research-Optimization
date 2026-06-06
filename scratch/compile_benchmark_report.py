@@ -1,52 +1,95 @@
 import pandas as pd
+import numpy as np
 
-df = pd.read_csv("docs/logs/benchmark_clean.csv")
+shards = {
+    "solomon_clustered": "results/ultimate-publication-suite/solomon_clustered/benchmark_clean.csv",
+    "solomon_short_horizon": "results/ultimate-publication-suite/solomon_short_horizon/benchmark_clean.csv",
+    "solomon_wide_horizon": "results/ultimate-publication-suite/solomon_wide_horizon/benchmark_clean.csv",
+}
 
-# We want to display the results in a beautiful table format.
-# Let's filter for each algorithm and display it grouped by instance or family.
-# Wait, let's create a table with:
-# Instance | ALNS-Base NV (TD) | Hybrid-Fixed NV (TD) | Hybrid-Rule NV (TD) | Hybrid-DDQN NV (TD) | OR-Tools NV (TD)
+dfs = []
+for shard_name, path in shards.items():
+    try:
+        shard_df = pd.read_csv(path)
+        shard_df["Shard"] = shard_name
+        dfs.append(shard_df)
+    except Exception as e:
+        print(f"Error loading {shard_name}: {e}")
 
-pivot_df = df.pivot(index=["Dataset", "Instance"], columns="Algorithm", values=["NV_mean", "TD_mean", "Gap%"])
+if not dfs:
+    print("No data found!")
+    exit(1)
 
-output_file = "/Users/thundercock2/.gemini/antigravity/brain/a2f667cd-3d6f-4d5b-87ad-a5f864490fc1/full_benchmark_results.md"
+df = pd.concat(dfs, ignore_index=True)
+df["Algorithm"] = df["Algorithm"].str.strip()
 
-with open(output_file, "w") as f:
-    f.write("# Full 56-Instance Solomon Benchmark Results\n\n")
-    f.write("Below is the detailed instance-by-instance breakdown of the full 56-instance benchmark results loaded from `docs/logs/benchmark_clean.csv`.\n\n")
-    
-    # We can create a markdown table
-    f.write("| Instance | Dataset | ALNS-Base NV (TD) | Hybrid-Fixed NV (TD) | Hybrid-Rule NV (TD) | Hybrid-DDQN NV (TD) | OR-Tools NV (TD) |\n")
-    f.write("| :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n")
-    
-    for idx, row in pivot_df.iterrows():
-        dataset, instance = idx
-        
-        # ALNS-Base
-        alns_nv = row[("NV_mean", "ALNS-Base")]
-        alns_td = row[("TD_mean", "ALNS-Base")]
-        alns_str = f"{alns_nv:.1f} ({alns_td:.1f})" if not pd.isna(alns_nv) else "N/A"
-        
-        # Hybrid-Fixed
-        fixed_nv = row[("NV_mean", "Hybrid-Fixed")]
-        fixed_td = row[("TD_mean", "Hybrid-Fixed")]
-        fixed_str = f"{fixed_nv:.1f} ({fixed_td:.1f})" if not pd.isna(fixed_nv) else "N/A"
-        
-        # Hybrid-Rule
-        rule_nv = row[("NV_mean", "Hybrid-Rule")]
-        rule_td = row[("TD_mean", "Hybrid-Rule")]
-        rule_str = f"{rule_nv:.1f} ({rule_td:.1f})" if not pd.isna(rule_nv) else "N/A"
-        
-        # Hybrid-DDQN
-        ddqn_nv = row[("NV_mean", "Hybrid-DDQN")]
-        ddqn_td = row[("TD_mean", "Hybrid-DDQN")]
-        ddqn_str = f"{ddqn_nv:.1f} ({ddqn_td:.1f})" if not pd.isna(ddqn_nv) else "N/A"
-        
-        # OR-Tools
-        ort_nv = row[("NV_mean", "OR-Tools")]
-        ort_td = row[("TD_mean", "OR-Tools")]
-        ort_str = f"{ort_nv:.1f} ({ort_td:.1f})" if not pd.isna(ort_nv) else "N/A"
-        
-        f.write(f"| **{instance}** | {dataset} | {alns_str} | {fixed_str} | {rule_str} | {ddqn_str} | {ort_str} |\n")
+# We want to filter to the completed algorithms
+algos = ["ALNS-Base", "Hybrid-Fixed", "Hybrid-Rule", "Hybrid-DDQN"]
+df = df[df["Algorithm"].isin(algos)]
 
-print("Generated full benchmark results report successfully!")
+# Calculate averages per Shard and Algorithm
+pivot_nv = df.pivot_table(index="Shard", columns="Algorithm", values="NV_mean", aggfunc="mean")
+pivot_nv_diff = df.pivot_table(index="Shard", columns="Algorithm", values="NV_diff", aggfunc="mean")
+pivot_gap = df.pivot_table(index="Shard", columns="Algorithm", values="Gap%", aggfunc="mean")
+pivot_time = df.pivot_table(index="Shard", columns="Algorithm", values="Time_s", aggfunc="mean")
+
+print("\n" + "="*80)
+print("AVERAGE VEHICLE COUNT DIFF vs BKS (NV_diff)")
+print("="*80)
+print(pivot_nv_diff.round(3).to_string())
+
+print("\n" + "="*80)
+print("AVERAGE DISTANCE GAP % vs BKS (Gap%)")
+print("="*80)
+print(pivot_gap.round(3).to_string())
+
+print("\n" + "="*80)
+print("AVERAGE SOLVE TIME IN SECONDS (Time_s)")
+print("="*80)
+print(pivot_time.round(1).to_string())
+
+# Overall averages across all instances
+print("\n" + "="*80)
+print("OVERALL SUMMARY STATS (Across 56 Solomon Instances)")
+print("="*80)
+summary = []
+for algo in algos:
+    algo_df = df[df["Algorithm"] == algo]
+    summary.append({
+        "Algorithm": algo,
+        "NV_mean": algo_df["NV_mean"].mean(),
+        "NV_diff_mean": algo_df["NV_diff"].mean(),
+        "Gap%_mean": algo_df["Gap%"].mean(),
+        "Time_s_mean": algo_df["Time_s"].mean()
+    })
+summary_df = pd.DataFrame(summary).set_index("Algorithm")
+print(summary_df.round(3).to_string())
+
+# Wilcoxon Signed-Rank Tests
+print("\n" + "="*80)
+print("WILCOXON SIGNED-RANK STATISTICAL TESTS (N=56)")
+print("="*80)
+
+from scipy.stats import wilcoxon
+
+# Pivot the data for tests
+nv_df = df.pivot(index="Instance", columns="Algorithm", values="NV_mean")
+td_df = df.pivot(index="Instance", columns="Algorithm", values="TD_mean")
+
+def test_pair(df_pivot, name_a, name_b, label):
+    diff = df_pivot[name_a] - df_pivot[name_b]
+    if np.all(diff == 0):
+        print(f"  {label} {name_a} vs {name_b}: Identical solutions (p-value N/A)")
+    else:
+        stat, p = wilcoxon(df_pivot[name_a], df_pivot[name_b])
+        print(f"  {label} {name_a} vs {name_b}: p-value = {p:.4e} (stat={stat:.1f})")
+
+test_pair(nv_df, "Hybrid-DDQN", "ALNS-Base", "NV")
+test_pair(td_df, "Hybrid-DDQN", "ALNS-Base", "TD")
+
+test_pair(nv_df, "Hybrid-DDQN", "Hybrid-Rule", "NV")
+test_pair(td_df, "Hybrid-DDQN", "Hybrid-Rule", "TD")
+
+test_pair(nv_df, "Hybrid-DDQN", "Hybrid-Fixed", "NV")
+test_pair(td_df, "Hybrid-DDQN", "Hybrid-Fixed", "TD")
+

@@ -165,11 +165,12 @@ def _route_duration_no_return(route: list[int], inst: Inst) -> float:
     return float(t)
 
 
-def _check_route(route: list[int], inst: Inst) -> bool:
+def _check_route(route: list[int] | np.ndarray, inst: Inst) -> bool:
     """Check capacity + time-window feasibility (delegates to numba ``_route_ok``)."""
+    arr = route if isinstance(route, np.ndarray) else np.array(route, np.int64)
     return bool(
         _route_ok(
-            np.array(route, np.int64),
+            arr,
             inst.demands,
             inst.capacity,
             inst.ready_times,

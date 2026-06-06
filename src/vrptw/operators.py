@@ -4,6 +4,7 @@ import math
 import random
 
 import numpy as np
+from numba import njit
 
 from .config import MODES, Config
 from .core import Inst, Plan, _invalidate, _route_duration_no_return
@@ -483,6 +484,28 @@ def _route_arrivals_wait(route: list[int], inst: Inst) -> tuple[list[float], flo
     return arrivals, float(total_wait)
 
 
+@njit(cache=True)
+def _route_arrivals_wait_numba(
+    route: np.ndarray,
+    dist: np.ndarray,
+    ready: np.ndarray,
+    service: np.ndarray,
+    arrivals: np.ndarray,
+) -> float:
+    total_wait = 0.0
+    t, prev = 0.0, 0
+    for idx in range(len(route)):
+        node = route[idx]
+        raw = t + dist[prev, node]
+        wait = max(0.0, ready[node] - raw)
+        t = raw + wait
+        arrivals[idx] = t
+        total_wait += wait
+        t += service[node]
+        prev = node
+    return total_wait
+
+
 def _route_forward_time_slacks(route: list[int], inst: Inst) -> list[float]:
     if not route:
         return []
@@ -499,47 +522,92 @@ def _route_forward_time_slacks(route: list[int], inst: Inst) -> list[float]:
     return [max(0.0, latest[idx] - arrivals[idx]) for idx in range(len(route))]
 
 
-def _fts_best_insert_position(node: int, route: list[int], inst: Inst) -> tuple[float, int | None]:
-    best_cost, best_pos = float("inf"), None
-    horizon = max(inst.horizon, 1.0)
-    max_dist = max(inst.max_dist, 1.0)
-    wait_weight = 0.10 + 0.35 * inst.tw_tight_frac
-    long_route_pressure = min((len(route) + 1) / 30.0, 1.0)
-    fts_weight = 0.15 + 0.45 * inst.tw_tight_frac + 0.25 * long_route_pressure
+@njit(cache=True)
+def _fts_best_insert_position_numba(
+    node: int,
+    route: np.ndarray,
+    dist: np.ndarray,
+    demands: np.ndarray,
+    capacity: float,
+    ready: np.ndarray,
+    due: np.ndarray,
+    service: np.ndarray,
+    horizon: float,
+    max_dist: float,
+    tw_tight_frac: float,
+) -> tuple[float, int]:
+    best_cost = 1e18
+    best_pos = -1
+    
+    n_nodes = len(route)
+    current_load = 0.0
+    for idx in range(n_nodes):
+        current_load += demands[route[idx]]
+    if current_load + demands[node] > capacity:
+        return 1e18, -1
 
-    base_arrivals, base_wait = _route_arrivals_wait(route, inst)
+    wait_weight = 0.10 + 0.35 * tw_tight_frac
+    long_route_pressure = min((n_nodes + 1) / 30.0, 1.0)
+    fts_weight = 0.15 + 0.45 * tw_tight_frac + 0.25 * long_route_pressure
 
-    for pos in range(len(route) + 1):
+    base_arrivals = np.zeros(n_nodes, dtype=np.float64)
+    _route_arrivals_wait_numba(route, dist, ready, service, base_arrivals)
+
+    for pos in range(n_nodes + 1):
         prev = route[pos - 1] if pos > 0 else 0
-        nxt = route[pos] if pos < len(route) else 0
+        nxt = route[pos] if pos < n_nodes else 0
 
         t_prev = base_arrivals[pos - 1] if pos > 0 else 0.0
-        t_arrive = t_prev + inst.dist[prev, node]
-        if t_arrive > inst.due_times[node]:
+        t_arrive = t_prev + dist[prev, node]
+        if t_arrive > due[node]:
             continue
-        t_depart = max(t_arrive, inst.ready_times[node]) + inst.service_times[node]
+        t_depart = max(t_arrive, ready[node]) + service[node]
         if nxt != 0:
-            t_nxt_new = t_depart + inst.dist[node, nxt]
-            t_nxt_old = base_arrivals[pos] if pos < len(base_arrivals) else None
-            if t_nxt_old is not None and t_nxt_new > inst.due_times[nxt]:
+            t_nxt_new = t_depart + dist[node, nxt]
+            if t_nxt_new > due[nxt]:
                 continue
 
-        dist_added = inst.dist[prev, node] + inst.dist[node, nxt] - inst.dist[prev, nxt]
-
-        wait_node = max(0.0, inst.ready_times[node] - (t_prev + inst.dist[prev, node]))
+        dist_added = dist[prev, node] + dist[node, nxt] - dist[prev, nxt]
+        wait_node = max(0.0, ready[node] - (t_prev + dist[prev, node]))
         wait_added = wait_node
 
-        if pos < len(base_arrivals):
-            downstream_fts = min(max(0.0, inst.due_times[route[i]] - base_arrivals[i]) for i in range(pos, len(route)))
+        if pos < n_nodes:
+            min_slack = horizon
+            for i in range(pos, n_nodes):
+                s = max(0.0, due[route[i]] - base_arrivals[i])
+                if s < min_slack:
+                    min_slack = s
+            downstream_fts = min_slack
         else:
             downstream_fts = horizon
         fts_norm = min(downstream_fts / horizon, 1.0)
 
-        composite = float(dist_added + wait_weight * wait_added - fts_weight * fts_norm * max_dist)
+        composite = dist_added + wait_weight * wait_added - fts_weight * fts_norm * max_dist
         if composite < best_cost:
-            best_cost, best_pos = composite, pos
+            best_cost = composite
+            best_pos = pos
 
     return best_cost, best_pos
+
+
+def _fts_best_insert_position(node: int, route: list[int], inst: Inst) -> tuple[float, int | None]:
+    route_arr = np.array(route, dtype=np.int64)
+    best_cost, best_pos = _fts_best_insert_position_numba(
+        node,
+        route_arr,
+        inst.dist,
+        inst.demands,
+        inst.capacity,
+        inst.ready_times,
+        inst.due_times,
+        inst.service_times,
+        max(inst.horizon, 1.0),
+        max(inst.max_dist, 1.0),
+        inst.tw_tight_frac,
+    )
+    if best_pos == -1:
+        return float("inf"), None
+    return float(best_cost), int(best_pos)
 
 
 def op_fts_greedy(plan: Plan, removed: list[int]) -> Plan:

@@ -1,19 +1,80 @@
 from __future__ import annotations
 
 import numpy as np
+from numba import njit
 
-from .core import Inst, Plan, _check_route, _route_cost
+from .core import Inst, Plan, _route_cost
+
+
+@njit(cache=True)
+def _best_insert_position_numba(
+    node: int,
+    route: np.ndarray,
+    dist: np.ndarray,
+    demands: np.ndarray,
+    capacity: float,
+    ready: np.ndarray,
+    due: np.ndarray,
+    service: np.ndarray,
+) -> tuple[float, int]:
+    best_cost = 1e18
+    best_pos = -1
+    
+    n_nodes = len(route)
+    current_load = 0.0
+    for idx in range(n_nodes):
+        current_load += demands[route[idx]]
+    if current_load + demands[node] > capacity:
+        return 1e18, -1
+
+    for pos in range(n_nodes + 1):
+        prev = route[pos - 1] if pos > 0 else 0
+        nxt = route[pos] if pos < n_nodes else 0
+        delta = dist[prev, node] + dist[node, nxt] - dist[prev, nxt]
+        if delta >= best_cost:
+            continue
+            
+        t = 0.0
+        prev_node = 0
+        feasible = True
+        
+        for idx in range(n_nodes + 1):
+            if idx == pos:
+                curr = node
+            else:
+                curr = route[idx if idx < pos else idx - 1]
+            
+            t += dist[prev_node, curr]
+            if t < ready[curr]:
+                t = ready[curr]
+            if t > due[curr]:
+                feasible = False
+                break
+            t += service[curr]
+            prev_node = curr
+            
+        if feasible and t + dist[prev_node, 0] <= due[0]:
+            best_cost = delta
+            best_pos = pos
+            
+    return best_cost, best_pos
 
 
 def _best_insert_position(node: int, route: list[int], inst: Inst) -> tuple[float, int | None]:
-    best_cost, best_pos = float("inf"), None
-    for pos in range(len(route) + 1):
-        prev = route[pos - 1] if pos > 0 else 0
-        nxt = route[pos] if pos < len(route) else 0
-        delta = inst.dist[prev, node] + inst.dist[node, nxt] - inst.dist[prev, nxt]
-        if delta < best_cost and _check_route(route[:pos] + [node] + route[pos:], inst):
-            best_cost, best_pos = delta, pos
-    return best_cost, best_pos
+    route_arr = np.array(route, dtype=np.int64)
+    best_cost, best_pos = _best_insert_position_numba(
+        node,
+        route_arr,
+        inst.dist,
+        inst.demands,
+        inst.capacity,
+        inst.ready_times,
+        inst.due_times,
+        inst.service_times,
+    )
+    if best_pos == -1:
+        return float("inf"), None
+    return float(best_cost), int(best_pos)
 
 
 def _insert_customer(plan: Plan, node: int, inst: Inst) -> None:
