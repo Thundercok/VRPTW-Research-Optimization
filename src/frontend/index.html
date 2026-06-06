@@ -1678,18 +1678,11 @@
           const isDesktop = window.innerWidth > 1024;
 
           if (isDesktop) {
-            // Desktop: premium scroll-scrub timeline with perfect snapping
             scrollTriggerInstance = ScrollTrigger.create({
               trigger: '.scroll-track',
               start: 'top top',
               end: 'bottom bottom',
               scrub: 0.5,
-              snap: {
-                snapTo: [0.0, 0.3333, 0.6666, 1.0],
-                duration: { min: 0.2, max: 0.6 },
-                delay: 0.05,
-                ease: 'power1.inOut',
-              },
               onUpdate: (self) => {
                 const val = self.progress;
                 let act = 1;
