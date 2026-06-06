@@ -167,6 +167,10 @@
   window.vrptwTrack = track;
 
   function bootstrap() {
+    if (window.location.protocol === 'file:') {
+      console.log('Running locally via file:// protocol. Observability bootstrap skipped.');
+      return;
+    }
     fetch(CONFIG_ENDPOINT, { credentials: 'same-origin' })
       .then(function (resp) {
         if (!resp.ok) throw new Error('config ' + resp.status);

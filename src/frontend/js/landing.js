@@ -100,43 +100,43 @@
   const DEPOT = { x: 150, y: 300 };
 
   const CUSTOMER_NODES = [
-    // Cluster 1 (Top Right)
-    { id: 1, x: 550, y: 150, targetColor: '#10b981', cluster: 1 }, // Emerald Route
-    { id: 2, x: 580, y: 120, targetColor: '#10b981', cluster: 1 },
-    { id: 3, x: 520, y: 180, targetColor: '#10b981', cluster: 1 },
-    { id: 4, x: 620, y: 140, targetColor: '#10b981', cluster: 1 },
-    { id: 5, x: 600, y: 190, targetColor: '#10b981', cluster: 1 },
-    { id: 6, x: 490, y: 160, targetColor: '#10b981', cluster: 1 },
-    { id: 7, x: 560, y: 210, targetColor: '#10b981', cluster: 1 },
+    // Cluster 1 (Top Right) - Ordered for a beautiful non-overlapping loop path
+    { id: 1, x: 450, y: 150, targetColor: '#10b981', cluster: 1 }, // Emerald Route
+    { id: 2, x: 500, y: 200, targetColor: '#10b981', cluster: 1 },
+    { id: 3, x: 550, y: 250, targetColor: '#10b981', cluster: 1 },
+    { id: 4, x: 600, y: 200, targetColor: '#10b981', cluster: 1 },
+    { id: 5, x: 650, y: 150, targetColor: '#10b981', cluster: 1 },
+    { id: 6, x: 600, y: 100, targetColor: '#10b981', cluster: 1 },
+    { id: 7, x: 550, y: 150, targetColor: '#10b981', cluster: 1 },
 
-    // Cluster 2 (Bottom Right)
-    { id: 8, x: 580, y: 450, targetColor: '#3b82f6', cluster: 2 }, // Blue Route
-    { id: 9, x: 620, y: 420, targetColor: '#3b82f6', cluster: 2 },
-    { id: 10, x: 540, y: 480, targetColor: '#3b82f6', cluster: 2 },
-    { id: 11, x: 650, y: 470, targetColor: '#3b82f6', cluster: 2 },
-    { id: 12, x: 510, y: 430, targetColor: '#3b82f6', cluster: 2 },
-    { id: 13, x: 600, y: 380, targetColor: '#3b82f6', cluster: 2 },
-    { id: 14, x: 640, y: 510, targetColor: '#3b82f6', cluster: 2 },
+    // Cluster 2 (Bottom Right) - Ordered for a beautiful non-overlapping loop path
+    { id: 8, x: 600, y: 350, targetColor: '#3b82f6', cluster: 2 }, // Blue Route
+    { id: 9, x: 650, y: 400, targetColor: '#3b82f6', cluster: 2 },
+    { id: 10, x: 700, y: 450, targetColor: '#3b82f6', cluster: 2 },
+    { id: 11, x: 650, y: 500, targetColor: '#3b82f6', cluster: 2 },
+    { id: 12, x: 550, y: 500, targetColor: '#3b82f6', cluster: 2 },
+    { id: 13, x: 600, y: 450, targetColor: '#3b82f6', cluster: 2 },
+    { id: 14, x: 500, y: 450, targetColor: '#3b82f6', cluster: 2 },
 
-    // Cluster 3 (Middle Right)
-    { id: 15, x: 450, y: 320, targetColor: '#6366f1', cluster: 3 }, // Indigo Route
-    { id: 16, x: 480, y: 290, targetColor: '#6366f1', cluster: 3 },
-    { id: 17, x: 420, y: 350, targetColor: '#6366f1', cluster: 3 },
-    { id: 18, x: 490, y: 340, targetColor: '#6366f1', cluster: 3 },
-    { id: 19, x: 390, y: 300, targetColor: '#6366f1', cluster: 3 },
-    { id: 20, x: 430, y: 270, targetColor: '#6366f1', cluster: 3 },
+    // Cluster 3 (Middle Right) - Ordered for a beautiful non-overlapping loop path
+    { id: 15, x: 350, y: 300, targetColor: '#6366f1', cluster: 3 }, // Indigo Route
+    { id: 16, x: 450, y: 250, targetColor: '#6366f1', cluster: 3 },
+    { id: 17, x: 500, y: 300, targetColor: '#6366f1', cluster: 3 },
+    { id: 18, x: 500, y: 350, targetColor: '#6366f1', cluster: 3 },
+    { id: 19, x: 400, y: 350, targetColor: '#6366f1', cluster: 3 },
+    { id: 20, x: 450, y: 300, targetColor: '#6366f1', cluster: 3 },
 
-    // Scattered Random Group
-    { id: 21, x: 300, y: 180, targetColor: '#8b5cf6', cluster: 4 }, // Purple Route
-    { id: 22, x: 350, y: 240, targetColor: '#8b5cf6', cluster: 4 },
-    { id: 23, x: 280, y: 400, targetColor: '#8b5cf6', cluster: 4 },
-    { id: 24, x: 340, y: 450, targetColor: '#8b5cf6', cluster: 4 },
-    { id: 25, x: 220, y: 220, targetColor: '#8b5cf6', cluster: 4 },
-    { id: 26, x: 250, y: 480, targetColor: '#8b5cf6', cluster: 4 },
-    { id: 27, x: 410, y: 530, targetColor: '#8b5cf6', cluster: 4 },
-    { id: 28, x: 480, y: 490, targetColor: '#8b5cf6', cluster: 4 },
-    { id: 29, x: 320, y: 110, targetColor: '#8b5cf6', cluster: 4 },
-    { id: 30, x: 240, y: 140, targetColor: '#8b5cf6', cluster: 4 },
+    // Scattered Random Group (Cluster 4) - Ordered for a beautiful non-overlapping loop path
+    { id: 21, x: 200, y: 200, targetColor: '#8b5cf6', cluster: 4 }, // Purple Route
+    { id: 22, x: 200, y: 100, targetColor: '#8b5cf6', cluster: 4 },
+    { id: 23, x: 300, y: 100, targetColor: '#8b5cf6', cluster: 4 },
+    { id: 24, x: 300, y: 150, targetColor: '#8b5cf6', cluster: 4 },
+    { id: 25, x: 350, y: 200, targetColor: '#8b5cf6', cluster: 4 },
+    { id: 26, x: 300, y: 400, targetColor: '#8b5cf6', cluster: 4 },
+    { id: 27, x: 250, y: 500, targetColor: '#8b5cf6', cluster: 4 },
+    { id: 28, x: 400, y: 500, targetColor: '#8b5cf6', cluster: 4 },
+    { id: 29, x: 450, y: 450, targetColor: '#8b5cf6', cluster: 4 },
+    { id: 30, x: 350, y: 450, targetColor: '#8b5cf6', cluster: 4 },
   ];
 
   // Map route configurations to coordinates

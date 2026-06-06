@@ -182,16 +182,24 @@ def _milp_recombine(
     if not MILP_OK or not route_records:
         return None
     n_routes = len(route_records)
-    cover = np.zeros((inst.n, n_routes), dtype=float)
+    from scipy.sparse import csc_matrix
+    rows = []
+    cols = []
+    data = []
     for ridx, rec in enumerate(route_records):
         for node in rec.nodes:
-            cover[node - 1, ridx] = 1.0
-    if np.any(cover.sum(axis=1) == 0):
+            rows.append(node - 1)
+            cols.append(ridx)
+            data.append(1.0)
+    cover = csc_matrix((data, (rows, cols)), shape=(inst.n, n_routes), dtype=float)
+    row_sums = np.asarray(cover.sum(axis=1)).flatten()
+    if np.any(row_sums == 0):
         return None
     constraints = [LinearConstraint(cover, lb=np.ones(inst.n), ub=np.ones(inst.n))]
     if nv_ceiling is not None:
+        cover_nv = csc_matrix(np.ones((1, n_routes), dtype=float))
         constraints.append(
-            LinearConstraint(np.ones((1, n_routes)), lb=np.array([0.0]), ub=np.array([float(nv_ceiling)]))
+            LinearConstraint(cover_nv, lb=np.array([0.0]), ub=np.array([float(nv_ceiling)]))
         )
     penalty = vehicle_penalty if vehicle_penalty is not None else _sp_vehicle_penalty(inst, cfg)
     costs = np.array([penalty + rec.cost for rec in route_records])
