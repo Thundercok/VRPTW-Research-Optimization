@@ -1683,6 +1683,12 @@
               start: 'top top',
               end: 'bottom bottom',
               scrub: 0.5,
+              snap: {
+                snapTo: [0.0, 0.3333, 0.6666, 1.0],
+                duration: { min: 0.2, max: 0.5 },
+                delay: 0.25,
+                ease: 'power2.inOut',
+              },
               onUpdate: (self) => {
                 const val = self.progress;
                 let act = 1;
