@@ -177,8 +177,8 @@ class Config:
     output_dir: str = field(default_factory=default_output_dir)
 
     # ── iterations (reduced from 3500; early-stop exits stagnation faster) ─
-    alns_iterations: int = 1200
-    hybrid_iterations: int = 1200
+    alns_iterations: int = 5000
+    hybrid_iterations: int = 5000
     early_stop_patience: int = 250
     polish_iterations: int = 80
     polish_patience: int = 40
