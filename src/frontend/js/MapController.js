@@ -871,6 +871,80 @@ export class MapController {
     }
   }
 
+  paintResult() {
+    const result = this.app.state.lastResult;
+    if (!result) return;
+
+    this.clearRoutes();
+    const routeCapacity = Number(this.app.state.lastRunFleet?.capacity ?? this.app.state.capacity);
+
+    const colors = {
+      ddqn: '#0b8a65',
+      alns: '#2563eb',
+      ortools: '#e11d48',
+      hybrid_fixed: '#d97706',
+      hybrid_ddqn: '#7c3aed',
+      hybrid_ddqn_transfer_rc1: '#0284c7',
+      hybrid_ddqn_transfer_dr: '#4f46e5',
+      hybrid: '#0b8a65',
+    };
+
+    for (const algoName in result) {
+      const color = colors[algoName] || '#6b7280';
+      this.renderAlgoRoutes(result[algoName], algoName, color, routeCapacity);
+    }
+
+    if (result.ddqn && result.alns) {
+      this.renderAlnsOnlySegments(result.ddqn, result.alns);
+    }
+
+    this.initSimulation(result);
+
+    // Dynamic map view radios in the DOM
+    const toggleContainer = document.querySelector('.map-toggles');
+    if (toggleContainer) {
+      const labels = {
+        ddqn: 'Hybrid DDQN (Transfer)',
+        alns: 'ALNS Base',
+        ortools: 'OR-Tools',
+        hybrid_fixed: 'Hybrid Fixed',
+        hybrid_ddqn: 'Hybrid DDQN (Random)',
+        hybrid_ddqn_transfer_rc1: 'Hybrid DDQN (RC1)',
+        hybrid_ddqn_transfer_dr: 'Hybrid DDQN (DR)',
+      };
+
+      let html = '';
+      const currentSelected = this.currentView || 'ddqn';
+
+      Object.keys(result).forEach((algoName) => {
+        const isChecked = algoName === currentSelected ? 'checked' : '';
+        const label = labels[algoName] || algoName;
+        html += `<label style="margin-right: 12px; display: inline-flex; align-items: center; gap: 4px; font-weight: 500; cursor: pointer; color: var(--text-main); font-size: 11px;">
+          <input type="radio" name="map_view" value="${algoName}" ${isChecked} /> ${label}
+        </label>`;
+      });
+      toggleContainer.innerHTML = html;
+
+      const radios = toggleContainer.querySelectorAll('input[name="map_view"]');
+      radios.forEach((radio) => {
+        radio.addEventListener('change', (e) => {
+          this.switchView(e.target.value);
+        });
+      });
+    }
+
+    const initialView = result.ddqn ? 'ddqn' : Object.keys(result)[0];
+    this.switchView(initialView);
+
+    this.fetchRoadGeometries(result)
+      .then(() => {
+        this.app.setStatus('Road geometry loaded — routes now follow actual roads.', 'ok');
+      })
+      .catch((err) => {
+        console.warn('OSRM road geometry fetch failed, keeping straight-line routes:', err);
+      });
+  }
+
   focusOnVehicle(vehicleId) {
     const marker =
       this.currentView === 'ddqn' ? this.ddqnVehicles.get(Number(vehicleId)) : this.alnsVehicles.get(Number(vehicleId));

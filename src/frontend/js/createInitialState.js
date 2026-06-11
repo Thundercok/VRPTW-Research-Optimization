@@ -14,6 +14,8 @@ export function createInitialState() {
     vehicles: 4,
     capacity: 120,
     customers: [],
+    solomonDatasets: [],
+    selectedDataset: 'demo',
     suggest: [],
     selectedSuggest: null,
     analysisVersion: '',
@@ -23,7 +25,7 @@ export function createInitialState() {
     analysisActivity: null,
     adminFeedback: [],
     lastResult: null,
-    activeTab: 'overview',
+    activeTab: 'dispatch',
     unlocked: Boolean(localStorage.getItem('vrptw_token')),
   };
 }

@@ -70,22 +70,18 @@ premature convergence on tightly constrained Vehicle Routing Problem with
 Time Windows (VRPTW) instances~\cite{Dantzig1959}.
 
 We propose \textbf{Hybrid DDQN-ALNS}: a hierarchical dual-agent framework
-coupling a macro \emph{Plateau Controller} (12-D state, 6 modes) with a micro
-\emph{Operator Controller} (15-D state, $11{\times}5{=}55$ destroy--repair
-actions) as a Hierarchical Markov Decision Process.  Simulated Annealing
-acceptance is replaced by a \emph{Learned Acceptance Criterion} (LAC), while a
-\emph{Welford Reward Normalizer}~\cite{welford1962} clips gradient magnitude
-across a three-stage Domain Randomization Curriculum~\cite{tobin2017domain}.
+coupling a macro \emph{Plateau Controller} with a micro
+\emph{Operator Controller} as a Hierarchical Markov Decision Process.  Simulated
+Annealing acceptance is replaced by a \emph{Learned Acceptance Criterion} (LAC),
+while a \emph{Welford Reward Normalizer}~\cite{welford1962} enables stable
+training across a three-stage Domain Randomization Curriculum~\cite{tobin2017domain}.
 
-On 55 Solomon 100-customer instances and 6 Gehring--Homberger 200-customer
-instances, Hybrid DDQN-ALNS reduces mean vehicle inflation to $+0.182$ above
-BKS---a $\mathbf{62\%}$ gain over ALNS-Base ($+0.482$,
-$p{=}1.314{\times}10^{-4}$) and a $\mathbf{90\%}$ gain over OR-Tools
-($+1.873$, $p{=}5.932{\times}10^{-8}$)~\cite{ortools}.  After strict
-vehicle-count filtering, fair-subset travel distance drops to $+1.342\%$, with
-wide-horizon families improving from $+8.775\%$ (ALNS-Base) to
-$\mathbf{+3.223\%}$---a $\mathbf{63\%}$ reduction driven by state-conditioned
-sequence polishing.
+On 55 Solomon 100-customer and 6 Gehring--Homberger 200-customer instances,
+Hybrid DDQN-ALNS reduces mean vehicle inflation to $+0.182$ above BKS---a
+$\mathbf{62\%}$ improvement over ALNS-Base and $\mathbf{90\%}$ over
+OR-Tools~\cite{ortools}.  NV-filtered travel distance improves by
+$\mathbf{63\%}$ on wide-horizon families, driven by state-conditioned sequence
+polishing.  All results use zero-shot transfer from synthetic training data.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -256,266 +252,279 @@ infeasible~\cite{Solomon1987}.}
 %  III.  PROPOSED METHODOLOGY
 % =============================================================================
 \section{Proposed Methodology: Hybrid DDQN-ALNS}
+\label{sec:methodology}
 
-Hybrid DDQN-ALNS keeps the feasibility-preserving ALNS loop, but replaces its
-static control rules with a goal-conditioned learning stack.  The architecture
-combines (i)~a macro Plateau Controller that decides the current search regime,
-(ii)~a micro Operator Controller that chooses one of 55 destroy--repair pairs,
-(iii)~a Learned Acceptance Criterion (LAC) that evaluates candidates, and (iv)~a
-Prioritized Experience Replay (PER) buffer trained under online Welford-normalized
-rewards (\cref{fig:v17_architecture}).  Components marked ${}^\star$ are new
-additions that improve transfer from synthetic curriculum graphs to Solomon and
-Gehring--Homberger benchmarks.
+\sloppy
+Hybrid DDQN-ALNS preserves the feasibility guarantees of ALNS while replacing
+its static roulette-wheel operator selection with a hierarchical reinforcement
+learning stack.  The search is modeled as a Hierarchical Markov Decision
+Process (HMDP) with two coordinated agents: a \emph{Plateau Controller}
+(macro) that selects among six search regimes, and an \emph{Operator Controller}
+(micro) that picks destroy--repair operator pairs conditioned on the active
+regime.  \Cref{fig:v17_architecture} illustrates the architecture.
 
+% ── Figure 3: Detailed architecture block diagram ────────────────────────────
 \begin{figure*}[!t]
 \centering
 \begin{tikzpicture}[
-  font=\sffamily\footnotesize,
-  >=Stealth,
-  node distance=0.9cm and 2.3cm,
-  % ── Component Block Geometric Presets ──────────────────────────────────────
-  block/.style={rectangle, rounded corners=3pt, draw=C_slate!80, fill=C_bgmid, semithick, align=center, minimum width=4.3cm, minimum height=0.9cm},
-  monitor/.style={block, draw=C_rose!85, fill=C_rose!4},
-  macro/.style  ={block, draw=C_indigo!80, fill=C_indigo!6},
-  micro/.style  ={block, draw=C_emerald!80, fill=C_emerald!6},
-  alns/.style   ={block, draw=C_slate!80, fill=C_bglight},
-  lac/.style    ={block, draw=C_sky!70, fill=C_sky!5},
-  eval/.style   ={block, draw=headcol!80, fill=C_bgmid, minimum width=4.8cm},
-  welf/.style   ={block, draw=C_slate!60, fill=C_bglight, minimum width=4.8cm},
-  side/.style   ={block, draw=C_violet!80, fill=C_violet!7},
-  pool/.style   ={block, draw=C_amber!85, fill=C_amber!6},
-  % ── Explicit Routing Lane Classes ──────────────────────────────────────────
-  FL/.style={->, semithick, draw=C_slate!85},
-  FB/.style={->, dashed, semithick, draw=C_sky!65},
-  GA/.style={->, thick, draw=C_fuchsia!85},
-  % ── Explicit Routing Lane Classes ──────────────────────────────────────────
-  LB/.style={font=\sffamily\scriptsize, text=C_slate!90, inner sep=2.5pt, fill=white}
+    font=\sffamily\footnotesize, >=Stealth,
+    node distance=0.65cm and 2.5cm,
+    %% ── Block styles ──────────────────────────────────────────────
+    det/.style={rectangle, rounded corners=4pt, semithick, align=center,
+                minimum width=7.2cm, minimum height=1.0cm, text width=7.0cm},
+    mon/.style ={det, draw=C_rose!85,    fill=C_rose!4},
+    mac/.style ={det, draw=C_indigo!80,  fill=C_indigo!6},
+    mic/.style ={det, draw=C_emerald!80, fill=C_emerald!6},
+    alns/.style={det, draw=C_slate!80,   fill=C_bglight},
+    lac/.style ={det, draw=C_sky!70,     fill=C_sky!5},
+    eval/.style={det, draw=headcol!80,   fill=C_bgmid},
+    norm/.style={det, draw=C_slate!55,   fill=C_bglight},
+    mem/.style ={rectangle, rounded corners=3pt, semithick, align=center,
+                 minimum width=3.8cm, minimum height=1.0cm, text width=3.6cm,
+                 draw=C_amber!85, fill=C_amber!5, font=\sffamily\footnotesize},
+    %% ── Arrow styles ──────────────────────────────────────────────
+    flow/.style={->, semithick, draw=C_slate!80},
+    back/.style={->, dashed, semithick, draw=C_sky!60},
+    goal/.style={->, thick, draw=C_fuchsia!85},
+    lbl/.style={font=\sffamily\scriptsize, fill=white, inner sep=2pt,
+                text=C_slate!90, align=center}
 ]
 
-  % ===========================================================================
-  %  1. CORE BACKBONE PIPELINE (Center Column)
-  % ===========================================================================
-  \node[monitor] (mon) {Environment Monitor\\\scriptsize Detect Stagnation};
-  \node[macro, below=of mon] (mac) {Plateau Controller\\\scriptsize DDQN $\cdot$ 12-D state $\cdot$ 6 modes};
-  \node[micro, below=of mac] (mic) {Operator Controller\\\scriptsize DDQN $\cdot$ 15-D state $\cdot$ $11{\times}5{=}55$ pairs};
-  \node[alns, below=of mic]  (als) {ALNS Core Engine\\\scriptsize 11 Destroy $\cdot$ 5 Repair};
-  \node[lac, below=of als]   (lac) {Learned Acceptance Criterion\\\scriptsize MLP $9{\to}48{\to}24{\to}1$ $\cdot$ $H{=}80$};
-  \node[eval, below=of lac]   (evl) {Two-Phase Evaluation\\\scriptsize Ejection Chains $\to$ Pure-TD MILP};
-  \node[welf, below=of evl]   (wlf) {Welford Normalizer\\\scriptsize $z_t = \mathrm{clip}\left(\frac{r_t-\hat{\mu}_t}{\hat{\sigma}_t},\,-8,\,+8\right)$};
+%% ── Main pipeline (center column) ──────────────────────────────────────────
+\node[mon] (M) {%
+  \textbf{Stagnation Monitor}\\[3pt]
+  \textit{In:}\enspace iteration success flag, $NV_t$, $NV^*$
+  \qquad
+  \textit{Out:}\enspace \texttt{no\_imp} counter, plateau trigger flag};
 
-  % ===========================================================================
-  %  2. HORIZONTAL SUBSYSTEM WINGS (Left & Right Flanks)
-  % ===========================================================================
-  % Left Wing Features
-  \node[side, left=of mac] (gnn) {Feature Extractor\\\scriptsize 12-D Macro $\cdot$ 15-D Micro};
-  \node[side, left=of evl] (cur) {Adaptive Curriculum\\\scriptsize Phase Multi-Step Thresholding};
+\node[mac, below=of M] (PC) {%
+  \textbf{Plateau Controller}\enspace(Macro DDQN, 128-D hidden)\\[3pt]
+  \textit{In:}\enspace $s_t^c\!\in\!\mathbb{R}^{12}$
+  \qquad
+  \textit{Out:}\enspace integer mode $m\in\{0,\ldots,5\}$\\[1pt]
+  \scriptsize Default $\cdot$ Intensify $\cdot$ Diversify $\cdot$
+  TW-Rescue $\cdot$ Pool-Recombine $\cdot$ Route-Reduce};
 
-  % Right Wing Memories
-  \node[pool, right=of mic] (poo) {Dual-Retention Pool\\\scriptsize Slot A: Cost/Node $\cdot$ Slot B: Length};
-  \node[side, right=of lac] (her) {Replay Buffer (PER)\\\\scriptsize Prioritized Transitions};
+\node[mic, below=of PC] (OC) {%
+  \textbf{Operator Controller}\enspace(Micro DDQN, 256-D hidden)\\[3pt]
+  \textit{In:}\enspace $s_t^o\!\in\!\mathbb{R}^{15}$,\ one-hot goal $g_m\!\in\!\mathbb{R}^6$,\ $m$
+  \qquad
+  \textit{Out:}\enspace pair index $a_t{=}(d,r)\in\{0,\ldots,54\}$\\[1pt]
+  \scriptsize $\mathrm{Score}(a){=}Q(s,a){+}\alpha_b\mu^{\mathrm{bandit}}{+}\mathrm{UCB}{+}\alpha_p\ln P(a\!\mid\!m)$};
 
-  % ===========================================================================
-  %  3. PRIMARY DOWNSTREAM CHANNELS
-  % ===========================================================================
-  \draw[FL] (mon) -- node[LB] {\texttt{no\_imp} $\ge 60$} (mac);
-  \draw[FL] (mac) -- node[LB] {mode $m$} (mic);
-  \draw[FL] (mic) -- node[LB] {$a_t = (d,r)$} (als);
-  \draw[FL] (als) -- (lac);
-  \draw[FL] (lac) -- (evl);
-  \draw[FL] (evl) -- (wlf);
+\node[alns, below=of OC] (AE) {%
+  \textbf{ALNS Core Engine}\\[3pt]
+  \textit{In:}\enspace destroy index $d$, repair index $r$, current solution $x_t$
+  \qquad
+  \textit{Out:}\enspace perturbed candidate $x'$, removed customers $\mathcal{R}$\\[1pt]
+  \scriptsize 11 destroy $\times$ 5 repair\enspace$\cdot$\enspace
+  2-opt / Or-opt polish\enspace$\cdot$\enspace ejection chains at $NV{=}NV_{\mathrm{BKS}}{+}1$};
 
-  % ===========================================================================
-  %  4. MANHATTAN ROUTING BUSWAYS & ISOLATED FEEDBACK LANES
-  % ===========================================================================
-  
-  % ── Left Flank Data Paths (State Mechanics) ──
-  \draw[FL] (als.west) -- ++(-0.6,0) |- node[LB, pos=0.25] {routing state} (gnn.west);
-  \draw[FL] (gnn.east) -- node[LB, above] {12-D state} (mac.west);
-  \draw[FL] (gnn.south) -- ++(0,-0.555) -| node[LB, pos=0.25] {15-D state} (mic.west);
-  \draw[FL] (evl.west) -- node[LB, above] {match-rate} (cur.east);
+\node[lac, below=of AE] (LA) {%
+  \textbf{Learned Acceptance Criterion}\enspace(MLP $9{\to}48{\to}24{\to}1$)\\[3pt]
+  \textit{In:}\enspace $\bigl[\Delta c/c_t,\ T_t/T_0,\ \texttt{no\_imp}/P_{\mathrm{stop}},\ \Delta NV,\
+    t/T_{\max},\ \omega,\ \mathrm{util},\ \mathrm{slack},\ e^{-\Delta c/T_t}\bigr]$\\[1pt]
+  \textit{Out:}\enspace accept/reject bit $b_t$;\enspace
+    hindsight label $y_t{=}\mathbf{1}[c^*_{t+80}{<}c^*_t]$};
 
-  % ── Right Flank Data Paths (Memory Pipelines) ──
-  \draw[FL] (als.east) -- node[LB, above] {valid routes} (poo.west);
-  \draw[FL] (poo.south) |- node[LB, pos=0.75, left] {MIP columns} (evl.east);
-  \draw[FL] (wlf.east) -- ++(0.7,0) |- node[LB, pos=0.25] {transition $(s,a,z_t,s',d)$} (her.east);
+\node[eval, below=of LA] (EV) {%
+  \textbf{Two-Phase Evaluation \& MIP Recombination}\\[3pt]
+  \textit{In:}\enspace accepted solution $x_t'$, feasible route set $\Omega$, pool columns
+  \qquad
+  \textit{Out:}\enspace incumbent $x^*$, raw reward $r_t$, match-rate\\[1pt]
+  \scriptsize Phase 1: fleet-min\ $\lambda\!\in\!\{2,5,12,30,50\}{\times}\bar{c}$\enspace
+  $\longrightarrow$\enspace Phase 2: distance-min ($\lambda{=}0$)};
 
-  % ── Control Hierarchy Bypasses ──
-  \draw[FL] (mon.east) -- ++(0.5,0) |- node[LB, pos=0.22] {$\NV \le \NV_{\mathrm{BKS}}$} (mic.east);
-  \draw[GA] (mac.east) -- ++(0.25,0) |- node[pos=0.22, right, font=\sffamily\scriptsize, text=C_fuchsia!90, fill=white] {$m$ one-hot} (mic.east);
-  \draw[FL, draw=C_amber!80] (mac.east) -- ++(0.8,0) |- node[LB, pos=0.22] {CW seeds} (poo.north);
+\node[norm, below=of EV] (WN) {%
+  \textbf{Welford Reward Normalizer}\\[3pt]
+  \textit{In:}\enspace scalar raw reward $r_t\in\mathbb{R}$
+  \qquad
+  \textit{Out:}\enspace $z_t=\mathrm{clip}\!\bigl(\tfrac{r_t-\hat{\mu}_t}{\hat{\sigma}_t},\,-8,\,+8\bigr)\in\mathbb{R}$\\[1pt]
+  \scriptsize Welford online mean/variance\enspace$\cdot$\enspace
+  128-step warmup\enspace$\cdot$\enspace statistics shared across curriculum};
 
-  % ── Parallel Left Feedback Lanes (Track Segregated) ──
-  \draw[FB] (wlf.west) -- ++(-1.1,0) |- node[LB, pos=0.22] {$z_t$} (mic.west);
-  \draw[FB] (wlf.west) -- ++(-1.7,0) |- node[LB, pos=0.22] {TD error} (mac.west);
+%% ── Side memory nodes ───────────────────────────────────────────────────────
+\node[mem, right=2.2cm of AE] (RP) {%
+  \textbf{Route Pool}\\[3pt]
+  Slot A (75\,\%): cost/node\\
+  Slot B (25\,\%): route length};
 
-  % ── Parallel Right Feedback Lanes ──
-  \draw[FL] (her.north) -- ++(0,1.25) -| node[LB, pos=0.75] {PER replay} (mic.east);
+\node[mem, right=2.2cm of LA] (PER) {%
+  \textbf{Replay Buffer (PER)}\\[3pt]
+  $(s_t,\,a_t,\,z_t,\,s_{t+1},\,\mathrm{done})$\\
+  $\alpha{=}0.6$,\quad$\beta\!:\!0.4\!\to\!1.0$};
 
-  % ===========================================================================
-  %  5. BOUNDING CANVAS CONTAINER & SWISS LEGEND
-  % ===========================================================================
-  \begin{scope}[on background layer]
-    \node[rectangle, rounded corners=6pt, draw=C_slate!30, fill=C_slate!2, line width=1pt,
-          fit=(mon)(mac)(mic)(als)(lac)(evl)(wlf)(gnn)(cur)(poo)(her), inner sep=22pt] (frame) {};
-  \end{scope}
-  \node[above=8pt of frame, font=\sffamily\bfseries, text=C_slate!80!black] {Domain Randomization Curriculum --- Adaptive Phase Controller};
+%% ── Forward flows (labeled with actual data payload) ────────────────────────
+\draw[flow] (M)  -- node[lbl, right]
+  {\texttt{no\_imp}$\,{\ge}\,60$, plateau bit} (PC);
 
-  \node[rectangle, rounded corners=4pt, draw=C_slate!35, fill=C_bglight, inner sep=8pt, below=24pt of frame] {
-    \begin{tabular}{@{}ll@{\hspace{4em}}ll@{}}
-      \tikz\draw[draw=C_slate!80, fill=C_bgmid, semithick] (0,0) rectangle (0.35,0.20); & Architecture Block &
-      \tikz\draw[->, semithick, draw=C_slate!80] (0,.10) -- (0.45,.10); & Standard Data Flow \\[4pt]
-      \tikz\draw[->, thick, draw=C_fuchsia!85] (0,.10) -- (0.45,.10); & Goal-Conditioning Vector &
-      \tikz\draw[->, dashed, semithick, draw=C_sky!65] (0,.10) -- (0.45,.10); & Reward Feedback Loop \\
-    \end{tabular}
-  };
+\draw[flow] (PC) -- node[lbl, right]
+  {mode $m\in\{0..5\}$} (OC);
+
+\draw[flow] (OC) -- node[lbl, right]
+  {destroy idx $d$,\ repair idx $r$} (AE);
+
+\draw[flow] (AE) -- node[lbl, right]
+  {candidate $x'$,\ $\Delta c$,\ $\Delta NV$} (LA);
+
+\draw[flow] (LA) -- node[lbl, right]
+  {accepted $x'$,\ route set $\Omega$} (EV);
+
+\draw[flow] (EV) -- node[lbl, right]
+  {raw reward $r_t$,\ new incumbent $x^*$} (WN);
+
+%% ── Side flows ──────────────────────────────────────────────────────────────
+\draw[flow] (AE.east)  -- node[lbl, above]
+  {valid routes $\{$cost, seq$\}$} (RP.west);
+
+\draw[flow] (RP.south) -- ++(0,-0.7) -|
+  node[lbl, pos=0.28, above] {SP columns $\Omega$} (EV.east);
+
+\draw[flow] (WN.east)  -- ++(0.6,0) |-
+  node[lbl, pos=0.55, right]
+  {transition $(s_t,a_t,z_t,s_{t+1},d)$} (PER.south);
+
+%% ── Reward feedback ─────────────────────────────────────────────────────────
+\draw[back] (PER.north) -- ++(0,0.8) -|
+  node[lbl, pos=0.22, above]
+  {sampled batch $(s,a,z,s',d){\times}B$} (OC.east);
+
+\draw[back] (WN.west) -- ++(-1.1,0) |-
+  node[lbl, pos=0.15, left]
+  {$z_t$\\ (micro reward)} (OC.west);
+
+\draw[back] (WN.west) -- ++(-1.7,0) |-
+  node[lbl, pos=0.15, left]
+  {seg.\ TD error\\ $\delta_{\mathrm{seg}}$} (PC.west);
+
+%% ── Goal-conditioning vector ────────────────────────────────────────────────
+\draw[goal] (PC.east) -- ++(0.5,0) |-
+  node[lbl,pos=0.55,right,text=C_fuchsia!90]{$m$ one-hot} (OC.east);
+
+%% ── Section title ───────────────────────────────────────────────────────────
+\node[above=8pt of M, font=\sffamily\bfseries, text=C_slate!75]
+  {Domain Randomization Curriculum\enspace---\enspace Adaptive Phase Controller};
+
 \end{tikzpicture}
-\caption{Integrated Hybrid DDQN-ALNS architecture map containing goal-conditioned state spaces, adaptive curriculum progression, and dual-lane structural reward networks.}
+\caption{%
+  Hybrid DDQN-ALNS architecture.
+  Each block shows its \textit{In}/\textit{Out} interface.
+  Solid arrows: forward data flow.
+  Dashed arrows: reward feedback loops.
+  Magenta arrow: goal-conditioning mode vector.}
 \label{fig:v17_architecture}
 \end{figure*}
 
+\subsection{Hierarchical MDP Formulation}
 
-\subsection{State Representation and Reward Potential}
+The HMDP operates at two temporal granularities.  Every $60$ consecutive
+iterations without an incumbent improvement trigger a \emph{macro decision}:
+the Plateau Controller observes a 12-dimensional state $s_t^c$ and selects a
+search mode $m\in\{0,\dots,5\}$ (Default, Intensify, Diversify, Time-Window
+Rescue, Pool Recombine, Route-Reduce).  At every iteration, the Operator
+Controller observes a 15-dimensional state $s_t^o$---augmented with the active
+mode $m$ as a goal signal---and selects a destroy--repair pair
+$a_t\in\{0,\dots,54\}$.  \Cref{tab:state_vectors} summarizes both state
+representations.
 
-All scalar features are normalised by graph size, initial vehicle count, or the
-current incumbent cost so that the same policy operates across all curriculum
-stages. 
+\begin{table}[!t]
+\centering
+\caption{State vector compositions for the two DDQN controllers.}
+\label{tab:state_vectors}
+\renewcommand{\arraystretch}{1.05}
+\setlength{\tabcolsep}{3pt}
+\small
+\begin{tabular}{@{}lcp{4.8cm}@{}}
+\toprule
+\textbf{Vector} & \textbf{Dim} & \textbf{Key Features} \\
+\midrule
+Macro $s_t^c$ & 12 & Stagnation ratio, cost gap to incumbent,
+  temperature ratio, improvement rate, fleet ratio, route spatial spread,
+  TW tightness, avg.\ slack, avg.\ fill, pool saturation, search progress \\
+\addlinespace
+Micro $s_t^o$ & 15 & Macro features augmented with segment progress,
+  active mode index $m/(M{-}1)$, fleet delta to best, recent improvement
+  flag \\
+\bottomrule
+\end{tabular}
+\end{table}
 
-The macro state vector $s_t^c \in \mathbb{R}^{12}$ captures search plateau and stagnation characteristics:
-\begin{align}
-  s_t^c &= \left[ s_{t,1}^c, \, s_{t,2}^c, \, \dots, \, s_{t,12}^c \right]^T \nonumber \\
-  \text{where } & s_{t,1}^c = \frac{\texttt{no\_imp}}{P_{\text{stop}}}, \quad s_{t,2}^c = \frac{c_t - c^*}{c^*}, \nonumber \\
-  & s_{t,3}^c = \frac{T_t}{T_0}, \quad s_{t,4}^c = \text{imp\_rate}, \nonumber \\
-  & s_{t,5}^c = \frac{NV_t}{NV_{\text{init}}}, \quad s_{t,6}^c = \text{rb}, \quad s_{t,7}^c = \text{lb}, \nonumber \\
-  & s_{t,8}^c = \omega, \quad s_{t,9}^c = \text{slack}_{\text{avg}}, \quad s_{t,10}^c = \text{fill}_{\text{avg}}, \nonumber \\
-  & s_{t,11}^c = \text{pool}_{\text{fill}}, \quad s_{t,12}^c = \frac{t}{T_{\text{max}}}
-  \label{eq:macro_state}
-\end{align}
-where $\texttt{no\_imp}$ is the number of steps without global improvement, $P_{\text{stop}}$ is the early-stop patience, $c_t$ and $c^*$ are the current and best costs, $T_t/T_0$ is the normalised temperature ratio, $\text{imp\_rate}$ is the rolling improvement rate, $NV_t/NV_{\text{init}}$ is the vehicle count ratio, $\text{rb}$ and $\text{lb}$ are route spatial spread metrics (route breadth and length), $\omega$ is the instance time-window tightness fraction, $\text{slack}_{\text{avg}}$ is the average remaining route time-window slack, $\text{fill}_{\text{avg}}$ is the average vehicle capacity utilization, $\text{pool}_{\text{fill}}$ is the route pool saturation fraction, and $t/T_{\text{max}}$ is the overall search progress fraction.
-
-The micro state vector $s_t^o \in \mathbb{R}^{15}$ augments local routing metrics with search context and Plateau Controller goal conditioning:
-\begin{align}
-  s_t^o &= \left[ s_{t,1}^o, \, s_{t,2}^o, \, \dots, \, s_{t,15}^o \right]^T \nonumber \\
-  \text{where } & s_{t,1}^o = \frac{c_t - c^*}{c^*}, \quad s_{t,2}^o = \frac{NV_t}{NV_{\text{init}}}, \quad s_{t,3}^o = \frac{t}{T_{\text{max}}}, \nonumber \\
-  & s_{t,4}^o = \frac{t \pmod S}{S}, \quad s_{t,5}^o = \frac{T_t}{T_0}, \nonumber \\
-  & s_{t,6}^o = \frac{\texttt{no\_imp}}{P_{\text{stop}}}, \quad s_{t,7}^o = \text{rb}, \quad s_{t,8}^o = \text{lb}, \nonumber \\
-  & s_{t,9}^o = \omega, \quad s_{t,10}^o = \text{slack}_{\text{avg}}, \quad s_{t,11}^o = \text{fill}_{\text{avg}}, \nonumber \\
-  & s_{t,12}^o = \text{pool}_{\text{fill}}, \quad s_{t,13}^o = \frac{m}{M-1}, \nonumber \\
-  & s_{t,14}^o = \frac{NV_t - NV^*}{NV_{\text{init}}}, \quad s_{t,15}^o = \text{recent\_imp}
-  \label{eq:micro_state}
-\end{align}
-where $S = 100$ is the segment size, $m \in \{0, \ldots, 5\}$ is the active macro mode index selected by the Plateau Controller, and $NV^*$ is the vehicle count of the best incumbent.
-
-Both controllers share a lexicographic shaping potential:
-\begin{align}
-  \Phi(x) &= -\lambda_{\text{fp}}(x) \beta_{\text{nv\_scale}} \Delta_{NV}^{\text{norm}}(x) \nonumber \\
-          &\quad - (1 - \lambda_{\text{fp}}(x)) \beta_{\text{cost\_scale}} \text{Gap}_{\TD}\%(x)
+Both controllers share a lexicographic reward potential that dynamically
+balances fleet reduction and distance minimization:
+\begin{equation}
+  \Phi(x) = -\lambda_{\text{fp}} \beta_{\text{nv}} \Delta_{NV}^{\text{norm}}
+           - (1-\lambda_{\text{fp}}) \beta_{\text{td}}
+             \operatorname{Gap}_{\text{TD}}\%
   \label{eq:potential}
-\end{align}
-where $\lambda_{\text{fp}}(x) = \left(1 + e^{-8 \cdot (NV_x - NV^*)/NV_{\text{init}}}\right)^{-1}$ represents the dynamic fleet pressure factor, $\Delta_{NV}^{\text{norm}}(x) = \max(NV_x - NV^*, 0)/NV_{\text{init}}$ is the normalized excess fleet size, and $\text{Gap}_{\TD}\%(x) = \text{clip}\left(\frac{TD_x - TD^*}{TD^*} \times 100, -25.0, 25.0\right)$ is the travel distance gap to the best incumbent. The constants are configured as $\beta_{\text{nv\_scale}} = 15.0$ and $\beta_{\text{cost\_scale}} = 0.18$. The potential is used to shape rewards via $F_t = \gamma \Phi(x_{t+1}) - \Phi(x_t)$, guaranteeing convergence to lexicographically superior states.
+\end{equation}
+where $\lambda_{\text{fp}} = \sigma\bigl(-8(NV_x{-}NV^*)/NV_{\text{init}}\bigr)$
+is a sigmoid fleet-pressure gate, $\Delta_{NV}^{\text{norm}}$ is the normalized
+excess fleet size, and $\operatorname{Gap}_{\text{TD}}\%$ is the clipped
+travel-distance gap to the incumbent.  Reward shaping via
+$F_t = \gamma\Phi(x_{t+1}) - \Phi(x_t)$ guarantees convergence toward
+lexicographically superior solutions.
 
-\subsection{Plateau Controller}
+\subsection{Operator Selection and Acceptance}
 
-When $\texttt{no\_imp}\ge60$, the macro agent selects a search mode
-$m\in\{0,\ldots,5\}$ corresponding to Default, Intensify, Diversify, Time-Window Rescue, Pool Recombine, or Route-Reduce.  The mode is injected as a one-hot goal vector into the micro controller, conditioning operator choice on the active search regime. The segment reward $R_{\text{seg}}$ evaluates search quality over a segment of length $S$:
-\begin{align}
-  R_{\text{seg}} &= \beta_{\text{seg}} \bigl[ R_{\text{base}} + \lambda_{\text{fp}} R_{\text{nv}} \nonumber \\
-                 &\quad + (1 - \lambda_{\text{fp}}) R_{\text{td}} \bigr] + \gamma_c \Phi(x_{t+S}) - \Phi(x_t)
+\textbf{Plateau Controller.}
+The macro agent is a Dueling DDQN~\cite{wang2016dueling} (hidden dim.\ 128)
+evaluated at every stagnation trigger.  Each of the six modes configures a
+distinct operator weight bias and temperature schedule to steer the search
+between intensification and diversification.  The segment reward evaluates
+search quality over $S{=}100$ iterations:
+\begin{equation}
+  R_{\text{seg}} = \beta_{\text{seg}}\bigl[R_{\text{base}}
+    + \lambda_{\text{fp}} R_{\text{nv}}
+    + (1{-}\lambda_{\text{fp}}) R_{\text{td}}\bigr]
+    + \gamma_c\Phi(x_{t+S}) - \Phi(x_t)
   \label{eq:rseg}
-\end{align}
-where $\beta_{\text{seg}} = 0.30$, and components $R_{\text{base}}$, $R_{\text{nv}}$, and $R_{\text{td}}$ balance vehicle reduction and distance quality:
-\begin{align*}
-  R_{\text{base}} &= -0.20 - 0.04 \cdot \text{LS\_passes} - 0.06 \cdot \mathbb{I}(\text{recombine}) \\
-                  &\quad + 15 \Delta_{NV}^{\text{best}} + 5 \Delta_{NV}^{\text{cur}} - 0.15 \cdot \mathbb{I}(\text{accepted\_moves} \le 10) \\
-  R_{\text{nv}} &= 8 \Delta_{NV}^{\text{best}} + 1.2 \Delta_{\TD}^{\text{best}}\% + 5 \Delta_{NV}^{\text{cur}} + 0.6 \Delta_{\TD}^{\text{cur}}\% \\
-  R_{\text{td}} &= 3 \Delta_{NV}^{\text{best}} + 3.5 \Delta_{\TD}^{\text{best}}\% + 2 \Delta_{NV}^{\text{cur}} + 1.8 \Delta_{\TD}^{\text{cur}}\%
-\end{align*}
-
-\subsection{Operator Controller --- Goal-Conditioned Selection}
-
-The Operator Controller selects a destroy--repair operator pair $a_t = (d, r)$ from $11 \times 5 = 55$ available combinations. The choice blends deep Q-network outputs, Thompson sampling bandit means $\mu_t^{\text{bandit}}(d, r)$ and prior mode biases:
-\begin{align}
-  \text{Score}(a) &= Q(s, a) + \alpha_{\text{bandit}} \mu_t^{\text{bandit}}(d, r) + \text{UCB}(a) \nonumber \\
-                  &\quad + \alpha_{\text{prior}} \ln(P(d|m) P(r|m) + \epsilon)
-  \label{eq:operator_score}
-\end{align}
-where $\alpha_{\text{prior}} = 0.55$, $\alpha_{\text{bandit}} = 0.20$, and $\text{UCB}(a)$ is a Welford-decayed Upper Confidence Bound value.
-The micro reward is shaped at every iteration $t$:
-\begin{align}
-  R_{\text{iter}} &= \beta_{\text{iter}} \bigl[ R_{\text{base}}^{\text{iter}} + \lambda_{\text{fp}} R_{\text{nv}}^{\text{iter}} \nonumber \\
-                  &\quad + (1 - \lambda_{\text{fp}}) R_{\text{td}}^{\text{iter}} \bigr] + \gamma_o \Phi(x') - \Phi(x)
-  \label{eq:riter}
-\end{align}
-where $\beta_{\text{iter}} = 0.45$, and the components are defined as:
-\begin{align*}
-  R_{\text{base}}^{\text{iter}} &= \mathbb{I}(\text{accepted}) \cdot 0.05 - \mathbb{I}(\neg \text{accepted}) \cdot 0.08 \\
-                  &\quad + 15 \Delta_{NV}^{\text{best}} + 5 \Delta_{NV}^{\text{cur}} - 0.5 \Delta_{NV}^{\text{inf\_penalty}} \\
-  R_{\text{nv}}^{\text{iter}} &= 3 \Delta_{NV}^{\text{best}} + 0.40 \Delta_{\TD}^{\text{best}}\% + 2 \Delta_{NV}^{\text{cur}} + 0.20 \Delta_{\TD}^{\text{cur}}\% \\
-  R_{\text{td}}^{\text{iter}} &= 0.50 \Delta_{NV}^{\text{best}} + 1.80 \Delta_{\TD}^{\text{best}}\% + 0.30 \Delta_{NV}^{\text{cur}} + 0.90 \Delta_{\TD}^{\text{cur}}\%
-\end{align*}
-
-Key algorithmic operations integrated in the ALNS loop are:
-
-\textbf{Intra-route Polish~\cite{pisinger2007general}:}  Iterated $2$-opt and
-Or-opt inside each route, terminated at $\Delta c<10^{-9}$, decoupled from the
-inter-route budget.  Dominant improvement driver on wide-horizon families.
-
-\textbf{Hard-mode Ejection Chains:}  At $NV=NV_{\BKS}+1$, beam width increases
-$16\!{\to}\!32$ and max depth $6\!{\to}\!10$, enabling cascaded multi-route
-customer displacement.
-
-\textbf{Dual-retention pool:}  Two complementary slots---Slot A (75\% capacity) sorted by cost per customer, and Slot B (25\% capacity) sorted by route length---prevent the set-partitioning phase from collapsing to near-duplicate incumbent routes.
-
-\textbf{Two-Phase Set-Partitioning~\cite{shaw1998using}:}  Phase~1 minimises
-fleet size using targeted penalty scales $\lambda_{\text{penalty}} \in \{2, 5, 12, 30, 50\} \times \text{mean\_cost}$ to force the MILP solver to eliminate empty or near-empty vehicles; once the target fleet floor is reached, Phase~2 zeros the vehicle penalty ($\lambda_{NV}=0$) and minimises pure distance over the route pool columns: $\min_{r\in\Omega}\text{Cost}_r\,y_r$.
-
-\subsection{Learned Acceptance Criterion (LAC)}
-
-To avoid the sub-optimal manual tuning of Simulated Annealing (SA) temperature schedules, we replace the metropolis criteria with a Learned Acceptance Criterion (LAC). The LAC is parameterized as a multi-layer perceptron (MLP) with structure $9 \to 48 \to 24 \to 1$ and a sigmoid output. At step $t$, the network takes input features $\mathbf{v}_t \in \mathbb{R}^9$:
-\begin{align}
-  \mathbf{v}_t &= \Bigl[
-    \frac{\Delta c}{c_t}, \,
-    \frac{T_t}{T_0}, \,
-    \frac{\texttt{no\_imp}}{P_{\text{stop}}}, \,
-    \text{clip}(NV_{\text{cand}} - NV_t, \, -2, \, 2), \, \nonumber \\
-    &\quad \frac{t}{T_{\text{max}}}, \,
-    \omega, \,
-    \text{util}_{\text{avg}}, \,
-    \text{slack}_{\text{avg}}, \,
-    e^{-\max(\Delta c, 0)/T_t}
-  \Bigr]^T
-  \label{eq:lac_features}
-\end{align}
-where $\Delta c = c_{\text{cand}} - c_t$. The network outputs the probability $P_{\text{lac}}(\mathbf{v}_t)$ that accepting the candidate solution will result in an improvement of the best-known solution within a future horizon $H = 80$. Transitions are stored and labeled retrospectively:
-\begin{equation}
-  y_t = \begin{cases} 1 & \text{if } c^*_{t+H} < c^*_t \\ 0 & \text{otherwise} \end{cases}
-  \label{eq:lac_label}
 \end{equation}
-The classifier is trained online using weighted binary cross-entropy to handle class imbalance from sparse improvement events.
+where $R_{\text{base}}$, $R_{\text{nv}}$, and $R_{\text{td}}$ respectively
+penalise operational cost, reward vehicle reduction, and reward distance
+improvement.
 
-\subsection{Welford Reward Normalization}
-
-To stabilize deep reinforcement learning across heterogeneous routing topologies, we apply online Welford reward Z-scoring. The raw reward $r_t$ is normalized before insertion into the experience replay buffer:
+\textbf{Operator Controller.}
+The micro agent is a Dueling DDQN (hidden dim.\ 256) selecting from
+$11$ destroy $\times$ $5$ repair $= 55$ operator pairs at every
+iteration.  Operator scoring blends Q-values with Thompson
+sampling~\cite{thompson1933likelihood} bandit means and mode-conditioned
+priors:
 \begin{equation}
-  z_t = \text{clip}\left(\frac{r_t - \hat{\mu}_t}{\hat{\sigma}_t}, \, -8, \, +8\right)
-  \label{eq:welford}
+  \operatorname{Score}(a) = Q(s,a) + \alpha_b\,\mu_t^{\text{bandit}}(a)
+    + \text{UCB}(a) + \alpha_p\ln P(a \mid m)
+  \label{eq:score}
 \end{equation}
-where the mean $\hat{\mu}_t$ and standard deviation $\hat{\sigma}_t$ are updated recursively:
-\begin{align}
-  \hat{\mu}_t &= \hat{\mu}_{t-1} + \frac{r_t - \hat{\mu}_{t-1}}{t} \\
-  M_{2, t} &= M_{2, t-1} + (r_t - \hat{\mu}_{t-1})(r_t - \hat{\mu}_t) \\
-  \hat{\sigma}_t &= \sqrt{\frac{M_{2, t}}{t - 1}}
-\end{align}
-Transitions containing $z_t$ are stored in the Prioritized Replay Buffer, ensuring stable gradients across curriculum stages and Solomon families.
+The destroy operators include Random, Shaw, Worst-Cost, Time-Window, Route,
+and Ejection-Chain variants; repair operators are Greedy, Greedy-Noise,
+and Regret-$k$ ($k\!\in\!\{2,3,4\}$)~\cite{pisinger2007general}.
 
+\textbf{Learned Acceptance Criterion (LAC).}
+A lightweight MLP ($9{\to}48{\to}24{\to}1$, sigmoid) replaces static
+SA acceptance.  Nine features characterizing the candidate
+solution---including cost delta, temperature ratio, fleet change, and
+Metropolis probability---predict whether acceptance leads to an incumbent
+improvement within horizon $H{=}80$.  Labels are assigned via hindsight:
+\begin{equation}
+  y_t = \begin{cases}
+    1 & \text{if } c^*_{t+H} < c^*_t \\
+    0 & \text{otherwise}
+  \end{cases}
+  \label{eq:lac}
+\end{equation}
+and the classifier is trained online with weighted binary cross-entropy.
 
-% =============================================================================
-%  IV.  TRAINING CURRICULUM
-% =============================================================================
-\section{Training: Domain Randomization Curriculum}
+\textbf{Search polishing.}
+Intra-route 2-opt and Or-opt~\cite{pisinger2007general} refine each route
+until convergence ($\Delta c < 10^{-9}$).  At $NV = NV_{\BKS}+1$, hard-mode
+ejection chains widen beam search ($16{\to}32$) and deepen the cascade
+($6{\to}10$) to eliminate near-empty vehicles.
+
+\subsection{Training and Infrastructure}
 \label{sec:training}
 
+\textbf{Domain Randomization Curriculum.}
 Following Tobin et al.~\cite{tobin2017domain}, training uses only synthetic
-graphs across three stages:
+graphs across three phases:
 
 \begin{center}
 \setlength{\tabcolsep}{4pt}
@@ -524,23 +533,43 @@ graphs across three stages:
 \toprule
 \textbf{Phase} & \textbf{$N$ range} & \textbf{Focus}\\
 \midrule
-1 --- Easy   & $[20,40]$  & Basic routing (C/R/RC distributions)\\
+1 --- Easy   & $[20,40]$  & Basic routing (C/R/RC classes)\\
 2 --- Target & $[40,80]$  & Solomon-equivalent complexity~\cite{Solomon1987}\\
-3 --- Chaos  & $[20,100]$ & Irregular TW/capacity; forces generalisation\\
+3 --- Chaos  & $[20,100]$ & Irregular TW/capacity; generalisation\\
 \bottomrule
 \end{tabular}
 \end{center}
 
-The Welford Normalizer~\cite{welford1962} shares statistics
-(\texttt{shared\_norm}) across all phases.  Curriculum advances phase only when
-the 50-episode match-rate exceeds the threshold $\theta$, preventing premature
-graduation.  After $N_{\text{epochs}}=20$ cycles of $B=15$ graphs each, frozen
-weights are applied zero-shot to Solomon~\cite{Solomon1987} and
-Gehring--Homberger~\cite{Gehring1999} without fine-tuning.
+Phase advancement requires a 50-episode match-rate threshold, preventing
+premature graduation.  After $N_{\text{epochs}}{=}20$ cycles of $B{=}15$
+graphs each, frozen weights are applied zero-shot to
+Solomon~\cite{Solomon1987} and Gehring--Homberger~\cite{Gehring1999}
+benchmarks without fine-tuning.
 
+\textbf{Reward normalization.}
+Raw rewards are Z-scored online using the Welford
+algorithm~\cite{welford1962}:
+\begin{equation}
+  z_t = \operatorname{clip}\!\left(\frac{r_t - \hat\mu_t}{\hat\sigma_t},\;
+    -8,\;+8\right)
+  \label{eq:welford}
+\end{equation}
+with statistics shared across curriculum phases and a warmup of 128
+observations to stabilize early estimates.
+
+\textbf{Experience replay and route storage.}
+Transitions $(s_t,a_t,z_t,s_{t+1},\text{done})$ are stored in a Prioritized
+Experience Replay buffer~\cite{schaul2016prioritized} with proportional
+prioritization ($\alpha{=}0.6$, $\beta$ annealed $0.4{\to}1.0$).  A
+dual-retention route pool maintains diverse columns for set-partitioning
+recombination: Slot~A (75\%, sorted by cost per customer) preserves locally
+efficient segments, while Slot~B (25\%, sorted by route length) retains
+fleet-reducing columns.  When triggered, a two-phase MILP first minimizes
+fleet size via escalating vehicle penalties, then minimizes travel distance
+with zero penalty.
 
 % =============================================================================
-%  V.  EXPERIMENTAL RESULTS
+%  IV.  EXPERIMENTAL RESULTS
 % =============================================================================
 \section{Experimental Results}
 \label{sec:results}
@@ -757,7 +786,7 @@ $rc2\_2\_1$ & $6/3099.00$
 
 
 % =============================================================================
-%  VI.  DISCUSSION
+%  V.  DISCUSSION
 % =============================================================================
 \section{Discussion}
 \label{sec:discussion}
@@ -794,7 +823,7 @@ deployment.
 
 
 % =============================================================================
-%  VII.  CONCLUSION
+%  VI.  CONCLUSION
 % =============================================================================
 \section{Conclusion}
 \label{sec:conclusion}
@@ -802,8 +831,8 @@ deployment.
 Hybrid DDQN-ALNS replaces static roulette-wheel selection with a hierarchical
 dual-agent controller that learns state-conditioned operator policies across a
 domain-randomized curriculum.  The architecture enforces strict lexicographic
-fleet-size discipline while achieving a $40\%$ reduction in vehicle inflation
-over ALNS-Base, a $91\%$ reduction over OR-Tools~\cite{ortools}, and a $72\%$
+fleet-size discipline while achieving a $62\%$ reduction in vehicle inflation
+over ALNS-Base, a $90\%$ reduction over OR-Tools~\cite{ortools}, and a $63\%$
 reduction in wide-horizon travel distance gap---all verified under zero-shot
 transfer to unseen benchmarks.
 
@@ -892,7 +921,7 @@ O.~Vinyals, M.~Fortunato, and N.~Jaitly,
 in \textit{Advances in NeurIPS}, vol.~28, pp.~2692--2700, 2015.
 
 \bibitem{kool2019attention}
-W.~Kool, H.~van Hoof, and M\_Welling,
+W.~Kool, H.~van Hoof, and M.~Welling,
 ``Attention, learn to solve routing problems!''
 in \textit{Int.\ Conf.\ Learning Representations (ICLR)}, 2019.
 

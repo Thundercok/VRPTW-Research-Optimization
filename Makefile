@@ -22,9 +22,8 @@ test:
 # Auth (9099) + Firestore (8080) + Hosting/SPA (5050) + Emulator UI (4000)
 
 dist:
-	@echo "Copying src/frontend/ → dist/ ..."
-	@rm -rf dist
-	@cp -r src/frontend dist
+	@echo "Building frontend using Vite..."
+	@npm run build
 	@echo "dist/ ready."
 
 emulators: dist
