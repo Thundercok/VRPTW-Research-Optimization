@@ -126,88 +126,117 @@ def _benchmark_worker(packed: tuple) -> tuple[dict, Plan | None]:
 
 
 def _benchmark_instance_worker(packed: tuple) -> list[dict]:
-    inst, algorithms, cfg, transfer_weights, plans_folder, completed = packed
-    archive = EliteArchive(k=cfg.elite_archive_k)
-    archive.load_plans(plans_folder, {inst.name: inst})
-    
-    dataset = (
-        "RC1"
-        if inst.name.upper().startswith("RC1")
-        else "RC2"
-        if inst.name.upper().startswith("RC2")
-        else inst.name[:2].upper()
-    )
-    
-    inst_rows = []
-    
-    for algo in algorithms:
-        algo_label = canonical_algo_label(algo)
-        if (inst.name, algo_label) in completed:
-            continue
-            
-        nv_v, cost_v, time_v, gap_v, nvd_v, ot_v = [], [], [], [], [], []
-        n_runs_eff = 1 if algo_label == ALGO_ORTOOLS else cfg.n_runs
+    inst, algorithms, cfg, transfer_weights, plans_folder, completed, wall_start = packed
+    print(f"    [PROCESSING] {inst.name}...", flush=True)
+    t0 = time.time()
+    try:
+        archive = EliteArchive(k=cfg.elite_archive_k)
+        archive.load_plans(plans_folder, {inst.name: inst})
         
-        best_overall: Plan | None = None
-        run_results = []
-        weights = transfer_weights if algo_label in (ALGO_HYBRID_DDQN_TRANSFER, ALGO_HYBRID_DDQN_TRANSFER_RC2, ALGO_HYBRID_DDQN_TRANSFER_DR) else None
-        
-        for i in range(n_runs_eff):
-            seed = cfg.seed + i
-            init = best_overall.copy() if best_overall is not None else _diversified_init(i, inst, archive, cfg)
-            
-            res, plan = run_instance(inst, algo_label, cfg, seed, weights, init)
-            if algo_label in (ALGO_HYBRID_DDQN_TRANSFER, ALGO_HYBRID_DDQN_TRANSFER_RC2, ALGO_HYBRID_DDQN_TRANSFER_DR) and plan is not None:
-                plan.algo = algo_label
-            if plan is not None:
-                if best_overall is None or plan.dominates(best_overall) or plan.nv < best_overall.nv:
-                    best_overall = plan.copy()
-            run_results.append((res, plan))
-            
-        for i, (res, plan) in enumerate(run_results):
-            if plan is not None:
-                archive.update_and_save(plan, plans_folder)
-            time_v.append(res["time"])
-            if res["nv"] is not None:
-                nv_v.append(res["nv"])
-                cost_v.append(res["cost"])
-                gap_v.append(res["td_gap"])
-                nvd_v.append(res["nv_diff"])
-                ot_v.append(res["on_time"])
-                
-        if not nv_v:
-            continue
-            
-        bks = BKS.get(inst.name)
-        nv_inflated = (
-            bks is not None
-            and float(np.mean(nv_v)) > bks["nv"] + 0.4
-            and all(g is not None for g in gap_v)
-            and float(np.mean(gap_v)) < 0
+        dataset = (
+            "RC1"
+            if inst.name.upper().startswith("RC1")
+            else "RC2"
+            if inst.name.upper().startswith("RC2")
+            else inst.name[:2].upper()
         )
         
-        row = {
-            "Dataset": dataset,
-            "Instance": inst.name,
-            "Algorithm": algo_label,
-            "NV_mean": round(float(np.mean(nv_v)), 2),
-            "NV_std": round(float(np.std(nv_v)), 2),
-            "NV_diff": round(float(np.mean(nvd_v)), 2) if nvd_v and nvd_v[0] is not None else None,
-            "TD_mean": round(float(np.mean(cost_v)), 2),
-            "TD_std": round(float(np.std(cost_v)), 2),
-            "Gap%": round(float(np.mean(gap_v)), 2) if gap_v and gap_v[0] is not None else None,
-            "OnTime": round(float(np.mean(ot_v)) * 100, 1),
-            "Time_s": round(float(np.mean(time_v)), 1),
-            "NV_cv": round(float(np.std(nv_v)) / max(float(np.mean(nv_v)), 1) * 100, 2),
-            "TD_cv": round(float(np.std(cost_v)) / max(float(np.mean(cost_v)), 1) * 100, 2),
-            "NV_inflated": nv_inflated,
-            "raw_costs": ";".join(f"{c:.4f}" for c in cost_v),
-            "raw_nv": ";".join(str(n) for n in nv_v),
-        }
-        inst_rows.append(row)
+        inst_rows = []
+        log_lines = []
         
-    print(f"[{inst.name}] Completed all requested algorithms.")
-    return inst_rows
+        for algo in algorithms:
+            algo_label = canonical_algo_label(algo)
+            if (inst.name, algo_label) in completed:
+                continue
+                
+            nv_v, cost_v, time_v, gap_v, nvd_v, ot_v = [], [], [], [], [], []
+            n_runs_eff = 1 if algo_label == ALGO_ORTOOLS else cfg.n_runs
+            
+            best_overall: Plan | None = None
+            run_results = []
+            weights = transfer_weights if algo_label in (ALGO_HYBRID_DDQN_TRANSFER, ALGO_HYBRID_DDQN_TRANSFER_RC2, ALGO_HYBRID_DDQN_TRANSFER_DR) else None
+            
+            for i in range(n_runs_eff):
+                seed = cfg.seed + i
+                init = best_overall.copy() if best_overall is not None else _diversified_init(i, inst, archive, cfg)
+                
+                res, plan = run_instance(inst, algo_label, cfg, seed, weights, init)
+                if algo_label in (ALGO_HYBRID_DDQN_TRANSFER, ALGO_HYBRID_DDQN_TRANSFER_RC2, ALGO_HYBRID_DDQN_TRANSFER_DR) and plan is not None:
+                    plan.algo = algo_label
+                if plan is not None:
+                    if best_overall is None or plan.dominates(best_overall) or plan.nv < best_overall.nv:
+                        best_overall = plan.copy()
+                run_results.append((res, plan))
+                
+            for i, (res, plan) in enumerate(run_results):
+                if plan is not None:
+                    archive.update_and_save(plan, plans_folder)
+                time_v.append(res["time"])
+                if res["nv"] is not None:
+                    nv_v.append(res["nv"])
+                    cost_v.append(res["cost"])
+                    gap_v.append(res["td_gap"])
+                    nvd_v.append(res["nv_diff"])
+                    ot_v.append(res["on_time"])
+                    
+            if not nv_v:
+                continue
+                
+            bks = BKS.get(inst.name)
+            nv_inflated = (
+                bks is not None
+                and float(np.mean(nv_v)) > bks["nv"] + 0.4
+                and all(g is not None for g in gap_v)
+                and float(np.mean(gap_v)) < 0
+            )
+            
+            row = {
+                "Dataset": dataset,
+                "Instance": inst.name,
+                "Algorithm": algo_label,
+                "NV_mean": round(float(np.mean(nv_v)), 2),
+                "NV_std": round(float(np.std(nv_v)), 2),
+                "NV_diff": round(float(np.mean(nvd_v)), 2) if nvd_v and nvd_v[0] is not None else None,
+                "TD_mean": round(float(np.mean(cost_v)), 2),
+                "TD_std": round(float(np.std(cost_v)), 2),
+                "Gap%": round(float(np.mean(gap_v)), 2) if gap_v and gap_v[0] is not None else None,
+                "OnTime": round(float(np.mean(ot_v)) * 100, 1),
+                "Time_s": round(float(np.mean(time_v)), 1),
+                "NV_cv": round(float(np.std(nv_v)) / max(float(np.mean(nv_v)), 1) * 100, 2),
+                "TD_cv": round(float(np.std(cost_v)) / max(float(np.mean(cost_v)), 1) * 100, 2),
+                "NV_inflated": nv_inflated,
+                "raw_costs": ";".join(f"{c:.4f}" for c in cost_v),
+                "raw_nv": ";".join(str(n) for n in nv_v),
+            }
+            inst_rows.append(row)
+            
+            # Format the output block for this algorithm
+            log_lines.append(f"\n[{inst.name}] {algo_label}")
+            for i, (res, plan) in enumerate(run_results):
+                elapsed_h = (time.time() - wall_start) / 3600
+                if res["nv"] is not None:
+                    log_lines.append(
+                        f"  run {i + 1}/{n_runs_eff}: nv={res['nv']} cost={res['cost']:.1f} "
+                        f"({res['time']:.1f}s) | wall {elapsed_h:.2f}h"
+                    )
+                else:
+                    log_lines.append(f"  run {i + 1}/{n_runs_eff}: FAILED ({res['time']:.1f}s)")
+            
+            gap_text = f"{row['Gap%']:+.1f}%" if row["Gap%"] is not None else "--"
+            log_lines.append(
+                f"  -> nv={row['NV_mean']:.1f}±{row['NV_std']:.1f}  "
+                f"td={row['TD_mean']:.1f}±{row['TD_std']:.1f}  gap={gap_text}"
+            )
+            
+        elapsed = time.time() - t0
+        print(f"    [SUCCESS] {inst.name} finished in {int(elapsed)}s", flush=True)
+        if log_lines:
+            print("\n".join(log_lines), flush=True)
+        print(f"[{inst.name}] Completed all requested algorithms.", flush=True)
+        return inst_rows
+    except Exception as exc:
+        print(f"    [!!! CRITICAL ERROR !!!] {inst.name} failed", flush=True)
+        raise exc
 
 
 def _diversified_init(run_idx: int, inst: Inst, archive: EliteArchive, cfg: Config) -> Plan | None:
@@ -242,6 +271,7 @@ def run_benchmark(
     transfer_weights: dict | None = None,
     archive: EliteArchive | None = None,
     checkpoint_path: str | None = None,
+    no_checkpoint: bool = False,
 ) -> pd.DataFrame:
     cfg.validate()
     instances = list(instances)
@@ -257,7 +287,7 @@ def run_benchmark(
 
     rows: list[dict] = []
     completed: set = set()
-    if os.path.exists(ckpt_path):
+    if not no_checkpoint and os.path.exists(ckpt_path):
         try:
             ckpt_df = pd.read_csv(ckpt_path)
             rows = ckpt_df.to_dict("records")
@@ -281,7 +311,11 @@ def run_benchmark(
                 needs_run = True
                 break
         if needs_run:
-            worker_args.append((inst, algorithms, cfg, transfer_weights, plans_folder, completed))
+            worker_args.append((inst, algorithms, cfg, transfer_weights, plans_folder, completed, wall_start))
+        else:
+            # Already completed in checkpoint — print status for progress monitor
+            print(f"    [PROCESSING] {inst.name}...", flush=True)
+            print(f"    [SUCCESS] {inst.name} finished in 0s", flush=True)
 
     if worker_args:
         max_workers = min(len(worker_args), max(1, os.cpu_count() - 1))

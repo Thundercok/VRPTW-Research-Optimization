@@ -62,6 +62,12 @@ if __name__ == "__main__":
         help="List of specific instance names to run (e.g. RC101 RC201). If empty, runs all available."
     )
 
+    parser.add_argument(
+        "--no-checkpoint",
+        action="store_true",
+        help="Ignore existing checkpoints and start a fresh run."
+    )
+
     args = parser.parse_args()
 
     cfg = Config(
@@ -105,6 +111,7 @@ if __name__ == "__main__":
         cfg=cfg,
         result_path=os.path.join(cfg.output_dir, "benchmark_clean.csv"),
         checkpoint_path=os.path.join(cfg.output_dir, "benchmark_checkpoint.csv"),
+        no_checkpoint=args.no_checkpoint,
     )
 
     print("\n\n═══ BENCHMARK SUMMARY ═══")
