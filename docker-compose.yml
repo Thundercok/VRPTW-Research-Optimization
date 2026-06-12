@@ -1,0 +1,56 @@
+services:
+  firebase-emulators:
+    build:
+      context: .
+      dockerfile: Dockerfile.firebase
+    ports:
+      - "4000:4000" # Emulator UI
+      - "8080:8080" # Firestore Emulator
+      - "9099:9099" # Auth Emulator
+    volumes:
+      - firebase-data:/root/.cache
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8080" # FastAPI API bound to port 8000 on host
+    environment:
+      - FIREBASE_AUTH_EMULATOR_HOST=firebase-emulators:9099
+      - FIRESTORE_EMULATOR_HOST=firebase-emulators:8080
+      - DEMO_AUTH_BYPASS=true
+      - PYTHONPATH=/app/src:/app/src/backend
+    volumes:
+      - ./src:/app/src
+      - ./data:/app/data
+      - ./logs:/app/logs
+    depends_on:
+      - firebase-emulators
+    restart: unless-stopped
+
+  frontend:
+    image: node:20-slim
+    working_dir: /app
+    ports:
+      - "5050:5050" # Vite dev server
+    volumes:
+      - .:/app
+    # Install dependencies inside container if needed, then run Vite on host 0.0.0.0
+    command: >
+      sh -c "
+      if [ ! -d 'node_modules' ]; then
+        echo 'Installing dependencies inside container...'
+        npm install
+      fi
+      npx vite --host 0.0.0.0 --port 5050
+      "
+    environment:
+      - VITE_API_BASE=http://localhost:8000
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  firebase-data:

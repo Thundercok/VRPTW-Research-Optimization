@@ -1,0 +1,36 @@
+FROM node:20-slim
+
+# Install JRE, curl, and netcat (for port checking)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    default-jre-headless \
+    curl \
+    netcat-openbsd \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install firebase-tools globally
+RUN npm install -g firebase-tools@latest
+
+WORKDIR /app
+
+# Copy firebase.json
+COPY firebase.json .
+
+# Create a start script that boots emulators, waits for port 9099, and seeds the test user
+RUN echo '#!/bin/bash\n\
+firebase emulators:start --only auth,firestore &\n\
+echo "Waiting for Auth Emulator on port 9099..."\n\
+for i in {1..30}; do\n\
+    nc -z 127.0.0.1 9099 && break\n\
+    sleep 1\n\
+done\n\
+echo "Seeding test user test@vrptw.local..."\n\
+curl -s -X POST "http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signUp?key=fake-api-key" \\\n\
+  -H "Content-Type: application/json" \\\n\
+  -d '\''{"email":"test@vrptw.local","password":"testpass123","returnSecureToken":true}'\'' > /dev/null\n\
+echo "Firebase Emulators seeded and running."\n\
+wait' > /app/start.sh && chmod +x /app/start.sh
+
+# Expose Emulator UI (4000), Firestore (8080), Auth (9099)
+EXPOSE 4000 8080 9099
+
+CMD ["/app/start.sh"]

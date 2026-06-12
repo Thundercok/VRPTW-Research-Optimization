@@ -89,3 +89,13 @@ test-e2e: dist
 	pkill -f "[f]irebase.*emulators" 2>/dev/null || true; \
 	pkill -f "[u]vicorn.*main:app" 2>/dev/null || true; \
 	exit $$EXIT_CODE
+
+# ── Docker Compose Stack Automation ────────────────────────────────
+docker-up:
+	docker compose up --build
+
+docker-down:
+	docker compose down
+
+docker-logs:
+	docker compose logs -f

@@ -17,7 +17,7 @@ COPY src/ /app/src/
 # Copy weights and other data files
 COPY rl_alns_dr_v15.safetensors /app/rl_alns_dr_v15.safetensors
 COPY data /app/data
-COPY logs /app/logs
+RUN mkdir -p /app/logs
 
 # Set python path to allow importing packages from src
 ENV PYTHONPATH=/app/src:/app/src/backend
