@@ -178,6 +178,8 @@ def _milp_recombine(
     cfg: Config,
     nv_ceiling: int | None = None,
     vehicle_penalty: float | None = None,
+    heatmap: np.ndarray | None = None,
+    alpha: float = 0.15,
 ) -> Plan | None:
     if not MILP_OK or not route_records:
         return None
@@ -202,7 +204,20 @@ def _milp_recombine(
             LinearConstraint(cover_nv, lb=np.array([0.0]), ub=np.array([float(nv_ceiling)]))
         )
     penalty = vehicle_penalty if vehicle_penalty is not None else _sp_vehicle_penalty(inst, cfg)
-    costs = np.array([penalty + rec.cost for rec in route_records])
+    costs = []
+    for rec in route_records:
+        r_cost = rec.cost
+        if heatmap is not None and alpha > 0.0:
+            nodes = rec.nodes
+            if nodes:
+                edges = [(0, nodes[0])]
+                for i in range(len(nodes) - 1):
+                    edges.append((nodes[i], nodes[i + 1]))
+                edges.append((nodes[-1], 0))
+                gnn_score = float(np.mean([heatmap[u, v] for u, v in edges]))
+                r_cost = rec.cost * (1.0 - alpha * gnn_score)
+        costs.append(penalty + r_cost)
+    costs = np.array(costs)
     result = milp(
         c=costs,
         constraints=constraints,
@@ -255,6 +270,8 @@ def recombine_with_route_pool(
     nv_ceiling: int | None = None,
     nv_target: int | None = None,
     td_only: bool = False,
+    heatmap: np.ndarray | None = None,
+    alpha: float = 0.15,
 ) -> Plan:
     pool.add_plan(incumbent)
     recs = pool.records(incumbent)
@@ -284,7 +301,13 @@ def recombine_with_route_pool(
 
     if not use_penalty:
         # Standard recombination: no NV pressure
-        candidate = _milp_recombine(recs, incumbent.inst, cfg, nv_ceiling=effective_ceiling, vehicle_penalty=0.0)
+        candidate = _milp_recombine(
+            recs, incumbent.inst, cfg,
+            nv_ceiling=effective_ceiling,
+            vehicle_penalty=0.0,
+            heatmap=heatmap,
+            alpha=alpha,
+        )
         if candidate is None:
             candidate = _greedy_recombine(recs, incumbent, nv_ceiling=effective_ceiling)
         return candidate if candidate.dominates(incumbent) else incumbent.copy()
@@ -314,6 +337,8 @@ def recombine_with_route_pool(
             tmp_cfg,
             nv_ceiling=effective_ceiling,
             vehicle_penalty=penalty,
+            heatmap=heatmap,
+            alpha=alpha,
         )
         if candidate is not None and (effective_ceiling is None or candidate.nv <= effective_ceiling):
             # Run LS at the new NV to recover TD

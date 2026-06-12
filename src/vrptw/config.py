@@ -273,6 +273,11 @@ class Config:
     # ── domain randomization ──────────────────────────────────────────────
     domain_randomization_epochs: int = 20
     domain_randomization_batch: int = 15
+    # ── SOTA GNN guidance ────────────────────────────────────────────────
+    gnn_guidance_strength: float = 0.45
+    gnn_pruning_threshold: float = 0.01
+    gnn_pruning_threshold_start: float = 0.05
+    gnn_pruning_threshold_end: float = 0.003
 
     def validate(self) -> None:
         """Validate configuration settings to prevent runtime failures during long-running tasks."""
@@ -314,7 +319,7 @@ class ModeSpec:
     destroy_scale: float
     temp_boost: float
     temp_decay_scale: float
-    destroy_bias: tuple[float, ...]  # length == N_D = 11
+    destroy_bias: tuple[float, ...]  # length == N_D = 13
     repair_bias: tuple[float, ...]  # length == N_R = 5
     ls_passes: int
     use_recombine: bool
@@ -326,7 +331,7 @@ MODES: tuple[ModeSpec, ...] = (
         1.00,
         1.00,
         1.000,
-        (1.0, 1.0, 1.0, 1.0, 1.0, 0.8, 0.8, 0.8, 1.0, 0.8, 0.5),
+        (1.0, 1.0, 1.0, 1.0, 1.0, 0.8, 0.8, 0.8, 1.0, 0.8, 0.5, 1.0, 1.0),
         (1.0, 1.0, 1.0, 1.0, 1.1),
         0,
         False,
@@ -336,7 +341,7 @@ MODES: tuple[ModeSpec, ...] = (
         0.70,
         0.98,
         0.995,
-        (0.5, 1.3, 1.2, 0.5, 1.0, 0.7, 0.8, 0.8, 0.9, 0.6, 0.3),
+        (0.5, 1.3, 1.2, 0.5, 1.0, 0.7, 0.8, 0.8, 0.9, 0.6, 0.3, 1.5, 1.4),
         (1.3, 1.2, 0.8, 1.0, 1.3),
         1,
         False,
@@ -346,7 +351,7 @@ MODES: tuple[ModeSpec, ...] = (
         1.35,
         1.08,
         1.002,
-        (1.5, 0.9, 1.3, 1.4, 1.0, 0.7, 1.4, 1.4, 1.6, 1.2, 1.5),
+        (1.5, 0.9, 1.3, 1.4, 1.0, 0.7, 1.4, 1.4, 1.6, 1.2, 1.5, 0.6, 1.2),
         (0.9, 1.0, 1.3, 1.0, 0.9),
         0,
         False,
@@ -356,7 +361,7 @@ MODES: tuple[ModeSpec, ...] = (
         1.10,
         1.05,
         1.000,
-        (0.6, 0.9, 1.1, 0.8, 1.8, 0.4, 0.8, 0.8, 1.0, 0.4, 0.5),
+        (0.6, 0.9, 1.1, 0.8, 1.8, 0.4, 0.8, 0.8, 1.0, 0.4, 0.5, 0.8, 0.9),
         (0.8, 1.0, 1.2, 1.8, 2.2),
         1,
         False,
@@ -366,7 +371,7 @@ MODES: tuple[ModeSpec, ...] = (
         0.90,
         1.01,
         0.997,
-        (0.7, 1.2, 0.9, 1.1, 0.8, 1.8, 1.6, 1.6, 1.1, 1.8, 1.2),
+        (0.7, 1.2, 0.9, 1.1, 0.8, 1.8, 1.6, 1.6, 1.1, 1.8, 1.2, 1.0, 1.1),
         (0.7, 1.1, 1.5, 0.9, 1.1),
         1,
         True,
@@ -376,7 +381,7 @@ MODES: tuple[ModeSpec, ...] = (
         0.95,
         1.02,
         0.998,
-        (0.6, 1.0, 0.9, 1.7, 0.6, 2.2, 2.4, 2.4, 1.2, 2.6, 2.2),
+        (0.6, 1.0, 0.9, 1.7, 0.6, 2.2, 2.4, 2.4, 1.2, 2.6, 2.2, 0.7, 0.8),
         (0.8, 1.2, 1.5, 1.0, 1.4),
         1,
         True,

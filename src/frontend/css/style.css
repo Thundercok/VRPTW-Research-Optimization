@@ -186,3 +186,21 @@ body {
   padding: 24px;
   box-shadow: var(--shadow-lg);
 }
+
+/* GNN Heatmap Tooltip */
+.leaflet-tooltip.gnn-tooltip {
+  background: rgba(15, 23, 42, 0.95) !important;
+  color: #f8fafc !important;
+  border: none !important;
+  border-radius: 4px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  padding: 6px 10px !important;
+  font-family: var(--font-main) !important;
+}
+.leaflet-tooltip-left.gnn-tooltip::before {
+  border-left-color: rgba(15, 23, 42, 0.95) !important;
+}
+.leaflet-tooltip-right.gnn-tooltip::before {
+  border-right-color: rgba(15, 23, 42, 0.95) !important;
+}
+

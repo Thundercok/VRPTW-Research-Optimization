@@ -126,6 +126,21 @@ def _benchmark_worker(packed: tuple) -> tuple[dict, Plan | None]:
 
 
 def _benchmark_instance_worker(packed: tuple) -> list[dict]:
+    # Restrict thread count to 1 to avoid thread contention across parallel processes
+    import os
+    import torch
+    
+    os.environ["OMP_NUM_THREADS"] = "1"
+    os.environ["MKL_NUM_THREADS"] = "1"
+    os.environ["OPENBLAS_NUM_THREADS"] = "1"
+    os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
+    os.environ["NUMEXPR_NUM_THREADS"] = "1"
+    os.environ["NUMBA_NUM_THREADS"] = "1"
+    try:
+        torch.set_num_threads(1)
+    except Exception:
+        pass
+
     inst, algorithms, cfg, transfer_weights, plans_folder, completed, wall_start = packed
     print(f"    [PROCESSING] {inst.name}...", flush=True)
     t0 = time.time()
@@ -180,6 +195,28 @@ def _benchmark_instance_worker(packed: tuple) -> list[dict]:
                     ot_v.append(res["on_time"])
                     
             if not nv_v:
+                # Store a dummy/failed entry in checkpoint to prevent infinite re-runs
+                row = {
+                    "Dataset": dataset,
+                    "Instance": inst.name,
+                    "Algorithm": algo_label,
+                    "NV_mean": None,
+                    "NV_std": None,
+                    "NV_diff": None,
+                    "TD_mean": None,
+                    "TD_std": None,
+                    "Gap%": None,
+                    "OnTime": None,
+                    "Time_s": round(float(np.mean(time_v)), 1) if time_v else 0.0,
+                    "NV_cv": None,
+                    "TD_cv": None,
+                    "NV_inflated": False,
+                    "raw_costs": "",
+                    "raw_nv": "",
+                }
+                inst_rows.append(row)
+                log_lines.append(f"\n[{inst.name}] {algo_label}")
+                log_lines.append(f"  -> FAILED/INFEASIBLE (no solution found)")
                 continue
                 
             bks = BKS.get(inst.name)

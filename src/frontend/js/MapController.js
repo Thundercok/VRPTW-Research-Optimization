@@ -63,6 +63,7 @@ export class MapController {
 
     this.canvasRenderer = L.canvas({ padding: 0.5 });
     this.markerLayer = L.layerGroup().addTo(this.map);
+    this.gnnHeatmapLayer = L.layerGroup();
 
     // Keep legacy layers defined for backwards compatibility
     this.ddqnRouteLayer = L.layerGroup();
@@ -142,6 +143,7 @@ export class MapController {
 
   clearRoutes() {
     this.stopVehicleAnimations();
+    this.clearGnnHeatmap();
     if (this.routeLayers) {
       for (const key in this.routeLayers) {
         this.routeLayers[key].clearLayers();
@@ -935,6 +937,7 @@ export class MapController {
 
     const initialView = result.ddqn ? 'ddqn' : Object.keys(result)[0];
     this.switchView(initialView);
+    this.updateGnnHeatmapOverlay();
 
     this.fetchRoadGeometries(result)
       .then(() => {
@@ -956,6 +959,116 @@ export class MapController {
       const road = this.roadRoutes.get(key);
       if (road && road.geometry.length > 0) {
         this.map.fitBounds(L.polyline(road.geometry).getBounds(), { padding: [50, 50] });
+      }
+    }
+  }
+
+  clearGnnHeatmap() {
+    if (this.gnnHeatmapLayer) {
+      this.gnnHeatmapLayer.clearLayers();
+    }
+  }
+
+  updateGnnHeatmapOverlay() {
+    const chk = document.getElementById('chk-gnn-heatmap');
+    const isChecked = chk && chk.checked;
+
+    if (isChecked) {
+      if (this.map && !this.map.hasLayer(this.gnnHeatmapLayer)) {
+        this.gnnHeatmapLayer.addTo(this.map);
+      }
+      this.renderGnnHeatmap();
+    } else {
+      if (this.map && this.map.hasLayer(this.gnnHeatmapLayer)) {
+        this.map.removeLayer(this.gnnHeatmapLayer);
+      }
+      this.clearGnnHeatmap();
+    }
+  }
+
+  renderGnnHeatmap() {
+    this.clearGnnHeatmap();
+
+    const result = this.app.state.lastResult;
+    if (!result) return;
+
+    let heatmap = null;
+    for (const algo in result) {
+      if (result[algo] && result[algo].gnn_heatmap) {
+        heatmap = result[algo].gnn_heatmap;
+        break;
+      }
+    }
+
+    if (!heatmap) return;
+
+    const customers = this.app.state.customers;
+    if (!customers || customers.length === 0) return;
+
+    const threshold = 0.15;
+
+    for (let i = 0; i < heatmap.length; i++) {
+      for (let j = 0; j < heatmap[i].length; j++) {
+        if (i === j) continue;
+        const prob = heatmap[i][j];
+        if (prob < threshold) continue;
+
+        const c1 = customers[i];
+        const c2 = customers[j];
+        if (!c1 || !c2) continue;
+
+        let color = '#a855f7'; // Low: Purple
+        let weight = 1.2;
+        let opacity = 0.45;
+
+        if (prob >= 0.75) {
+          color = '#f59e0b'; // High: Amber/Gold
+          weight = 3.5;
+          opacity = 0.85;
+        } else if (prob >= 0.40) {
+          color = '#3b82f6'; // Medium: Blue
+          weight = 2.2;
+          opacity = 0.65;
+        }
+
+        const polyline = L.polyline(
+          [[c1.lat, c1.lng], [c2.lat, c2.lng]],
+          {
+            color,
+            weight,
+            opacity,
+            dashArray: prob < 0.40 ? '4,4' : undefined,
+            renderer: this.canvasRenderer
+          }
+        );
+
+        polyline.bindTooltip(
+          `<div style="font-family: Inter, sans-serif; font-size: 11px; font-weight: 500;">
+             <strong>Edge Prediction:</strong> ${(prob * 100).toFixed(1)}%
+           </div>`,
+          {
+            sticky: true,
+            className: 'gnn-tooltip'
+          }
+        );
+
+        polyline.on('mouseover', () => {
+          polyline.setStyle({
+            color: '#10b981',
+            weight: weight + 1.5,
+            opacity: 0.95
+          });
+        });
+
+        polyline.on('mouseout', () => {
+          polyline.setStyle({
+            color,
+            weight,
+            opacity
+          });
+        });
+
+        polyline.addTo(this.gnnHeatmapLayer);
       }
     }
   }

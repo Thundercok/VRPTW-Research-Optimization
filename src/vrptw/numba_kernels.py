@@ -412,3 +412,241 @@ def _cross_exchange_pair_numba(
                         best_l2 = len2
 
     return best_delta, best_p1, best_l1, best_p2, best_l2
+
+
+# ──────────────────────────────────────────────────────────────────────
+# 7.  Pruned kernels using GNN heatmaps
+# ──────────────────────────────────────────────────────────────────────
+
+@njit(cache=True)
+def _swap_evaluate_pruned_numba(
+    r1: np.ndarray,
+    r2: np.ndarray,
+    dist: np.ndarray,
+    demands: np.ndarray,
+    capacity: float,
+    ready: np.ndarray,
+    due: np.ndarray,
+    service: np.ndarray,
+    heatmap: np.ndarray,
+    pruning_threshold: float,
+):
+    n1 = len(r1)
+    n2 = len(r2)
+    c1 = _route_cost(r1, dist)
+    c2 = _route_cost(r2, dist)
+    old_cost = c1 + c2
+
+    best_delta = -1e-9
+    best_sp = -1
+    best_dp = -1
+
+    t1 = r1.copy()
+    t2 = r2.copy()
+
+    for sp in range(n1):
+        prev1 = r1[sp - 1] if sp > 0 else 0
+        nxt1 = r1[sp + 1] if sp < n1 - 1 else 0
+        u = r1[sp]
+        
+        for dp in range(n2):
+            v = r2[dp]
+            if u == v:
+                continue
+
+            prev2 = r2[dp - 1] if dp > 0 else 0
+            nxt2 = r2[dp + 1] if dp < n2 - 1 else 0
+
+            # GNN edge probability check
+            if heatmap[prev1, v] < pruning_threshold or heatmap[v, nxt1] < pruning_threshold or \
+               heatmap[prev2, u] < pruning_threshold or heatmap[u, nxt2] < pruning_threshold:
+                continue
+
+            # Swap in-place
+            t1[sp] = v
+            t2[dp] = u
+
+            if _route_ok(t1, demands, capacity, ready, due, service, dist) and \
+               _route_ok(t2, demands, capacity, ready, due, service, dist):
+                new_cost = _route_cost(t1, dist) + _route_cost(t2, dist)
+                delta = new_cost - old_cost
+                if delta < best_delta:
+                    best_delta = delta
+                    best_sp = sp
+                    best_dp = dp
+
+            # Undo swap
+            t1[sp] = u
+            t2[dp] = v
+
+    return best_delta, best_sp, best_dp
+
+
+@njit(cache=True)
+def _best_segment_insert_pruned_numba(
+    seg: np.ndarray,
+    route: np.ndarray,
+    dist: np.ndarray,
+    demands: np.ndarray,
+    capacity: float,
+    ready: np.ndarray,
+    due: np.ndarray,
+    service: np.ndarray,
+    heatmap: np.ndarray,
+    pruning_threshold: float,
+):
+    seg_len = len(seg)
+    rn = len(route)
+    new_len = rn + seg_len
+
+    # Capacity early-exit
+    seg_load = 0.0
+    for k in range(seg_len):
+        seg_load += demands[seg[k]]
+    route_load = 0.0
+    for k in range(rn):
+        route_load += demands[route[k]]
+    if seg_load + route_load > capacity:
+        return 1e18, -1, 0
+
+    old_cost = _route_cost(route, dist)
+
+    best_delta = 1e18
+    best_pos = -1
+    best_rev = 0
+
+    cand = np.empty(new_len, dtype=np.int64)
+    seg_rev = np.empty(seg_len, dtype=np.int64)
+    for k in range(seg_len):
+        seg_rev[k] = seg[seg_len - 1 - k]
+
+    for rev in range(2):  # 0 = forward, 1 = reversed
+        s = seg if rev == 0 else seg_rev
+        for pos in range(rn + 1):
+            prev = route[pos - 1] if pos > 0 else 0
+            nxt = route[pos] if pos < rn else 0
+            
+            # GNN edge probability check
+            if heatmap[prev, s[0]] < pruning_threshold or heatmap[s[-1], nxt] < pruning_threshold:
+                continue
+
+            ci = 0
+            for k in range(pos):
+                cand[ci] = route[k]
+                ci += 1
+            for k in range(seg_len):
+                cand[ci] = s[k]
+                ci += 1
+            for k in range(pos, rn):
+                cand[ci] = route[k]
+                ci += 1
+
+            if not _route_ok(cand, demands, capacity, ready, due, service, dist):
+                continue
+            new_cost = _route_cost(cand, dist)
+            delta = new_cost - old_cost
+            if delta < best_delta:
+                best_delta = delta
+                best_pos = pos
+                best_rev = rev
+
+    if best_pos == -1:
+        return 1e18, -1, 0
+    return best_delta, best_pos, best_rev
+
+
+@njit(cache=True)
+def _cross_exchange_pair_pruned_numba(
+    r1: np.ndarray,
+    r2: np.ndarray,
+    max_len1: int,
+    max_len2: int,
+    dist: np.ndarray,
+    demands: np.ndarray,
+    capacity: float,
+    ready: np.ndarray,
+    due: np.ndarray,
+    service: np.ndarray,
+    old_pair_cost: float,
+    heatmap: np.ndarray,
+    pruning_threshold: float,
+):
+    n1 = len(r1)
+    n2 = len(r2)
+    max_cand = n1 + n2
+
+    cand1 = np.empty(max_cand, dtype=np.int64)
+    cand2 = np.empty(max_cand, dtype=np.int64)
+
+    best_delta = -1e-9
+    best_p1 = -1
+    best_l1 = -1
+    best_p2 = -1
+    best_l2 = -1
+
+    for len1 in range(1, max_len1 + 1):
+        if n1 < len1:
+            continue
+        for len2 in range(1, max_len2 + 1):
+            if n2 < len2:
+                continue
+            for p1 in range(n1 - len1 + 1):
+                prev1 = r1[p1 - 1] if p1 > 0 else 0
+                nxt1 = r1[p1 + len1] if p1 + len1 < n1 else 0
+                
+                for p2 in range(n2 - len2 + 1):
+                    prev2 = r2[p2 - 1] if p2 > 0 else 0
+                    nxt2 = r2[p2 + len2] if p2 + len2 < n2 else 0
+
+                    # GNN boundary edge checks
+                    if heatmap[prev1, r2[p2]] < pruning_threshold or \
+                       heatmap[r2[p2 + len2 - 1], nxt1] < pruning_threshold or \
+                       heatmap[prev2, r1[p1]] < pruning_threshold or \
+                       heatmap[r1[p1 + len1 - 1], nxt2] < pruning_threshold:
+                        continue
+
+                    # Build nr1 = r1[:p1] + r2[p2:p2+len2] + r1[p1+len1:]
+                    cn1 = 0
+                    for k in range(p1):
+                        cand1[cn1] = r1[k]
+                        cn1 += 1
+                    for k in range(p2, p2 + len2):
+                        cand1[cn1] = r2[k]
+                        cn1 += 1
+                    for k in range(p1 + len1, n1):
+                        cand1[cn1] = r1[k]
+                        cn1 += 1
+
+                    # Build nr2 = r2[:p2] + r1[p1:p1+len1] + r2[p2+len2:]
+                    cn2 = 0
+                    for k in range(p2):
+                        cand2[cn2] = r2[k]
+                        cn2 += 1
+                    for k in range(p1, p1 + len1):
+                        cand2[cn2] = r1[k]
+                        cn2 += 1
+                    for k in range(p2 + len2, n2):
+                        cand2[cn2] = r2[k]
+                        cn2 += 1
+
+                    if cn1 == 0 or cn2 == 0:
+                        continue
+
+                    c1_slice = cand1[:cn1]
+                    c2_slice = cand2[:cn2]
+
+                    if not _route_ok(c1_slice, demands, capacity, ready, due, service, dist):
+                        continue
+                    if not _route_ok(c2_slice, demands, capacity, ready, due, service, dist):
+                        continue
+
+                    new_cost = _route_cost(c1_slice, dist) + _route_cost(c2_slice, dist)
+                    delta = new_cost - old_pair_cost
+                    if delta < best_delta:
+                        best_delta = delta
+                        best_p1 = p1
+                        best_l1 = len1
+                        best_p2 = p2
+                        best_l2 = len2
+
+    return best_delta, best_p1, best_l1, best_p2, best_l2

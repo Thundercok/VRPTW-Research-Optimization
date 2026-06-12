@@ -6,7 +6,6 @@
 \citation{Dantzig1959}
 \citation{welford1962}
 \citation{tobin2017domain}
-\citation{ortools}
 \citation{Dantzig1959}
 \citation{shaw1998using,Ropke2006,pisinger2007general}
 \citation{vinyals2015pointer}
@@ -14,102 +13,100 @@
 \citation{nazari2018reinforcement}
 \citation{wang2016dueling}
 \citation{welford1962}
-\citation{Ropke2006}
 \citation{Solomon1987}
 \@writefile{toc}{\contentsline {section}{\numberline {I}Introduction}{1}{section.1}\protected@file@percent }
 \newlabel{sec:intro}{{I}{1}{Introduction}{section.1}{}}
 \newlabel{sec:intro@cref}{{[section][1][]I}{[1][1][]1}{}{}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Classical ALNS~\cite  {Ropke2006} and its structural limitations.}}{1}{figure.1}\protected@file@percent }
-\newlabel{fig:classical_alns}{{1}{1}{Classical ALNS~\cite {Ropke2006} and its structural limitations}{figure.1}{}}
-\newlabel{fig:classical_alns@cref}{{[figure][1][]1}{[1][1][]1}{}{}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {II}Mathematical Background}{1}{section.2}\protected@file@percent }
 \newlabel{sec:background}{{II}{1}{Mathematical Background}{section.2}{}}
 \newlabel{sec:background@cref}{{[section][2][]II}{[1][1][]1}{}{}{}}
-\citation{Solomon1987}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-A}}Formulation}{1}{subsection.2.1}\protected@file@percent }
+\newlabel{eq:objective}{{1}{1}{Formulation}{equation.1}{}}
+\newlabel{eq:objective@cref}{{[equation][1][]1}{[1][1][]1}{}{}{}}
+\newlabel{eq:assign}{{3}{1}{Formulation}{equation.3}{}}
+\newlabel{eq:assign@cref}{{[equation][3][]3}{[1][1][]1}{}{}{}}
+\newlabel{eq:flow}{{4}{1}{Formulation}{equation.4}{}}
+\newlabel{eq:flow@cref}{{[equation][4][]4}{[1][1][]1}{}{}{}}
+\newlabel{eq:capacity}{{5}{1}{Formulation}{equation.5}{}}
+\newlabel{eq:capacity@cref}{{[equation][5][]5}{[1][1][]1}{}{}{}}
+\newlabel{eq:bigM}{{6}{1}{Formulation}{equation.6}{}}
+\newlabel{eq:bigM@cref}{{[equation][6][]6}{[1][1][]1}{}{}{}}
+\newlabel{eq:tw}{{7}{1}{Formulation}{equation.7}{}}
+\newlabel{eq:tw@cref}{{[equation][7][]7}{[1][1][]1}{}{}{}}
 \citation{wang2016dueling}
 \citation{thompson1933likelihood}
 \citation{pisinger2007general}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-A}}Formulation}{2}{subsection.2.1}\protected@file@percent }
-\newlabel{eq:objective}{{1}{2}{Formulation}{equation.1}{}}
-\newlabel{eq:objective@cref}{{[equation][1][]1}{[1][1][]2}{}{}{}}
-\newlabel{eq:assign}{{2}{2}{Formulation}{equation.2}{}}
-\newlabel{eq:assign@cref}{{[equation][2][]2}{[1][2][]2}{}{}{}}
-\newlabel{eq:flow}{{3}{2}{Formulation}{equation.3}{}}
-\newlabel{eq:flow@cref}{{[equation][3][]3}{[1][2][]2}{}{}{}}
-\newlabel{eq:capacity}{{4}{2}{Formulation}{equation.4}{}}
-\newlabel{eq:capacity@cref}{{[equation][4][]4}{[1][2][]2}{}{}{}}
-\newlabel{eq:bigM}{{5}{2}{Formulation}{equation.5}{}}
-\newlabel{eq:bigM@cref}{{[equation][5][]5}{[1][2][]2}{}{}{}}
-\newlabel{eq:tw}{{6}{2}{Formulation}{equation.6}{}}
-\newlabel{eq:tw@cref}{{[equation][6][]6}{[1][2][]2}{}{}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Time propagation: early arrival waits; late arrival is infeasible~\cite  {Solomon1987}.}}{2}{figure.2}\protected@file@percent }
-\newlabel{fig:timeline}{{2}{2}{Time propagation: early arrival waits; late arrival is infeasible~\cite {Solomon1987}}{figure.2}{}}
-\newlabel{fig:timeline@cref}{{[figure][2][]2}{[1][2][]2}{}{}{}}
+\citation{pisinger2007general}
+\citation{tobin2017domain}
+\citation{Solomon1987}
+\@writefile{lot}{\contentsline {table}{\numberline {I}{\ignorespaces State vector compositions for the two DDQN controllers.}}{2}{table.1}\protected@file@percent }
+\newlabel{tab:state_vectors}{{I}{2}{State vector compositions for the two DDQN controllers}{table.1}{}}
+\newlabel{tab:state_vectors@cref}{{[table][1][]I}{[1][2][]2}{}{}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {III}Proposed Methodology: Hybrid DDQN-ALNS}{2}{section.3}\protected@file@percent }
 \newlabel{sec:methodology}{{III}{2}{Proposed Methodology: Hybrid DDQN-ALNS}{section.3}{}}
 \newlabel{sec:methodology@cref}{{[section][3][]III}{[1][2][]2}{}{}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-A}}Hierarchical MDP Formulation}{2}{subsection.3.1}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {I}{\ignorespaces State vector compositions for the two DDQN controllers.}}{2}{table.1}\protected@file@percent }
-\newlabel{tab:state_vectors}{{I}{2}{State vector compositions for the two DDQN controllers}{table.1}{}}
-\newlabel{tab:state_vectors@cref}{{[table][1][]I}{[1][2][]2}{}{}{}}
-\newlabel{eq:potential}{{7}{2}{Hierarchical MDP Formulation}{equation.7}{}}
-\newlabel{eq:potential@cref}{{[equation][7][]7}{[1][2][]2}{}{}{}}
+\newlabel{eq:potential}{{8}{2}{Hierarchical MDP Formulation}{equation.8}{}}
+\newlabel{eq:potential@cref}{{[equation][8][]8}{[1][2][]2}{}{}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-B}}Operator Selection and Acceptance}{2}{subsection.3.2}\protected@file@percent }
-\newlabel{eq:rseg}{{8}{2}{Operator Selection and Acceptance}{equation.8}{}}
-\newlabel{eq:rseg@cref}{{[equation][8][]8}{[1][2][]2}{}{}{}}
-\newlabel{eq:score}{{9}{2}{Operator Selection and Acceptance}{equation.9}{}}
-\newlabel{eq:score@cref}{{[equation][9][]9}{[1][2][]2}{}{}{}}
-\citation{pisinger2007general}
-\citation{tobin2017domain}
-\citation{Solomon1987}
+\newlabel{eq:rseg}{{9}{2}{Operator Selection and Acceptance}{equation.9}{}}
+\newlabel{eq:rseg@cref}{{[equation][9][]9}{[1][2][]2}{}{}{}}
+\newlabel{eq:score}{{10}{2}{Operator Selection and Acceptance}{equation.10}{}}
+\newlabel{eq:score@cref}{{[equation][10][]10}{[1][2][]2}{}{}{}}
+\newlabel{eq:lac}{{11}{2}{Operator Selection and Acceptance}{equation.11}{}}
+\newlabel{eq:lac@cref}{{[equation][11][]11}{[1][2][]2}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-C}}Training and Infrastructure}{2}{subsection.3.3}\protected@file@percent }
+\newlabel{sec:training}{{\mbox  {III-C}}{2}{Training and Infrastructure}{subsection.3.3}{}}
+\newlabel{sec:training@cref}{{[subsection][3][3]\mbox  {III-C}}{[1][2][]2}{}{}{}}
 \citation{Solomon1987}
 \citation{Gehring1999}
-\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Hybrid DDQN-ALNS architecture. Each block shows its \textit  {In}/\textit  {Out} interface. Solid arrows: forward data flow. Dashed arrows: reward feedback loops. Magenta arrow: goal-conditioning mode vector.}}{3}{figure.3}\protected@file@percent }
-\newlabel{fig:v17_architecture}{{3}{3}{Hybrid DDQN-ALNS architecture. Each block shows its \textit {In}/\textit {Out} interface. Solid arrows: forward data flow. Dashed arrows: reward feedback loops. Magenta arrow: goal-conditioning mode vector}{figure.3}{}}
-\newlabel{fig:v17_architecture@cref}{{[figure][3][]3}{[1][2][]3}{}{}{}}
-\newlabel{eq:lac}{{10}{3}{Operator Selection and Acceptance}{equation.10}{}}
-\newlabel{eq:lac@cref}{{[equation][10][]10}{[1][2][]3}{}{}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-C}}Training and Infrastructure}{3}{subsection.3.3}\protected@file@percent }
-\newlabel{sec:training}{{\mbox  {III-C}}{3}{Training and Infrastructure}{subsection.3.3}{}}
-\newlabel{sec:training@cref}{{[subsection][3][3]\mbox  {III-C}}{[1][3][]3}{}{}{}}
 \citation{welford1962}
 \citation{schaul2016prioritized}
 \citation{ortools}
 \citation{Ropke2006}
 \citation{Solomon1987}
 \citation{Gehring1999}
-\citation{ortools}
+\newlabel{eq:welford}{{12}{3}{Training and Infrastructure}{equation.12}{}}
+\newlabel{eq:welford@cref}{{[equation][12][]12}{[1][3][]3}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-D}}Graph Neural Network Guided Routing}{3}{subsection.3.4}\protected@file@percent }
+\newlabel{sec:gnn_guidance}{{\mbox  {III-D}}{3}{Graph Neural Network Guided Routing}{subsection.3.4}{}}
+\newlabel{sec:gnn_guidance@cref}{{[subsection][4][3]\mbox  {III-D}}{[1][3][]3}{}{}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {IV}Experimental Results}{3}{section.4}\protected@file@percent }
+\newlabel{sec:results}{{IV}{3}{Experimental Results}{section.4}{}}
+\newlabel{sec:results@cref}{{[section][4][]IV}{[1][3][]3}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-A}}Setup}{3}{subsection.4.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-B}}Ablation Analysis}{3}{subsection.4.2}\protected@file@percent }
 \citation{Ropke2006}
 \citation{ortools}
 \citation{pisinger2007general}
+\citation{Gehring1999}
+\citation{Ropke2006}
+\citation{ortools}
 \citation{ortools}
 \citation{Gehring1999}
 \citation{ortools}
 \citation{pisinger2007general}
-\@writefile{lot}{\contentsline {table}{\numberline {II}{\ignorespaces $NV_{\text  {diff}}$ on Solomon. Lower is better; $0.000{=}$BKS.}}{4}{table.2}\protected@file@percent }
-\newlabel{tab:nv_summary}{{II}{4}{$NV_{\text {diff}}$ on Solomon. Lower is better; $0.000{=}$BKS}{table.2}{}}
-\newlabel{tab:nv_summary@cref}{{[table][2][]II}{[1][4][]4}{}{}{}}
-\newlabel{eq:welford}{{11}{4}{Training and Infrastructure}{equation.11}{}}
-\newlabel{eq:welford@cref}{{[equation][11][]11}{[1][4][]4}{}{}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {IV}Experimental Results}{4}{section.4}\protected@file@percent }
-\newlabel{sec:results}{{IV}{4}{Experimental Results}{section.4}{}}
-\newlabel{sec:results@cref}{{[section][4][]IV}{[1][4][]4}{}{}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-A}}Setup}{4}{subsection.4.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-B}}Vehicle Count Minimization}{4}{subsection.4.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-C}}Routing Distance with Fair-Subset Filtering}{4}{subsection.4.3}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {III}{\ignorespaces NV-filtered TD Gap\%. Lower is better.}}{4}{table.3}\protected@file@percent }
-\newlabel{tab:distance_summary}{{III}{4}{NV-filtered TD Gap\%. Lower is better}{table.3}{}}
-\newlabel{tab:distance_summary@cref}{{[table][3][]III}{[1][4][]4}{}{}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {IV}{\ignorespaces Strict fair intersection ($N=32$) by Solomon family.}}{4}{table.4}\protected@file@percent }
-\newlabel{tab:fair_by_category}{{IV}{4}{Strict fair intersection ($N=32$) by Solomon family}{table.4}{}}
-\newlabel{tab:fair_by_category@cref}{{[table][4][]IV}{[1][4][]4}{}{}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-D}}Head-to-Head vs.\ OR-Tools}{4}{subsection.4.4}\protected@file@percent }
-\newlabel{subsec:ortools_baseline}{{\mbox  {IV-D}}{4}{Head-to-Head vs.\ OR-Tools}{subsection.4.4}{}}
-\newlabel{subsec:ortools_baseline@cref}{{[subsection][4][4]\mbox  {IV-D}}{[1][4][]4}{}{}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-E}}Gehring--Homberger Scalability}{4}{subsection.4.5}\protected@file@percent }
-\citation{Gehring1999}
-\citation{Ropke2006}
-\citation{ortools}
+\@writefile{lot}{\contentsline {table}{\numberline {II}{\ignorespaces Ablation Analysis: Component contributions (overall $N=62$ instances, average NV diff and TD Gap\% relative to BKS).}}{4}{table.2}\protected@file@percent }
+\newlabel{tab:ablation}{{II}{4}{Ablation Analysis: Component contributions (overall $N=62$ instances, average NV diff and TD Gap\% relative to BKS)}{table.2}{}}
+\newlabel{tab:ablation@cref}{{[table][2][]II}{[1][4][]4}{}{}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {III}{\ignorespaces $NV_{\text  {diff}}$ on Solomon. Lower is better; $0.000{=}$BKS.}}{4}{table.3}\protected@file@percent }
+\newlabel{tab:nv_summary}{{III}{4}{$NV_{\text {diff}}$ on Solomon. Lower is better; $0.000{=}$BKS}{table.3}{}}
+\newlabel{tab:nv_summary@cref}{{[table][3][]III}{[1][4][]4}{}{}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {IV}{\ignorespaces NV-filtered TD Gap\%. Lower is better.}}{4}{table.4}\protected@file@percent }
+\newlabel{tab:distance_summary}{{IV}{4}{NV-filtered TD Gap\%. Lower is better}{table.4}{}}
+\newlabel{tab:distance_summary@cref}{{[table][4][]IV}{[1][4][]4}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-C}}Vehicle Count Minimization}{4}{subsection.4.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-D}}Routing Distance with Fair-Subset Filtering}{4}{subsection.4.4}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {V}{\ignorespaces Strict fair intersection ($N=47$) by Solomon family.}}{4}{table.5}\protected@file@percent }
+\newlabel{tab:fair_by_category}{{V}{4}{Strict fair intersection ($N=47$) by Solomon family}{table.5}{}}
+\newlabel{tab:fair_by_category@cref}{{[table][5][]V}{[1][4][]4}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-E}}Head-to-Head vs.\ OR-Tools}{4}{subsection.4.5}\protected@file@percent }
+\newlabel{subsec:ortools_baseline}{{\mbox  {IV-E}}{4}{Head-to-Head vs.\ OR-Tools}{subsection.4.5}{}}
+\newlabel{subsec:ortools_baseline@cref}{{[subsection][5][4]\mbox  {IV-E}}{[1][4][]4}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-F}}Gehring--Homberger Scalability}{4}{subsection.4.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-G}}Validation of SOTA GNN Heatmap Guidance}{4}{subsection.4.7}\protected@file@percent }
+\newlabel{subsec:gnn_validation}{{\mbox  {IV-G}}{4}{Validation of SOTA GNN Heatmap Guidance}{subsection.4.7}{}}
+\newlabel{subsec:gnn_validation@cref}{{[subsection][7][4]\mbox  {IV-G}}{[1][4][]4}{}{}{}}
 \citation{wang2016dueling}
 \citation{tobin2017domain}
 \citation{Solomon1987}
@@ -119,6 +116,21 @@
 \bibcite{Dantzig1959}{1}
 \bibcite{Ropke2006}{2}
 \bibcite{shaw1998using}{3}
+\@writefile{lot}{\contentsline {table}{\numberline {VI}{\ignorespaces Gehring--Homberger~\cite  {Gehring1999} 200-customer results at 600 iterations. Format: $NV/TD\,\text  {Gap}\%$. ${}^\dagger $: $NV>NV_{\text  {BKS}}$ --- negative gaps reflect over-allocation.}}{5}{table.6}\protected@file@percent }
+\newlabel{tab:gh200}{{VI}{5}{Gehring--Homberger~\cite {Gehring1999} 200-customer results at 600 iterations. Format: $NV/TD\,\text {Gap}\%$. ${}^\dagger $: $NV>NV_{\BKS }$ --- negative gaps reflect over-allocation}{table.6}{}}
+\newlabel{tab:gh200@cref}{{[table][6][]VI}{[1][4][]5}{}{}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {VII}{\ignorespaces Baseline vs. GNN-Guided Hybrid-DDQN (150 Iterations)}}{5}{table.7}\protected@file@percent }
+\newlabel{tab:gnn_comparison}{{VII}{5}{Baseline vs. GNN-Guided Hybrid-DDQN (150 Iterations)}{table.7}{}}
+\newlabel{tab:gnn_comparison@cref}{{[table][7][]VII}{[1][4][]5}{}{}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {V}Discussion}{5}{section.5}\protected@file@percent }
+\newlabel{sec:discussion}{{V}{5}{Discussion}{section.5}{}}
+\newlabel{sec:discussion@cref}{{[section][5][]V}{[1][5][]5}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-A}}Learned State-Conditioned Neighborhood Selection}{5}{subsection.5.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-B}}Limitations}{5}{subsection.5.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {VI}Conclusion}{5}{section.6}\protected@file@percent }
+\newlabel{sec:conclusion}{{VI}{5}{Conclusion}{section.6}{}}
+\newlabel{sec:conclusion@cref}{{[section][6][]VI}{[1][5][]5}{}{}{}}
+\@writefile{toc}{\contentsline {section}{References}{5}{section*.2}\protected@file@percent }
 \bibcite{pisinger2007general}{4}
 \bibcite{Solomon1987}{5}
 \bibcite{Gehring1999}{6}
@@ -131,16 +143,4 @@
 \bibcite{kool2019attention}{13}
 \bibcite{nazari2018reinforcement}{14}
 \bibcite{ortools}{15}
-\@writefile{toc}{\contentsline {section}{\numberline {V}Discussion}{5}{section.5}\protected@file@percent }
-\newlabel{sec:discussion}{{V}{5}{Discussion}{section.5}{}}
-\newlabel{sec:discussion@cref}{{[section][5][]V}{[1][5][]5}{}{}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-A}}Learned State-Conditioned Neighborhood Selection}{5}{subsection.5.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-B}}Limitations}{5}{subsection.5.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {VI}Conclusion}{5}{section.6}\protected@file@percent }
-\newlabel{sec:conclusion}{{VI}{5}{Conclusion}{section.6}{}}
-\newlabel{sec:conclusion@cref}{{[section][6][]VI}{[1][5][]5}{}{}{}}
-\@writefile{toc}{\contentsline {section}{References}{5}{section*.2}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {V}{\ignorespaces Gehring--Homberger~\cite  {Gehring1999} 200-customer results at 600 iterations. Format: $NV/TD\,\text  {Gap}\%$. ${}^\dagger $: $NV>NV_{\text  {BKS}}$ --- negative gaps reflect over-allocation.}}{6}{table.5}\protected@file@percent }
-\newlabel{tab:gh200}{{V}{6}{Gehring--Homberger~\cite {Gehring1999} 200-customer results at 600 iterations. Format: $NV/TD\,\text {Gap}\%$. ${}^\dagger $: $NV>NV_{\BKS }$ --- negative gaps reflect over-allocation}{table.5}{}}
-\newlabel{tab:gh200@cref}{{[table][5][]V}{[1][5][]6}{}{}{}}
 \gdef \@abspage@last{6}

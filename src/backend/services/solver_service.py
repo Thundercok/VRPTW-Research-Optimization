@@ -223,6 +223,57 @@ def _resolve_transfer_path() -> Path | None:
     return None
 
 
+_DEFAULT_GNN_PATH = _ROOT / "docs" / "model" / "gnn_edge_predictor.pt"
+_ALTERNATIVE_GNN_PATH = _ROOT / "model" / "gnn_edge_predictor.pt"
+
+_GNN_LOADED_ONCE = False
+_GNN_PATH_USED: str | None = None
+
+
+def _resolve_gnn_path() -> Path | None:
+    """Return the path that GNN model will load from, or None if missing."""
+    path_env = os.environ.get("VRPTW_GNN_WEIGHTS")
+    if path_env:
+        candidate = Path(path_env)
+        if candidate.exists():
+            return candidate
+    for candidate in (_DEFAULT_GNN_PATH, _ALTERNATIVE_GNN_PATH):
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def _load_gnn_weights(solver: Any) -> bool:
+    """Load the trained GNN model weights into the solver."""
+    global _GNN_LOADED_ONCE, _GNN_PATH_USED
+    path = _resolve_gnn_path()
+    if path is None:
+        if not _GNN_LOADED_ONCE:
+            _GNN_LOADED_ONCE = True
+            logger.warning(
+                "GNN model weights NOT FOUND at %s or %s. GNN heatmap guidance will be disabled.",
+                _DEFAULT_GNN_PATH,
+                _ALTERNATIVE_GNN_PATH,
+            )
+        return False
+
+    try:
+        if hasattr(solver, "load_gnn_model"):
+            solver.load_gnn_model(str(path))
+            if not _GNN_LOADED_ONCE:
+                _GNN_LOADED_ONCE = True
+                _GNN_PATH_USED = str(path)
+                logger.info("GNN model loaded from %s.", path)
+            return True
+        return False
+    except Exception as exc:
+        if not _GNN_LOADED_ONCE:
+            _GNN_LOADED_ONCE = True
+            logger.error("Failed to load GNN model weights from %s: %s", path, exc)
+        return False
+
+
+
 def _align_action_head(state: dict[str, Any], target_module: Any) -> tuple[dict[str, Any], int]:
     """Pad the action-head row dimension when the checkpoint was trained with
     fewer modes than the current code defines.
@@ -345,6 +396,7 @@ def _run_ddqn_alns(payload: JobRequest) -> dict[str, Any]:
     solver = runtime.plateau_hybrid_solver(inst, config)
     _load_transfer_weights(solver)
     solver.ctrl.eps = config.ctrl_eps_end
+    _load_gnn_weights(solver)
     start = time.time()
     plan, _ = solver.solve(seed=config.seed, frozen=True)
     elapsed = time.time() - start
@@ -354,7 +406,10 @@ def _run_ddqn_alns(payload: JobRequest) -> dict[str, Any]:
             f"Infeasible configuration: requires {plan.nv} vehicles but only {payload.fleet.vehicles} provided"
         )
 
-    return runtime.plan_to_payload(plan, payload.customers, elapsed)
+    res = runtime.plan_to_payload(plan, payload.customers, elapsed)
+    if getattr(solver, "heatmap", None) is not None:
+        res["gnn_heatmap"] = solver.heatmap.tolist()
+    return res
 
 
 def _run_alns(payload: JobRequest) -> dict[str, Any]:
@@ -438,33 +493,49 @@ def _run_algo_generic(payload: JobRequest, algo: str) -> dict[str, Any]:
 
     elif algo == "hybrid_fixed":
         solver = vrptw.HybridFixedSolver(inst, config)
+        _load_gnn_weights(solver)
         start = time.time()
         plan, _ = solver.solve(seed=config.seed)
         elapsed = time.time() - start
-        return runtime.plan_to_payload(plan, payload.customers, elapsed)
+        res = runtime.plan_to_payload(plan, payload.customers, elapsed)
+        if getattr(solver, "heatmap", None) is not None:
+            res["gnn_heatmap"] = solver.heatmap.tolist()
+        return res
 
     elif algo == "hybrid_ddqn":
         solver = vrptw.HybridDDQNSolver(inst, config)
+        _load_gnn_weights(solver)
         start = time.time()
         plan, _ = solver.solve(seed=config.seed, frozen=True)
         elapsed = time.time() - start
-        return runtime.plan_to_payload(plan, payload.customers, elapsed)
+        res = runtime.plan_to_payload(plan, payload.customers, elapsed)
+        if getattr(solver, "heatmap", None) is not None:
+            res["gnn_heatmap"] = solver.heatmap.tolist()
+        return res
 
     elif algo == "hybrid_ddqn_transfer_rc1":
         solver = vrptw.HybridDDQNSolver(inst, config)
         _load_weights_for_solver(solver, algo)
+        _load_gnn_weights(solver)
         start = time.time()
         plan, _ = solver.solve(seed=config.seed, frozen=True)
         elapsed = time.time() - start
-        return runtime.plan_to_payload(plan, payload.customers, elapsed)
+        res = runtime.plan_to_payload(plan, payload.customers, elapsed)
+        if getattr(solver, "heatmap", None) is not None:
+            res["gnn_heatmap"] = solver.heatmap.tolist()
+        return res
 
     elif algo == "hybrid_ddqn_transfer_dr":
         solver = vrptw.HybridDDQNSolver(inst, config)
         _load_weights_for_solver(solver, algo)
+        _load_gnn_weights(solver)
         start = time.time()
         plan, _ = solver.solve(seed=config.seed, frozen=True)
         elapsed = time.time() - start
-        return runtime.plan_to_payload(plan, payload.customers, elapsed)
+        res = runtime.plan_to_payload(plan, payload.customers, elapsed)
+        if getattr(solver, "heatmap", None) is not None:
+            res["gnn_heatmap"] = solver.heatmap.tolist()
+        return res
 
     else:
         raise ValueError(f"Unknown algorithm specified: {algo}")

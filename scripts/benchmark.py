@@ -1,6 +1,15 @@
 #!/usr/bin/env python3
 import os
 import sys
+
+# Limit thread counts for math/deep learning libraries to prevent CPU oversubscription/contention
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
+os.environ["NUMBA_NUM_THREADS"] = "1"
+
 import argparse
 import subprocess
 import shutil
@@ -396,12 +405,13 @@ def run_status():
     failed_file = os.path.join(OUTPUT_BASE, "failed_instances.txt")
     if os.path.exists(failed_file):
         active_failures = []
+        completed_instances_lower = {ci.lower() for ci in completed_instances}
         with open(failed_file, "r") as f:
             for line in f:
                 parts = line.strip().split(",")
                 if len(parts) >= 2:
                     inst = parts[1].strip()
-                    if inst not in completed_instances:
+                    if inst.lower() not in completed_instances_lower:
                         active_failures.append(line.strip())
         
         if active_failures:
@@ -442,8 +452,8 @@ def run_analyze():
     df = pd.concat(all_dfs, ignore_index=True)
     df["Algorithm"] = df["Algorithm"].str.strip()
     
-    # Find instances with all 5 algorithms completed
-    algo_counts = df.groupby("Instance")["Algorithm"].nunique()
+    # Find instances with all 5 algorithms completed successfully (with valid metrics)
+    algo_counts = df.dropna(subset=["NV_mean"]).groupby("Instance")["Algorithm"].nunique()
     valid_instances = algo_counts[algo_counts == len(ALGS)].index.tolist()
     print(f"Analyzing {len(valid_instances)} instances completed by all {len(ALGS)} algorithms:")
     

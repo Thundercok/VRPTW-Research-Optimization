@@ -398,6 +398,130 @@ def op_route_absorb_disrupt(plan: Plan, size: int) -> tuple[Plan, list[int]]:
     return _invalidate(plan), removed
 
 
+def op_neural_worst(plan: Plan, size: int, heatmap: np.ndarray | None = None) -> tuple[Plan, list[int]]:
+    """Remove customers whose current edges have low GNN-predicted probability.
+
+    For each customer *node* currently placed between *prev* and *nxt* in its
+    route, compute a removal score:
+        score = (1 - heatmap[prev, node]) + (1 - heatmap[node, nxt])
+    High score ⇒ the GNN thinks these edges are unlikely in a good solution
+    ⇒ the customer is misplaced ⇒ prioritise it for removal.
+
+    Falls back to ``op_worst`` when no heatmap is available.
+    """
+    if heatmap is None:
+        return op_worst(plan, size)
+
+    inst = plan.inst
+    scores: list[tuple[float, int]] = []
+    for route in plan.routes:
+        for idx, node in enumerate(route):
+            prev = route[idx - 1] if idx > 0 else 0
+            nxt = route[idx + 1] if idx < len(route) - 1 else 0
+            # Low heatmap probability → high removal score
+            neural_score = (1.0 - heatmap[prev, node]) + (1.0 - heatmap[node, nxt])
+            # Blend with detour cost for stability (30% distance, 70% neural)
+            detour = inst.dist[prev, node] + inst.dist[node, nxt] - inst.dist[prev, nxt]
+            detour_norm = detour / max(inst.max_dist, 1e-9)
+            score = 0.7 * neural_score + 0.3 * detour_norm
+            scores.append((score, node))
+    scores.sort(reverse=True)
+
+    p = 3.0
+    removed: list[int] = []
+    rs: set = set()
+    while len(removed) < size and scores:
+        idx = int((random.random() ** p) * len(scores))
+        _, node = scores.pop(idx)
+        if node not in rs:
+            removed.append(node)
+            rs.add(node)
+    plan.routes = [[n for n in r if n not in rs] for r in plan.routes]
+    plan.routes = [r for r in plan.routes if r]
+    return _invalidate(plan), removed
+
+
+def op_neural_shaw(plan: Plan, size: int, heatmap: np.ndarray | None = None) -> tuple[Plan, list[int]]:
+    """Remove a coherent cluster of poorly-connected customers using Shaw relatedness and GNN edge probability.
+
+    Falls back to ``op_shaw`` when no heatmap is available.
+    """
+    if heatmap is None:
+        return op_shaw(plan, size)
+
+    inst = plan.inst
+    nodes = [n for r in plan.routes for n in r]
+    if not nodes:
+        return plan, []
+
+    # 1. Seed: pick customer with lowest avg GNN edge probability to neighbors in current route
+    seed_node = None
+    min_avg_prob = 2.0
+    for route in plan.routes:
+        for idx, node in enumerate(route):
+            prev = route[idx - 1] if idx > 0 else 0
+            nxt = route[idx + 1] if idx < len(route) - 1 else 0
+            avg_prob = 0.5 * (heatmap[prev, node] + heatmap[node, nxt])
+            if avg_prob < min_avg_prob:
+                min_avg_prob = avg_prob
+                seed_node = node
+
+    if seed_node is None:
+        seed_node = random.choice(nodes)
+
+    removed = [seed_node]
+    rs = {seed_node}
+    max_dist = inst.max_dist + 1e-9
+    max_tw = max(inst.due_times - inst.ready_times) + 1e-9
+
+    while len(removed) < size:
+        ref_node = random.choice(removed)
+        neighbors = inst.neighbors_k[ref_node]
+        candidates = []
+        for n in neighbors:
+            if n not in rs:
+                spatial_rel = inst.dist[ref_node, n] / max_dist
+                temporal_rel = abs(inst.ready_times[ref_node] - inst.ready_times[n]) / max_tw
+                demand_rel = abs(inst.demands[ref_node] - inst.demands[n]) / inst.capacity
+                avg_heatmap_prob = sum(0.5 * (heatmap[r, n] + heatmap[n, r]) for r in removed) / len(removed)
+                score = (
+                    0.35 * spatial_rel
+                    + 0.25 * temporal_rel
+                    + 0.30 * (1.0 - avg_heatmap_prob)
+                    + 0.10 * demand_rel
+                )
+                candidates.append((n, score))
+
+        if not candidates:
+            for n in nodes:
+                if n not in rs:
+                    spatial_rel = inst.dist[ref_node, n] / max_dist
+                    temporal_rel = abs(inst.ready_times[ref_node] - inst.ready_times[n]) / max_tw
+                    demand_rel = abs(inst.demands[ref_node] - inst.demands[n]) / inst.capacity
+                    avg_heatmap_prob = sum(0.5 * (heatmap[r, n] + heatmap[n, r]) for r in removed) / len(removed)
+                    score = (
+                        0.35 * spatial_rel
+                        + 0.25 * temporal_rel
+                        + 0.30 * (1.0 - avg_heatmap_prob)
+                        + 0.10 * demand_rel
+                    )
+                    candidates.append((n, score))
+
+        if not candidates:
+            break
+
+        candidates.sort(key=lambda x: x[1])
+        p = 3.0
+        idx = int((random.random() ** p) * len(candidates))
+        chosen = candidates[idx][0]
+        removed.append(chosen)
+        rs.add(chosen)
+
+    plan.routes = [[n for n in r if n not in rs] for r in plan.routes]
+    plan.routes = [r for r in plan.routes if r]
+    return _invalidate(plan), removed
+
+
 DESTROY = [
     op_random,
     op_worst,
@@ -410,41 +534,60 @@ DESTROY = [
     op_cross_route_shaw,
     op_route_merge_sample,
     op_route_absorb_disrupt,
+    op_neural_worst,
+    op_neural_shaw,
 ]
 
 
-def op_greedy(plan: Plan, removed: list[int]) -> Plan:
+def op_greedy(plan: Plan, removed: list[int], heatmap: np.ndarray | None = None, gamma: float = 0.0) -> Plan:
     inst = plan.inst
-    for node in sorted(removed, key=lambda n: inst.due_times[n]):
-        _insert_customer(plan, node, inst)
+    if heatmap is not None and gamma > 0.0:
+        from .heuristics import _insert_customer_biased
+        for node in sorted(removed, key=lambda n: inst.due_times[n]):
+            _insert_customer_biased(plan, node, inst, heatmap, gamma)
+    else:
+        for node in sorted(removed, key=lambda n: inst.due_times[n]):
+            _insert_customer(plan, node, inst)
     return Plan(plan.routes, inst, plan.algo)
 
 
-def _regret(plan: Plan, removed: list[int], k: int) -> Plan:
+def _regret(plan: Plan, removed: list[int], k: int, heatmap: np.ndarray | None = None, gamma: float = 0.0) -> Plan:
     inst = plan.inst
     remaining: set = set(removed)
     while remaining:
         best_regret, chosen, choice = -float("inf"), None, None
         for node in remaining:
-            options = sorted(
-                (delta, ri, pos)
-                for ri, route in enumerate(plan.routes)
-                for delta, pos in [_best_insert_position(node, route, inst)]
-                if pos is not None
-            )
+            if heatmap is not None and gamma > 0.0:
+                from .heuristics import _best_insert_position_biased
+                options = []
+                for ri, route in enumerate(plan.routes):
+                    biased, actual, pos = _best_insert_position_biased(node, route, inst, heatmap, gamma)
+                    if pos is not None:
+                        options.append((biased, actual, ri, pos))
+                options.sort(key=lambda x: x[0])
+            else:
+                options = []
+                for ri, route in enumerate(plan.routes):
+                    delta, pos = _best_insert_position(node, route, inst)
+                    if pos is not None:
+                        options.append((delta, delta, ri, pos))
+                options.sort(key=lambda x: x[0])
+                
             if not options:
                 continue
+                
             regret = (
                 sum(options[i][0] - options[0][0] for i in range(1, k))
                 if len(options) >= k
                 else (options[1][0] - options[0][0] if len(options) >= 2 else float("inf"))
             )
             if regret > best_regret:
-                best_regret, chosen, choice = regret, node, options[0]
+                # We store best choice, but keep track of actual cost to make insertion correctly
+                best_regret, chosen, choice = regret, node, (options[0][2], options[0][3])
+                
         if chosen is not None and choice is not None:
-            _, ri, pos = choice
-            if pos is not None:
-                plan.routes[ri].insert(pos, chosen)
+            ri, pos = choice
+            plan.routes[ri].insert(pos, chosen)
             plan.invalidate()
             remaining.discard(chosen)
         else:
@@ -454,19 +597,25 @@ def _regret(plan: Plan, removed: list[int], k: int) -> Plan:
     return Plan(plan.routes, inst, plan.algo)
 
 
-def op_regret_2(plan: Plan, removed: list[int]) -> Plan:
-    return _regret(plan, removed, 2)
+def op_regret_2(plan: Plan, removed: list[int], heatmap: np.ndarray | None = None, gamma: float = 0.0) -> Plan:
+    return _regret(plan, removed, 2, heatmap, gamma)
 
 
-def op_regret_3(plan: Plan, removed: list[int]) -> Plan:
-    return _regret(plan, removed, 3)
+def op_regret_3(plan: Plan, removed: list[int], heatmap: np.ndarray | None = None, gamma: float = 0.0) -> Plan:
+    return _regret(plan, removed, 3, heatmap, gamma)
 
 
-def op_tw_greedy(plan: Plan, removed: list[int]) -> Plan:
+def op_tw_greedy(plan: Plan, removed: list[int], heatmap: np.ndarray | None = None, gamma: float = 0.0) -> Plan:
     inst = plan.inst
-    for node in sorted(removed, key=lambda n: inst.due_times[n] - inst.ready_times[n]):
-        _insert_customer(plan, node, inst)
+    if heatmap is not None and gamma > 0.0:
+        from .heuristics import _insert_customer_biased
+        for node in sorted(removed, key=lambda n: inst.due_times[n] - inst.ready_times[n]):
+            _insert_customer_biased(plan, node, inst, heatmap, gamma)
+    else:
+        for node in sorted(removed, key=lambda n: inst.due_times[n] - inst.ready_times[n]):
+            _insert_customer(plan, node, inst)
     return Plan(plan.routes, inst, plan.algo)
+
 
 
 def _route_arrivals_wait(route: list[int], inst: Inst) -> tuple[list[float], float]:
@@ -610,7 +759,7 @@ def _fts_best_insert_position(node: int, route: list[int], inst: Inst) -> tuple[
     return float(best_cost), int(best_pos)
 
 
-def op_fts_greedy(plan: Plan, removed: list[int]) -> Plan:
+def op_fts_greedy(plan: Plan, removed: list[int], heatmap: np.ndarray | None = None, gamma: float = 0.0) -> Plan:
     inst = plan.inst
     urgent_first = sorted(
         removed,
@@ -634,7 +783,7 @@ REPAIR = [op_greedy, op_regret_2, op_regret_3, op_tw_greedy, op_fts_greedy]
 N_D, N_R = len(DESTROY), len(REPAIR)
 N_ACTIONS = N_D * N_R
 
-assert N_D == 11
+assert N_D == 13
 assert N_R == 5
 for _m in MODES:
     assert len(_m.destroy_bias) == N_D

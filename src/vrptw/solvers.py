@@ -36,7 +36,7 @@ from .local_search import (
     _two_opt_best,
     td_converge_polish,
 )
-from .operators import DESTROY, N_D, N_R, REPAIR, accept, accept_with_nv_ceiling, destroy_size
+from .operators import DESTROY, N_D, N_R, REPAIR, accept, accept_with_nv_ceiling, destroy_size, op_neural_worst, op_neural_shaw
 from .pool import RoutePool, recombine_with_route_pool
 from .rl import (
     DEVICE,
@@ -128,6 +128,45 @@ class HybridDDQNSolver:
         self._pool_seeding_done: bool = False  # guard: fires once per solve()
         self._init_nv = 1
         self.archive = EliteArchive(k=cfg.elite_archive_k)
+        self.gnn_model = None
+        self.heatmap = None
+        self.gamma = 0.0
+        self.current_it = None
+
+    def load_gnn_model(self, model_path: str) -> None:
+        import os
+        if os.path.exists(model_path):
+            from .gnn import GNNEdgePredictor
+            self.gnn_model = GNNEdgePredictor(node_dim=6, edge_dim=1, hidden_dim=64, num_layers=3).to(DEVICE)
+            if model_path.endswith(".safetensors"):
+                from safetensors.torch import load_file
+                state_dict = load_file(model_path)
+            else:
+                state_dict = torch.load(model_path, map_location=DEVICE)
+            self.gnn_model.load_state_dict(state_dict)
+
+    def _destroy(self, di: int, plan: Plan, size: int) -> tuple[Plan, list[int]]:
+        """Dispatch destroy operator, passing heatmap to op_neural_worst and op_neural_shaw."""
+        destroy_fn = DESTROY[di]
+        if destroy_fn in (op_neural_worst, op_neural_shaw):
+            return destroy_fn(plan, size, heatmap=self.heatmap)
+        return destroy_fn(plan, size)
+
+    def _local_search(self, plan: Plan, **kwargs) -> Plan:
+        """Helper to run local search with GNN heatmap pruning if available."""
+        if "heatmap" not in kwargs:
+            kwargs["heatmap"] = self.heatmap
+        if "pruning_threshold" not in kwargs:
+            if hasattr(self, "current_it") and self.current_it is not None:
+                it = self.current_it
+                max_it = getattr(self.cfg, "hybrid_iterations", 1)
+                t_start = getattr(self.cfg, "gnn_pruning_threshold_start", 0.05)
+                t_end = getattr(self.cfg, "gnn_pruning_threshold_end", 0.003)
+                frac = min(1.0, max(0.0, it / max(1, max_it)))
+                kwargs["pruning_threshold"] = t_start + (t_end - t_start) * frac
+            else:
+                kwargs["pruning_threshold"] = getattr(self.cfg, "gnn_pruning_threshold_end", 0.003)
+        return local_search(plan, **kwargs)
 
     def clone_weights(self) -> dict:
         weights: dict[str, torch.Tensor] = {}
@@ -396,9 +435,9 @@ class HybridDDQNSolver:
         ):
             self._segment_recombine_used = True
             nv_cap = min(best.nv, refined.nv)
-            recombined = recombine_with_route_pool(refined, pool, self.cfg, nv_ceiling=nv_cap)
+            recombined = recombine_with_route_pool(refined, pool, self.cfg, nv_ceiling=nv_cap, heatmap=self.heatmap)
             if recombined.dominates(refined):
-                refined = local_search(
+                refined = self._local_search(
                     recombined, max_passes=1, nv_ceiling=recombined.nv, max_ls_moves=self.cfg.max_ls_moves
                 )
         return refined
@@ -408,7 +447,7 @@ class HybridDDQNSolver:
         target_nv = start.nv
         # Inherit operator statistics from main search instead of cold-starting
         polish_bandit = inherited_bandit.clone() if inherited_bandit is not None else ThompsonBandit(N_D, N_R)
-        cur = local_search(start, max_passes=cfg.polish_ls_passes, nv_ceiling=target_nv, max_ls_moves=cfg.max_ls_moves)
+        cur = self._local_search(start, max_passes=cfg.polish_ls_passes, nv_ceiling=target_nv, max_ls_moves=cfg.max_ls_moves)
         best = cur.copy()
         pool.add_plan(best)
         temp = cfg.temp_control * best.cost / math.log(2)
@@ -416,9 +455,9 @@ class HybridDDQNSolver:
         for it in range(cfg.polish_iterations):
             di, ri = polish_bandit.select()
             size = destroy_size(it, cfg.polish_iterations, cfg, self.inst.n, scale=0.70)
-            dest, removed = DESTROY[di](cur.copy(), size)
-            cand = REPAIR[ri](dest, removed)
-            cand = local_search(cand, max_passes=1, nv_ceiling=target_nv, max_ls_moves=cfg.max_ls_moves)
+            dest, removed = self._destroy(di, cur.copy(), size)
+            cand = REPAIR[ri](dest, removed, heatmap=self.heatmap, gamma=self.gamma)
+            cand = self._local_search(cand, max_passes=1, nv_ceiling=target_nv, max_ls_moves=cfg.max_ls_moves)
             pool.add_plan(cand)
             score, cur_before = 0, cur
             if accept_with_nv_ceiling(cur, cand, temp, target_nv):
@@ -439,7 +478,7 @@ class HybridDDQNSolver:
             temp *= cfg.temp_decay * 0.997
             if no_imp >= cfg.polish_patience:
                 break
-        best = local_search(best, max_passes=cfg.polish_ls_passes, nv_ceiling=best.nv, max_ls_moves=cfg.max_ls_moves)
+        best = self._local_search(best, max_passes=cfg.polish_ls_passes, nv_ceiling=best.nv, max_ls_moves=cfg.max_ls_moves)
         pool.add_plan(best)
         return best
 
@@ -466,7 +505,7 @@ class HybridDDQNSolver:
 
             # Alternate shaw (spatial clustering) and route_eliminate (full route removal)
             di = 2 if it % 2 == 0 else 5  # DESTROY[2]=op_shaw, DESTROY[5]=op_route_eliminate
-            destroyed, removed = DESTROY[di](best.copy(), size)
+            destroyed, removed = self._destroy(di, best.copy(), size)
 
             # regret-3 repair: tends to build fewer, longer routes than greedy
             candidate = REPAIR[2](destroyed, removed)  # REPAIR[2] = op_regret_3
@@ -808,7 +847,7 @@ class HybridDDQNSolver:
 
                 # Try to build a different starting topology via pool recombination
                 restart_plan = recombine_with_route_pool(
-                    start, pool, cfg, nv_ceiling=start.nv
+                    start, pool, cfg, nv_ceiling=start.nv, heatmap=self.heatmap
                 )
                 if restart_plan.feasible and restart_plan.nv <= start.nv:
                     cur = restart_plan
@@ -818,7 +857,7 @@ class HybridDDQNSolver:
 
             di, ri = bandit.select()
             size = destroy_size(it, effective_iters, cfg, inst.n, scale=1.0)
-            dest, removed = DESTROY[di](cur.copy(), size)
+            dest, removed = self._destroy(di, cur.copy(), size)
             cand = REPAIR[ri](dest, removed)
 
             for route in cand.routes:
@@ -839,7 +878,7 @@ class HybridDDQNSolver:
 
                 # 1. Try local search reduction (run only if improving or periodically)
                 if is_improving or it % 15 == 0:
-                    reduced = local_search(
+                    reduced = self._local_search(
                         cand,
                         max_passes=1,
                         nv_ceiling=cand.nv,
@@ -871,7 +910,7 @@ class HybridDDQNSolver:
                 # 3. Try MILP recombination
                 if not (reduced.feasible and reduced.nv <= target_nv):
                     if is_improving or it % 50 == 0:
-                        rec = recombine_with_route_pool(cand, pool, cfg, nv_target=target_nv)
+                        rec = recombine_with_route_pool(cand, pool, cfg, nv_target=target_nv, heatmap=self.heatmap)
                         if rec.feasible and rec.nv <= target_nv:
                             reduced = rec
 
@@ -933,6 +972,20 @@ class HybridDDQNSolver:
         recent_improvements: deque[int] = deque(maxlen=cfg.segment_size)
         no_imp = 0
         self.q_scale = 1.0
+        
+        # Initialize GNN edge predictor heatmap once per solve()
+        self.heatmap = None
+        self.gamma = 0.0
+        if self.gnn_model is not None:
+            from .gnn import get_gnn_features
+            self.gnn_model.eval()
+            with torch.no_grad():
+                node_feats, edge_feats = get_gnn_features(self.inst)
+                logits = self.gnn_model(node_feats.to(DEVICE), edge_feats.to(DEVICE))
+                probs = torch.sigmoid(logits)[0].cpu().numpy()
+                self.heatmap = probs
+                self.gamma = getattr(cfg, "gnn_guidance_strength", 0.45)
+
         n_segments = math.ceil(cfg.hybrid_iterations / cfg.segment_size)
 
         for seg_idx in range(n_segments):
@@ -967,6 +1020,7 @@ class HybridDDQNSolver:
                 it = seg_idx * cfg.segment_size + offset
                 if it >= cfg.hybrid_iterations:
                     break
+                self.current_it = it
                 op_state = self._op_state(cur, best, action, it, temp, no_imp, pool, imp_rate)
                 if getattr(self, "use_op_rl", True):
                     op_action, di, ri = self.op_ctrl.act(
@@ -988,8 +1042,8 @@ class HybridDDQNSolver:
                 )
                 cur_before = cur.copy()
                 best_before = best.copy()
-                dest, removed = DESTROY[di](cur.copy(), size)
-                cand = REPAIR[ri](dest, removed)
+                dest, removed = self._destroy(di, cur.copy(), size)
+                cand = REPAIR[ri](dest, removed, heatmap=self.heatmap, gamma=self.gamma)
                 cand = self._refine_candidate(cand, action, pool, cur, best, no_imp, it)
 
                 lac_decided = False
@@ -1039,7 +1093,7 @@ class HybridDDQNSolver:
                             if action in (MODE_INTENSIFY, MODE_TW_RESCUE, MODE_POOL_RECOMBINE, MODE_ROUTE_REDUCE)
                             else None
                         )
-                        cand = local_search(
+                        cand = self._local_search(
                             cand, max_passes=MODES[action].ls_passes, nv_ceiling=nv_cap, max_ls_moves=cfg.max_ls_moves
                         )
                         self.ls_budget.record(time.time() - t_ls, cost_pre, cand.cost)
@@ -1124,7 +1178,7 @@ class HybridDDQNSolver:
                 break
 
         if cfg.recombine_after_main_search:
-            recombined = recombine_with_route_pool(best, pool, cfg, nv_ceiling=best.nv)
+            recombined = recombine_with_route_pool(best, pool, cfg, nv_ceiling=best.nv, heatmap=self.heatmap)
             if recombined.dominates(best):
                 best = recombined
                 pool.add_plan(best)
@@ -1134,9 +1188,9 @@ class HybridDDQNSolver:
         history.append(best.cost)
 
         if cfg.recombine_after_polish:
-            recombined = recombine_with_route_pool(best, pool, cfg, nv_ceiling=best.nv)
+            recombined = recombine_with_route_pool(best, pool, cfg, nv_ceiling=best.nv, heatmap=self.heatmap)
             if recombined.dominates(best):
-                best = local_search(
+                best = self._local_search(
                     recombined, max_passes=cfg.polish_ls_passes, nv_ceiling=recombined.nv, max_ls_moves=cfg.max_ls_moves
                 )
                 history.append(best.cost)
@@ -1176,10 +1230,10 @@ class HybridDDQNSolver:
 
             # NV-reduction loop stops at BKS floor
             for _target_nv in range(best.nv - 1, max(_bks_nv - 1, 0), -1):
-                _rec = recombine_with_route_pool(best, pool, cfg, nv_target=_target_nv)
+                _rec = recombine_with_route_pool(best, pool, cfg, nv_target=_target_nv, heatmap=self.heatmap)
                 if not _rec.feasible or _rec.nv > _target_nv:
                     break
-                _rec = local_search(
+                _rec = self._local_search(
                     _rec,
                     max_passes=cfg.polish_ls_passes + 1,
                     nv_ceiling=_rec.nv,
@@ -1244,7 +1298,7 @@ class HybridDDQNSolver:
 
                 # Phase B: standard inter-route local search for cross-route improvements
                 td_scale = 4 if is_wide_tw else 2
-                td_polished = local_search(
+                td_polished = self._local_search(
                     best,
                     max_passes=cfg.polish_ls_passes + td_scale,
                     nv_ceiling=best.nv,
@@ -1271,6 +1325,7 @@ class HybridDDQNSolver:
 
         best.algo = self.algo_name
         self.archive.update(best)
+        self.current_it = None
         return best, history
 
     def solve_multi_run(
@@ -1394,13 +1449,15 @@ def run_ortools(inst: Inst, cfg: Config) -> tuple[Plan | None, float]:
         return None, 0.0
     from ortools.constraint_solver import pywrapcp, routing_enums_pb2
 
-    scale = 100
+    scale = 100000  # Increased scale factor from 100 to 100000 for precision
     n_nodes = inst.n + 1
     n_vehicles = inst.n
     manager = pywrapcp.RoutingIndexManager(n_nodes, n_vehicles, 0)
     routing = pywrapcp.RoutingModel(manager)
-    dist_mat = (inst.dist * scale).astype(int)
-    serv_int = (inst.service_times * scale).astype(int)
+    
+    # Use np.round to avoid truncation/underflow errors
+    dist_mat = np.round(inst.dist * scale).astype(np.int64)
+    serv_int = np.round(inst.service_times * scale).astype(np.int64)
 
     # Pre-compute the full transit matrix (dist + service time) as a 2D list of integers.
     # This avoids expensive Python-to-C++ callbacks and GIL locks in the solver loop.
@@ -1414,11 +1471,14 @@ def run_ortools(inst: Inst, cfg: Config) -> tuple[Plan | None, float]:
 
     demand_idx = routing.RegisterUnaryTransitCallback(demand_cb)
     routing.AddDimensionWithVehicleCapacity(demand_idx, 0, [int(inst.capacity)] * n_vehicles, True, "Capacity")
-    routing.AddDimension(transit_idx, int(inst.horizon * scale), int(inst.horizon * scale), False, "Time")
+    routing.AddDimension(transit_idx, int(np.round(inst.horizon * scale)), int(np.round(inst.horizon * scale)), False, "Time")
     time_dim = routing.GetDimensionOrDie("Time")
     for node in range(1, inst.n + 1):
         idx = manager.NodeToIndex(node)
-        time_dim.CumulVar(idx).SetRange(int(inst.ready_times[node] * scale), int(inst.due_times[node] * scale))
+        time_dim.CumulVar(idx).SetRange(
+            int(np.round(inst.ready_times[node] * scale)),
+            int(np.round(inst.due_times[node] * scale))
+        )
     for v in range(n_vehicles):
         routing.AddVariableMinimizedByFinalizer(time_dim.CumulVar(routing.Start(v)))
         routing.AddVariableMinimizedByFinalizer(time_dim.CumulVar(routing.End(v)))

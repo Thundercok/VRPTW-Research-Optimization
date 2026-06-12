@@ -48,6 +48,8 @@ from .solvers import (
     ScheduledHybridSolver,
     run_ortools,
 )
+from .gnn import GNNEdgePredictor, get_gnn_features, plan_to_adj_matrix
+from .train_gnn import train_gnn
 
 __all__ = [
     "ALGO_ALNS_BASE",
@@ -94,4 +96,8 @@ __all__ = [
     "_load_weights",
     "MODES",
     "ModeSpec",
+    "GNNEdgePredictor",
+    "get_gnn_features",
+    "plan_to_adj_matrix",
+    "train_gnn",
 ]

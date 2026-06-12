@@ -386,7 +386,7 @@ class PlateauController:
         if random.random() < self.eps:
             return random.randrange(len(MODES))
         with torch.no_grad():
-            return int(self.q(torch.tensor(state).unsqueeze(0).to(DEVICE))[0].argmax().item())
+            return int(self.q(torch.as_tensor(state, dtype=torch.float32, device=DEVICE).unsqueeze(0))[0].argmax().item())
 
     def observe(self, s, a, r, ns, done=0.0):
         self.buf.push(s, a, r, ns, done)
@@ -455,7 +455,7 @@ class OperatorController:
             di, ri = divmod(action, N_R)
         else:
             with torch.no_grad():
-                q = self.q(torch.tensor(state).unsqueeze(0).to(DEVICE))[0].cpu().numpy()
+                q = self.q(torch.as_tensor(state, dtype=torch.float32, device=DEVICE).unsqueeze(0))[0].cpu().numpy()
             q = (
                 q
                 + self.cfg.op_prior_strength * np.log(prior.reshape(-1) + 1e-8)

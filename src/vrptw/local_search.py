@@ -3,14 +3,17 @@ from __future__ import annotations
 import numpy as np
 
 from .core import Inst, Plan, _check_route, _route_ok, _route_cost
-from .heuristics import _best_insert_position, _best_insert_position_numba, _route_cost_list, _route_load
+from .heuristics import _best_insert_position, _best_insert_position_numba, _best_insert_position_pruned_numba, _route_cost_list, _route_load
 from .numba_kernels import (
     _two_opt_best_numba,
     _or_opt_intra_numba,
     _intra_route_optimize_numba,
     _swap_evaluate_numba,
+    _swap_evaluate_pruned_numba,
     _best_segment_insert_numba,
+    _best_segment_insert_pruned_numba,
     _cross_exchange_pair_numba,
+    _cross_exchange_pair_pruned_numba,
 )
 
 
@@ -25,11 +28,20 @@ def _two_opt_best(route: list[int], inst: Inst) -> list[int]:
     return list(result)
 
 
-def _best_relocate(plan: Plan, nv_ceiling: int | None = None):
+def _best_relocate(
+    plan: Plan,
+    nv_ceiling: int | None = None,
+    heatmap: np.ndarray | None = None,
+    pruning_threshold: float = 0.0,
+):
     inst = plan.inst
     best_delta, best_move = -1e-9, None
+    max_dist = max(inst.max_dist, 1.0)
     # Pre-convert all routes to arrays once
     route_arrays = [np.array(r, dtype=np.int64) for r in plan.routes]
+    # Pre-calculate route centroids
+    centroids = [inst.coords[arr].mean(axis=0) if len(arr) > 0 else inst.coords[0] for arr in route_arrays]
+    
     for si in range(len(plan.routes)):
         source_route = plan.routes[si]
         for sp in range(len(source_route)):
@@ -40,15 +52,29 @@ def _best_relocate(plan: Plan, nv_ceiling: int | None = None):
             prev_s = source_route[sp - 1] if sp > 0 else 0
             next_s = source_route[sp + 1] if sp < len(source_route) - 1 else 0
             remove_delta = inst.dist[prev_s, next_s] - inst.dist[prev_s, node] - inst.dist[node, next_s]
+            node_coord = inst.coords[node]
+            
             for di in range(len(plan.routes)):
                 if di == si:
                     continue
-                # Use already-JIT'd insert evaluator — no array allocation per position
-                insert_delta, best_pos = _best_insert_position_numba(
-                    node, route_arrays[di],
-                    inst.dist, inst.demands, inst.capacity,
-                    inst.ready_times, inst.due_times, inst.service_times,
-                )
+                # Spatial filter: skip routes whose centroids are too far from node
+                if float(np.linalg.norm(centroids[di] - node_coord)) > 0.55 * max_dist:
+                    continue
+                
+                # Check if pruning is enabled and heatmap is provided
+                if heatmap is not None and pruning_threshold > 0.0:
+                    insert_delta, best_pos = _best_insert_position_pruned_numba(
+                        node, route_arrays[di],
+                        inst.dist, inst.demands, inst.capacity,
+                        inst.ready_times, inst.due_times, inst.service_times,
+                        heatmap, pruning_threshold
+                    )
+                else:
+                    insert_delta, best_pos = _best_insert_position_numba(
+                        node, route_arrays[di],
+                        inst.dist, inst.demands, inst.capacity,
+                        inst.ready_times, inst.due_times, inst.service_times,
+                    )
                 if best_pos == -1:
                     continue
                 new_nv = plan.nv - (1 if sn_empty else 0)
@@ -73,17 +99,29 @@ def _apply_relocate(plan: Plan, move: tuple[int, int, int, int]) -> Plan:
     return Plan(routes, plan.inst, plan.algo)
 
 
-def _best_swap(plan: Plan):
+def _best_swap(
+    plan: Plan,
+    heatmap: np.ndarray | None = None,
+    pruning_threshold: float = 0.0,
+):
     inst = plan.inst
     best_delta, best_move = -1e-9, None
     route_arrays = [np.array(r, dtype=np.int64) for r in plan.routes]
     for si in range(len(plan.routes)):
         for di in range(si + 1, len(plan.routes)):
-            delta, sp, dp = _swap_evaluate_numba(
-                route_arrays[si], route_arrays[di],
-                inst.dist, inst.demands, inst.capacity,
-                inst.ready_times, inst.due_times, inst.service_times,
-            )
+            if heatmap is not None and pruning_threshold > 0.0:
+                delta, sp, dp = _swap_evaluate_pruned_numba(
+                    route_arrays[si], route_arrays[di],
+                    inst.dist, inst.demands, inst.capacity,
+                    inst.ready_times, inst.due_times, inst.service_times,
+                    heatmap, pruning_threshold
+                )
+            else:
+                delta, sp, dp = _swap_evaluate_numba(
+                    route_arrays[si], route_arrays[di],
+                    inst.dist, inst.demands, inst.capacity,
+                    inst.ready_times, inst.due_times, inst.service_times,
+                )
             if sp >= 0 and delta < best_delta:
                 best_delta, best_move = delta, (si, int(sp), di, int(dp))
     return best_move
@@ -96,7 +134,12 @@ def _apply_swap(plan: Plan, move: tuple[int, int, int, int]) -> Plan:
     return Plan(routes, plan.inst, plan.algo)
 
 
-def _cross_exchange(plan: Plan, nv_ceiling: int | None = None) -> Plan | None:
+def _cross_exchange(
+    plan: Plan,
+    nv_ceiling: int | None = None,
+    heatmap: np.ndarray | None = None,
+    pruning_threshold: float = 0.0,
+) -> Plan | None:
     inst = plan.inst
     if nv_ceiling is not None and plan.nv > nv_ceiling:
         return None
@@ -107,6 +150,11 @@ def _cross_exchange(plan: Plan, nv_ceiling: int | None = None) -> Plan | None:
     # Pre-convert routes to arrays once
     route_arrays = [np.array(r, dtype=np.int64) for r in plan.routes]
 
+    # Pre-calculate route metrics for filtering
+    route_coords_mean = [inst.coords[arr].mean(axis=0) if len(arr) > 0 else np.zeros(2) for arr in route_arrays]
+    route_readys = [float(np.min(inst.ready_times[arr])) if len(arr) > 0 else 0.0 for arr in route_arrays]
+    route_dues = [float(np.max(inst.due_times[arr])) if len(arr) > 0 else 0.0 for arr in route_arrays]
+
     for i in range(len(plan.routes)):
         for j in range(i + 1, len(plan.routes)):
             r1, r2 = plan.routes[i], plan.routes[j]
@@ -114,12 +162,9 @@ def _cross_exchange(plan: Plan, nv_ceiling: int | None = None) -> Plan | None:
                 continue
             r1_arr, r2_arr = route_arrays[i], route_arrays[j]
             # Route-level spatial/temporal filter
-            c1 = inst.coords[r1_arr].mean(axis=0)
-            c2 = inst.coords[r2_arr].mean(axis=0)
-            r1_ready = float(np.min(inst.ready_times[r1_arr]))
-            r1_due = float(np.max(inst.due_times[r1_arr]))
-            r2_ready = float(np.min(inst.ready_times[r2_arr]))
-            r2_due = float(np.max(inst.due_times[r2_arr]))
+            c1, c2 = route_coords_mean[i], route_coords_mean[j]
+            r1_ready, r1_due = route_readys[i], route_dues[i]
+            r2_ready, r2_due = route_readys[j], route_dues[j]
             if float(np.linalg.norm(c1 - c2)) > 0.55 * max_dist and not (
                 min(r1_due, r2_due) >= max(r1_ready, r2_ready)
             ):
@@ -128,12 +173,20 @@ def _cross_exchange(plan: Plan, nv_ceiling: int | None = None) -> Plan | None:
             max_len1 = 3 if len(r1) >= 12 else 2
             max_len2 = 3 if len(r2) >= 12 else 2
             # Delegate entire (p1, p2, len1, len2) search to JIT
-            delta, p1, len1, p2, len2 = _cross_exchange_pair_numba(
-                r1_arr, r2_arr, max_len1, max_len2,
-                inst.dist, inst.demands, inst.capacity,
-                inst.ready_times, inst.due_times, inst.service_times,
-                old_pair,
-            )
+            if heatmap is not None and pruning_threshold > 0.0:
+                delta, p1, len1, p2, len2 = _cross_exchange_pair_pruned_numba(
+                    r1_arr, r2_arr, max_len1, max_len2,
+                    inst.dist, inst.demands, inst.capacity,
+                    inst.ready_times, inst.due_times, inst.service_times,
+                    old_pair, heatmap, pruning_threshold
+                )
+            else:
+                delta, p1, len1, p2, len2 = _cross_exchange_pair_numba(
+                    r1_arr, r2_arr, max_len1, max_len2,
+                    inst.dist, inst.demands, inst.capacity,
+                    inst.ready_times, inst.due_times, inst.service_times,
+                    old_pair,
+                )
             if p1 >= 0 and delta < best_delta:
                 seg2 = list(r2[p2:p2 + len2])
                 seg1 = list(r1[p1:p1 + len1])
@@ -180,7 +233,12 @@ def _try_route_compact(plan: Plan, nv_ceiling: int | None = None) -> Plan | None
     return None
 
 
-def _best_or_opt(plan: Plan, nv_ceiling: int | None = None):
+def _best_or_opt(
+    plan: Plan,
+    nv_ceiling: int | None = None,
+    heatmap: np.ndarray | None = None,
+    pruning_threshold: float = 0.0,
+):
     inst = plan.inst
     best_delta, best_move = -1e-9, None
     route_arrays = [np.array(r, dtype=np.int64) for r in plan.routes]
@@ -204,11 +262,19 @@ def _best_or_opt(plan: Plan, nv_ceiling: int | None = None):
                     if di == si:
                         continue
                     # JIT-compiled segment insertion evaluation
-                    insert_delta, best_pos, rev_int = _best_segment_insert_numba(
-                        seg_arr, route_arrays[di],
-                        inst.dist, inst.demands, inst.capacity,
-                        inst.ready_times, inst.due_times, inst.service_times,
-                    )
+                    if heatmap is not None and pruning_threshold > 0.0:
+                        insert_delta, best_pos, rev_int = _best_segment_insert_pruned_numba(
+                            seg_arr, route_arrays[di],
+                            inst.dist, inst.demands, inst.capacity,
+                            inst.ready_times, inst.due_times, inst.service_times,
+                            heatmap, pruning_threshold
+                        )
+                    else:
+                        insert_delta, best_pos, rev_int = _best_segment_insert_numba(
+                            seg_arr, route_arrays[di],
+                            inst.dist, inst.demands, inst.capacity,
+                            inst.ready_times, inst.due_times, inst.service_times,
+                        )
                     if best_pos == -1:
                         continue
                     new_nv = plan.nv - (1 if sn_empty else 0)
@@ -616,6 +682,8 @@ def local_search(
     nv_ceiling: int | None = None,
     max_ls_moves: int = 5,
     pool=None,
+    heatmap: np.ndarray | None = None,
+    pruning_threshold: float = 0.0,
 ) -> Plan:
     best = plan.copy()
     
@@ -632,7 +700,7 @@ def local_search(
         moves = 0
         while moves < max_ls_moves:
             # 1. Relocate Move
-            move = _best_relocate(best, nv_ceiling=nv_ceiling)
+            move = _best_relocate(best, nv_ceiling=nv_ceiling, heatmap=heatmap, pruning_threshold=pruning_threshold)
             if move is not None:
                 cand = _apply_relocate(best, move)
                 if cand.feasible and (cand.dominates(best) or (cand.nv == best.nv and cand.cost + 1e-9 < best.cost)):
@@ -652,7 +720,7 @@ def local_search(
                 continue
             
             # 3. Swap Move
-            move = _best_swap(best)
+            move = _best_swap(best, heatmap=heatmap, pruning_threshold=pruning_threshold)
             if move is not None:
                 cand = _apply_swap(best, move)
                 if cand.feasible and cand.cost + 1e-9 < best.cost:
@@ -663,7 +731,7 @@ def local_search(
                     continue
             
             # 4. Or-Opt Move
-            move = _best_or_opt(best, nv_ceiling=nv_ceiling)
+            move = _best_or_opt(best, nv_ceiling=nv_ceiling, heatmap=heatmap, pruning_threshold=pruning_threshold)
             if move is not None:
                 cand = _apply_or_opt(best, move)
                 if cand.feasible and (cand.dominates(best) or (cand.nv == best.nv and cand.cost + 1e-9 < best.cost)):
@@ -674,7 +742,7 @@ def local_search(
                     continue
             
             # 5. Cross Exchange
-            cross = _cross_exchange(best, nv_ceiling=nv_ceiling)
+            cross = _cross_exchange(best, nv_ceiling=nv_ceiling, heatmap=heatmap, pruning_threshold=pruning_threshold)
             if cross is not None:
                 best, improved = cross, True
                 moves += 1

@@ -8,6 +8,7 @@ export default function LiveDispatchView() {
   const { state, updateState, toast, setStatus, request, t } = useAppContext();
 
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [showGnnLegend, setShowGnnLegend] = useState(false);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [editingCell, setEditingCell] = useState(null); // { id, field }
   const [editValue, setEditValue] = useState('');
@@ -943,14 +944,80 @@ export default function LiveDispatchView() {
               </button>
               <h3>Geospatial View</h3>
             </div>
-            <div className="map-toggles">
-              <label><input type="radio" name="map_view" value="ddqn" defaultChecked /> DDQN</label>
-              <label><input type="radio" name="map_view" value="alns" /> ALNS Base</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div className="map-toggles">
+                <label><input type="radio" name="map_view" value="ddqn" defaultChecked /> DDQN</label>
+                <label><input type="radio" name="map_view" value="alns" /> ALNS Base</label>
+              </div>
+              <label className="gnn-heatmap-toggle-label" style={{ 
+                display: 'inline-flex', 
+                alignItems: 'center', 
+                gap: '6px', 
+                fontSize: '11px', 
+                fontWeight: '600', 
+                color: 'var(--primary)', 
+                cursor: 'pointer', 
+                borderLeft: '1px solid var(--border)', 
+                paddingLeft: '12px',
+                userSelect: 'none'
+              }}>
+                <input 
+                  type="checkbox" 
+                  id="chk-gnn-heatmap" 
+                  checked={showGnnLegend} 
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setShowGnnLegend(checked);
+                    if (window.app && window.app.mapController) {
+                      window.app.mapController.updateGnnHeatmapOverlay();
+                    }
+                  }} 
+                />
+                <span>Show GNN Heatmap</span>
+              </label>
             </div>
           </div>
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', minHeight: 0 }}>
             {/* Direct Leaflet Canvas Container */}
             <div id="map-container" className="map-view" style={{ flex: 1 }}></div>
+
+            {/* GNN Heatmap Legend Overlay */}
+            {showGnnLegend && (
+              <div className="gnn-legend-overlay" style={{
+                position: 'absolute',
+                bottom: '16px',
+                left: '16px',
+                zIndex: 1000,
+                background: 'rgba(255, 255, 255, 0.95)',
+                backdropFilter: 'blur(4px)',
+                padding: '10px 14px',
+                borderRadius: '8px',
+                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1)',
+                border: '1px solid #e2e8f0',
+                fontFamily: 'var(--font-main)',
+                pointerEvents: 'none',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '6px',
+                minWidth: '180px'
+              }}>
+                <div style={{ fontWeight: 700, fontSize: '10.5px', textTransform: 'uppercase', color: '#1e293b', borderBottom: '1px solid #e2e8f0', paddingBottom: '4px', marginBottom: '2px', letterSpacing: '0.5px' }}>
+                  GNN Edge Probability
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', color: '#334155' }}>
+                  <span style={{ display: 'inline-block', width: '14px', height: '4px', background: '#f59e0b', borderRadius: '1px' }}></span>
+                  <span>High Confidence (&ge; 75%)</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', color: '#334155' }}>
+                  <span style={{ display: 'inline-block', width: '14px', height: '2.5px', background: '#3b82f6', borderRadius: '1px' }}></span>
+                  <span>Medium (40% - 75%)</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', color: '#334155' }}>
+                  <span style={{ display: 'inline-block', width: '14px', height: '0px', borderTop: '2px dashed #a855f7' }}></span>
+                  <span>Low Confidence (15% - 40%)</span>
+                </div>
+              </div>
+            )}
 
             {/* Simulation Control Bar */}
             <div id="sim-control-panel" className="sim-control-bar hidden">
