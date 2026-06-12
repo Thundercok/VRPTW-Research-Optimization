@@ -9,7 +9,8 @@ WORKDIR /app
 
 # Copy requirements and install python dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --extra-index-url https://download.pytorch.org/whl/cpu -r requirements.txt
+
 
 # Copy the core library src/vrptw, backend src/backend, and frontend src/frontend
 COPY src/ /app/src/
