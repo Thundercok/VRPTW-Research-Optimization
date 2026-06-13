@@ -121,31 +121,11 @@
     </nav>
 
     <main id="main">
-      <!-- Interactive Showcase Section -->
+      <!-- Story Scroll Section -->
       <section class="scroll-showcase-section" id="showcase">
         <div class="scroll-track">
           <div class="sticky-viewport">
             <div class="showcase-grid">
-              <!-- Sleek tab switcher floating in the top-center -->
-              <div class="showcase-tabs-container">
-                <button class="showcase-tab active" id="tab-act1">
-                  <span class="tab-num">01</span>
-                  <span class="tab-text" data-i18n="nav.act1">The Objective</span>
-                </button>
-                <button class="showcase-tab" id="tab-act2">
-                  <span class="tab-num">02</span>
-                  <span class="tab-text" data-i18n="nav.act2">The Chaos</span>
-                </button>
-                <button class="showcase-tab" id="tab-act3">
-                  <span class="tab-num">03</span>
-                  <span class="tab-text" data-i18n="nav.act3">Neural Solver</span>
-                </button>
-                <button class="showcase-tab" id="tab-act4">
-                  <span class="tab-num">04</span>
-                  <span class="tab-text" data-i18n="nav.act4">Optimal Dispatch</span>
-                </button>
-              </div>
-
               <!-- Left Side: Copy Story cards stacked absolutely -->
               <div class="story-content-panel">
                 <div class="story-cards-container">
@@ -168,7 +148,8 @@
                         complexity.
                       </p>
                       <div class="scroll-hint">
-                        <span>Scroll down or click tabs to explore</span>
+                        <span class="mouse-icon"><span class="mouse-wheel"></span></span>
+                        <span>Scroll to begin routing</span>
                       </div>
                     </div>
                   </div>
@@ -239,7 +220,33 @@
               <!-- Right Side: Clean Graphics Canvas -->
               <div class="story-graphics-panel">
                 <div class="canvas-wrapper">
-                  <canvas id="animation-canvas" style="width: 100%; height: 100%; display: block"></canvas>
+                  <!-- Subtle Grid Pattern Background -->
+                  <div class="canvas-grid-bg"></div>
+
+                  <svg id="animation-canvas" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid meet">
+                    <defs>
+                      <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                        <feGaussianBlur stdDeviation="4" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                      </filter>
+                      <linearGradient id="headlight-gradient" x1="0%" y1="50%" x2="100%" y2="50%">
+                        <stop offset="0%" stop-color="#fef08a" stop-opacity="0.85" />
+                        <stop offset="100%" stop-color="#fef08a" stop-opacity="0" />
+                      </linearGradient>
+                    </defs>
+
+                    <!-- Routes drawn between nodes -->
+                    <g id="route-paths-group"></g>
+
+                    <!-- Hovering routes and paths group -->
+                    <g id="routes-hover-group"></g>
+
+                    <!-- Scattered Customer Nodes -->
+                    <g id="nodes-group"></g>
+
+                    <!-- Vehicles / Trucks animated pointers -->
+                    <g id="vehicles-group"></g>
+                  </svg>
 
                   <!-- Live Stats HUD that reveals in Act IV -->
                   <div class="hud-stats-panel" id="hud-panel">
@@ -250,7 +257,7 @@
                     <div class="hud-body">
                       <div class="hud-stat-item">
                         <span class="hud-label">Distance Saved</span>
-                        <span class="hud-value positive">+28.4%</span>
+                        <span class="hud-value positive">-18.4%</span>
                       </div>
                       <div class="hud-stat-item">
                         <span class="hud-label">On-Time Rate</span>
@@ -546,17 +553,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 
     <!-- Observability -->
-    <script type="module">
-      if (window.location.protocol !== 'file:') {
-        import('./js/observability.js?v=20260522').catch((err) => {
-          console.debug('Telemetry disabled:', err.message);
-        });
-      } else {
-        window.vrptwTrack = function (event, props) {
-          console.debug('[Telemetry Skipped]', event, props);
-        };
-      }
-    </script>
+    <script type="module" src="js/observability.js?v=20260522"></script>
 
     <!-- Main Inline Landing Page Interactions Script to support local file:// execution -->
     <script>
@@ -609,10 +606,6 @@
             'results.title': 'Solomon Benchmark Results',
             'getstarted.eyebrow': 'Developer Quickstart',
             'getstarted.title': 'Run the engine locally in 60s',
-            'nav.act1': 'The Objective',
-            'nav.act2': 'The Chaos',
-            'nav.act3': 'Neural Solver',
-            'nav.act4': 'Optimal Dispatch',
           },
           vn: {
             'brand.sub': 'Tối ưu hóa Nghiên cứu',
@@ -654,73 +647,69 @@
             'results.title': 'Kết quả Benchmark Solomon',
             'getstarted.eyebrow': 'Khởi động nhanh cho Dev',
             'getstarted.title': 'Chạy cục bộ engine trong 60 giây',
-            'nav.act1': 'Mục tiêu',
-            'nav.act2': 'Hỗn loạn',
-            'nav.act3': 'Bộ giải Neural',
-            'nav.act4': 'Điều phối Tối ưu',
           },
         };
 
         // Node and Path Coordinates Setup for Canvas
         const DEPOT = { x: 150, y: 300 };
-        const neutralNodeColor = '#6b7280';
+        const neutralNodeColor = '#57534e';
 
         const CUSTOMER_NODES = [
-          // Cluster 1 (Top Right) - Ordered for a beautiful non-overlapping loop path
-          { id: 1, x: 450, y: 150, targetColor: '#3b82f6', cluster: 1 }, // Royal Blue Route
-          { id: 2, x: 500, y: 200, targetColor: '#3b82f6', cluster: 1 },
-          { id: 3, x: 550, y: 250, targetColor: '#3b82f6', cluster: 1 },
-          { id: 4, x: 600, y: 200, targetColor: '#3b82f6', cluster: 1 },
-          { id: 5, x: 650, y: 150, targetColor: '#3b82f6', cluster: 1 },
-          { id: 6, x: 600, y: 100, targetColor: '#3b82f6', cluster: 1 },
-          { id: 7, x: 550, y: 150, targetColor: '#3b82f6', cluster: 1 },
+          // Cluster 1 (Top Right)
+          { id: 1, x: 550, y: 150, targetColor: '#fb7185', cluster: 1 }, // Peach Rose Route
+          { id: 2, x: 580, y: 120, targetColor: '#fb7185', cluster: 1 },
+          { id: 3, x: 520, y: 180, targetColor: '#fb7185', cluster: 1 },
+          { id: 4, x: 620, y: 140, targetColor: '#fb7185', cluster: 1 },
+          { id: 5, x: 600, y: 190, targetColor: '#fb7185', cluster: 1 },
+          { id: 6, x: 490, y: 160, targetColor: '#fb7185', cluster: 1 },
+          { id: 7, x: 560, y: 210, targetColor: '#fb7185', cluster: 1 },
 
-          // Cluster 2 (Bottom Right) - Ordered for a beautiful non-overlapping loop path
-          { id: 8, x: 600, y: 350, targetColor: '#f97316', cluster: 2 }, // Copper Orange Route
-          { id: 9, x: 650, y: 400, targetColor: '#f97316', cluster: 2 },
-          { id: 10, x: 700, y: 450, targetColor: '#f97316', cluster: 2 },
-          { id: 11, x: 650, y: 500, targetColor: '#f97316', cluster: 2 },
-          { id: 12, x: 550, y: 500, targetColor: '#f97316', cluster: 2 },
-          { id: 13, x: 600, y: 450, targetColor: '#f97316', cluster: 2 },
-          { id: 14, x: 500, y: 450, targetColor: '#f97316', cluster: 2 },
+          // Cluster 2 (Bottom Right)
+          { id: 8, x: 580, y: 450, targetColor: '#f97316', cluster: 2 }, // Copper Orange Route
+          { id: 9, x: 620, y: 420, targetColor: '#f97316', cluster: 2 },
+          { id: 10, x: 540, y: 480, targetColor: '#f97316', cluster: 2 },
+          { id: 11, x: 650, y: 470, targetColor: '#f97316', cluster: 2 },
+          { id: 12, x: 510, y: 430, targetColor: '#f97316', cluster: 2 },
+          { id: 13, x: 600, y: 380, targetColor: '#f97316', cluster: 2 },
+          { id: 14, x: 640, y: 510, targetColor: '#f97316', cluster: 2 },
 
-          // Cluster 3 (Middle Right) - Ordered for a beautiful non-overlapping loop path
-          { id: 15, x: 350, y: 300, targetColor: '#10b981', cluster: 3 }, // Emerald Route
-          { id: 16, x: 450, y: 250, targetColor: '#10b981', cluster: 3 },
-          { id: 17, x: 500, y: 300, targetColor: '#10b981', cluster: 3 },
-          { id: 18, x: 500, y: 350, targetColor: '#10b981', cluster: 3 },
-          { id: 19, x: 400, y: 350, targetColor: '#10b981', cluster: 3 },
-          { id: 20, x: 450, y: 300, targetColor: '#10b981', cluster: 3 },
+          // Cluster 3 (Middle Right)
+          { id: 15, x: 450, y: 320, targetColor: '#fbbf24', cluster: 3 }, // Amber Route
+          { id: 16, x: 480, y: 290, targetColor: '#fbbf24', cluster: 3 },
+          { id: 17, x: 420, y: 350, targetColor: '#fbbf24', cluster: 3 },
+          { id: 18, x: 490, y: 340, targetColor: '#fbbf24', cluster: 3 },
+          { id: 19, x: 390, y: 300, targetColor: '#fbbf24', cluster: 3 },
+          { id: 20, x: 430, y: 270, targetColor: '#fbbf24', cluster: 3 },
 
-          // Scattered Random Group (Cluster 4) - Ordered for a beautiful non-overlapping loop path
-          { id: 21, x: 200, y: 200, targetColor: '#8b5cf6', cluster: 4 }, // Purple Route
-          { id: 22, x: 200, y: 100, targetColor: '#8b5cf6', cluster: 4 },
-          { id: 23, x: 300, y: 100, targetColor: '#8b5cf6', cluster: 4 },
-          { id: 24, x: 300, y: 150, targetColor: '#8b5cf6', cluster: 4 },
-          { id: 25, x: 350, y: 200, targetColor: '#8b5cf6', cluster: 4 },
-          { id: 26, x: 300, y: 400, targetColor: '#8b5cf6', cluster: 4 },
-          { id: 27, x: 250, y: 500, targetColor: '#8b5cf6', cluster: 4 },
-          { id: 28, x: 400, y: 500, targetColor: '#8b5cf6', cluster: 4 },
-          { id: 29, x: 450, y: 450, targetColor: '#8b5cf6', cluster: 4 },
-          { id: 30, x: 350, y: 450, targetColor: '#8b5cf6', cluster: 4 },
+          // Scattered Random Group
+          { id: 21, x: 300, y: 180, targetColor: '#f59e0b', cluster: 4 }, // Warm Gold Route
+          { id: 22, x: 350, y: 240, targetColor: '#f59e0b', cluster: 4 },
+          { id: 23, x: 280, y: 400, targetColor: '#f59e0b', cluster: 4 },
+          { id: 24, x: 340, y: 450, targetColor: '#f59e0b', cluster: 4 },
+          { id: 25, x: 220, y: 220, targetColor: '#f59e0b', cluster: 4 },
+          { id: 26, x: 250, y: 480, targetColor: '#f59e0b', cluster: 4 },
+          { id: 27, x: 410, y: 530, targetColor: '#f59e0b', cluster: 4 },
+          { id: 28, x: 480, y: 490, targetColor: '#f59e0b', cluster: 4 },
+          { id: 29, x: 320, y: 110, targetColor: '#f59e0b', cluster: 4 },
+          { id: 30, x: 240, y: 140, targetColor: '#f59e0b', cluster: 4 },
         ];
 
         // Map route configurations to coordinates
         const ROUTES = [
           {
-            color: '#3b82f6', // Royal Blue
+            color: '#fb7185', // Peach Rose
             nodes: [DEPOT, ...CUSTOMER_NODES.filter((n) => n.cluster === 1), DEPOT],
           },
           {
-            color: '#f97316', // Orange
+            color: '#f97316', // Copper Orange
             nodes: [DEPOT, ...CUSTOMER_NODES.filter((n) => n.cluster === 2), DEPOT],
           },
           {
-            color: '#10b981', // Emerald
+            color: '#fbbf24', // Amber
             nodes: [DEPOT, ...CUSTOMER_NODES.filter((n) => n.cluster === 3), DEPOT],
           },
           {
-            color: '#8b5cf6', // Purple
+            color: '#f59e0b', // Warm Gold
             nodes: [DEPOT, ...CUSTOMER_NODES.filter((n) => n.cluster === 4), DEPOT],
           },
         ];
@@ -750,6 +739,569 @@
           };
         }
 
+        // Helper: Generate structured SVG paths for routes
+        function buildPathD(points) {
+          return points.reduce((d, p, i) => {
+            return d + (i === 0 ? `M ${p.x} ${p.y}` : ` L ${p.x} ${p.y}`);
+          }, '');
+        }
+
+        // Canvas elements creation
+        const svgCanvas = document.getElementById('animation-canvas');
+        const routeGroup = document.getElementById('route-paths-group');
+        const routesHoverGroup = document.getElementById('routes-hover-group');
+        const nodesGroup = document.getElementById('nodes-group');
+        const vehiclesGroup = document.getElementById('vehicles-group');
+
+        let nodeElements = [];
+        let haloElements = [];
+        let routePathElements = [];
+        let routeGlowPathElements = [];
+        let vehicleElements = [];
+        let particleElements = [];
+        let chaosLinesGroup = null;
+        let cachedMaxGlow = 0.22;
+
+        function updateCachedThemeVariables() {
+          const style = getComputedStyle(document.documentElement);
+          cachedMaxGlow = parseFloat(style.getPropertyValue('--route-glow-opacity').trim()) || 0.22;
+        }
+
+        // Helper: Update 3D hologram altitude and properties for nodes (using cached DOM references)
+        function updateNodeHologram(node, x, y, height, ringColor, opacity) {
+          node.el.setAttribute('transform', `translate(${x}, ${y})`);
+          node.el.style.opacity = opacity;
+
+          node.altLine.setAttribute('y2', -height);
+          node.ring.setAttribute('cy', -height);
+          node.core.setAttribute('cy', -height);
+
+          if (ringColor) {
+            node.ring.setAttribute('fill', ringColor);
+          }
+        }
+
+        // Helper: Update 3D hologram height and properties for vehicles (using cached DOM references)
+        function updateVehicleHologram(v, x, y, height, angle, opacity) {
+          v.el.style.opacity = opacity;
+          v.el.setAttribute('transform', `translate(${x}, ${y})`);
+
+          if (v.shadow) {
+            v.shadow.setAttribute('transform', `rotate(${angle})`);
+            v.shadow.style.opacity = height > 0 ? '0.45' : '0.9';
+          }
+
+          if (v.pointer) {
+            v.pointer.setAttribute('transform', `translate(0, ${-height}) rotate(${angle})`);
+          }
+        }
+
+        // Initialize Canvas DOM structures
+        function initCanvas() {
+          if (!svgCanvas) return;
+
+          // Clear groupings
+          routeGroup.innerHTML = '';
+          if (routesHoverGroup) routesHoverGroup.innerHTML = '';
+          nodesGroup.innerHTML = '';
+          vehiclesGroup.innerHTML = '';
+
+          nodeElements = [];
+          haloElements = [];
+          routePathElements = [];
+          routeGlowPathElements = [];
+          vehicleElements = [];
+          particleElements = [];
+
+          // 1. Generate background streets (decorative grid)
+          const streetsGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          streetsGroup.setAttribute('opacity', '0.06');
+          routeGroup.appendChild(streetsGroup);
+
+          for (let x = 100; x < 800; x += 100) {
+            const road = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            road.setAttribute('x1', x);
+            road.setAttribute('y1', 40);
+            road.setAttribute('x2', x + Math.sin(x) * 20);
+            road.setAttribute('y2', 560);
+            road.setAttribute('stroke', 'var(--canvas-street)');
+            road.setAttribute('stroke-width', '1');
+            road.setAttribute('stroke-dasharray', '4 4');
+            streetsGroup.appendChild(road);
+          }
+          for (let y = 100; y < 600; y += 100) {
+            const road = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            road.setAttribute('x1', 40);
+            road.setAttribute('y1', y);
+            road.setAttribute('x2', 760);
+            road.setAttribute('y2', y + Math.cos(y) * 20);
+            road.setAttribute('stroke', 'var(--canvas-street)');
+            road.setAttribute('stroke-width', '1');
+            road.setAttribute('stroke-dasharray', '4 4');
+            streetsGroup.appendChild(road);
+          }
+
+          // 2. Generate Concentric Radar Circles centered on DEPOT
+          const radarGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          streetsGroup.appendChild(radarGroup);
+
+          const radii = [120, 260, 420];
+          const labels = ['ZONE I - 5KM', 'ZONE II - 12KM', 'ZONE III - 20KM'];
+          radii.forEach((r, idx) => {
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            circle.setAttribute('cx', DEPOT.x);
+            circle.setAttribute('cy', DEPOT.y);
+            circle.setAttribute('r', r);
+            circle.setAttribute('fill', 'none');
+            circle.setAttribute('stroke', 'var(--canvas-radar)');
+            circle.setAttribute('stroke-width', '0.75');
+            circle.setAttribute('stroke-dasharray', '2 6');
+            circle.setAttribute('opacity', '0.6');
+            radarGroup.appendChild(circle);
+
+            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            text.setAttribute('x', DEPOT.x + 8);
+            text.setAttribute('y', DEPOT.y - r - 6);
+            text.setAttribute('fill', 'var(--canvas-radar-text)');
+            text.setAttribute('font-size', '9px');
+            text.setAttribute('font-family', 'JetBrains Mono');
+            text.setAttribute('letter-spacing', '0.05em');
+            text.textContent = labels[idx];
+            radarGroup.appendChild(text);
+          });
+
+          // Create Depot Node (Upgraded to radar shield reticle)
+          const depotHalo = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          depotHalo.setAttribute('cx', DEPOT.x);
+          depotHalo.setAttribute('cy', DEPOT.y);
+          depotHalo.setAttribute('r', 18);
+          depotHalo.setAttribute('fill', 'none');
+          depotHalo.setAttribute('stroke', 'var(--gold)');
+          depotHalo.setAttribute('stroke-width', '0.75');
+          depotHalo.setAttribute('stroke-dasharray', '2 3');
+          depotHalo.setAttribute('class', 'node-halo');
+          nodesGroup.appendChild(depotHalo);
+
+          const depotOuter = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          depotOuter.setAttribute('cx', DEPOT.x);
+          depotOuter.setAttribute('cy', DEPOT.y);
+          depotOuter.setAttribute('r', 8);
+          depotOuter.setAttribute('fill', 'none');
+          depotOuter.setAttribute('stroke', 'var(--gold)');
+          depotOuter.setAttribute('stroke-width', '1.5');
+          nodesGroup.appendChild(depotOuter);
+
+          const depotCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          depotCircle.setAttribute('cx', DEPOT.x);
+          depotCircle.setAttribute('cy', DEPOT.y);
+          depotCircle.setAttribute('r', 3);
+          depotCircle.setAttribute('fill', 'var(--gold)');
+          nodesGroup.appendChild(depotCircle);
+
+          // Create Customer Nodes (Neutral start state, upgraded to 3D hologram group)
+          CUSTOMER_NODES.forEach((node) => {
+            const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            group.setAttribute('transform', `translate(${node.x}, ${node.y})`);
+
+            // Ground shadow
+            const shadowCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            shadowCircle.setAttribute('cx', '0');
+            shadowCircle.setAttribute('cy', '0');
+            shadowCircle.setAttribute('r', '3.5');
+            shadowCircle.setAttribute('fill', 'var(--node-shadow)');
+            group.appendChild(shadowCircle);
+
+            // Alt dashed line
+            const altLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            altLine.setAttribute('x1', '0');
+            altLine.setAttribute('y1', '0');
+            altLine.setAttribute('x2', '0');
+            altLine.setAttribute('y2', '-30');
+            altLine.setAttribute('stroke', 'var(--node-stem)');
+            altLine.setAttribute('stroke-width', '0.75');
+            altLine.setAttribute('stroke-dasharray', '1.5 1.5');
+            group.appendChild(altLine);
+
+            // Ground alert red halo (for Act II)
+            const halo = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            halo.setAttribute('cx', '0');
+            halo.setAttribute('cy', '0');
+            halo.setAttribute('r', '4');
+            halo.setAttribute('fill', 'none');
+            halo.setAttribute('stroke', '#ef4444');
+            halo.setAttribute('stroke-width', '2');
+            halo.setAttribute('class', 'node-halo');
+            halo.style.opacity = '0';
+            group.appendChild(halo);
+            haloElements.push({ id: node.id, el: halo });
+
+            // Floating node ring
+            const borderRing = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            borderRing.setAttribute('cx', '0');
+            borderRing.setAttribute('cy', '-30');
+            borderRing.setAttribute('r', '5');
+            borderRing.setAttribute('class', 'node-circle customer');
+            borderRing.setAttribute('fill', 'var(--node-neutral-fill)');
+            borderRing.setAttribute('stroke', 'var(--node-border)');
+            borderRing.setAttribute('stroke-width', '1.5');
+            group.appendChild(borderRing);
+
+            // Floating core dot
+            const core = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            core.setAttribute('cx', '0');
+            core.setAttribute('cy', '-30');
+            core.setAttribute('r', '2');
+            core.setAttribute('fill', 'var(--node-border)');
+            core.setAttribute('class', 'floating-core');
+            group.appendChild(core);
+
+            nodesGroup.appendChild(group);
+            nodeElements.push({
+              id: node.id,
+              el: group,
+              altLine: altLine,
+              ring: borderRing,
+              core: core,
+              shadowCircle: shadowCircle,
+              originalX: node.x,
+              originalY: node.y
+            });
+          });
+
+          // Create Routes (Dual layer: glow path + sharp path)
+          ROUTES.forEach((route, index) => {
+            // 1. Thick Glowing underneath path
+            const glowPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            glowPath.setAttribute('d', buildPathD(route.nodes));
+            glowPath.setAttribute('class', 'route-line solved');
+            glowPath.setAttribute('stroke', route.color);
+            glowPath.setAttribute('stroke-width', '8');
+            glowPath.setAttribute('filter', 'url(#glow)');
+            glowPath.style.opacity = '0';
+            if (routesHoverGroup) routesHoverGroup.appendChild(glowPath);
+            else routeGroup.appendChild(glowPath);
+            routeGlowPathElements.push({ index, el: glowPath });
+
+            // 2. Sharp overlay path
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            path.setAttribute('d', buildPathD(route.nodes));
+            path.setAttribute('class', 'route-line solved');
+            path.setAttribute('stroke', route.color);
+            path.setAttribute('stroke-width', '2.5');
+            path.style.opacity = '0';
+            if (routesHoverGroup) routesHoverGroup.appendChild(path);
+            else routeGroup.appendChild(path);
+            routePathElements.push({ index, el: path, color: route.color });
+
+            // Create vehicle container group (delta pointer vector model)
+            const vehicleGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            vehicleGroup.setAttribute('class', 'vehicle-container');
+            vehicleGroup.style.opacity = '0';
+
+            // Ground drop shadow (matching delta pointer rotated on ground)
+            const shadow = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+            shadow.setAttribute('points', '-8,-4 6,0 -8,4 -5,0');
+            shadow.setAttribute('fill', 'rgba(0,0,0,0.18)');
+            shadow.setAttribute('class', 'vehicle-shadow');
+            vehicleGroup.appendChild(shadow);
+
+            // Floating pointer group
+            const pointerGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            pointerGroup.setAttribute('class', 'vehicle-pointer');
+
+            // Delta pointer body
+            const pointer = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+            pointer.setAttribute('points', '-8,-4 6,0 -8,4 -5,0');
+            pointerGroup.appendChild(pointer);
+
+            // Pointer core dot
+            const pointerCore = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            pointerCore.setAttribute('cx', '-2.2');
+            pointerCore.setAttribute('cy', '0');
+            pointerCore.setAttribute('r', '1.6');
+            pointerCore.setAttribute('fill', '#ffffff');
+            pointerGroup.appendChild(pointerCore);
+
+            // Headlight glow
+            const beam = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+            beam.setAttribute('points', '5,-1.5 30,-9 30,9 5,1.5');
+            beam.setAttribute('fill', 'url(#headlight-gradient)');
+            beam.setAttribute('opacity', '0.45');
+            beam.setAttribute('pointer-events', 'none');
+            pointerGroup.appendChild(beam);
+
+            vehicleGroup.appendChild(pointerGroup);
+
+            vehiclesGroup.appendChild(vehicleGroup);
+            vehicleElements.push({
+              index,
+              el: vehicleGroup,
+              shadow: shadow,
+              pointer: pointerGroup,
+              color: route.color
+            });
+
+            // Create 3 glowing fiber data particles per route
+            for (let pIdx = 0; pIdx < 3; pIdx++) {
+              const particle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+              particle.setAttribute('r', '2.5');
+              particle.setAttribute('fill', route.color);
+              particle.setAttribute('opacity', '0.75');
+              particle.style.display = 'none';
+              if (routesHoverGroup) routesHoverGroup.appendChild(particle);
+              else vehiclesGroup.appendChild(particle);
+              particleElements.push({ routeIndex: index, el: particle, offset: pIdx * 0.33 });
+            }
+          });
+
+          // Create a group for chaotic problem state lines (with object pooling)
+          chaosLinesGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          for (let i = 0; i < 20; i++) {
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            const n1 = CUSTOMER_NODES[Math.floor(lerp(0, CUSTOMER_NODES.length - 1, (i * 0.17) % 1))];
+            const n2 = CUSTOMER_NODES[Math.floor(lerp(0, CUSTOMER_NODES.length - 1, (i * 0.37) % 1))];
+            line.setAttribute('x1', n1.x);
+            line.setAttribute('y1', n1.y);
+            line.setAttribute('x2', n2.x);
+            line.setAttribute('y2', n2.y);
+            line.setAttribute('stroke', '#ef4444');
+            line.setAttribute('stroke-width', '1');
+            line.setAttribute('opacity', '0');
+            chaosLinesGroup.appendChild(line);
+          }
+          if (routesHoverGroup) routesHoverGroup.appendChild(chaosLinesGroup);
+          else routeGroup.appendChild(chaosLinesGroup);
+        }
+
+        // Dynamic SVG Renderer based on progress
+        const cachedHud = document.getElementById('hud-panel');
+
+        function renderCanvas(act, progress) {
+          if (!svgCanvas) return;
+
+          // Interactive 3D Perspective tilt shift on scroll
+          const overallProgress = (act - 1) * 0.25 + progress * 0.25;
+          const rx = lerp(46, 54, overallProgress);
+          const rz = lerp(-24, -32, overallProgress);
+          svgCanvas.style.transform = `translate(100px, -20px) rotateX(${rx}deg) rotateZ(${rz}deg) scale(1.15)`;
+
+          // Translate route lines and particles to match floating altitude of nodes/vehicles
+          let height = 0;
+          if (act === 1) {
+            height = 0;
+          } else if (act === 2) {
+            height = progress * 30;
+          } else {
+            height = 30;
+          }
+          if (routesHoverGroup) {
+            routesHoverGroup.setAttribute('transform', `translate(0, ${-height})`);
+          }
+
+          if (act === 1) {
+            // Act I: Simple linear truck deliveries
+            if (chaosLinesGroup) {
+              Array.from(chaosLinesGroup.children).forEach((line) => line.setAttribute('opacity', '0'));
+            }
+
+            // Hide HUD panel
+            if (cachedHud) cachedHud.classList.remove('active');
+
+            // Nodes are bunched up, flat on the ground plane (altitude = 0)
+            nodeElements.forEach((node) => {
+              const targetX = lerp(DEPOT.x, 700, (node.id - 1) / CUSTOMER_NODES.length);
+              updateNodeHologram(node, targetX, DEPOT.y, 0, 'var(--node-neutral-fill)', lerp(0.1, 0.4, progress));
+            });
+
+            // Clear halos
+            haloElements.forEach((h) => (h.el.style.opacity = '0'));
+
+            // Hide optimized routes
+            routePathElements.forEach((r) => (r.el.style.opacity = '0'));
+            routeGlowPathElements.forEach((r) => (r.el.style.opacity = '0'));
+
+            // Hide particles
+            particleElements.forEach((p) => (p.el.style.display = 'none'));
+
+            // Run single vehicle flat on the ground
+            vehicleElements.forEach((v, idx) => {
+              if (idx === 0) {
+                const pos = getPointAtProgress([DEPOT, { x: 700, y: DEPOT.y }], progress);
+                updateVehicleHologram(v, pos.x, pos.y, 0, 0, '1');
+                v.el.setAttribute('fill', v.color);
+              } else {
+                v.el.style.opacity = '0';
+              }
+            });
+          } else if (act === 2) {
+            // Act II: Explosion into chaos
+            if (cachedHud) cachedHud.classList.remove('active');
+
+            // Nodes explode to original coordinates and physically rise up from ground map plane
+            nodeElements.forEach((node) => {
+              const startX = lerp(DEPOT.x, 700, (node.id - 1) / CUSTOMER_NODES.length);
+              const startY = DEPOT.y;
+
+              const currentX = lerp(startX, node.originalX, progress);
+              const currentY = lerp(startY, node.originalY, progress);
+              const height = progress * 30; // rising altitude hologram
+
+              updateNodeHologram(node, currentX, currentY, height, '#ef4444', 1.0);
+            });
+
+            // Turn on red halos at half progress
+            haloElements.forEach((h) => {
+              h.el.setAttribute('cx', '0');
+              h.el.setAttribute('cy', '0'); // stays centered on group projection
+              h.el.style.opacity = progress > 0.5 ? '0.6' : '0';
+            });
+
+            // Draw pre-created chaotic lines by modulating opacity
+            if (chaosLinesGroup) {
+              if (progress > 0.3) {
+                const chaosOpacity = lerp(0, 0.35, progress);
+                Array.from(chaosLinesGroup.children).forEach((line) => line.setAttribute('opacity', chaosOpacity));
+              } else {
+                Array.from(chaosLinesGroup.children).forEach((line) => line.setAttribute('opacity', '0'));
+              }
+            }
+
+            // Hide optimized routes
+            routePathElements.forEach((r) => (r.el.style.opacity = '0'));
+            routeGlowPathElements.forEach((r) => (r.el.style.opacity = '0'));
+
+            // Hide particles
+            particleElements.forEach((p) => (p.el.style.display = 'none'));
+
+            // Truck shakes on the ground
+            vehicleElements.forEach((v, idx) => {
+              if (idx === 0) {
+                const shakeX = DEPOT.x + Math.sin(Date.now() * 0.05) * 3;
+                const shakeY = DEPOT.y + Math.cos(Date.now() * 0.05) * 3;
+                updateVehicleHologram(v, shakeX, shakeY, 0, shakeX * 5, '1');
+                v.el.setAttribute('fill', '#ef4444');
+              } else {
+                v.el.style.opacity = '0';
+              }
+            });
+          } else if (act === 3) {
+            // Act III: Optimization (drawing routes, changing node states)
+            if (chaosLinesGroup) {
+              Array.from(chaosLinesGroup.children).forEach((line) => line.setAttribute('opacity', '0'));
+            }
+
+            if (cachedHud) cachedHud.classList.remove('active');
+
+            // Adjust nodes to cluster colors progressively, hovering at full height (30px)
+            nodeElements.forEach((node) => {
+              const targetNode = CUSTOMER_NODES.find((n) => n.id === node.id);
+              const nodeColor =
+                progress > 0.5 ? targetNode.targetColor : lerpColor('#ef4444', targetNode.targetColor, progress * 2);
+              updateNodeHologram(node, node.originalX, node.originalY, 30, nodeColor, 1.0);
+            });
+
+            // Halos fade out
+            haloElements.forEach((h) => (h.el.style.opacity = lerp(0.6, 0, progress)));
+
+            // Hide particles
+            particleElements.forEach((p) => (p.el.style.display = 'none'));
+
+            // Draw optimized routes progressively using stroke dash offsets
+            routeGlowPathElements.forEach((r) => {
+              r.el.style.opacity = progress * cachedMaxGlow;
+              const totalLength = r.el.getTotalLength() || 1500;
+              r.el.setAttribute('stroke-dasharray', totalLength);
+              r.el.setAttribute('stroke-dashoffset', totalLength * (1 - progress));
+            });
+
+            routePathElements.forEach((r) => {
+              r.el.style.opacity = progress;
+              const totalLength = r.el.getTotalLength() || 1500;
+              r.el.setAttribute('stroke-dasharray', totalLength);
+              r.el.setAttribute('stroke-dashoffset', totalLength * (1 - progress));
+            });
+
+            // Vehicles start tracing routes, hovering at constant 30px height
+            vehicleElements.forEach((v) => {
+              const route = ROUTES[v.index];
+              const pos = getPointAtProgress(
+                route.nodes.map((n) => ({ x: n.x, y: n.y })),
+                progress
+              );
+              const nextPos = getPointAtProgress(
+                route.nodes.map((n) => ({ x: n.x, y: n.y })),
+                Math.min(1.0, progress + 0.01)
+              );
+              const angle = Math.atan2(nextPos.y - pos.y, nextPos.x - pos.x) * (180 / Math.PI);
+              updateVehicleHologram(v, pos.x, pos.y, 30, angle, progress > 0.4 ? '1' : '0');
+              v.el.setAttribute('fill', v.color);
+            });
+          } else if (act === 4) {
+            // Act IV: Completed Dashboard loop
+            if (chaosLinesGroup) {
+              Array.from(chaosLinesGroup.children).forEach((line) => line.setAttribute('opacity', '0'));
+            }
+
+            // Fade HUD panel in
+            if (cachedHud) cachedHud.classList.add('active');
+
+            // Nodes locked in color groups, hovering in 3D
+            nodeElements.forEach((node) => {
+              const targetNode = CUSTOMER_NODES.find((n) => n.id === node.id);
+              updateNodeHologram(node, node.originalX, node.originalY, 30, targetNode.targetColor, 1.0);
+            });
+
+            // Halos fully hidden
+            haloElements.forEach((h) => (h.el.style.opacity = '0'));
+
+            // Paths fully active & glowing
+            routeGlowPathElements.forEach((r) => {
+              r.el.style.opacity = cachedMaxGlow;
+              r.el.removeAttribute('stroke-dashoffset');
+              r.el.removeAttribute('stroke-dasharray');
+            });
+
+            routePathElements.forEach((r) => {
+              r.el.style.opacity = '1';
+              r.el.removeAttribute('stroke-dashoffset');
+              r.el.removeAttribute('stroke-dasharray');
+            });
+
+            // Continuous loop of vehicles tracing routes, hovering at 30px altitude
+            const time = Date.now() * 0.00015;
+            vehicleElements.forEach((v) => {
+              const route = ROUTES[v.index];
+              const loopProg = (time * (1.2 + v.index * 0.25)) % 1;
+              const pos = getPointAtProgress(
+                route.nodes.map((n) => ({ x: n.x, y: n.y })),
+                loopProg
+              );
+
+              const nextPos = getPointAtProgress(
+                route.nodes.map((n) => ({ x: n.x, y: n.y })),
+                (loopProg + 0.01) % 1
+              );
+              const angle = Math.atan2(nextPos.y - pos.y, nextPos.x - pos.x) * (180 / Math.PI);
+
+              updateVehicleHologram(v, pos.x, pos.y, 30, angle, '1');
+              v.el.setAttribute('fill', v.color);
+            });
+
+            // Animate fiber optic glowing data particles flowing along routes on the ground map
+            particleElements.forEach((p) => {
+              p.el.style.display = 'block';
+              const route = ROUTES[p.routeIndex];
+              const pProg = (time * 2.2 + p.offset) % 1; // Faster speed than trucks
+              const pos = getPointAtProgress(
+                route.nodes.map((n) => ({ x: n.x, y: n.y })),
+                pProg
+              );
+              p.el.setAttribute('cx', pos.x);
+              p.el.setAttribute('cy', pos.y);
+            });
+          }
+        }
+
         // Color blending helper for transitions
         function lerpColor(color1, color2, factor) {
           const clamp = Math.max(0, Math.min(1, factor));
@@ -763,11 +1315,6 @@
           return `rgb(${r}, ${g}, ${b})`;
         }
 
-        // Smooth Hermite cubic interpolation for premium state transitions
-        function easeInOutCubic(t) {
-          return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-        }
-
         function parseHex(hex) {
           const clean = hex.replace('#', '');
           return {
@@ -777,992 +1324,74 @@
           };
         }
 
-        // Pre-calculate grid-aligned paths for each route to match street grid
-        function expandPathToGrid(points) {
-          if (points.length < 2) return points;
-          const gridPoints = [points[0]];
-          for (let i = 0; i < points.length - 1; i++) {
-            const p1 = points[i];
-            const p2 = points[i + 1];
-
-            // Turn corners on grid lines: alternate horizontal-first and vertical-first
-            if (i % 2 === 0) {
-              gridPoints.push({ x: p2.x, y: p1.y });
-            } else {
-              gridPoints.push({ x: p1.x, y: p2.y });
-            }
-            gridPoints.push(p2);
-          }
-          return gridPoints;
-        }
-
-        // Initialize grid paths on load
-        ROUTES.forEach((route) => {
-          route.gridNodes = expandPathToGrid(route.nodes);
-        });
-
-        // Canvas elements creation
-        const canvas = document.getElementById('animation-canvas');
-        const ctx = canvas.getContext('2d');
-
-        // Scroll state tracked by GSAP ScrollTrigger
-        const scrollState = {
-          act: 1,
-          progress: 0.0,
-        };
-
-        // Theme colors loaded from CSS variables
-        let themeColors = {
-          radar: 'rgba(120, 113, 108, 0.2)',
-          radarText: '#78716c',
-          nodeShadow: 'rgba(0, 0, 0, 0.08)',
-          nodeStem: '#a8a29e',
-          nodeNeutralFill: '#e7e5e4',
-          nodeBorder: '#44403c',
-          street: '#e5e5e0',
-          grid: 'rgba(120, 113, 108, 0.15)',
-          gold: '#eab308',
-          water: 'rgba(186, 230, 253, 0.28)',
-          park: 'rgba(220, 252, 231, 0.35)',
-          block: 'rgba(231, 229, 228, 0.5)',
-        };
-        let cachedMaxGlow = 0.22;
-
-        function updateCachedThemeVariables() {
-          const style = getComputedStyle(document.documentElement);
-          const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
-          const isDark = currentTheme === 'dark';
-          themeColors = {
-            radar: style.getPropertyValue('--canvas-radar').trim() || 'rgba(120, 113, 108, 0.2)',
-            radarText: style.getPropertyValue('--canvas-radar-text').trim() || '#78716c',
-            nodeShadow: style.getPropertyValue('--node-shadow').trim() || 'rgba(0, 0, 0, 0.08)',
-            nodeStem: style.getPropertyValue('--node-stem').trim() || '#a8a29e',
-            nodeNeutralFill: style.getPropertyValue('--node-neutral-fill').trim() || '#e7e5e4',
-            nodeBorder: style.getPropertyValue('--node-border').trim() || '#44403c',
-            street: style.getPropertyValue('--canvas-street').trim() || '#e5e5e0',
-            grid: style.getPropertyValue('--canvas-grid').trim() || 'rgba(120, 113, 108, 0.15)',
-            gold: style.getPropertyValue('--gold').trim() || '#eab308',
-            water: style.getPropertyValue('--canvas-map-water').trim() || 'rgba(186, 230, 253, 0.28)',
-            park: style.getPropertyValue('--canvas-map-park').trim() || 'rgba(220, 252, 231, 0.35)',
-            block: style.getPropertyValue('--canvas-map-block').trim() || 'rgba(231, 229, 228, 0.5)',
-            buildingLeft: isDark ? 'rgba(28, 25, 23, 0.85)' : 'rgba(214, 211, 209, 0.85)',
-            buildingFront: isDark ? 'rgba(44, 40, 36, 0.9)' : 'rgba(231, 229, 228, 0.9)',
-            buildingTop: isDark ? 'rgba(87, 83, 78, 0.95)' : 'rgba(245, 245, 244, 0.95)',
-          };
-          cachedMaxGlow = parseFloat(style.getPropertyValue('--route-glow-opacity').trim()) || 0.22;
-        }
-
-        // Setup 20 chaotic red lines for Act II
-        const chaosConnections = [];
-        for (let i = 0; i < 20; i++) {
-          const idx1 = Math.floor(lerp(0, CUSTOMER_NODES.length - 1, (i * 0.17) % 1));
-          const idx2 = Math.floor(lerp(0, CUSTOMER_NODES.length - 1, (i * 0.37) % 1));
-          chaosConnections.push({ n1: CUSTOMER_NODES[idx1], n2: CUSTOMER_NODES[idx2] });
-        }
-
-        // Handle canvas sizing and high-DPI scaling
-        function resizeCanvas() {
-          if (!canvas) return;
-          const rect = canvas.getBoundingClientRect();
-          const dpr = window.devicePixelRatio || 1;
-          const w = rect.width || 800;
-          const h = rect.height || 600;
-          canvas.width = w * dpr;
-          canvas.height = h * dpr;
-        }
-
-        // Draw helper functions
-        function drawDotGrid() {
-          ctx.save();
-          ctx.fillStyle = themeColors.grid;
-          ctx.beginPath();
-          const spacing = 40;
-          for (let x = -400; x < 1200; x += spacing) {
-            for (let y = -400; y < 1000; y += spacing) {
-              ctx.moveTo(x + 1, y);
-              ctx.arc(x, y, 0.75, 0, Math.PI * 2);
-            }
-          }
-          ctx.fill();
-          ctx.restore();
-        }
-
-        function drawCityMap() {
-          const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
-
-          // 1. Winding River/Coastal waterway on the far-left edge (where no routes go)
-          ctx.save();
-          ctx.fillStyle = themeColors.water;
-          ctx.beginPath();
-          ctx.moveTo(0, -400);
-          ctx.lineTo(55, -400);
-          ctx.bezierCurveTo(70, 150, 25, 300, 65, 450);
-          ctx.bezierCurveTo(75, 600, 45, 800, 40, 1000);
-          ctx.lineTo(0, 1000);
-          ctx.closePath();
-          ctx.fill();
-          ctx.restore();
-
-          // 2. Green Areas (Parks)
-          ctx.save();
-          ctx.fillStyle = themeColors.park;
-
-          // Park 1 (Top Left)
-          ctx.beginPath();
-          ctx.arc(250, 110, 60, 0, Math.PI * 2);
-          ctx.fill();
-
-          // Park 2 (Bottom Right)
-          ctx.beginPath();
-          ctx.arc(650, 460, 80, 0, Math.PI * 2);
-          ctx.fill();
-
-          // Scattered tree icons inside parks
-          ctx.fillStyle = currentTheme === 'light' ? '#86efac' : '#047857';
-          const parkTrees = [
-            { x: 230, y: 90 },
-            { x: 260, y: 120 },
-            { x: 220, y: 120 },
-            { x: 270, y: 95 },
-            { x: 620, y: 440 },
-            { x: 670, y: 480 },
-            { x: 630, y: 490 },
-            { x: 680, y: 430 },
-          ];
-          parkTrees.forEach((t) => {
-            ctx.beginPath();
-            ctx.arc(t.x, t.y, 2, 0, Math.PI * 2);
-            ctx.fill();
-          });
-          ctx.restore();
-
-          // 3. Streets (Thin lines running in between blocks, drawn first)
-          ctx.save();
-          ctx.strokeStyle = themeColors.street;
-          ctx.lineWidth = 2.0;
-          ctx.globalAlpha = currentTheme === 'light' ? 0.9 : 0.45;
-
-          const blockCols = [
-            -390, -320, -250, -180, -110, -40, 30, 100, 150, 220, 300, 380, 450, 520, 600, 680, 750, 820, 890, 960,
-            1030, 1100, 1170, 1240,
-          ];
-          const blockRows = [
-            -300, -240, -180, -120, -60, 0, 60, 120, 180, 240, 300, 360, 420, 480, 540, 600, 660, 720, 780, 840, 900,
-            960,
-          ];
-
-          // Draw vertical street lines
-          blockCols.forEach((x) => {
-            ctx.beginPath();
-            ctx.moveTo(x, -400);
-            ctx.lineTo(x, 1000);
-            ctx.stroke();
-          });
-
-          // Draw horizontal street lines
-          blockRows.forEach((y) => {
-            ctx.beginPath();
-            ctx.moveTo(80, y); // Start after river
-            ctx.lineTo(1200, y);
-            ctx.stroke();
-          });
-
-          // Highlight primary logistics highways crossing the depot
-          ctx.lineWidth = 3.5;
-          ctx.strokeStyle = currentTheme === 'light' ? '#cbd5e1' : '#334155';
-
-          ctx.beginPath();
-          ctx.moveTo(DEPOT.x, -400);
-          ctx.lineTo(DEPOT.x, 1000);
-          ctx.stroke();
-
-          ctx.beginPath();
-          ctx.moveTo(80, DEPOT.y);
-          ctx.lineTo(1200, DEPOT.y);
-          ctx.stroke();
-
-          ctx.restore();
-
-          // 4. City Blocks (Subtle cadastral architectural parcels, drawn flat)
-          ctx.save();
-          const buildingFill = themeColors.block;
-          const buildingStroke = currentTheme === 'light' ? '#e2e8f0' : '#27272a';
-          ctx.fillStyle = buildingFill;
-          ctx.strokeStyle = buildingStroke;
-          ctx.lineWidth = 0.6;
-
-          for (let i = 0; i < blockCols.length - 1; i++) {
-            for (let j = 0; j < blockRows.length - 1; j++) {
-              const x1 = blockCols[i] + 4;
-              const x2 = blockCols[i + 1] - 4;
-              const y1 = blockRows[j] + 4;
-              const y2 = blockRows[j + 1] - 4;
-              const w = x2 - x1;
-              const h = y2 - y1;
-
-              const cx = x1 + w / 2;
-              const cy = y1 + h / 2;
-
-              // Skip blocks near the depot
-              const distToDepot = Math.sqrt((cx - DEPOT.x) ** 2 + (cy - DEPOT.y) ** 2);
-              if (distToDepot < 45) continue;
-
-              // Skip blocks inside parks
-              const distToPark1 = Math.sqrt((cx - 250) ** 2 + (cy - 110) ** 2);
-              if (distToPark1 < 65) continue;
-
-              const distToPark2 = Math.sqrt((cx - 650) ** 2 + (cy - 460) ** 2);
-              if (distToPark2 < 85) continue;
-
-              // Skip blocks in water (left coast)
-              if (cx < 80) continue;
-
-              // Procedurally partition the block cell into buildings
-              const seed = (i * 7 + j * 13) % 4;
-              if (seed === 0) {
-                // Large courtyard building
-                ctx.fillRect(x1, y1, w, h);
-                ctx.strokeRect(x1, y1, w, h);
-              } else if (seed === 1) {
-                // Horizontal split (2 buildings)
-                const hw = w / 2 - 2;
-                ctx.fillRect(x1, y1, hw, h);
-                ctx.strokeRect(x1, y1, hw, h);
-                ctx.fillRect(x1 + hw + 4, y1, hw, h);
-                ctx.strokeRect(x1 + hw + 4, y1, hw, h);
-              } else if (seed === 2) {
-                // Vertical split (2 buildings)
-                const hh = h / 2 - 2;
-                ctx.fillRect(x1, y1, w, hh);
-                ctx.strokeRect(x1, y1, w, hh);
-                ctx.fillRect(x1, y1 + hh + 4, w, hh);
-                ctx.strokeRect(x1, y1 + hh + 4, w, hh);
-              } else {
-                // Quad split (4 small structures)
-                const hw = w / 2 - 2;
-                const hh = h / 2 - 2;
-                ctx.fillRect(x1, y1, hw, hh);
-                ctx.strokeRect(x1, y1, hw, hh);
-                ctx.fillRect(x1 + hw + 4, y1, hw, hh);
-                ctx.strokeRect(x1 + hw + 4, y1, hw, hh);
-                ctx.fillRect(x1, y1 + hh + 4, hw, hh);
-                ctx.strokeRect(x1, y1 + hh + 4, hw, hh);
-                ctx.fillRect(x1 + hw + 4, y1 + hh + 4, hw, hh);
-                ctx.strokeRect(x1 + hw + 4, y1 + hh + 4, hw, hh);
-              }
-            }
-          }
-          ctx.restore();
-        }
-
-        function drawRadarCircles() {
-          ctx.save();
-          ctx.strokeStyle = themeColors.radar;
-          ctx.lineWidth = 0.8;
-          ctx.setLineDash([2, 5]);
-          ctx.fillStyle = themeColors.radarText;
-          ctx.font = '9px var(--font-sans)';
-          ctx.letterSpacing = '0.04em';
-
-          const radii = [120, 260, 420];
-          const labels = ['ZONE I - 5KM', 'ZONE II - 12KM', 'ZONE III - 20KM'];
-          radii.forEach((r, idx) => {
-            ctx.beginPath();
-            ctx.arc(DEPOT.x, DEPOT.y, r, 0, Math.PI * 2);
-            ctx.stroke();
-            ctx.fillText(labels[idx], DEPOT.x + 8, DEPOT.y - r - 4);
-          });
-          ctx.restore();
-        }
-
-        function drawDepot(time) {
-          ctx.save();
-
-          // Outer pulsing ring
-          ctx.beginPath();
-          const pulse = 16 + Math.sin(time * 0.002) * 3;
-          ctx.arc(DEPOT.x, DEPOT.y, pulse, 0, Math.PI * 2);
-          ctx.strokeStyle = 'rgba(37, 99, 235, 0.25)';
-          ctx.lineWidth = 1.5;
-          ctx.stroke();
-
-          // Main Depot Outer Circle
-          ctx.beginPath();
-          ctx.arc(DEPOT.x, DEPOT.y, 9, 0, Math.PI * 2);
-          ctx.fillStyle = '#2563eb';
-          ctx.strokeStyle = '#ffffff';
-          ctx.lineWidth = 2.0;
-          ctx.fill();
-          ctx.stroke();
-
-          // Center Core Dot
-          ctx.beginPath();
-          ctx.arc(DEPOT.x, DEPOT.y, 3.5, 0, Math.PI * 2);
-          ctx.fillStyle = '#ffffff';
-          ctx.fill();
-
-          ctx.restore();
-        }
-
-        function drawNodeGround(x, y, color, opacity, haloOpacity) {
-          if (opacity <= 0) return;
-
-          // Pulsing outer halo in background
-          if (haloOpacity > 0) {
-            ctx.save();
-            ctx.globalAlpha = haloOpacity * 0.35;
-            ctx.fillStyle = color;
-            ctx.beginPath();
-            const pulseRad = 6 + ((Date.now() % 1200) / 1200) * 14;
-            ctx.arc(x, y, pulseRad, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.restore();
-          }
-
-          // Target pad outer ring
-          ctx.save();
-          ctx.globalAlpha = opacity * 0.2;
-          ctx.strokeStyle = color;
-          ctx.lineWidth = 1;
-          ctx.beginPath();
-          ctx.arc(x, y, 9, 0, Math.PI * 2);
-          ctx.stroke();
-          ctx.restore();
-        }
-
-        function drawNodeFloating(x, y, height, color, opacity) {
-          if (opacity <= 0) return;
-
-          // In flat 2D layout, we draw the node marker flat at (x, y) without any vertical offsets.
-          // This represents a premium flat pin style.
-          ctx.save();
-          ctx.globalAlpha = opacity;
-
-          const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
-          ctx.fillStyle = currentTheme === 'light' ? '#ffffff' : '#1e293b';
-          ctx.strokeStyle = color;
-          ctx.lineWidth = 2.0;
-          ctx.beginPath();
-          ctx.arc(x, y, 5.5, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.stroke();
-
-          // Inner core dot
-          ctx.fillStyle = color;
-          ctx.beginPath();
-          ctx.arc(x, y, 2.5, 0, Math.PI * 2);
-          ctx.fill();
-
-          ctx.restore();
-        }
-
-        // Draw progressive route path on canvas (drawn flat on ground streets)
-        function drawRouteProgressive(points, progress, color, isGlow, opacity) {
-          if (points.length < 2 || opacity <= 0) return;
-
-          ctx.save();
-          ctx.beginPath();
-          ctx.moveTo(points[0].x, points[0].y);
-
-          if (progress >= 1.0) {
-            for (let i = 1; i < points.length; i++) {
-              ctx.lineTo(points[i].x, points[i].y);
-            }
-          } else {
-            let totalLength = 0;
-            for (let i = 0; i < points.length - 1; i++) {
-              const dx = points[i + 1].x - points[i].x;
-              const dy = points[i + 1].y - points[i].y;
-              totalLength += Math.sqrt(dx * dx + dy * dy);
-            }
-
-            const targetLength = totalLength * progress;
-            let currentLength = 0;
-            for (let i = 0; i < points.length - 1; i++) {
-              const p1 = points[i];
-              const p2 = points[i + 1];
-              const dx = p2.x - p1.x;
-              const dy = p2.y - p1.y;
-              const dist = Math.sqrt(dx * dx + dy * dy) || 0.001;
-
-              if (currentLength + dist >= targetLength) {
-                const remaining = targetLength - currentLength;
-                const ratio = remaining / dist;
-                ctx.lineTo(p1.x + dx * ratio, p1.y + dy * ratio);
-                break;
-              } else {
-                ctx.lineTo(p2.x, p2.y);
-                currentLength += dist;
-              }
-            }
-          }
-
-          if (isGlow) {
-            ctx.strokeStyle = color;
-            ctx.lineWidth = 8;
-            ctx.globalAlpha = opacity * 0.15;
-            ctx.stroke();
-          } else {
-            ctx.strokeStyle = color;
-            ctx.lineWidth = 3.0;
-            ctx.globalAlpha = opacity * 0.85;
-            ctx.stroke();
-          }
-          ctx.restore();
-        }
-
-        // Draw vehicle delta pointer on canvas (flat 2D top-down truck)
-        function drawVehicle(x, y, height, angleDegrees, color, opacity) {
-          if (opacity <= 0) return;
-          const angle = ((angleDegrees || 0) * Math.PI) / 180 || 0;
-
-          // Flat shadow (drawn underneath the truck)
-          ctx.save();
-          ctx.globalAlpha = opacity * 0.15;
-          ctx.translate(x, y);
-          ctx.rotate(angle);
-          ctx.fillStyle = '#000000';
-          ctx.fillRect(-8.5, -3.5, 11, 8);
-          ctx.fillRect(2.5, -2.5, 5, 6);
-          ctx.restore();
-
-          // Truck body container
-          ctx.save();
-          ctx.globalAlpha = opacity;
-          ctx.translate(x, y);
-          ctx.rotate(angle);
-
-          // 1. Draw Wheels
-          ctx.fillStyle = '#1e293b';
-          ctx.fillRect(-6, -4.5, 3, 0.8);
-          ctx.fillRect(-6, 3.7, 3, 0.8);
-          ctx.fillRect(3, -4.2, 2, 0.8);
-          ctx.fillRect(3, 3.4, 2, 0.8);
-
-          // 2. Draw Headlight beam
-          ctx.save();
-          ctx.globalAlpha = 0.35;
-          const headlightGrad = ctx.createLinearGradient(6, 0, 26, 0);
-          headlightGrad.addColorStop(0, 'rgba(254, 240, 138, 0.7)');
-          headlightGrad.addColorStop(1, 'rgba(254, 240, 138, 0)');
-          ctx.fillStyle = headlightGrad;
-          ctx.beginPath();
-          ctx.moveTo(6, -1);
-          ctx.lineTo(26, -7);
-          ctx.lineTo(26, 7);
-          ctx.lineTo(6, 1);
-          ctx.closePath();
-          ctx.fill();
-          ctx.restore();
-
-          // 3. Draw Cargo Bed (Main trailer body, colored)
-          ctx.fillStyle = color;
-          ctx.strokeStyle = '#ffffff';
-          ctx.lineWidth = 0.8;
-          ctx.fillRect(-8, -3.5, 10, 7);
-          ctx.strokeRect(-8, -3.5, 10, 7);
-
-          // 4. Draw Cab (colored)
-          ctx.fillRect(2, -2.5, 4, 5);
-          ctx.strokeRect(2, -2.5, 4, 5);
-
-          // 5. Draw Windshield (Glass reflection effect)
-          ctx.fillStyle = '#0f172a';
-          ctx.fillRect(3.5, -2, 1, 4);
-
-          ctx.restore();
-        }
-
-        // Draw moving flow particle (running flat along the ground roads)
-        function drawParticle(x, y, color, opacity = 0.8) {
-          ctx.save();
-          ctx.globalAlpha = opacity;
-          ctx.fillStyle = color;
-          ctx.beginPath();
-          ctx.arc(x, y, 2, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.restore();
-        }
-
-        // Main Draw Loop
-        function drawCanvas() {
-          try {
-            if (!canvas || !ctx) return;
-
-            const rect = canvas.getBoundingClientRect();
-            const dpr = window.devicePixelRatio || 1;
-            const w = rect.width || 800;
-            const h = rect.height || 600;
-
-            // Clear and scale canvas for high-DPI crispness with uniform aspect ratio
-            ctx.resetTransform();
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            let scale, shiftX, shiftY, mapScale;
-            const isMobileLayout = window.innerWidth <= 1024;
-
-            if (isMobileLayout) {
-              // Mobile: scale to fit width and center vertically
-              scale = w / 800;
-              ctx.scale(dpr * scale, dpr * scale);
-              shiftX = 0;
-              shiftY = Math.max(10, (h / scale - 600) / 2);
-              mapScale = 1.0;
-            } else {
-              // Desktop: scale to fit height and shift to the right to clear text cards
-              scale = h / 600;
-              ctx.scale(dpr * scale, dpr * scale);
-
-              const w_coords = w / scale;
-              mapScale = 0.82;
-              // Align X near the right edge with a 30px margin
-              shiftX = Math.max(20, w_coords - 800 * mapScale - 30);
-              // Center Y vertically
-              shiftY = (600 - 600 * mapScale) / 2;
-            }
-
-            ctx.translate(shiftX, shiftY);
-            ctx.scale(mapScale, mapScale);
-
-            const act = scrollState.act;
-            const rawProgress = scrollState.progress;
-            const progress = easeInOutCubic(rawProgress);
-            const time = Date.now();
-
-            // Clear inline styles on canvas element to prevent scaling shifts
-            canvas.style.transform = '';
-
-            const cachedHud = document.getElementById('hud-panel');
-
-            // Dynamic Camera Zoom & Pan (Zoomed in on Depot and Customer 15 for Act 1, zooming out in Act 2)
-            let camX = 400;
-            let camY = 300;
-            let camZoom = 1.0;
-
-            if (act === 1) {
-              camX = 250;
-              camY = 300;
-              camZoom = 2.2;
-            } else if (act === 2) {
-              camX = lerp(250, 400, progress);
-              camY = 300;
-              camZoom = lerp(2.2, 1.0, progress);
-            } else {
-              camX = 400;
-              camY = 300;
-              camZoom = 1.0;
-            }
-
-            ctx.translate(400, 300);
-            ctx.scale(camZoom, camZoom);
-            ctx.translate(-camX, -camY);
-
-            // 1. Draw base grids and city map flat on the ground plane (h = 0)
-            drawDotGrid();
-            drawCityMap();
-            drawRadarCircles();
-            drawDepot(time);
-
-            if (act === 1) {
-              // ACT I: Flat linear delivery
-              if (cachedHud) cachedHud.classList.remove('active');
-
-              // Draw only Customer Node 15 (id = 15)
-              const node15 = CUSTOMER_NODES.find((n) => n.id === 15);
-              if (node15) {
-                // Ground Node
-                drawNodeGround(node15.x, node15.y, themeColors.nodeNeutralFill, 1.0, 0);
-                // Floating Node (flat)
-                drawNodeFloating(node15.x, node15.y, 0, themeColors.nodeNeutralFill, 1.0);
-              }
-
-              // Simple route path
-              const pathPoints = [DEPOT, { x: 350, y: 300 }];
-              drawRouteProgressive(pathPoints, progress, ROUTES[0].color, true, 1.0);
-              drawRouteProgressive(pathPoints, progress, ROUTES[0].color, false, 1.0);
-
-              // Single truck running flat along the ground road
-              const pos = getPointAtProgress(pathPoints, progress);
-              drawVehicle(pos.x, pos.y, 0, 0, ROUTES[0].color, 1.0);
-            } else if (act === 2) {
-              // ACT II: Explosion into chaos
-              if (cachedHud) cachedHud.classList.remove('active');
-
-              // Ground Nodes dispersing from Depot (except node 15)
-              CUSTOMER_NODES.forEach((node) => {
-                const currentX = node.id === 15 ? 350 : lerp(DEPOT.x, node.x, progress);
-                const currentY = node.id === 15 ? 300 : lerp(DEPOT.y, node.y, progress);
-                const haloOpacity = progress > 0.5 ? 0.6 : 0.0;
-                const nodeOpacity = node.id === 15 ? 1.0 : progress;
-                drawNodeGround(currentX, currentY, '#ef4444', nodeOpacity, haloOpacity);
-              });
-
-              // Single truck returning to depot or shaking
-              let truckX, truckY, truckAngle;
-              if (progress <= 0.4) {
-                // Return trip: from Customer 15 to Depot
-                const returnT = Math.min(1.0, progress / 0.4);
-                truckX = lerp(350, DEPOT.x, returnT);
-                truckY = 300;
-                truckAngle = 180; // Facing left
-              } else {
-                // Shaking at depot
-                truckX = DEPOT.x + Math.sin(time * 0.05) * 3;
-                truckY = DEPOT.y + Math.cos(time * 0.05) * 3;
-                truckAngle = truckX * 5;
-              }
-              drawVehicle(truckX, truckY, 0, truckAngle, '#ef4444', 1.0);
-
-              // Draw chaos lines flat on the ground map
-              if (progress > 0.3) {
-                ctx.save();
-                ctx.strokeStyle = '#ef4444';
-                ctx.lineWidth = 1;
-                ctx.globalAlpha = lerp(0, 0.35, (progress - 0.3) / 0.7);
-                chaosConnections.forEach((conn) => {
-                  const currentX1 = conn.n1.id === 15 ? 350 : lerp(DEPOT.x, conn.n1.x, progress);
-                  const currentY1 = conn.n1.id === 15 ? 300 : lerp(DEPOT.y, conn.n1.y, progress);
-
-                  const currentX2 = conn.n2.id === 15 ? 350 : lerp(DEPOT.x, conn.n2.x, progress);
-                  const currentY2 = conn.n2.id === 15 ? 300 : lerp(DEPOT.y, conn.n2.y, progress);
-
-                  ctx.beginPath();
-                  ctx.moveTo(currentX1, currentY1);
-                  ctx.lineTo(currentX2, currentY2);
-                  ctx.stroke();
-                });
-                ctx.restore();
-              }
-
-              // Floating Nodes dispersing from Depot (except node 15)
-              CUSTOMER_NODES.forEach((node) => {
-                const currentX = node.id === 15 ? 350 : lerp(DEPOT.x, node.x, progress);
-                const currentY = node.id === 15 ? 300 : lerp(DEPOT.y, node.y, progress);
-                const height = progress * 30;
-                const nodeOpacity = node.id === 15 ? 1.0 : progress;
-                drawNodeFloating(currentX, currentY, height, '#ef4444', nodeOpacity);
-              });
-            } else if (act === 3) {
-              // ACT III: Optimization sequence
-              if (cachedHud) cachedHud.classList.remove('active');
-
-              // Draw chaos connections fading out in the first 40% of progress
-              if (progress < 0.4) {
-                ctx.save();
-                ctx.strokeStyle = '#ef4444';
-                ctx.lineWidth = 1;
-                ctx.globalAlpha = lerp(0.35, 0.0, progress / 0.4);
-                chaosConnections.forEach((conn) => {
-                  ctx.beginPath();
-                  ctx.moveTo(conn.n1.x, conn.n1.y);
-                  ctx.lineTo(conn.n2.x, conn.n2.y);
-                  ctx.stroke();
-                });
-                ctx.restore();
-              }
-
-              // Ground Nodes
-              CUSTOMER_NODES.forEach((node) => {
-                const nodeColor =
-                  progress > 0.5 ? node.targetColor : lerpColor('#ef4444', node.targetColor, progress * 2);
-                const haloOpacity = lerp(0.6, 0, progress);
-                drawNodeGround(node.x, node.y, nodeColor, 1.0, haloOpacity);
-              });
-
-              // Progressive routes flat on ground
-              ROUTES.forEach((route) => {
-                drawRouteProgressive(route.gridNodes, progress, route.color, true, progress);
-                drawRouteProgressive(route.gridNodes, progress, route.color, false, progress);
-              });
-
-              // Vehicles tracing routes flat on ground roads
-              ROUTES.forEach((route) => {
-                const pos = getPointAtProgress(route.gridNodes, progress);
-                const nextPos = getPointAtProgress(route.gridNodes, Math.min(1.0, progress + 0.01));
-                const angle = Math.atan2(nextPos.y - pos.y, nextPos.x - pos.x) * (180 / Math.PI) || 0;
-                drawVehicle(pos.x, pos.y, 0, angle, route.color, 1.0);
-              });
-
-              // Floating Nodes target markers (bobbing)
-              CUSTOMER_NODES.forEach((node) => {
-                const nodeColor =
-                  progress > 0.5 ? node.targetColor : lerpColor('#ef4444', node.targetColor, progress * 2);
-                const bob = Math.sin(time * 0.002 + node.id) * 1.5;
-                drawNodeFloating(node.x, node.y, 30 + bob, nodeColor, 1.0);
-              });
-            } else if (act === 4) {
-              // ACT IV: Continuous completed dashboard loop
-              if (cachedHud) cachedHud.classList.add('active');
-
-              // Ground Nodes
-              CUSTOMER_NODES.forEach((node) => {
-                drawNodeGround(node.x, node.y, node.targetColor, 1.0, 0.0);
-              });
-
-              // Fully active routes flat on ground
-              ROUTES.forEach((route) => {
-                drawRouteProgressive(route.gridNodes, 1.0, route.color, true, 1.0);
-                drawRouteProgressive(route.gridNodes, 1.0, route.color, false, 1.0);
-              });
-
-              // Vehicles tracing routes continuously & particles
-              const speedTime = time * 0.00015;
-              ROUTES.forEach((route, index) => {
-                const loopProg = (speedTime * (1.2 + index * 0.25)) % 1;
-                // Smoothly speed up vehicles from 0 (at depot) to their continuous loopProg position
-                const currentProg = lerp(0.0, loopProg, progress);
-                const pos = getPointAtProgress(route.gridNodes, currentProg);
-                const nextPos = getPointAtProgress(route.gridNodes, (currentProg + 0.01) % 1);
-                const angle = Math.atan2(nextPos.y - pos.y, nextPos.x - pos.x) * (180 / Math.PI) || 0;
-
-                drawVehicle(pos.x, pos.y, 0, angle, route.color, 1.0);
-
-                // 3 particles flowing continuously flat on route paths
-                for (let pIdx = 0; pIdx < 3; pIdx++) {
-                  const offset = pIdx * 0.33;
-                  const pProg = (speedTime * 2.2 + offset) % 1;
-                  const currentPProg = lerp(0.0, pProg, progress);
-                  const pPos = getPointAtProgress(route.gridNodes, currentPProg);
-                  drawParticle(pPos.x, pPos.y, route.color, progress * 0.8);
-                }
-              });
-
-              // Floating Nodes targets bobbing
-              CUSTOMER_NODES.forEach((node) => {
-                const bob = Math.sin(time * 0.002 + node.id) * 1.5;
-                drawNodeFloating(node.x, node.y, 30 + bob, node.targetColor, 1.0);
-              });
-            }
-          } catch (err) {
-            console.error('Canvas draw error:', err);
-            let errDiv = document.getElementById('debug-err-banner');
-            if (!errDiv) {
-              errDiv = document.createElement('div');
-              errDiv.id = 'debug-err-banner';
-              errDiv.style =
-                'position:fixed;top:0;left:0;width:100%;background:rgba(239,68,68,0.95);color:white;z-index:99999;padding:12px;font-family:monospace;font-size:12px;line-height:1.4;white-space:pre-wrap;box-shadow:0 4px 12px rgba(0,0,0,0.3);border-bottom:3px solid #dc2626;';
-              document.body.appendChild(errDiv);
-            }
-            errDiv.textContent = 'Canvas Draw Error:\n' + err.message + '\n\nStack:\n' + err.stack;
-          }
-        }
-
-        // Animation Frame loop state
-        let isVisible = false;
-        let animationFrameId = null;
-
-        function animationLoop() {
-          if (!isVisible) return;
-          drawCanvas();
-          animationFrameId = requestAnimationFrame(animationLoop);
-        }
-
-        // Setup performance guard via IntersectionObserver
-        function setupPerformanceGuard() {
-          const observer = new IntersectionObserver(
-            (entries) => {
-              entries.forEach((entry) => {
-                isVisible = entry.isIntersecting;
-                if (isVisible) {
-                  // Resume rendering loop
-                  if (!animationFrameId) {
-                    animationFrameId = requestAnimationFrame(animationLoop);
-                  }
-                } else {
-                  // Pause rendering loop
-                  if (animationFrameId) {
-                    cancelAnimationFrame(animationFrameId);
-                    animationFrameId = null;
-                  }
-                }
-              });
-            },
-            { threshold: 0.01 }
-          );
-
-          const wrapper = document.querySelector('.story-graphics-panel');
-          if (wrapper) observer.observe(wrapper);
-        }
-
         // ===================================================================
-        // Interactive Tab Showcase & Autoplay Integration
+        // GSAP ScrollTrigger Integration
         // ===================================================================
-
-        let autoplayTimer = null;
-        let currentAct = 1;
-
-        function setAct(actNum, isManual = true) {
-          if (isManual) {
-            stopAutoplay();
-          }
-
-          currentAct = actNum;
-
-          // Update active states of tab buttons
-          for (let act = 1; act <= 4; act++) {
-            const tabBtn = document.getElementById(`tab-act${act}`);
-            if (tabBtn) {
-              tabBtn.classList.toggle('active', act === actNum);
-            }
-          }
-
-          // Reset progress and animate to 1.0 (trigger transition effect)
-          scrollState.act = actNum;
-          scrollState.progress = 0;
-
-          // Animate the act progress from 0.0 to 1.0
-          if (typeof gsap !== 'undefined') {
-            gsap.killTweensOf(scrollState);
-            gsap.to(scrollState, {
-              progress: 1.0,
-              duration: 0.8,
-              ease: 'power2.out',
-              onUpdate: () => {
-                updateWordmarkLetters(scrollState.act, scrollState.progress);
-              },
-            });
-          } else {
-            scrollState.progress = 1.0;
-            updateWordmarkLetters(scrollState.act, 1.0);
-          }
-
-          toggleActiveCard(actNum);
-        }
-
-        function startAutoplay() {
-          stopAutoplay();
-          autoplayTimer = setInterval(() => {
-            let nextAct = currentAct + 1;
-            if (nextAct > 4) nextAct = 1;
-            setAct(nextAct, false);
-          }, 6000); // cycle every 6 seconds
-        }
-
-        function stopAutoplay() {
-          if (autoplayTimer) {
-            clearInterval(autoplayTimer);
-            autoplayTimer = null;
-          }
-        }
-
-        let scrollTriggerInstance = null;
-
-        function updateTabActive(actNum) {
-          for (let act = 1; act <= 4; act++) {
-            const tabBtn = document.getElementById(`tab-act${act}`);
-            if (tabBtn) {
-              tabBtn.classList.toggle('active', act === actNum);
-            }
-          }
-        }
 
         function setupScrollAnimations() {
-          resizeCanvas();
-          updateCachedThemeVariables();
-
-          // Register ScrollTrigger to be safe
-          if (typeof gsap !== 'undefined' && typeof ScrollTrigger !== 'undefined') {
-            gsap.registerPlugin(ScrollTrigger);
+          if (typeof gsap === 'undefined' || typeof ScrollTrigger === 'undefined') {
+            console.warn('GSAP or ScrollTrigger not loaded. Using fallback animation.');
+            setupFallbackAnimation();
+            return;
           }
 
-          // Clean up any existing desktop ScrollTrigger instance
-          if (scrollTriggerInstance) {
-            scrollTriggerInstance.kill();
-            scrollTriggerInstance = null;
-          }
-          if (typeof gsap !== 'undefined') {
-            gsap.killTweensOf(scrollState);
-          }
-          stopAutoplay();
+          gsap.registerPlugin(ScrollTrigger);
 
-          const isDesktop = window.innerWidth > 1024;
+          // Only run scroll timeline on desktop
+          if (window.innerWidth < 1024) {
+            setupFallbackAnimation();
+            return;
+          }
 
-          if (isDesktop) {
-            scrollTriggerInstance = ScrollTrigger.create({
+          initCanvas();
+          renderCanvas(1, 0.0); // Call initial render immediately on load
+          updateWordmarkLetters(1, 0.0); // Initialize wordmark reveal state
+
+          // Timeline to scrub animation state
+          const tl = gsap.timeline({
+            scrollTrigger: {
               trigger: '.scroll-track',
               start: 'top top',
               end: 'bottom bottom',
-              scrub: 0.5,
+              scrub: 1.5,
               snap: {
-                snapTo: [0.0, 0.3333, 0.6666, 1.0],
-                duration: { min: 0.2, max: 0.5 },
-                delay: 0.25,
+                snapTo: 1 / 3,
+                delay: 0.1,
+                duration: { min: 0.3, max: 0.8 },
                 ease: 'power2.inOut',
               },
               onUpdate: (self) => {
-                const val = self.progress;
-                let act = 1;
-                let progress = 0.0;
+                const progress = self.progress;
 
-                if (val <= 0.1666) {
+                // Divide timeline into 4 Acts
+                let act = 1;
+                let actProgress = 0;
+
+                if (progress < 0.25) {
                   act = 1;
-                  progress = val / 0.1666;
-                } else if (val <= 0.3333) {
+                  actProgress = progress / 0.25;
+                } else if (progress < 0.5) {
                   act = 2;
-                  progress = (val - 0.1666) / 0.1667;
-                } else if (val <= 0.6666) {
+                  actProgress = (progress - 0.25) / 0.25;
+                } else if (progress < 0.75) {
                   act = 3;
-                  progress = (val - 0.3333) / 0.3333;
+                  actProgress = (progress - 0.5) / 0.25;
                 } else {
                   act = 4;
-                  progress = Math.min(1.0, (val - 0.6666) / 0.3334);
+                  actProgress = (progress - 0.75) / 0.25;
                 }
 
-                scrollState.act = act;
-                scrollState.progress = progress;
-
-                // Sync card active states, wordmark sequential letters, and tab states
+                // Trigger Act Card active toggle
                 toggleActiveCard(act);
-                updateWordmarkLetters(act, progress);
-                updateTabActive(act);
+
+                // Update wordmark letters reveal
+                updateWordmarkLetters(act, actProgress);
+
+                // Render canvas updates
+                renderCanvas(act, actProgress);
               },
-            });
-
-            // Tab clicks scroll smoothly to the target snapped viewport coordinate
-            const snapPoints = [0.0, 0.3333, 0.6666, 1.0];
-            for (let act = 1; act <= 4; act++) {
-              const tabBtn = document.getElementById(`tab-act${act}`);
-              if (tabBtn) {
-                tabBtn.onclick = () => {
-                  if (!scrollTriggerInstance) return;
-                  const targetProgress = snapPoints[act - 1];
-                  const startPos = scrollTriggerInstance.start;
-                  const endPos = scrollTriggerInstance.end;
-                  const targetScroll = startPos + (endPos - startPos) * targetProgress;
-
-                  const scrollObj = { y: window.scrollY };
-                  gsap.to(scrollObj, {
-                    y: targetScroll + 1, // Add 1px offset to guarantee active threshold trigger
-                    duration: 0.8,
-                    ease: 'power2.out',
-                    onUpdate: () => {
-                      window.scrollTo(0, scrollObj.y);
-                    },
-                  });
-                };
-              }
-            }
-
-            // Sync visual state with current scroll position on load
-            ScrollTrigger.refresh();
-          } else {
-            // Mobile/Tablet: fallback to tab autoplay cycle
-            for (let act = 1; act <= 4; act++) {
-              const tabBtn = document.getElementById(`tab-act${act}`);
-              if (tabBtn) {
-                tabBtn.onclick = () => {
-                  setAct(act, true);
-                };
-              }
-            }
-
-            // Reset to Act I and start cycles
-            setAct(1, false);
-            startAutoplay();
-          }
-
-          // Start loop
-          setupPerformanceGuard();
+            },
+          });
         }
 
         // Toggle active CSS class for text cards
@@ -1770,12 +1399,16 @@
           for (let act = 1; act <= 4; act++) {
             const card = document.getElementById(`card-act${act}`);
             if (card) {
-              card.classList.toggle('active', act === activeAct);
+              if (act === activeAct) {
+                card.classList.add('active');
+              } else {
+                card.classList.remove('active');
+              }
             }
           }
         }
 
-        // Update sequential wordmark letter reveal
+        // Update sequential wordmark letter reveal on scroll
         function updateWordmarkLetters(activeAct, actProgress) {
           for (let act = 1; act <= 4; act++) {
             const letters = document.querySelectorAll(`#card-act${act} .letter`);
@@ -1790,13 +1423,34 @@
               if (act === 1) {
                 letters.forEach((el, idx) => {
                   const threshold = (idx / letters.length) * 0.8;
-                  el.classList.toggle('revealed', actProgress >= threshold);
+                  if (actProgress >= threshold) {
+                    el.classList.add('revealed');
+                  } else {
+                    el.classList.remove('revealed');
+                  }
                 });
               } else {
                 letters.forEach((el) => el.classList.add('revealed'));
               }
             }
           }
+        }
+
+        // Fallback animation: continuous loop for mobile/tablets or if GSAP fails
+        let fallbackInterval = null;
+        function setupFallbackAnimation() {
+          if (fallbackInterval) clearInterval(fallbackInterval);
+
+          initCanvas();
+          toggleActiveCard(4); // Keep Act IV card active
+          updateWordmarkLetters(4, 1.0); // Reveal all letters by default in fallback mode
+
+          // Draw initial state of Act IV immediately
+          renderCanvas(4, 1.0);
+
+          fallbackInterval = setInterval(() => {
+            renderCanvas(4, 1.0); // Keep rendering loop in Act IV (routes resolved)
+          }, 16);
         }
 
         // ===================================================================

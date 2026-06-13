@@ -2,6 +2,12 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      (function () {
+        const savedTheme = localStorage.getItem('vrptw_theme') || localStorage.getItem('vrptw_landing_theme_v2') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+      })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>NAMI | Dispatch Control Tower</title>
 
@@ -28,7 +34,7 @@
     <link rel="stylesheet" href="css/gantt.css" />
   </head>
 
-  <body class="light-theme-enforced">
+  <body>
     <div id="root"></div>
     <script type="module" src="js/app_root.jsx"></script>
   </body>

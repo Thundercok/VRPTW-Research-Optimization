@@ -5,6 +5,7 @@ export default function SettingsView() {
   const { state, setLang, toast, t } = useAppContext();
   const [apiUrl, setApiUrl] = useState(() => localStorage.getItem('vrptw_api_base') || '');
   const [mapTheme, setMapTheme] = useState(() => localStorage.getItem('vrptw_map_theme') || 'carto-light');
+  const [appTheme, setAppTheme] = useState(() => localStorage.getItem('vrptw_theme') || localStorage.getItem('vrptw_landing_theme_v2') || 'dark');
 
   const saveApiBase = () => {
     if (apiUrl.trim()) {
@@ -20,6 +21,14 @@ export default function SettingsView() {
     setMapTheme(val);
     localStorage.setItem('vrptw_map_theme', val);
     toast('Style Selected', 'Map visual style updated. Please refresh to render tiles.', 'ok');
+  };
+
+  const handleAppThemeChange = (e) => {
+    const val = e.target.value;
+    setAppTheme(val);
+    localStorage.setItem('vrptw_theme', val);
+    document.documentElement.setAttribute('data-theme', val);
+    toast('Theme Updated', `Application theme changed to ${val}.`, 'ok');
   };
 
   return (
@@ -69,6 +78,20 @@ export default function SettingsView() {
                 Tiếng Việt (VN)
               </button>
             </div>
+          </div>
+
+          <div className="settings-form-group" style={{ marginTop: '16px' }}>
+            <label htmlFor="settings-app-theme">Application Theme Mode</label>
+            <select 
+              id="settings-app-theme" 
+              className="saas-select" 
+              style={{ marginTop: '6px' }}
+              value={appTheme}
+              onChange={handleAppThemeChange}
+            >
+              <option value="dark">Dark Theme (Premium Glassmorphic)</option>
+              <option value="light">Light Theme (Default Slate)</option>
+            </select>
           </div>
 
           <div className="settings-form-group" style={{ marginTop: '16px' }}>
