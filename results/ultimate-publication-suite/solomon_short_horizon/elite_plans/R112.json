@@ -124,5 +124,5 @@
       50
     ]
   ],
-  "algo": "Hybrid-DDQN"
+  "algo": "Hybrid-Rule"
 }

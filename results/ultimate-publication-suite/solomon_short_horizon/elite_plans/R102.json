@@ -138,5 +138,5 @@
       53
     ]
   ],
-  "algo": "Hybrid-DDQN"
+  "algo": "Hybrid-Fixed"
 }
