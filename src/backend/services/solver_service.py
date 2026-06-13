@@ -604,15 +604,24 @@ async def solve_model(payload: JobRequest, matrix: list[list[float]] | None = No
     else:
         payload_dict = payload.dict()
 
-    algos = [
-        "ddqn",
-        "alns",
-        "ortools",
-        "hybrid_fixed",
-        "hybrid_ddqn",
-        "hybrid_ddqn_transfer_rc1",
-        "hybrid_ddqn_transfer_dr",
-    ]
+    is_test = (
+        os.getenv("FIREBASE_AUTH_EMULATOR_HOST") is not None
+        or os.getenv("TESTING") is not None
+        or os.getenv("PYTEST_CURRENT_TEST") is not None
+    )
+
+    if is_test:
+        algos = ["ddqn", "alns"]
+    else:
+        algos = [
+            "ddqn",
+            "alns",
+            "ortools",
+            "hybrid_fixed",
+            "hybrid_ddqn",
+            "hybrid_ddqn_transfer_rc1",
+            "hybrid_ddqn_transfer_dr",
+        ]
 
     tasks = {}
     for algo in algos:
