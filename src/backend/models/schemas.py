@@ -113,3 +113,9 @@ class JobState:
     result: dict[str, Any] | None = None
     error: str | None = None
     debug: dict[str, Any] | None = None
+
+
+class ReoptimizeRequest(BaseModel):
+    fleet: FleetConfig
+    customers: list[Point]
+    routes: list[list[int]]

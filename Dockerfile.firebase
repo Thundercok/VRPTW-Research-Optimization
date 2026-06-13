@@ -1,8 +1,19 @@
 FROM node:20-slim
 
-# Install JRE, curl, and netcat (for port checking)
+# Install dependencies for adding repositories
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    default-jre-headless \
+    wget \
+    gnupg \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Add Eclipse Temurin repository
+RUN wget -qO - https://packages.adoptium.net/artifactory/api/gpg/key/public | gpg --dearmor > /etc/apt/trusted.gpg.d/adoptium.gpg \
+    && echo "deb https://packages.adoptium.net/artifactory/deb bookworm main" > /etc/apt/sources.list.d/adoptium.list
+
+# Install JRE 21, curl, and netcat (for port checking)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    temurin-21-jre \
     curl \
     netcat-openbsd \
     && rm -rf /var/lib/apt/lists/*

@@ -447,6 +447,21 @@ class OperatorController:
 
     def act(self, state, dw, rw, bandit, frozen=False, ucb_aug=None) -> tuple[int, int, int]:
         prior = self._prior(dw, rw)
+        self.last_q = None
+        try:
+            with torch.no_grad():
+                q = self.q(torch.as_tensor(state, dtype=torch.float32, device=DEVICE).unsqueeze(0))[0].cpu().numpy()
+            q_adjusted = (
+                q
+                + self.cfg.op_prior_strength * np.log(prior.reshape(-1) + 1e-8)
+                + self.cfg.op_bandit_strength * bandit.mean().reshape(-1)
+            )
+            if ucb_aug is not None:
+                q_adjusted = ucb_aug.augment_qvalues(q_adjusted)
+            self.last_q = q_adjusted
+        except Exception:
+            self.last_q = None
+
         if not frozen and len(self.buf) < self.cfg.op_warmup:
             di, ri = bandit.select(prior=prior, prior_strength=self.cfg.bandit_prior_strength)
             action = di * N_R + ri
@@ -454,16 +469,19 @@ class OperatorController:
             action = self._sample_prior(prior, bandit)
             di, ri = divmod(action, N_R)
         else:
-            with torch.no_grad():
-                q = self.q(torch.as_tensor(state, dtype=torch.float32, device=DEVICE).unsqueeze(0))[0].cpu().numpy()
-            q = (
-                q
-                + self.cfg.op_prior_strength * np.log(prior.reshape(-1) + 1e-8)
-                + self.cfg.op_bandit_strength * bandit.mean().reshape(-1)
-            )
-            if ucb_aug is not None:
-                q = ucb_aug.augment_qvalues(q)
-            action = int(q.argmax())
+            if self.last_q is not None:
+                action = int(self.last_q.argmax())
+            else:
+                with torch.no_grad():
+                    q = self.q(torch.as_tensor(state, dtype=torch.float32, device=DEVICE).unsqueeze(0))[0].cpu().numpy()
+                q_adjusted = (
+                    q
+                    + self.cfg.op_prior_strength * np.log(prior.reshape(-1) + 1e-8)
+                    + self.cfg.op_bandit_strength * bandit.mean().reshape(-1)
+                )
+                if ucb_aug is not None:
+                    q_adjusted = ucb_aug.augment_qvalues(q_adjusted)
+                action = int(q_adjusted.argmax())
             di, ri = divmod(action, N_R)
         return int(action), int(di), int(ri)
 

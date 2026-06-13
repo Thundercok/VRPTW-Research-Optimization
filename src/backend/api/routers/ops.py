@@ -28,7 +28,7 @@ from api.dependencies import require_user
 from core.config import demo_auth_bypass_enabled
 from core.firebase import is_firebase_enabled
 from core.rate_limit import GEOCODE_LIMIT, JOBS_LIMIT, limiter
-from models.schemas import JobRequest, MatrixRequest
+from models.schemas import JobRequest, MatrixRequest, ReoptimizeRequest
 from services.geocode_service import geocode_address, reverse_geocode_address
 from services.job_service import job_service
 from services.matrix_service import calculate_matrix
@@ -355,6 +355,46 @@ async def analysis_activity(
 @router.post("/matrix")
 async def matrix(body: MatrixRequest, _: dict[str, str] = Depends(require_user)) -> dict[str, Any]:
     return await calculate_matrix(body.points)
+
+
+@router.post("/reoptimize")
+async def reoptimize(
+    body: ReoptimizeRequest,
+    _: dict[str, str] = Depends(require_user),
+) -> dict[str, Any]:
+    try:
+        from services.research_adapter import build_inst, plan_to_payload
+        from vrptw import Plan
+        from vrptw.local_search import td_converge_polish
+    except ImportError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Solver is unavailable because research dependencies are missing: {exc}",
+        )
+
+    try:
+        inst = build_inst(body.customers, capacity=body.fleet.capacity, name="Reoptimize")
+    except ValueError as val_err:
+        raise HTTPException(status_code=400, detail=str(val_err))
+
+    id_to_idx = {c.id: idx for idx, c in enumerate(body.customers) if c.id is not None}
+    
+    mapped_routes = []
+    for r in body.routes:
+        mapped_route = []
+        for cid in r:
+            if cid in id_to_idx:
+                node_idx = id_to_idx[cid]
+                if node_idx != 0:
+                    mapped_route.append(node_idx)
+        if mapped_route:
+            mapped_routes.append(mapped_route)
+
+    plan = Plan(mapped_routes, inst, algo="manual")
+    polished_plan = td_converge_polish(plan, max_passes=25)
+    res = plan_to_payload(polished_plan, body.customers, 0.0)
+    res["feasible"] = polished_plan.feasible
+    return res
 
 
 @router.post("/jobs")

@@ -176,16 +176,38 @@ export class MapController {
       const markerOptions = {
         icon: c.isDepot ? this.buildDepotIcon() : this.buildCustomerIcon(c.ready, c.due),
       };
+
+      let popupContent = `
+        <div style="font-family: Inter, sans-serif; min-width: 140px;">
+          <strong style="font-size: 13px; color: #0f172a; display: block; margin-bottom: 2px;">${c.name}</strong>
+          <div style="color: #64748b; font-size: 11px; margin-bottom: 2px;">Demand: ${c.demand} units</div>
+      `;
+
+      if (this.app.state.editMode && !c.isDepot) {
+        const currentVid = window.app_reassign_get_vid ? window.app_reassign_get_vid(c.id) : 0;
+        let optionsHtml = '<option value="0">Unassigned</option>';
+        const maxVehicles = Number(this.app.state.lastRunFleet?.vehicles ?? this.app.state.vehicles ?? 5);
+        for (let v = 1; v <= maxVehicles; v++) {
+          const selectedAttr = v === currentVid ? 'selected' : '';
+          optionsHtml += `<option value="${v}" ${selectedAttr}>Vehicle ${v}</option>`;
+        }
+        popupContent += `
+          <div style="margin-top: 8px; border-top: 1px solid #e2e8f0; padding-top: 6px;">
+            <label style="font-size: 9px; font-weight: 700; color: #475569; display: block; margin-bottom: 3px; letter-spacing: 0.3px;">ASSIGN VEHICLE:</label>
+            <select style="width: 100%; font-size: 10px; padding: 2px 4px; border: 1px solid #cbd5e1; border-radius: 4px; outline: none; background: #fff;" onchange="if(window.app_reassign_handler) window.app_reassign_handler(${c.id}, this.value)">
+              ${optionsHtml}
+            </select>
+          </div>
+        `;
+      } else {
+        popupContent += `
+          <div style="color: #64748b; font-size: 11px;">Time Window: ${c.ready} - ${c.due}</div>
+        `;
+      }
+      popupContent += `</div>`;
+
       L.marker(p, markerOptions)
-        .bindPopup(
-          `
-                <div style="font-family: Inter, sans-serif;">
-                  <strong style="font-size: 14px; color: #0f172a;">${c.name}</strong>
-                  <div style="color: #64748b; font-size: 12px; margin-top: 4px;">Demand: ${c.demand} units</div>
-                  <div style="color: #64748b; font-size: 11px;">Time Window: ${c.ready} - ${c.due}</div>
-                </div>
-            `
-        )
+        .bindPopup(popupContent)
         .addTo(this.markerLayer);
     });
     if (bounds.length > 0) this.map.fitBounds(bounds, { padding: [40, 40] });
@@ -1005,7 +1027,7 @@ export class MapController {
     const customers = this.app.state.customers;
     if (!customers || customers.length === 0) return;
 
-    const threshold = 0.15;
+    const threshold = this.app.state.gnnThreshold !== undefined ? this.app.state.gnnThreshold : 0.15;
 
     for (let i = 0; i < heatmap.length; i++) {
       for (let j = 0; j < heatmap[i].length; j++) {

@@ -14,6 +14,13 @@ export default function LiveDispatchView() {
   const [editValue, setEditValue] = useState('');
   const [pasteData, setPasteData] = useState('');
 
+  // AI Playground states
+  const [playgroundOpen, setPlaygroundOpen] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [reoptimizing, setReoptimizing] = useState(false);
+  const [manualRoutes, setManualRoutes] = useState({});
+  const [solverConsoleHistory, setSolverConsoleHistory] = useState([]);
+
   // Forms states for inline row addition
   const [isAddingRow, setIsAddingRow] = useState(false);
   const [addRowData, setAddRowData] = useState({
@@ -163,7 +170,7 @@ export default function LiveDispatchView() {
     }
   }, [state.customers]);
 
-  // Update route displays when solver finishes
+  // Update route displays when solver finishes or changes
   useEffect(() => {
     if (state.lastResult && mapControllerRef.current && simulationControllerRef.current && ganttControllerRef.current) {
       mapControllerRef.current.clearRoutes();
@@ -188,6 +195,227 @@ export default function LiveDispatchView() {
       emptyAlns?.classList.add('hidden');
     }
   }, [state.lastResult]);
+
+  // Sync solver history and routes to local state
+  useEffect(() => {
+    if (state.lastResult && state.lastResult.ddqn) {
+      const initial = {};
+      state.lastResult.ddqn.routes.forEach((r) => {
+        initial[r.vehicle_id] = [...r.stops];
+      });
+      setManualRoutes(initial);
+      
+      if (state.lastResult.ddqn.solver_history) {
+        setSolverConsoleHistory(state.lastResult.ddqn.solver_history);
+      } else {
+        setSolverConsoleHistory([]);
+      }
+    }
+  }, [state.lastResult]);
+
+  // Global callback bridges for Leaflet map markers to interact with React state
+  useEffect(() => {
+    window.app_reassign_get_vid = (cid) => {
+      for (const vid in manualRoutes) {
+        if (manualRoutes[vid].includes(cid)) {
+          return Number(vid);
+        }
+      }
+      return 0;
+    };
+    
+    window.app_reassign_handler = (cid, value) => {
+      reassignCustomer(cid, Number(value));
+    };
+    
+    return () => {
+      window.app_reassign_get_vid = null;
+      window.app_reassign_handler = null;
+    };
+  }, [manualRoutes]);
+
+  const getVehicleForCustomer = (cid) => {
+    for (const vid in manualRoutes) {
+      if (manualRoutes[vid].includes(cid)) {
+        return Number(vid);
+      }
+    }
+    return 0;
+  };
+
+  const reassignCustomer = (cid, newVid) => {
+    setManualRoutes((prev) => {
+      const next = { ...prev };
+      for (const vid in next) {
+        next[vid] = next[vid].filter((id) => id !== cid);
+      }
+      if (newVid !== 0) {
+        if (!next[newVid]) next[newVid] = [];
+        next[newVid].push(cid);
+      }
+      triggerMapPaint(next);
+      return next;
+    });
+  };
+
+  const triggerMapPaint = (routes) => {
+    if (!mapControllerRef.current) return;
+    const capacity = Number(state.lastRunFleet?.capacity ?? state.capacity);
+    const customers = state.customers;
+    const depot = customers.find((c) => c.id === 0);
+    if (!depot) return;
+    
+    const mockRoutes = Object.keys(routes).map((vid) => {
+      const stopIds = routes[vid];
+      const stopCusts = stopIds.map((sid) => customers.find((c) => c.id === sid)).filter(Boolean);
+      
+      const path = [[depot.lat, depot.lng]];
+      stopCusts.forEach((c) => path.push([c.lat, c.lng]));
+      path.push([depot.lat, depot.lng]);
+      
+      let load = 0;
+      let distance = 0.0;
+      let prev = depot;
+      stopCusts.forEach((c) => {
+        load += c.demand;
+        const dx = c.lat - prev.lat;
+        const dy = c.lng - prev.lng;
+        distance += Math.sqrt(dx*dx + dy*dy);
+        prev = c;
+      });
+      const dxEnd = depot.lat - prev.lat;
+      const dyEnd = depot.lng - prev.lng;
+      distance += Math.sqrt(dxEnd*dxEnd + dyEnd*dyEnd);
+      
+      return {
+        vehicle_id: Number(vid),
+        load: load,
+        distance_km: distance,
+        path: path,
+        stops: stopIds,
+        schedule: []
+      };
+    });
+    
+    mapControllerRef.current.clearRoutes();
+    mapControllerRef.current.renderAlgoRoutes({ routes: mockRoutes }, 'ddqn', '#fbbf24', capacity);
+  };
+
+  const toggleEditMode = (enabled) => {
+    setEditMode(enabled);
+    updateState({ editMode: enabled });
+    if (mapControllerRef.current) {
+      mapControllerRef.current.renderMarkers();
+      if (enabled) {
+        triggerMapPaint(manualRoutes);
+      } else {
+        mapControllerRef.current.clearRoutes();
+        mapControllerRef.current.paintResult();
+      }
+    }
+  };
+
+  const violations = React.useMemo(() => {
+    if (!editMode) return [];
+    const capacity = Number(state.lastRunFleet?.capacity ?? state.capacity);
+    const customers = state.customers;
+    const result = [];
+    
+    Object.keys(manualRoutes).forEach((vid) => {
+      const routeNodes = manualRoutes[vid];
+      if (!routeNodes || routeNodes.length === 0) return;
+      
+      let load = 0;
+      routeNodes.forEach((cid) => {
+        const cust = customers.find((c) => c.id === cid);
+        if (cust) load += cust.demand;
+      });
+      if (load > capacity) {
+        result.push(`Vehicle ${vid}: Overloaded (${load}/${capacity})`);
+      }
+      
+      let time = 0.0;
+      let prevNode = customers.find((c) => c.id === 0);
+      for (let i = 0; i < routeNodes.length; i++) {
+        const cid = routeNodes[i];
+        const cust = customers.find((c) => c.id === cid);
+        if (!cust || !prevNode) continue;
+        
+        const dx = cust.lat - prevNode.lat;
+        const dy = cust.lng - prevNode.lng;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        
+        const arrival = time + dist;
+        if (arrival > cust.due) {
+          result.push(`Vehicle ${vid} → ${cust.name || 'Stop ' + cid}: Late by ${(arrival - cust.due).toFixed(1)}m`);
+        }
+        time = Math.max(arrival, cust.ready) + cust.service;
+        prevNode = cust;
+      }
+    });
+    return result;
+  }, [editMode, manualRoutes, state.customers, state.capacity, state.lastRunFleet]);
+
+  const handleAiRepair = async () => {
+    setReoptimizing(true);
+    try {
+      const routesArray = Object.keys(manualRoutes)
+        .map((vid) => manualRoutes[vid])
+        .filter((r) => r && r.length > 0);
+        
+      const body = {
+        fleet: {
+          vehicles: Number(state.lastRunFleet?.vehicles ?? state.vehicles ?? 5),
+          capacity: Number(state.lastRunFleet?.capacity ?? state.capacity ?? 100)
+        },
+        customers: state.customers.map((c) => ({
+          id: c.id,
+          name: c.name,
+          address: c.address,
+          lat: c.lat,
+          lng: c.lng,
+          demand: c.demand,
+          isDepot: c.isDepot,
+          ready: c.ready,
+          due: c.due,
+          service: c.service
+        })),
+        routes: routesArray
+      };
+      
+      const res = await request('/reoptimize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      
+      if (res && res.routes) {
+        const updatedResult = { ...state.lastResult };
+        updatedResult.ddqn = {
+          ...updatedResult.ddqn,
+          routes: res.routes,
+          total_distance_km: res.total_distance_km,
+          vehicles_used: res.vehicles_used,
+          runtime_s: res.runtime_sec
+        };
+        
+        updateState({ lastResult: updatedResult });
+        setEditMode(false);
+        updateState({ editMode: false });
+        
+        if (mapControllerRef.current) {
+          mapControllerRef.current.renderMarkers();
+          mapControllerRef.current.clearRoutes();
+          mapControllerRef.current.paintResult();
+        }
+        toast('AI Repair Done', 'Manual routes polished and constraints resolved successfully.', 'ok');
+      }
+    } catch (err) {
+      toast('AI Repair Failed', err.message || 'Error communicating with re-optimizer.', 'error');
+    } finally {
+      setReoptimizing(false);
+    }
+  };
 
   // Row selection handler
   const toggleSelection = (id) => {
@@ -603,6 +831,7 @@ export default function LiveDispatchView() {
                   <th className="num">Service</th>
                   <th style={{ width: '90px' }}>Priority</th>
                   <th style={{ width: '100px' }}>Req. Skill</th>
+                  {editMode && <th style={{ width: '130px' }}>AI Route Assign</th>}
                 </tr>
               </thead>
               <tbody id="customer-rows">
@@ -896,6 +1125,24 @@ export default function LiveDispatchView() {
                           )
                         )}
                       </td>
+                      {editMode && (
+                        <td>
+                          {c.isDepot ? (
+                            <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Depot</span>
+                          ) : (
+                            <select
+                              value={getVehicleForCustomer(c.id)}
+                              onChange={(e) => reassignCustomer(c.id, Number(e.target.value))}
+                              style={{ width: '100%', fontSize: '11px', padding: '2px 4px', border: '1px solid #cbd5e1', borderRadius: '4px', outline: 'none' }}
+                            >
+                              <option value="0">Unassigned</option>
+                              {Array.from({ length: Number(state.lastRunFleet?.vehicles ?? state.vehicles ?? 5) }).map((_, idx) => (
+                                <option key={idx + 1} value={idx + 1}>Vehicle {idx + 1}</option>
+                              ))}
+                            </select>
+                          )}
+                        </td>
+                      )}
                     </tr>
                   );
                 })}
@@ -975,6 +1222,14 @@ export default function LiveDispatchView() {
                 />
                 <span>Show GNN Heatmap</span>
               </label>
+              <button 
+                id="btn-toggle-playground"
+                className={`playground-toggle-btn ${playgroundOpen ? 'active' : ''}`}
+                onClick={() => setPlaygroundOpen(!playgroundOpen)}
+                style={{ marginLeft: '8px' }}
+              >
+                🧠 AI Playground
+              </button>
             </div>
           </div>
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', minHeight: 0 }}>
@@ -1159,6 +1414,159 @@ export default function LiveDispatchView() {
                   </p>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* AI Playground Drawer */}
+          <div id="playground-drawer" className={`playground-drawer ${playgroundOpen ? 'open' : ''}`}>
+            <div className="drawer-header">
+              <h3 style={{ margin: 0, fontSize: '12px', fontWeight: 700, color: 'var(--text-main)' }}>🧠 AI Playground & XAI Console</h3>
+              <button 
+                id="btn-close-playground"
+                className="drawer-close-btn" 
+                onClick={() => setPlaygroundOpen(false)} 
+                title="Close"
+                style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: 'var(--text-muted)' }}
+              >
+                &times;
+              </button>
+            </div>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '14px', gap: '12px', overflowY: 'auto' }}>
+              
+              {/* Manual Edit Mode Toggle */}
+              <div className="glass-card" style={{ padding: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <span style={{ fontWeight: 600, fontSize: '11.5px', color: 'var(--text-main)' }}>Manual Re-routing Mode</span>
+                  <label className="switch" style={{ position: 'relative', display: 'inline-block', width: '36px', height: '18px' }}>
+                    <input 
+                      type="checkbox" 
+                      id="chk-edit-mode"
+                      checked={editMode}
+                      onChange={(e) => toggleEditMode(e.target.checked)}
+                      style={{ opacity: 0, width: 0, height: 0 }}
+                    />
+                    <span style={{
+                      position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0,
+                      backgroundColor: editMode ? 'var(--success)' : '#ccc', borderRadius: '18px',
+                      transition: '0.3s'
+                    }}>
+                      <span style={{
+                        position: 'absolute', content: '""', height: '12px', width: '12px', left: editMode ? '20px' : '4px', bottom: '3px',
+                        backgroundColor: 'white', borderRadius: '50%', transition: '0.3s'
+                      }} />
+                    </span>
+                  </label>
+                </div>
+                <p style={{ fontSize: '10px', color: 'var(--text-muted)', margin: 0, lineHeight: 1.4 }}>
+                  Drag markers, click popups, or edit columns to manually assign stops to different vehicles.
+                </p>
+                
+                {editMode && (
+                  <div style={{ marginTop: '10px' }}>
+                    <button 
+                      id="btn-ai-repair"
+                      className="btn-primary btn-sm glow-btn" 
+                      style={{ width: '100%', padding: '6px 12px', fontSize: '11px', fontWeight: 600 }}
+                      onClick={handleAiRepair}
+                      disabled={reoptimizing}
+                    >
+                      {reoptimizing ? '🧬 AI Repairing...' : '✨ Run AI Repair (Sequence Polish)'}
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Constraint Violations */}
+              <div className="glass-card" style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <h4 style={{ margin: 0, fontSize: '10.5px', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-main)' }}>
+                  Live Constraint Checks
+                </h4>
+                {violations.length === 0 ? (
+                  <div style={{ fontSize: '10px', color: 'var(--success)', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 500 }}>
+                    <span>✅</span> <span>All manual routes are feasible.</span>
+                  </div>
+                ) : (
+                  <div style={{ maxHeight: '100px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    {violations.map((v, i) => (
+                      <div key={i} className="violation-tag" style={{ margin: 0, padding: '3px 6px' }}>
+                        <span>⚠️</span> <span>{v}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* GNN Threshold Control */}
+              <div className="glass-card" style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: 600 }}>
+                  <span style={{ color: 'var(--text-main)' }}>GNN Confidence Filter</span>
+                  <span style={{ color: 'var(--primary)' }}>&ge; {Number(state.gnnThreshold ?? 0.15).toFixed(2)}</span>
+                </div>
+                <input 
+                  type="range" 
+                  min="0.0" 
+                  max="1.0" 
+                  step="0.05"
+                  value={state.gnnThreshold ?? 0.15}
+                  onChange={(e) => {
+                    const val = parseFloat(e.target.value);
+                    updateState({ gnnThreshold: val });
+                    if (mapControllerRef.current) {
+                      mapControllerRef.current.updateGnnHeatmapOverlay();
+                    }
+                  }}
+                  style={{ width: '100%', cursor: 'pointer' }}
+                />
+                <p style={{ fontSize: '9.5px', color: 'var(--text-muted)', margin: 0, lineHeight: 1.3 }}>
+                  Filter edges based on predicted GNN connectivity probabilities.
+                </p>
+              </div>
+
+              {/* Live DDQN Decision Log */}
+              <div className="glass-card" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px', minHeight: '160px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h4 style={{ margin: 0, fontSize: '10.5px', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-main)' }}>
+                    🧠 DDQN Decision Log
+                  </h4>
+                  {solverConsoleHistory.length > 0 && (
+                    <span style={{ fontSize: '8px', background: 'var(--primary-soft)', color: 'var(--primary)', padding: '1px 4px', borderRadius: '3px', fontWeight: 700 }}>
+                      {solverConsoleHistory.length} Iters
+                    </span>
+                  )}
+                </div>
+                
+                <div className="xai-console" style={{ flex: 1, maxHeight: '200px' }}>
+                  {solverConsoleHistory.length === 0 ? (
+                    <div style={{ color: '#64748b', fontSize: '10px', textAlign: 'center', marginTop: '50px', lineHeight: 1.4 }}>
+                      Console Idle.<br/>Solve an instance to stream deep learning operator actions.
+                    </div>
+                  ) : (
+                    solverConsoleHistory.map((h, i) => {
+                      const accepts = h.accepted ? 'ACCEPTED' : 'REJECTED';
+                      const acceptsColor = h.accepted ? '#10b981' : '#ef4444';
+                      const hasQVal = h.q_value !== undefined && h.q_value !== null && Number(h.q_value) !== 0;
+                      const qValFormatted = hasQVal ? Number(h.q_value).toFixed(2) : '';
+                      const costValFormatted = (h.cost === undefined || h.cost === null || !isFinite(Number(h.cost))) 
+                        ? '∞' 
+                        : Number(h.cost).toFixed(1);
+                      return (
+                        <div key={i} className="xai-console-line">
+                          <span style={{ color: '#818cf8' }}>[Iter {h.iteration}]</span>{' '}
+                          <span style={{ color: '#f472b6' }}>{h.destroy_op.replace('op_', '')}</span>{' '}
+                          <span style={{ color: '#94a3b8' }}>+</span>{' '}
+                          <span style={{ color: '#60a5fa' }}>{h.repair_op.replace('op_', '')}</span>{' '}
+                          {hasQVal && (
+                            <span style={{ color: '#fbbf24' }}> [Q: {qValFormatted}]</span>
+                          )}{' '}
+                          <span style={{ color: '#e2e8f0' }}>&rarr; Cost {costValFormatted}</span>{' '}
+                          <span style={{ color: acceptsColor, fontWeight: 700 }}>({accepts})</span>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
             </div>
           </div>
         </div>

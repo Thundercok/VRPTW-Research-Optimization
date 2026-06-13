@@ -95,6 +95,8 @@ def plan_to_payload(
             wait = max(0.0, ready - arrival)
             service_dur = float(points[node].service)
             departure = service_start + service_dur
+            due = float(points[node].due)
+            late = max(0.0, arrival - due)
             schedule.append(
                 {
                     "customer_id": int(points[node].id) if points[node].id is not None else int(node),
@@ -104,6 +106,7 @@ def plan_to_payload(
                     "service_start": round(service_start, 2),
                     "service_duration": round(service_dur, 2),
                     "departure": round(departure, 2),
+                    "late": round(late, 2),
                 }
             )
             current_time = departure

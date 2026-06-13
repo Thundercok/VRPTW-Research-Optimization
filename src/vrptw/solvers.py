@@ -63,8 +63,10 @@ class ALNSSolver:
         self.inst = inst
         self.cfg = cfg
         self.bandit = ThompsonBandit(N_D, N_R)
+        self.solver_history = []
 
     def solve(self, seed: int | None = None, init: Plan | None = None) -> tuple[Plan, list[float]]:
+        self.solver_history = []
         if seed is not None:
             random.seed(seed)
             np.random.seed(seed)
@@ -82,7 +84,8 @@ class ALNSSolver:
             dest, removed = DESTROY[di](cur.copy(), size)
             cand = REPAIR[ri](dest, removed)
             score = 0
-            if accept(cur, cand, temp):
+            accepted = accept(cur, cand, temp)
+            if accepted:
                 if cand.dominates(best):
                     best, score, no_imp = cand.copy(), cfg.sigma1, 0
                 elif cand.dominates(cur):
@@ -92,6 +95,17 @@ class ALNSSolver:
                 cur = cand
             else:
                 no_imp += 1
+
+            if len(self.solver_history) < 500:
+                self.solver_history.append({
+                    "iteration": int(it),
+                    "destroy_op": DESTROY[di].__name__,
+                    "repair_op": REPAIR[ri].__name__,
+                    "q_value": 0.0,
+                    "cost": float(cand.cost) if cand.feasible else float('inf'),
+                    "best_cost": float(best.cost),
+                    "accepted": bool(accepted)
+                })
 
             # Adapt q_scale based on whether search is improving or stuck
             if no_imp == 0:
@@ -132,6 +146,7 @@ class HybridDDQNSolver:
         self.heatmap = None
         self.gamma = 0.0
         self.current_it = None
+        self.solver_history = []
 
     def load_gnn_model(self, model_path: str) -> None:
         import os
@@ -942,6 +957,7 @@ class HybridDDQNSolver:
         shared_norm: WelfordRewardNormalizer | None = None,
         _warm_start: bool = False,
     ) -> tuple[Plan, list[float]]:
+        self.solver_history = []
         if seed is not None:
             random.seed(seed)
             np.random.seed(seed)
@@ -1116,6 +1132,24 @@ class HybridDDQNSolver:
                 mode_bandit.update(di, ri, score, cfg.sigma1)
                 cur_after = cur.copy()
                 best_after = best.copy()
+
+                # Record decision history for XAI dashboard
+                q_val = 0.0
+                if getattr(self, "use_op_rl", True) and getattr(self.op_ctrl, "last_q", None) is not None:
+                    try:
+                        q_val = float(self.op_ctrl.last_q[op_action])
+                    except Exception:
+                        pass
+                if len(self.solver_history) < 500:
+                    self.solver_history.append({
+                        "iteration": int(it),
+                        "destroy_op": DESTROY[di].__name__,
+                        "repair_op": REPAIR[ri].__name__,
+                        "q_value": q_val,
+                        "cost": float(cand.cost) if cand.feasible else float('inf'),
+                        "best_cost": float(best.cost),
+                        "accepted": bool(accepted)
+                    })
                 next_imp = sum(recent_improvements) / max(len(recent_improvements), 1)
                 next_state = self._op_state(cur_after, best_after, action, it + 1, temp, no_imp, pool, next_imp)
                 done = 1.0 if no_imp >= cfg.early_stop_patience else 0.0

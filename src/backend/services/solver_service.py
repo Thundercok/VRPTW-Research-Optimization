@@ -73,15 +73,31 @@ def _get_web_config() -> Any:
     global _WEB_CONFIG
     if _WEB_CONFIG is None:
         runtime = _load_solver_runtime()
-        _WEB_CONFIG = runtime.config(
-            alns_iterations=500,
-            hybrid_iterations=500,
-            early_stop_patience=200,
-            polish_iterations=100,
-            polish_patience=60,
-            n_runs=1,
-            ortools_time_limit=10.0,
+        is_test = (
+            os.getenv("FIREBASE_AUTH_EMULATOR_HOST") is not None
+            or os.getenv("TESTING") is not None
+            or os.getenv("PYTEST_CURRENT_TEST") is not None
         )
+        if is_test:
+            _WEB_CONFIG = runtime.config(
+                alns_iterations=20,
+                hybrid_iterations=20,
+                early_stop_patience=10,
+                polish_iterations=5,
+                polish_patience=5,
+                n_runs=1,
+                ortools_time_limit=1.0,
+            )
+        else:
+            _WEB_CONFIG = runtime.config(
+                alns_iterations=500,
+                hybrid_iterations=500,
+                early_stop_patience=200,
+                polish_iterations=100,
+                polish_patience=60,
+                n_runs=1,
+                ortools_time_limit=10.0,
+            )
     return _WEB_CONFIG
 
 
@@ -409,6 +425,7 @@ def _run_ddqn_alns(payload: JobRequest) -> dict[str, Any]:
     res = runtime.plan_to_payload(plan, payload.customers, elapsed)
     if getattr(solver, "heatmap", None) is not None:
         res["gnn_heatmap"] = solver.heatmap.tolist()
+    res["solver_history"] = getattr(solver, "solver_history", [])
     return res
 
 
@@ -426,7 +443,9 @@ def _run_alns(payload: JobRequest) -> dict[str, Any]:
             f"Infeasible configuration: requires {plan.nv} vehicles but only {payload.fleet.vehicles} provided"
         )
 
-    return runtime.plan_to_payload(plan, payload.customers, elapsed)
+    res = runtime.plan_to_payload(plan, payload.customers, elapsed)
+    res["solver_history"] = getattr(solver, "solver_history", [])
+    return res
 
 
 def _load_weights_for_solver(solver: Any, algo: str) -> None:
@@ -489,7 +508,9 @@ def _run_algo_generic(payload: JobRequest, algo: str) -> dict[str, Any]:
         start = time.time()
         plan, _ = solver.solve(seed=config.seed)
         elapsed = time.time() - start
-        return runtime.plan_to_payload(plan, payload.customers, elapsed)
+        res = runtime.plan_to_payload(plan, payload.customers, elapsed)
+        res["solver_history"] = getattr(solver, "solver_history", [])
+        return res
 
     elif algo == "hybrid_fixed":
         solver = vrptw.HybridFixedSolver(inst, config)
@@ -500,6 +521,7 @@ def _run_algo_generic(payload: JobRequest, algo: str) -> dict[str, Any]:
         res = runtime.plan_to_payload(plan, payload.customers, elapsed)
         if getattr(solver, "heatmap", None) is not None:
             res["gnn_heatmap"] = solver.heatmap.tolist()
+        res["solver_history"] = getattr(solver, "solver_history", [])
         return res
 
     elif algo == "hybrid_ddqn":
@@ -511,6 +533,7 @@ def _run_algo_generic(payload: JobRequest, algo: str) -> dict[str, Any]:
         res = runtime.plan_to_payload(plan, payload.customers, elapsed)
         if getattr(solver, "heatmap", None) is not None:
             res["gnn_heatmap"] = solver.heatmap.tolist()
+        res["solver_history"] = getattr(solver, "solver_history", [])
         return res
 
     elif algo == "hybrid_ddqn_transfer_rc1":
@@ -523,6 +546,7 @@ def _run_algo_generic(payload: JobRequest, algo: str) -> dict[str, Any]:
         res = runtime.plan_to_payload(plan, payload.customers, elapsed)
         if getattr(solver, "heatmap", None) is not None:
             res["gnn_heatmap"] = solver.heatmap.tolist()
+        res["solver_history"] = getattr(solver, "solver_history", [])
         return res
 
     elif algo == "hybrid_ddqn_transfer_dr":
@@ -535,6 +559,7 @@ def _run_algo_generic(payload: JobRequest, algo: str) -> dict[str, Any]:
         res = runtime.plan_to_payload(plan, payload.customers, elapsed)
         if getattr(solver, "heatmap", None) is not None:
             res["gnn_heatmap"] = solver.heatmap.tolist()
+        res["solver_history"] = getattr(solver, "solver_history", [])
         return res
 
     else:
