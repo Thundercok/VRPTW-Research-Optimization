@@ -428,7 +428,7 @@ Hybrid-Rule (rule-based macro) & $+0.168$ & $-0.599\%$ \\
 \subsection{Vehicle Count Minimization}
 
 \Cref{tab:nv_summary} reports $NV_{\text{diff}}=NV_{\text{algo}}-NV_{\BKS}$.
-Hybrid-DDQN achieves $+0.139$ overall mean NV difference to BKS on Solomon---representing a $13.7\%$ improvement over ALNS-Base ($+0.161$) and a $92.7\%$ improvement over OR-Tools ($+1.911$).  Wilcoxon signed-rank tests (per-run paired, $N=310$) across the benchmark set confirm vehicle count reduction is highly significant against OR-Tools ($p=2.731{\times}10^{-9}$, $W=0.0$, effect size $r=0.750$) and ALNS-Base ($p=1.431{\times}10^{-2}$, $W=0.0$, effect size $r=0.130$).
+Hybrid-DDQN achieves $+0.125$ overall mean NV difference to BKS on Solomon---representing a $53.7\%$ improvement over ALNS-Base ($+0.270$) and a $93.3\%$ improvement over OR-Tools ($+1.857$).  Wilcoxon signed-rank tests across the benchmark set confirm vehicle count reduction is highly significant against OR-Tools ($p=4.05{\times}10^{-8}$) and ALNS-Base ($p=2.81{\times}10^{-3}$).
 
 \begin{table}[!t]
 \centering
@@ -446,11 +446,11 @@ Hybrid-DDQN achieves $+0.139$ overall mean NV difference to BKS on Solomon---rep
   & \textbf{H-DDQN}
   & \textbf{OR-Tools~\cite{ortools}}\\
 \midrule
-Clustered ($N=17$)     & 0.000 & 0.000 & 0.000 & \textbf{0.000} & 0.059\\
-Short horizon ($N=20$) & 0.350 & 0.350 & 0.350 & \textbf{0.340} & 2.450\\
-Wide horizon ($N=19$)  & 0.105 & 0.105 & 0.074 & \textbf{0.053} & 3.000\\
+Clustered ($N=17$)     & 0.000 & 0.000 & 0.000 & \textbf{0.000} & 0.000\\
+Short horizon ($N=20$) & 0.549 & 0.322 & 0.300 & \textbf{0.300} & 2.450\\
+Wide horizon ($N=19$)  & 0.218 & 0.060 & 0.053 & \textbf{0.053} & 2.895\\
 \midrule
-Overall mean           & 0.161 & 0.161 & 0.150 & \textbf{0.139} & 1.911\\
+Overall mean           & 0.270 & 0.135 & 0.125 & \textbf{0.125} & 1.857\\
 \bottomrule
 \end{tabular}}
 \end{table}
@@ -461,7 +461,7 @@ An inflated fleet count artificially reduces travel distance; distance
 comparison is only valid when vehicle counts match the
 BKS~\cite{pisinger2007general}.  Two filters are reported:
 (a)~\emph{algo-specific}: each solver filtered independently; and
-(b)~\emph{strict fair intersection} ($N=47$): all hybrids simultaneously at
+(b)~\emph{strict fair intersection} ($N=39$): all hybrids simultaneously at
 $NV\le NV_{\BKS}$.
 
 \begin{table}[!t]
@@ -477,22 +477,22 @@ $NV\le NV_{\BKS}$.
   & \textbf{H-Rule} & \textbf{H-DDQN}\\
 \midrule
 Algo-specific
-  & $+0.220\%\ (N{=}47)$ & $+0.218\%\ (N{=}47)$
-  & $+0.215\%\ (N{=}47)$ & \textbf{$+0.230\%$} $(N{=}48)$\\
+  & $+1.079\%\ (N{=}39)$ & $+0.618\%\ (N{=}46)$
+  & $+0.490\%\ (N{=}49)$ & \textbf{$+0.449\%$} $(N{=}49)$\\
 Fair intersection
-  & $+0.220\%$ & $+0.218\%$ & $+0.215\%$ & \textbf{$+0.204\%$}\\
+  & $+1.079\%$ & $+0.287\%$ & $+0.213\%$ & \textbf{$+0.174\%$}\\
 \bottomrule
 \end{tabular}}
 \end{table}
 
 \Cref{tab:fair_by_category} disaggregates by family.
-The wide-horizon gap narrows from $+0.533\%$ (ALNS-Base) to
-$\mathbf{+0.502\%}$ (Hybrid-DDQN), a $5.8\%$ reduction attributable to
+The wide-horizon gap narrows from $+1.954\%$ (ALNS-Base) to
+$\mathbf{+0.464\%}$ (Hybrid-DDQN), a $76.3\%$ reduction attributable to
 convergent intra-route $2$-opt and Or-opt polishing.
 
 \begin{table}[!t]
 \centering
-\caption{Strict fair intersection ($N=47$) by Solomon family.}
+\caption{Strict fair intersection ($N=39$) by Solomon family.}
 \label{tab:fair_by_category}
 \renewcommand{\arraystretch}{1.08}
 \setlength{\tabcolsep}{3pt}
@@ -503,14 +503,14 @@ convergent intra-route $2$-opt and Or-opt polishing.
   & \textbf{H-Rule} & \textbf{H-DDQN}\\
 \midrule
 Clustered ($N=17$)
-  & $0.000\%$ & $0.000\%$ & $0.000\%$ & \textbf{$0.000\%$}\\
-Short horizon ($N=13$)
-  & $+0.100\%$ & $+0.093\%$ & $+0.085\%$ & \textbf{$+0.082\%$}\\
-Wide horizon ($N=17$)
-  & $+0.533\%$ & $+0.531\%$ & $+0.529\%$ & \textbf{$+0.502\%$}\\
+  & $+0.395\%$ & $+0.020\%$ & $0.000\%$ & \textbf{$0.000\%$}\\
+Short horizon ($N=8$)
+  & $+1.000\%$ & $+0.168\%$ & $+0.094\%$ & \textbf{$+0.039\%$}\\
+Wide horizon ($N=14$)
+  & $+1.954\%$ & $+0.681\%$ & $+0.541\%$ & \textbf{$+0.464\%$}\\
 \midrule
-Overall ($N=47$)
-  & $+0.220\%$ & $+0.218\%$ & $+0.215\%$ & \textbf{$+0.204\%$}\\
+Overall ($N=39$)
+  & $+1.079\%$ & $+0.287\%$ & $+0.213\%$ & \textbf{$+0.174\%$}\\
 \bottomrule
 \end{tabular}}
 \end{table}
@@ -535,23 +535,23 @@ ${}^\dagger$: $NV>NV_{\BKS}$ --- negative gaps reflect over-allocation.}
   & \textbf{OR-Tools~\cite{ortools}}\\
 \midrule
 $c1\_2\_1$ & $20/2704.57$
-  & $20/-0.00\%$            & $20/-0.00\%$           & $20/-0.00\%$
-  & \textbf{$20/-0.00\%$}   & $21/+5.67\%$\\
+  & $20/+0.11\%$            & $20/+0.00\%$           & $20/+0.00\%$
+  & \textbf{$20/+0.00\%$}   & $21/+5.67\%$\\
 $c2\_2\_1$ & $6/1931.44$
   & $6/+0.00\%$             & $6/+0.00\%$            & $6/+0.00\%$
   & \textbf{$6/+0.00\%$}    & $7/+0.19\%$\\
 $r1\_2\_1$ & $20/4795.12$
-  & $20/+0.57\%$            & $20/+0.57\%$           & $20/+0.57\%$
-  & \textbf{$20/+0.57\%$}   & $26/+2.59\%$\\
+  & $20/+9.10\%$            & $20/+2.01\%$           & $20/+0.81\%$
+  & \textbf{$20/+0.61\%$}   & $26/+2.35\%$\\
 $r2\_2\_1$ & $4/4483.00$
-  & $5/-9.41\%{}^\dagger$   & $5/-9.44\%{}^\dagger$  & $5/-9.53\%{}^\dagger$
-  & \textbf{$5/-9.57\%{}^\dagger$}  & $12/-19.96\%{}^\dagger$\\
+  & $5/-5.49\%{}^\dagger$   & $5/-8.18\%{}^\dagger$  & $5/-8.18\%{}^\dagger$
+  & \textbf{$5/-8.22\%{}^\dagger$}  & $12/-19.96\%{}^\dagger$\\
 $rc1\_2\_1$ & $18/3603.00$
-  & $19/-0.98\%{}^\dagger$  & $19/-0.98\%{}^\dagger$ & $19/-0.98\%{}^\dagger$
-  & \textbf{$19/-0.98\%{}^\dagger$} & $21/+5.54\%$\\
+  & $19/+3.83\%{}^\dagger$  & $19/+0.39\%{}^\dagger$ & $19/-0.76\%{}^\dagger$
+  & \textbf{$18.2/+9.09\%{}^\dagger$} & $20/+6.41\%{}^\dagger$\\
 $rc2\_2\_1$ & $6/3099.00$
-  & $6/+1.32\%$             & $6/+1.32\%$            & $6/+1.32\%$
-  & \textbf{$6/+1.32\%$}    & $11/-4.43\%{}^\dagger$\\
+  & $6/+7.16\%$             & $6/+4.34\%$            & $6/+3.60\%$
+  & \textbf{$6/+3.17\%$}    & $11/-4.41\%{}^\dagger$\\
 \bottomrule
 \end{tabular}}
 \end{table*}
@@ -585,9 +585,10 @@ ejection chains.
 
 \Cref{tab:gh200} shows 200-customer results~\cite{Gehring1999}.
 Hybrid-DDQN matches BKS NV on all clustered instances, outperforms
-OR-Tools~\cite{ortools} by up to 8 vehicles on random families, and returns
-feasible solutions where OR-Tools fails (\texttt{rc1\_2\_1}).  Negative TD gaps
-in ${}^\dagger$-marked rows reflect vehicle over-allocation, not lexicographic
+OR-Tools~\cite{ortools} by up to 7 vehicles on random families (e.g., \texttt{r2\_2\_1}), and
+approaches BKS on complex combination families where OR-Tools is highly suboptimal
+(e.g., \texttt{rc1\_2\_1}, where Hybrid-DDQN achieves a mean of 18.20 vehicles compared to OR-Tools' 20).
+Negative TD gaps in ${}^\dagger$-marked rows reflect vehicle over-allocation, not lexicographic
 improvement~\cite{pisinger2007general}.
 \subsection{Validation of SOTA GNN Heatmap Guidance}
 \label{subsec:gnn_validation}
