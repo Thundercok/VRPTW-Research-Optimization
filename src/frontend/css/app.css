@@ -1299,14 +1299,16 @@ body.demo-active .demo-badge {
 /* ── LOADING OVERLAY ────────────────────────────────── */
 .loading-overlay {
   position: fixed;
-  inset: 0;
+  bottom: 24px;
+  right: 24px;
   z-index: 9000;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(15, 23, 42, 0.45);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  align-items: flex-end;
+  justify-content: flex-end;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  pointer-events: none;
   transition: opacity 0.3s ease;
 }
 
@@ -1315,20 +1317,21 @@ body.demo-active .demo-badge {
 }
 
 .loading-card {
-  background: color-mix(in srgb, var(--bg-surface) 75%, transparent);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
-  border-radius: var(--r-2xl, 20px);
-  width: 460px;
+  pointer-events: auto;
+  background: color-mix(in srgb, var(--bg-surface) 88%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  border-radius: var(--r-xl, 16px);
+  width: 420px;
   max-width: 90vw;
-  padding: 32px;
+  padding: 24px;
   box-shadow:
-    0 20px 40px -15px rgba(0, 0, 0, 0.15),
-    0 0 50px -10px color-mix(in srgb, var(--primary) 12%, transparent);
+    0 12px 35px -10px rgba(0, 0, 0, 0.35),
+    0 0 50px -15px color-mix(in srgb, var(--primary) 15%, transparent);
   position: relative;
   overflow: hidden;
-  animation: loading-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: loading-slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   transition:
     border-color 0.4s ease,
     box-shadow 0.4s ease;
@@ -1401,6 +1404,17 @@ body.demo-active .demo-badge {
   to {
     opacity: 1;
     transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes loading-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(40px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 
