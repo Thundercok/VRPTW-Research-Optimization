@@ -5,12 +5,29 @@ OUTPUT_BASE="results/multiscale-publication-suite"
 mkdir -p "$OUTPUT_BASE"
 
 echo "=========================================================================="
-echo " Starting Multi-Scale Benchmark Suite (200 to 1000 Customers)             "
-echo " Running all 10 algorithms side-by-side on all sizes                      "
+echo " Starting Multi-Scale Benchmark Suite (Solomon + Homberger)               "
+echo " Running all 10 algorithms side-by-side across all sizes (100 - 1000)      "
 echo "=========================================================================="
 
 ALGS="ALNS-Base GNN-ALNS-Base Hybrid-Fixed GNN-Hybrid-Fixed Hybrid-Rule GNN-Hybrid-Rule Hybrid-DDQN GNN-Hybrid-DDQN DQN OR-Tools"
 
+# ── 1. SOLOMON BENCHMARK (100 Customers) ───────────────────────────────────
+echo ""
+echo ">>> [RUNNING] Solomon (100 Customers)..."
+solomon_insts=("C101" "C201" "R101" "R201" "RC101" "RC201")
+solomon_iters=1000
+
+PYTHONPATH=src .venv/bin/python docs/run_benchmark.py \
+  --data-path "data/Solomon" \
+  --output-dir "$OUTPUT_BASE/solomon_100" \
+  --runs 1 \
+  --alns-iters "$solomon_iters" \
+  --hybrid-iters "$solomon_iters" \
+  --algorithms $ALGS \
+  --instances "${solomon_insts[@]}" \
+  --no-checkpoint
+
+# ── 2. HOMBERGER BENCHMARKS (200 to 1000 Customers) ──────────────────────
 for size in 200 400 600 800 1000; do
   idx=$(( size / 100 ))
   echo ""
@@ -37,7 +54,6 @@ for size in 200 400 600 800 1000; do
   
   echo "    Instances  : ${insts[*]}"
   echo "    Iterations : $iters"
-  echo "    Algorithms : All 10"
   
   PYTHONPATH=src .venv/bin/python docs/run_benchmark.py \
     --data-path "data/Gehring_Homberger/homberger_${size}_customer_instances" \
