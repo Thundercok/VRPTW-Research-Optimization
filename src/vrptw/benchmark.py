@@ -72,13 +72,16 @@ def run_instance(
     init_plan: Plan | None = None,
 ) -> tuple[dict, Plan | None]:
     start = time.time()
-    algo = canonical_algo_label(algo)
+    algo_canonical = canonical_algo_label(algo)
+    use_gnn = algo_canonical.startswith("GNN-")
+    target_algo = algo_canonical[4:] if use_gnn else algo_canonical
+
     plan: Plan | None = None
-    if algo == ALGO_ORTOOLS:
+    if target_algo == ALGO_ORTOOLS:
         plan, elapsed = run_ortools(inst, cfg)
         if plan is None:
             return {
-                "algo": ALGO_ORTOOLS,
+                "algo": algo_canonical,
                 "nv": None,
                 "cost": None,
                 "time": time.time() - start,
@@ -88,36 +91,40 @@ def run_instance(
                 "hist": [],
             }, None
         history = [plan.cost]
-    elif algo == ALGO_ALNS_BASE:
+    elif target_algo == ALGO_ALNS_BASE:
         solver = ALNSSolver(inst, cfg)
-        if getattr(cfg, "gnn_model_path", None) is not None:
+        if use_gnn and getattr(cfg, "gnn_model_path", None) is not None:
             solver.load_gnn_model(cfg.gnn_model_path)
         plan, history = solver.solve(seed=seed, init=init_plan)
-    elif algo == ALGO_HYBRID_FIXED:
+        plan.algo = algo_canonical
+    elif target_algo == ALGO_HYBRID_FIXED:
         solver = HybridFixedSolver(inst, cfg)
-        if getattr(cfg, "gnn_model_path", None) is not None:
+        if use_gnn and getattr(cfg, "gnn_model_path", None) is not None:
             solver.load_gnn_model(cfg.gnn_model_path)
         plan, history = solver.solve(seed=seed, init=init_plan)
-    elif algo == ALGO_HYBRID_RULE:
+        plan.algo = algo_canonical
+    elif target_algo == ALGO_HYBRID_RULE:
         solver = HybridRuleSolver(inst, cfg)
-        if getattr(cfg, "gnn_model_path", None) is not None:
+        if use_gnn and getattr(cfg, "gnn_model_path", None) is not None:
             solver.load_gnn_model(cfg.gnn_model_path)
         plan, history = solver.solve(seed=seed, init=init_plan)
-    elif algo == ALGO_HYBRID_DDQN:
+        plan.algo = algo_canonical
+    elif target_algo == ALGO_HYBRID_DDQN:
         solver = HybridDDQNSolver(inst, cfg)
-        if getattr(cfg, "gnn_model_path", None) is not None:
+        if use_gnn and getattr(cfg, "gnn_model_path", None) is not None:
             solver.load_gnn_model(cfg.gnn_model_path)
         plan, history = solver.solve(seed=seed, init=init_plan)
-    elif algo in (ALGO_HYBRID_DDQN_TRANSFER, ALGO_HYBRID_DDQN_TRANSFER_RC2, ALGO_HYBRID_DDQN_TRANSFER_DR):
+        plan.algo = algo_canonical
+    elif target_algo in (ALGO_HYBRID_DDQN_TRANSFER, ALGO_HYBRID_DDQN_TRANSFER_RC2, ALGO_HYBRID_DDQN_TRANSFER_DR):
         solver = HybridDDQNSolver(inst, cfg)
-        if getattr(cfg, "gnn_model_path", None) is not None:
+        if use_gnn and getattr(cfg, "gnn_model_path", None) is not None:
             solver.load_gnn_model(cfg.gnn_model_path)
         if transfer_weights is not None:
             solver.load_weights(transfer_weights)
         plan, history = solver.solve(seed=seed, frozen=True, init=init_plan)
-        plan.algo = algo
+        plan.algo = algo_canonical
     else:
-        raise ValueError(f"Unsupported algorithm: {algo}")
+        raise ValueError(f"Unsupported algorithm: {algo_canonical}")
     bks = BKS.get(inst.name)
     return {
         "algo": plan.algo,

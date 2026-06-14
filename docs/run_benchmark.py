@@ -52,7 +52,10 @@ if __name__ == "__main__":
     parser.add_argument(
         "--algorithms",
         nargs="+",
-        choices=[ALGO_ALNS_BASE, ALGO_HYBRID_FIXED, ALGO_HYBRID_RULE, ALGO_HYBRID_DDQN, ALGO_ORTOOLS],
+        choices=[
+            ALGO_ALNS_BASE, ALGO_HYBRID_FIXED, ALGO_HYBRID_RULE, ALGO_HYBRID_DDQN, ALGO_ORTOOLS,
+            "GNN-ALNS-Base", "GNN-Hybrid-Fixed", "GNN-Hybrid-Rule", "GNN-Hybrid-DDQN"
+        ],
         default=[ALGO_ALNS_BASE, ALGO_HYBRID_FIXED, ALGO_HYBRID_RULE, ALGO_HYBRID_DDQN],
         help="Algorithms to include in benchmark"
     )
@@ -71,6 +74,13 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    gnn_path = args.gnn_path
+    if gnn_path is None and any(a.startswith("GNN-") for a in args.algorithms):
+        default_gnn = "docs/model/gnn_edge_predictor.pt"
+        if os.path.exists(default_gnn):
+            gnn_path = default_gnn
+            print(f"Auto-configured GNN model path to: {default_gnn}")
+
     cfg = Config(
         data_path=args.data_path,
         output_dir=args.output_dir,
@@ -80,7 +90,7 @@ if __name__ == "__main__":
         early_stop_patience=args.early_stop,
         polish_iterations=args.polish_iters,
         max_wall_hours=args.max_hours,
-        gnn_model_path=args.gnn_path,
+        gnn_model_path=gnn_path,
     )
 
     # ── Load Solomon instances ─────────────────────────────────────────────
