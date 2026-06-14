@@ -84,6 +84,7 @@ ALGO_HYBRID_DDQN = "Hybrid-DDQN"
 ALGO_HYBRID_DDQN_TRANSFER = "Hybrid-DDQN-Transfer"
 ALGO_HYBRID_DDQN_TRANSFER_RC2 = "Hybrid-DDQN-Transfer-RC2"
 ALGO_HYBRID_DDQN_TRANSFER_DR = "Hybrid-DDQN-Transfer-DR"
+ALGO_DQN = "DQN"
 
 ALGO_ORDER = [
     ALGO_ORTOOLS,
@@ -94,6 +95,7 @@ ALGO_ORDER = [
     ALGO_HYBRID_DDQN_TRANSFER,
     ALGO_HYBRID_DDQN_TRANSFER_RC2,
     ALGO_HYBRID_DDQN_TRANSFER_DR,
+    ALGO_DQN,
 ]
 
 LEGACY_ALGO_LABELS = {
@@ -113,7 +115,10 @@ LEGACY_ALGO_LABELS = {
     "Hybrid-DDQN-Transfer": ALGO_HYBRID_DDQN_TRANSFER,
     "Hybrid-DDQN-Transfer-RC2": ALGO_HYBRID_DDQN_TRANSFER_RC2,
     "Hybrid-DDQN-Transfer-DR": ALGO_HYBRID_DDQN_TRANSFER_DR,
+    "dqn": ALGO_DQN,
+    "DQN": ALGO_DQN,
 }
+
 
 
 def canonical_algo_label(label: str) -> str:
@@ -256,6 +261,21 @@ class Config:
 
     # ── elite archive ─────────────────────────────────────────────────────
     elite_archive_k: int = 5
+
+    # ── constructive DQN (ablation only) ──────────────────────────────────
+    dqn_state_dim: int = 13
+    dqn_hidden: int = 128
+    dqn_lr: float = 1e-3
+    dqn_gamma: float = 0.99
+    dqn_buffer: int = 8192
+    dqn_batch: int = 64
+    dqn_eps_start: float = 1.0
+    dqn_eps_end: float = 0.05
+    dqn_eps_decay: float = 0.995
+    dqn_target_freq: int = 20
+    dqn_train_freq: int = 5
+    dqn_vehicle_penalty: float = 5.0
+
 
     # ── OR-Tools ──────────────────────────────────────────────────────────
     ortools_time_limit: float = 15.0

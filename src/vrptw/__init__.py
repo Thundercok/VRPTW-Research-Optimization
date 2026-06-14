@@ -19,6 +19,7 @@ from .config import (
     ALGO_HYBRID_FIXED,
     ALGO_HYBRID_RULE,
     ALGO_ORTOOLS,
+    ALGO_DQN,
     BKS,
     MODES,
     Config,
@@ -41,6 +42,7 @@ from .rl import (
 )
 from .solvers import (
     ALNSSolver,
+    DQNSolver,
     HybridDDQNSolver,
     HybridFixedSolver,
     HybridRuleSolver,
@@ -60,7 +62,9 @@ __all__ = [
     "ALGO_HYBRID_DDQN_TRANSFER_RC2",
     "ALGO_HYBRID_DDQN_TRANSFER_DR",
     "ALGO_ORTOOLS",
+    "ALGO_DQN",
     "ALNSSolver",
+    "DQNSolver",
     "BKS",
     "Config",
     "EliteArchive",

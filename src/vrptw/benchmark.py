@@ -20,6 +20,7 @@ from .config import (
     ALGO_HYBRID_FIXED,
     ALGO_HYBRID_RULE,
     ALGO_ORTOOLS,
+    ALGO_DQN,
     BKS,
     Config,
     canonical_algo_label,
@@ -29,7 +30,8 @@ from .core import Inst, Plan
 from .generators import SyntheticVRPTWGenerator
 from .operators import op_regret_2, op_shaw
 from .rl import EliteArchive, WelfordRewardNormalizer
-from .solvers import ALNSSolver, HybridDDQNSolver, HybridFixedSolver, HybridRuleSolver, run_ortools
+from .solvers import ALNSSolver, DQNSolver, HybridDDQNSolver, HybridFixedSolver, HybridRuleSolver, run_ortools
+
 
 try:
     from safetensors.torch import load_file as _st_load
@@ -122,6 +124,10 @@ def run_instance(
         if transfer_weights is not None:
             solver.load_weights(transfer_weights)
         plan, history = solver.solve(seed=seed, frozen=True, init=init_plan)
+        plan.algo = algo_canonical
+    elif target_algo == ALGO_DQN:
+        solver = DQNSolver(inst, cfg)
+        plan, history = solver.solve(seed=seed)
         plan.algo = algo_canonical
     else:
         raise ValueError(f"Unsupported algorithm: {algo_canonical}")

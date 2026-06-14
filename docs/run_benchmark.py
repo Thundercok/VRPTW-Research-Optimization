@@ -25,6 +25,7 @@ from vrptw import (
     ALGO_HYBRID_RULE,
     ALGO_HYBRID_DDQN,
     ALGO_ORTOOLS,
+    ALGO_DQN,
 )
 
 # ── REQUIRED: all execution must be inside this guard so that spawn workers
@@ -53,7 +54,7 @@ if __name__ == "__main__":
         "--algorithms",
         nargs="+",
         choices=[
-            ALGO_ALNS_BASE, ALGO_HYBRID_FIXED, ALGO_HYBRID_RULE, ALGO_HYBRID_DDQN, ALGO_ORTOOLS,
+            ALGO_ALNS_BASE, ALGO_HYBRID_FIXED, ALGO_HYBRID_RULE, ALGO_HYBRID_DDQN, ALGO_ORTOOLS, ALGO_DQN,
             "GNN-ALNS-Base", "GNN-Hybrid-Fixed", "GNN-Hybrid-Rule", "GNN-Hybrid-DDQN"
         ],
         default=[ALGO_ALNS_BASE, ALGO_HYBRID_FIXED, ALGO_HYBRID_RULE, ALGO_HYBRID_DDQN],

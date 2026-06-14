@@ -7,6 +7,9 @@ from collections import deque
 
 import numpy as np
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
 
 from .config import (
     ALGO_ALNS_BASE,
@@ -14,7 +17,9 @@ from .config import (
     ALGO_HYBRID_FIXED,
     ALGO_HYBRID_RULE,
     ALGO_ORTOOLS,
+    ALGO_DQN,
     BKS,
+
     MODE_DEFAULT,
     MODE_DIVERSIFY,
     MODE_INTENSIFY,
@@ -1619,3 +1624,199 @@ def run_ortools(inst: Inst, cfg: Config) -> tuple[Plan | None, float]:
         print(f"  [OR-Tools] infeasible ({elapsed:.1f}s)")
         return None, elapsed
     return plan, elapsed
+
+
+class ReplayBuffer:
+    def __init__(self, capacity: int):
+        self.buf = deque(maxlen=capacity)
+
+    def push(self, *transition) -> None:
+        self.buf.append(transition)
+
+    def sample(self, batch_size: int):
+        s, a, r, ns, d = zip(*random.sample(self.buf, batch_size))
+        return (
+            np.array(s, np.float32),
+            np.array(a, np.int64),
+            np.array(r, np.float32),
+            np.array(ns, np.float32),
+            np.array(d, np.float32),
+        )
+
+    def __len__(self) -> int:
+        return len(self.buf)
+
+
+class DQNNet(nn.Module):
+    def __init__(self, state_dim: int, action_dim: int, hidden_dim: int):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(state_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, action_dim),
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.net(x)
+
+
+class DQNSolver:
+    """Pure constructive RL — ablation study only. Not competitive."""
+
+    def __init__(self, inst: Inst, cfg: Config):
+        self.inst = inst
+        self.cfg = cfg
+        self.q = DQNNet(cfg.dqn_state_dim, inst.n + 1, cfg.dqn_hidden).to(DEVICE)
+        self.q_t = DQNNet(cfg.dqn_state_dim, inst.n + 1, cfg.dqn_hidden).to(DEVICE)
+        self.q_t.load_state_dict(self.q.state_dict())
+        self.opt = optim.Adam(self.q.parameters(), lr=cfg.dqn_lr)
+        self.buf = ReplayBuffer(cfg.dqn_buffer)
+        self.eps = cfg.dqn_eps_start
+
+    def _state(self, node: int, visited: set[int], load: float, t: float) -> np.ndarray:
+        inst = self.inst
+        uv = inst.n - len(visited)
+        feas = [
+            n
+            for n in range(1, inst.n + 1)
+            if n not in visited
+            and load + inst.demands[n] <= inst.capacity
+            and t + inst.dist[node, n] <= inst.due_times[n]
+        ]
+        nf = len(feas)
+        if feas:
+            slacks = [inst.due_times[n] - (t + inst.dist[node, n]) for n in feas]
+            ms = min(slacks) / max(inst.horizon, 1)
+            av = (sum(slacks) / nf) / max(inst.horizon, 1)
+            uf = sum(1 for s in slacks if s < 0.1 * inst.horizon) / max(nf, 1)
+            aw = (sum(inst.tw_width[n] for n in feas) / nf) / max(inst.max_tw_width, 1)
+        else:
+            ms = av = uf = aw = 0.0
+        return np.array(
+            [
+                load / inst.capacity,
+                t / max(inst.horizon, 1),
+                len(visited) / inst.n,
+                (inst.capacity - load) / inst.capacity,
+                uv / inst.n,
+                nf / max(uv, 1),
+                inst.coords[node, 0] / 100,
+                inst.coords[node, 1] / 100,
+                inst.demands[node] / inst.capacity,
+                ms,
+                av,
+                uf,
+                aw,
+            ],
+            dtype=np.float32,
+        )
+
+    def _acts(self, node: int, visited: set[int], load: float, t: float) -> list[int]:
+        inst = self.inst
+        acts = [0]
+        for n in range(1, inst.n + 1):
+            if (
+                n not in visited
+                and load + inst.demands[n] <= inst.capacity
+                and t + inst.dist[node, n] <= inst.due_times[n]
+            ):
+                acts.append(n)
+        return acts
+
+    def _sel(self, state: np.ndarray, feasible: list[int]) -> int:
+        if random.random() < self.eps:
+            return random.choice(feasible)
+        with torch.no_grad():
+            q = self.q(torch.tensor(state, device=DEVICE).unsqueeze(0)).cpu().numpy()[0]
+        return max(feasible, key=lambda a: q[a])
+
+    def _train(self) -> None:
+        if len(self.buf) < self.cfg.dqn_batch:
+            return
+        s, a, r, ns, d = self.buf.sample(self.cfg.dqn_batch)
+        s_t = torch.tensor(s, device=DEVICE)
+        a_t = torch.tensor(a, dtype=torch.long, device=DEVICE)
+        r_t = torch.tensor(r, device=DEVICE)
+        ns_t = torch.tensor(ns, device=DEVICE)
+        d_t = torch.tensor(d, device=DEVICE)
+        qp = self.q(s_t).gather(1, a_t.unsqueeze(1)).squeeze(1)
+        with torch.no_grad():
+            tgt = r_t + self.cfg.dqn_gamma * self.q_t(ns_t).max(1)[0] * (1 - d_t)
+        loss = F.mse_loss(qp, tgt)
+        self.opt.zero_grad()
+        loss.backward()
+        nn.utils.clip_grad_norm_(self.q.parameters(), 1.0)
+        self.opt.step()
+
+    def _episode(self) -> tuple[Plan, list]:
+        inst = self.inst
+        visited: set[int] = set()
+        routes: list[list[int]] = []
+        trans: list = []
+        while len(visited) < inst.n:
+            route: list[int] = []
+            node = 0
+            load = 0.0
+            t = 0.0
+            is_new = True
+            while True:
+                state = self._state(node, visited, load, t)
+                feas = self._acts(node, visited, load, t)
+                if len(feas) == 1:
+                    break
+                action = self._sel(state, feas)
+                if action == 0:
+                    break
+                dv = inst.dist[node, action]
+                rew = -dv / max(inst.max_dist, 1)
+                if is_new and routes:
+                    rew -= self.cfg.dqn_vehicle_penalty / inst.n
+                is_new = False
+                load += inst.demands[action]
+                t = max(t + dv, inst.ready_times[action]) + inst.service_times[action]
+                visited.add(action)
+                route.append(action)
+                ns = self._state(action, visited, load, t)
+                done = float(len(visited) == inst.n)
+                trans.append((state, action, rew, ns, done))
+                node = action
+            if route:
+                routes.append(route)
+        return Plan(routes, inst, ALGO_DQN), trans
+
+    def solve(self, seed: int | None = None) -> tuple[Plan, list[float]]:
+        if seed is not None:
+            random.seed(seed)
+            np.random.seed(seed)
+            torch.manual_seed(seed)
+        cfg = self.cfg
+        best = None
+        bc = float("inf")
+        hist: list[float] = []
+        self.eps = cfg.dqn_eps_start
+        n_eps = max(50, cfg.alns_iterations // self.inst.n)
+        for ep in range(n_eps):
+            plan, trans = self._episode()
+            if plan.feasible and trans:
+                bonus = max(0.0, (bc - plan.cost) / bc * 10) if bc < float("inf") else 1.0
+                s, a, r, ns, d = trans[-1]
+                trans[-1] = (s, a, r + bonus, ns, d)
+                if plan.cost < bc:
+                    bc = plan.cost
+                    best = plan.copy()
+            for tr in trans:
+                self.buf.push(*tr)
+            if ep % cfg.dqn_train_freq == 0:
+                for _ in range(min(5, len(self.buf) // max(cfg.dqn_batch, 1))):
+                    self._train()
+            if ep % cfg.dqn_target_freq == 0:
+                self.q_t.load_state_dict(self.q.state_dict())
+            self.eps = max(cfg.dqn_eps_end, self.eps * cfg.dqn_eps_decay)
+            hist.append(bc if bc < float("inf") else float("nan"))
+        if best is None:
+            best = build_greedy(self.inst, ALGO_DQN)
+        best.algo = ALGO_DQN
+        return best, hist
+
