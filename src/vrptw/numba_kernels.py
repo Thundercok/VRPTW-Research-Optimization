@@ -4,17 +4,18 @@ JIT-compiled Numba kernels for VRPTW local-search hot paths.
 Every function is decorated with ``@njit(cache=True)`` and operates
 exclusively on NumPy arrays and scalars (no Python objects).
 """
+
 from __future__ import annotations
 
 import numpy as np
 from numba import njit
 
-from .core import _route_ok, _route_cost
-
+from .core import _route_cost, _route_ok
 
 # ──────────────────────────────────────────────────────────────────────
 # 1.  2-opt (intra-route)
 # ──────────────────────────────────────────────────────────────────────
+
 
 @njit(cache=True)
 def _two_opt_best_numba(
@@ -65,6 +66,7 @@ def _two_opt_best_numba(
 # ──────────────────────────────────────────────────────────────────────
 # 2.  Intra-route Or-Opt  (segment lengths 1, 2, 3)
 # ──────────────────────────────────────────────────────────────────────
+
 
 @njit(cache=True)
 def _or_opt_intra_numba(
@@ -146,6 +148,7 @@ def _or_opt_intra_numba(
 # 3.  Combined intra-route optimise  (alternates 2-opt ↔ or-opt)
 # ──────────────────────────────────────────────────────────────────────
 
+
 @njit(cache=True)
 def _intra_route_optimize_numba(
     route_arr: np.ndarray,
@@ -181,6 +184,7 @@ def _intra_route_optimize_numba(
 # ──────────────────────────────────────────────────────────────────────
 # 4.  Inter-route single-node swap evaluation
 # ──────────────────────────────────────────────────────────────────────
+
 
 @njit(cache=True)
 def _swap_evaluate_numba(
@@ -223,8 +227,9 @@ def _swap_evaluate_numba(
             t1[sp] = r2[dp]
             t2[dp] = r1[sp]
 
-            if _route_ok(t1, demands, capacity, ready, due, service, dist) and \
-               _route_ok(t2, demands, capacity, ready, due, service, dist):
+            if _route_ok(t1, demands, capacity, ready, due, service, dist) and _route_ok(
+                t2, demands, capacity, ready, due, service, dist
+            ):
                 new_cost = _route_cost(t1, dist) + _route_cost(t2, dist)
                 delta = new_cost - old_cost
                 if delta < best_delta:
@@ -242,6 +247,7 @@ def _swap_evaluate_numba(
 # ──────────────────────────────────────────────────────────────────────
 # 5.  Best segment insertion into a route
 # ──────────────────────────────────────────────────────────────────────
+
 
 @njit(cache=True)
 def _best_segment_insert_numba(
@@ -319,6 +325,7 @@ def _best_segment_insert_numba(
 # ──────────────────────────────────────────────────────────────────────
 # 6.  Cross-exchange segment swap between two routes
 # ──────────────────────────────────────────────────────────────────────
+
 
 @njit(cache=True)
 def _cross_exchange_pair_numba(
@@ -418,6 +425,7 @@ def _cross_exchange_pair_numba(
 # 7.  Pruned kernels using GNN heatmaps
 # ──────────────────────────────────────────────────────────────────────
 
+
 @njit(cache=True)
 def _swap_evaluate_pruned_numba(
     r1: np.ndarray,
@@ -448,7 +456,7 @@ def _swap_evaluate_pruned_numba(
         prev1 = r1[sp - 1] if sp > 0 else 0
         nxt1 = r1[sp + 1] if sp < n1 - 1 else 0
         u = r1[sp]
-        
+
         for dp in range(n2):
             v = r2[dp]
             if u == v:
@@ -458,16 +466,21 @@ def _swap_evaluate_pruned_numba(
             nxt2 = r2[dp + 1] if dp < n2 - 1 else 0
 
             # GNN edge probability check
-            if heatmap[prev1, v] < pruning_threshold or heatmap[v, nxt1] < pruning_threshold or \
-               heatmap[prev2, u] < pruning_threshold or heatmap[u, nxt2] < pruning_threshold:
+            if (
+                heatmap[prev1, v] < pruning_threshold
+                or heatmap[v, nxt1] < pruning_threshold
+                or heatmap[prev2, u] < pruning_threshold
+                or heatmap[u, nxt2] < pruning_threshold
+            ):
                 continue
 
             # Swap in-place
             t1[sp] = v
             t2[dp] = u
 
-            if _route_ok(t1, demands, capacity, ready, due, service, dist) and \
-               _route_ok(t2, demands, capacity, ready, due, service, dist):
+            if _route_ok(t1, demands, capacity, ready, due, service, dist) and _route_ok(
+                t2, demands, capacity, ready, due, service, dist
+            ):
                 new_cost = _route_cost(t1, dist) + _route_cost(t2, dist)
                 delta = new_cost - old_cost
                 if delta < best_delta:
@@ -525,7 +538,7 @@ def _best_segment_insert_pruned_numba(
         for pos in range(rn + 1):
             prev = route[pos - 1] if pos > 0 else 0
             nxt = route[pos] if pos < rn else 0
-            
+
             # GNN edge probability check
             if heatmap[prev, s[0]] < pruning_threshold or heatmap[s[-1], nxt] < pruning_threshold:
                 continue
@@ -593,16 +606,18 @@ def _cross_exchange_pair_pruned_numba(
             for p1 in range(n1 - len1 + 1):
                 prev1 = r1[p1 - 1] if p1 > 0 else 0
                 nxt1 = r1[p1 + len1] if p1 + len1 < n1 else 0
-                
+
                 for p2 in range(n2 - len2 + 1):
                     prev2 = r2[p2 - 1] if p2 > 0 else 0
                     nxt2 = r2[p2 + len2] if p2 + len2 < n2 else 0
 
                     # GNN boundary edge checks
-                    if heatmap[prev1, r2[p2]] < pruning_threshold or \
-                       heatmap[r2[p2 + len2 - 1], nxt1] < pruning_threshold or \
-                       heatmap[prev2, r1[p1]] < pruning_threshold or \
-                       heatmap[r1[p1 + len1 - 1], nxt2] < pruning_threshold:
+                    if (
+                        heatmap[prev1, r2[p2]] < pruning_threshold
+                        or heatmap[r2[p2 + len2 - 1], nxt1] < pruning_threshold
+                        or heatmap[prev2, r1[p1]] < pruning_threshold
+                        or heatmap[r1[p1 + len1 - 1], nxt2] < pruning_threshold
+                    ):
                         continue
 
                     # Build nr1 = r1[:p1] + r2[p2:p2+len2] + r1[p1+len1:]

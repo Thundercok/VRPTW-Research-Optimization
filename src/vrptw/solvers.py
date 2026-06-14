@@ -24,19 +24,29 @@ from .config import (
     MODES,
     Config,
 )
-from .core import Inst, Plan, _avg_slack, _fleet_fill, _plan_spread, _check_route
-from .heuristics import build_greedy, _best_insert_position
+from .core import Inst, Plan, _avg_slack, _check_route, _fleet_fill, _plan_spread
+from .heuristics import _best_insert_position, build_greedy
 from .local_search import (
     _buffered_route_elimination,
     _ejection_chain_eliminate,
     _iterative_route_elimination,
     _try_route_merge,
+    _two_opt_best,
     local_search,
     merged_route_candidates,
-    _two_opt_best,
     td_converge_polish,
 )
-from .operators import DESTROY, N_D, N_R, REPAIR, accept, accept_with_nv_ceiling, destroy_size, op_neural_worst, op_neural_shaw
+from .operators import (
+    DESTROY,
+    N_D,
+    N_R,
+    REPAIR,
+    accept,
+    accept_with_nv_ceiling,
+    destroy_size,
+    op_neural_shaw,
+    op_neural_worst,
+)
 from .pool import RoutePool, recombine_with_route_pool
 from .rl import (
     DEVICE,
@@ -64,15 +74,66 @@ class ALNSSolver:
         self.cfg = cfg
         self.bandit = ThompsonBandit(N_D, N_R)
         self.solver_history = []
+        self.gnn_model = None
+        self.heatmap = None
+        self.gamma = 0.0
+
+    def load_gnn_model(self, model_path: str) -> None:
+        import os
+
+        if os.path.exists(model_path):
+            from .gnn import GNNEdgePredictor
+
+            self.gnn_model = GNNEdgePredictor(node_dim=6, edge_dim=1, hidden_dim=64, num_layers=3).to(DEVICE)
+            if model_path.endswith(".safetensors"):
+                from safetensors.torch import load_file
+
+                state_dict = load_file(model_path)
+            else:
+                state_dict = torch.load(model_path, map_location=DEVICE)
+            self.gnn_model.load_state_dict(state_dict)
+
+    def _destroy(self, di: int, plan: Plan, size: int) -> tuple[Plan, list[int]]:
+        destroy_fn = DESTROY[di]
+        if destroy_fn in (op_neural_worst, op_neural_shaw):
+            return destroy_fn(plan, size, heatmap=self.heatmap)
+        return destroy_fn(plan, size)
+
+    def _local_search(self, plan: Plan, **kwargs) -> Plan:
+        if "heatmap" not in kwargs:
+            kwargs["heatmap"] = self.heatmap
+        if "pruning_threshold" not in kwargs:
+            kwargs["pruning_threshold"] = getattr(self.cfg, "gnn_pruning_threshold_end", 0.003)
+        return local_search(plan, **kwargs)
 
     def solve(self, seed: int | None = None, init: Plan | None = None) -> tuple[Plan, list[float]]:
         self.solver_history = []
         if seed is not None:
             random.seed(seed)
             np.random.seed(seed)
+            torch.manual_seed(seed)
         cfg = self.cfg
         self.bandit = ThompsonBandit(N_D, N_R)
-        cur = init.copy() if init is not None else build_greedy(self.inst, ALGO_ALNS_BASE)
+
+        # Initialize GNN edge predictor heatmap once per solve()
+        self.heatmap = None
+        self.gamma = 0.0
+        if self.gnn_model is not None:
+            from .gnn import get_gnn_features
+
+            self.gnn_model.eval()
+            with torch.no_grad():
+                node_feats, edge_feats = get_gnn_features(self.inst)
+                logits = self.gnn_model(node_feats.to(DEVICE), edge_feats.to(DEVICE))
+                probs = torch.sigmoid(logits)[0].cpu().numpy()
+                self.heatmap = probs
+                self.gamma = getattr(cfg, "gnn_guidance_strength", 0.45)
+
+        cur = (
+            init.copy()
+            if init is not None
+            else build_greedy(self.inst, ALGO_ALNS_BASE, heatmap=self.heatmap, gnn_strength=self.gamma)
+        )
         best = cur.copy()
         temp = cfg.temp_control * cur.cost / math.log(2)
         history = [best.cost]
@@ -81,8 +142,8 @@ class ALNSSolver:
         for it in range(cfg.alns_iterations):
             di, ri = self.bandit.select()
             size = destroy_size(it, cfg.alns_iterations, cfg, self.inst.n, scale=self.q_scale)
-            dest, removed = DESTROY[di](cur.copy(), size)
-            cand = REPAIR[ri](dest, removed)
+            dest, removed = self._destroy(di, cur.copy(), size)
+            cand = REPAIR[ri](dest, removed, heatmap=self.heatmap, gamma=self.gamma)
             score = 0
             accepted = accept(cur, cand, temp)
             if accepted:
@@ -97,15 +158,17 @@ class ALNSSolver:
                 no_imp += 1
 
             if len(self.solver_history) < 500:
-                self.solver_history.append({
-                    "iteration": int(it),
-                    "destroy_op": DESTROY[di].__name__,
-                    "repair_op": REPAIR[ri].__name__,
-                    "q_value": 0.0,
-                    "cost": float(cand.cost) if cand.feasible else float('inf'),
-                    "best_cost": float(best.cost),
-                    "accepted": bool(accepted)
-                })
+                self.solver_history.append(
+                    {
+                        "iteration": int(it),
+                        "destroy_op": DESTROY[di].__name__,
+                        "repair_op": REPAIR[ri].__name__,
+                        "q_value": 0.0,
+                        "cost": float(cand.cost) if cand.feasible else float("inf"),
+                        "best_cost": float(best.cost),
+                        "accepted": bool(accepted),
+                    }
+                )
 
             # Adapt q_scale based on whether search is improving or stuck
             if no_imp == 0:
@@ -150,11 +213,14 @@ class HybridDDQNSolver:
 
     def load_gnn_model(self, model_path: str) -> None:
         import os
+
         if os.path.exists(model_path):
             from .gnn import GNNEdgePredictor
+
             self.gnn_model = GNNEdgePredictor(node_dim=6, edge_dim=1, hidden_dim=64, num_layers=3).to(DEVICE)
             if model_path.endswith(".safetensors"):
                 from safetensors.torch import load_file
+
                 state_dict = load_file(model_path)
             else:
                 state_dict = torch.load(model_path, map_location=DEVICE)
@@ -203,9 +269,10 @@ class HybridDDQNSolver:
         o_up: dict[str, torch.Tensor] = {}
         LEGACY_OP_PREFIXES = ("op.", "operator_ctrl.", "op_ctrl.")
         legacy = not any(k.startswith(("plateau.", "operator.")) for k in weights)
-        
+
         if legacy:
             import warnings
+
             warnings.warn(
                 "load_weights: legacy unprefixed weight format detected. "
                 "Re-save weights using clone_weights() to suppress this warning.",
@@ -217,7 +284,7 @@ class HybridDDQNSolver:
                 is_op = False
                 for prefix in LEGACY_OP_PREFIXES:
                     if k.startswith(prefix):
-                        target_key = k[len(prefix):]
+                        target_key = k[len(prefix) :]
                         is_op = True
                         break
                 if not is_op and target_key in plateau_sd and tuple(v.shape) == tuple(plateau_sd[target_key].shape):
@@ -270,18 +337,18 @@ class HybridDDQNSolver:
                                 )
                         else:
                             o_up[bare] = v.to(DEVICE)
-                            
+
         plateau_sd.update(p_up)
         operator_sd.update(o_up)
         self.ctrl.q.load_state_dict(plateau_sd)
         self.ctrl.q_t.load_state_dict(plateau_sd)
         self.op_ctrl.q.load_state_dict(operator_sd)
         self.op_ctrl.q_t.load_state_dict(operator_sd)
-        
+
         lac_weights = {k: v for k, v in weights.items() if k.startswith("lac.")}
         if lac_weights:
             self.lac.load_state_dict(lac_weights)
-            
+
         if "ucb.mu" in weights:
             loaded_mu = weights["ucb.mu"].numpy().astype(np.float64)
             loaded_cnt = weights["ucb.cnt"].numpy().astype(np.float64)
@@ -309,7 +376,7 @@ class HybridDDQNSolver:
                 self.ucb_aug._cnt = loaded_cnt
                 self.ucb_aug._m2 = loaded_m2
             self.ucb_aug._N = float(self.ucb_aug._cnt.sum())
-            
+
         norm_d = {k.split(".", 1)[1]: float(weights[k]) for k in weights if k.startswith("reward_norm.")}
         if norm_d:
             self.reward_norm.load_state_dict(norm_d)
@@ -462,7 +529,9 @@ class HybridDDQNSolver:
         target_nv = start.nv
         # Inherit operator statistics from main search instead of cold-starting
         polish_bandit = inherited_bandit.clone() if inherited_bandit is not None else ThompsonBandit(N_D, N_R)
-        cur = self._local_search(start, max_passes=cfg.polish_ls_passes, nv_ceiling=target_nv, max_ls_moves=cfg.max_ls_moves)
+        cur = self._local_search(
+            start, max_passes=cfg.polish_ls_passes, nv_ceiling=target_nv, max_ls_moves=cfg.max_ls_moves
+        )
         best = cur.copy()
         pool.add_plan(best)
         temp = cfg.temp_control * best.cost / math.log(2)
@@ -493,7 +562,9 @@ class HybridDDQNSolver:
             temp *= cfg.temp_decay * 0.997
             if no_imp >= cfg.polish_patience:
                 break
-        best = self._local_search(best, max_passes=cfg.polish_ls_passes, nv_ceiling=best.nv, max_ls_moves=cfg.max_ls_moves)
+        best = self._local_search(
+            best, max_passes=cfg.polish_ls_passes, nv_ceiling=best.nv, max_ls_moves=cfg.max_ls_moves
+        )
         pool.add_plan(best)
         return best
 
@@ -581,7 +652,7 @@ class HybridDDQNSolver:
                 rev_full = route[::-1]
                 if _check_route(rev_full, inst):
                     pool.add_route(rev_full)
-                    
+
         # ── Cross-route boundary migration & interior crosses ──────────────
         if len(plan.routes) >= 2:
             for i in range(len(plan.routes)):
@@ -628,20 +699,20 @@ class HybridDDQNSolver:
                                 u, v_node = r1[idx1], r2[idx2]
                                 # Only cross if nodes are spatially close
                                 if inst.dist[u, v_node] <= 0.35 * max_dist:
-                                    ic1 = r1[:idx1] + [v_node] + r1[idx1+1:]
-                                    ic2 = r2[:idx2] + [u] + r2[idx2+1:]
+                                    ic1 = r1[:idx1] + [v_node] + r1[idx1 + 1 :]
+                                    ic2 = r2[:idx2] + [u] + r2[idx2 + 1 :]
                                     if _check_route(ic1, inst):
                                         pool.add_route(ic1)
                                     if _check_route(ic2, inst):
                                         pool.add_route(ic2)
-                                        
+
                         # Segment swaps (length 2) with spatio-temporal proximity gate
                         for idx1 in range(1, len(r1) - 2):
                             for idx2 in range(1, len(r2) - 2):
                                 u_seg, v_seg = r1[idx1], r2[idx2]
                                 if inst.dist[u_seg, v_seg] <= 0.25 * max_dist:
-                                    is1 = r1[:idx1] + r2[idx2:idx2+2] + r1[idx1+2:]
-                                    is2 = r2[:idx2] + r1[idx1:idx1+2] + r2[idx2+2:]
+                                    is1 = r1[:idx1] + r2[idx2 : idx2 + 2] + r1[idx1 + 2 :]
+                                    is2 = r2[:idx2] + r1[idx1 : idx1 + 2] + r2[idx2 + 2 :]
                                     if _check_route(is1, inst):
                                         pool.add_route(is1)
                                     if _check_route(is2, inst):
@@ -748,8 +819,7 @@ class HybridDDQNSolver:
         inst = self.inst
         customers = list(range(1, inst.n + 1))
         # Sort once by TW midpoint for reproducible seed spacing
-        tw_sorted = sorted(customers,
-                           key=lambda n: (inst.ready_times[n] + inst.due_times[n]) / 2.0)
+        tw_sorted = sorted(customers, key=lambda n: (inst.ready_times[n] + inst.due_times[n]) / 2.0)
         step = max(1, inst.n // target_nv)
 
         for trial in range(n_trials):
@@ -861,9 +931,7 @@ class HybridDDQNSolver:
                 temp = cfg.temp_control * start.cost / math.log(2) * temp_mult
 
                 # Try to build a different starting topology via pool recombination
-                restart_plan = recombine_with_route_pool(
-                    start, pool, cfg, nv_ceiling=start.nv, heatmap=self.heatmap
-                )
+                restart_plan = recombine_with_route_pool(start, pool, cfg, nv_ceiling=start.nv, heatmap=self.heatmap)
                 if restart_plan.feasible and restart_plan.nv <= start.nv:
                     cur = restart_plan
                 else:
@@ -914,11 +982,10 @@ class HybridDDQNSolver:
                 if not (reduced.feasible and reduced.nv <= target_nv):
                     if is_improving or it % 40 == 0:
                         from .local_search import _buffered_route_elimination
+
                         _bks_entry = BKS.get(inst.name)
                         _bks_nv = int(_bks_entry["nv"]) if _bks_entry else 0
-                        buff = _buffered_route_elimination(
-                            cand, pool=pool, hard_mode=(target_nv == _bks_nv)
-                        )
+                        buff = _buffered_route_elimination(cand, pool=pool, hard_mode=(target_nv == _bks_nv))
                         if buff.feasible and buff.nv <= target_nv:
                             reduced = buff
 
@@ -938,10 +1005,7 @@ class HybridDDQNSolver:
                         score = cfg.sigma1
                 else:
                     # Accept the near-miss candidate via SA to keep exploring
-                    if (
-                        cand.cost <= cur.cost
-                        or random.random() < math.exp(-(cand.cost - cur.cost) / max(temp, 1e-6))
-                    ):
+                    if cand.cost <= cur.cost or random.random() < math.exp(-(cand.cost - cur.cost) / max(temp, 1e-6)):
                         cur = cand
 
             bandit.update(di, ri, score, cfg.sigma1)
@@ -974,8 +1038,26 @@ class HybridDDQNSolver:
         if getattr(self, "use_op_rl", True):
             self.lac = LearnedAcceptanceCriterion(cfg)
         self.mode_bandits = [ThompsonBandit(N_D, N_R) for _ in MODES]
+        # Initialize GNN edge predictor heatmap once per solve()
+        self.heatmap = None
+        self.gamma = 0.0
+        if self.gnn_model is not None:
+            from .gnn import get_gnn_features
+
+            self.gnn_model.eval()
+            with torch.no_grad():
+                node_feats, edge_feats = get_gnn_features(self.inst)
+                logits = self.gnn_model(node_feats.to(DEVICE), edge_feats.to(DEVICE))
+                probs = torch.sigmoid(logits)[0].cpu().numpy()
+                self.heatmap = probs
+                self.gamma = getattr(cfg, "gnn_guidance_strength", 0.45)
+
         pool = RoutePool(self.inst, cfg)
-        cur = init.copy() if init is not None else build_greedy(self.inst, self.algo_name)
+        cur = (
+            init.copy()
+            if init is not None
+            else build_greedy(self.inst, self.algo_name, heatmap=self.heatmap, gnn_strength=self.gamma)
+        )
         best = cur.copy()
         pool.add_plan(cur)
         self._init_nv = cur.nv
@@ -988,19 +1070,6 @@ class HybridDDQNSolver:
         recent_improvements: deque[int] = deque(maxlen=cfg.segment_size)
         no_imp = 0
         self.q_scale = 1.0
-        
-        # Initialize GNN edge predictor heatmap once per solve()
-        self.heatmap = None
-        self.gamma = 0.0
-        if self.gnn_model is not None:
-            from .gnn import get_gnn_features
-            self.gnn_model.eval()
-            with torch.no_grad():
-                node_feats, edge_feats = get_gnn_features(self.inst)
-                logits = self.gnn_model(node_feats.to(DEVICE), edge_feats.to(DEVICE))
-                probs = torch.sigmoid(logits)[0].cpu().numpy()
-                self.heatmap = probs
-                self.gamma = getattr(cfg, "gnn_guidance_strength", 0.45)
 
         n_segments = math.ceil(cfg.hybrid_iterations / cfg.segment_size)
 
@@ -1141,15 +1210,17 @@ class HybridDDQNSolver:
                     except Exception:
                         pass
                 if len(self.solver_history) < 500:
-                    self.solver_history.append({
-                        "iteration": int(it),
-                        "destroy_op": DESTROY[di].__name__,
-                        "repair_op": REPAIR[ri].__name__,
-                        "q_value": q_val,
-                        "cost": float(cand.cost) if cand.feasible else float('inf'),
-                        "best_cost": float(best.cost),
-                        "accepted": bool(accepted)
-                    })
+                    self.solver_history.append(
+                        {
+                            "iteration": int(it),
+                            "destroy_op": DESTROY[di].__name__,
+                            "repair_op": REPAIR[ri].__name__,
+                            "q_value": q_val,
+                            "cost": float(cand.cost) if cand.feasible else float("inf"),
+                            "best_cost": float(best.cost),
+                            "accepted": bool(accepted),
+                        }
+                    )
                 next_imp = sum(recent_improvements) / max(len(recent_improvements), 1)
                 next_state = self._op_state(cur_after, best_after, action, it + 1, temp, no_imp, pool, next_imp)
                 done = 1.0 if no_imp >= cfg.early_stop_patience else 0.0
@@ -1289,7 +1360,7 @@ class HybridDDQNSolver:
                 pool.add_plan(best)
                 history.append(best.cost)
 
-            _one_over_bks = (_bks_entry is not None and best.nv == _bks_nv + 1)
+            _one_over_bks = _bks_entry is not None and best.nv == _bks_nv + 1
             buffered = _buffered_route_elimination(best, pool=pool, hard_mode=_one_over_bks)
             if buffered.feasible and (buffered.nv < best.nv or buffered.dominates(best)):
                 best = buffered
@@ -1305,16 +1376,16 @@ class HybridDDQNSolver:
             # Committed NV search only if still above BKS floor
             if best.nv > _bks_nv:
                 committed = self._committed_nv_search(best, pool, target_nv=best.nv - 1)
-                if committed is not None and committed.feasible and (
-                    committed.nv < best.nv or committed.dominates(best)
+                if (
+                    committed is not None
+                    and committed.feasible
+                    and (committed.nv < best.nv or committed.dominates(best))
                 ):
                     best = committed
                     pool.add_plan(best)
                     history.append(best.cost)
                     chain2 = _ejection_chain_eliminate(best)
-                    if chain2 is not None and chain2.feasible and (
-                        chain2.nv < best.nv or chain2.dominates(best)
-                    ):
+                    if chain2 is not None and chain2.feasible and (chain2.nv < best.nv or chain2.dominates(best)):
                         best = chain2
                         pool.add_plan(best)
                         history.append(best.cost)
@@ -1348,7 +1419,9 @@ class HybridDDQNSolver:
             # but the penalty-scaled MILP didn't find the globally cheapest combination.
             if True:
                 td_rec = recombine_with_route_pool(
-                    best, pool, cfg,
+                    best,
+                    pool,
+                    cfg,
                     nv_ceiling=best.nv,
                     td_only=True,
                 )
@@ -1488,7 +1561,7 @@ def run_ortools(inst: Inst, cfg: Config) -> tuple[Plan | None, float]:
     n_vehicles = inst.n
     manager = pywrapcp.RoutingIndexManager(n_nodes, n_vehicles, 0)
     routing = pywrapcp.RoutingModel(manager)
-    
+
     # Use np.round to avoid truncation/underflow errors
     dist_mat = np.round(inst.dist * scale).astype(np.int64)
     serv_int = np.round(inst.service_times * scale).astype(np.int64)
@@ -1498,6 +1571,8 @@ def run_ortools(inst: Inst, cfg: Config) -> tuple[Plan | None, float]:
     transit_matrix = (dist_mat + serv_int[:, None]).tolist()
     transit_idx = routing.RegisterTransitMatrix(transit_matrix)
     routing.SetArcCostEvaluatorOfAllVehicles(transit_idx)
+    # Set a large fixed cost per vehicle to ensure OR-Tools prioritizes vehicle count minimization (fleet size)
+    routing.SetFixedCostOfAllVehicles(int(100000 * scale))
     demands_int = inst.demands.astype(int)
 
     def demand_cb(fi):
@@ -1505,13 +1580,14 @@ def run_ortools(inst: Inst, cfg: Config) -> tuple[Plan | None, float]:
 
     demand_idx = routing.RegisterUnaryTransitCallback(demand_cb)
     routing.AddDimensionWithVehicleCapacity(demand_idx, 0, [int(inst.capacity)] * n_vehicles, True, "Capacity")
-    routing.AddDimension(transit_idx, int(np.round(inst.horizon * scale)), int(np.round(inst.horizon * scale)), False, "Time")
+    routing.AddDimension(
+        transit_idx, int(np.round(inst.horizon * scale)), int(np.round(inst.horizon * scale)), False, "Time"
+    )
     time_dim = routing.GetDimensionOrDie("Time")
     for node in range(1, inst.n + 1):
         idx = manager.NodeToIndex(node)
         time_dim.CumulVar(idx).SetRange(
-            int(np.round(inst.ready_times[node] * scale)),
-            int(np.round(inst.due_times[node] * scale))
+            int(np.round(inst.ready_times[node] * scale)), int(np.round(inst.due_times[node] * scale))
         )
     for v in range(n_vehicles):
         routing.AddVariableMinimizedByFinalizer(time_dim.CumulVar(routing.Start(v)))

@@ -289,7 +289,6 @@ def _load_gnn_weights(solver: Any) -> bool:
         return False
 
 
-
 def _align_action_head(state: dict[str, Any], target_module: Any) -> tuple[dict[str, Any], int]:
     """Pad the action-head row dimension when the checkpoint was trained with
     fewer modes than the current code defines.

@@ -39,9 +39,7 @@ def _same_cover_priority(rec: RouteRecord) -> tuple[float, float]:
 def _is_exact_cover(plan: Plan) -> bool:
     nodes = [n for route in plan.routes for n in route]
     return (
-        len(nodes) == plan.inst.n
-        and len(set(nodes)) == plan.inst.n
-        and all(1 <= node <= plan.inst.n for node in nodes)
+        len(nodes) == plan.inst.n and len(set(nodes)) == plan.inst.n and all(1 <= node <= plan.inst.n for node in nodes)
     )
 
 
@@ -62,8 +60,8 @@ class RoutePool:
         if len(self._routes) <= limit + 100:
             return
 
-        slot_b = max(limit // 4, 8)   # 25% → longest routes (NV-1 MILP)
-        slot_a = limit - slot_b        # 75% → cheapest-per-stop routes
+        slot_b = max(limit // 4, 8)  # 25% → longest routes (NV-1 MILP)
+        limit - slot_b  # 75% → cheapest-per-stop routes
 
         usage: dict[int, int] = {}
         kept: dict[tuple[int, ...], RouteRecord] = {}
@@ -92,17 +90,17 @@ class RoutePool:
                 usage[n] = usage.get(n, 0) + 1
             return True
 
-        for rec in len_ranked:      # Fill Slot B with longest routes
+        for rec in len_ranked:  # Fill Slot B with longest routes
             if len(kept) >= slot_b:
                 break
             _admit(rec)
 
-        for rec in eff_ranked:      # Fill Slot A with cheapest-per-stop routes
+        for rec in eff_ranked:  # Fill Slot A with cheapest-per-stop routes
             if len(kept) >= limit:
                 break
             _admit(rec)
 
-        if len(kept) < limit:       # Backfill if either slot undersaturated
+        if len(kept) < limit:  # Backfill if either slot undersaturated
             for rec in len_ranked:
                 if len(kept) >= limit:
                     break
@@ -185,6 +183,7 @@ def _milp_recombine(
         return None
     n_routes = len(route_records)
     from scipy.sparse import csc_matrix
+
     rows = []
     cols = []
     data = []
@@ -200,9 +199,7 @@ def _milp_recombine(
     constraints = [LinearConstraint(cover, lb=np.ones(inst.n), ub=np.ones(inst.n))]
     if nv_ceiling is not None:
         cover_nv = csc_matrix(np.ones((1, n_routes), dtype=float))
-        constraints.append(
-            LinearConstraint(cover_nv, lb=np.array([0.0]), ub=np.array([float(nv_ceiling)]))
-        )
+        constraints.append(LinearConstraint(cover_nv, lb=np.array([0.0]), ub=np.array([float(nv_ceiling)])))
     penalty = vehicle_penalty if vehicle_penalty is not None else _sp_vehicle_penalty(inst, cfg)
     costs = []
     for rec in route_records:
@@ -282,16 +279,20 @@ def recombine_with_route_pool(
     if td_only:
         effective_ceiling = nv_ceiling if nv_ceiling is not None else incumbent.nv
         candidate = _milp_recombine(
-            recs, incumbent.inst, cfg,
+            recs,
+            incumbent.inst,
+            cfg,
             nv_ceiling=effective_ceiling,
             vehicle_penalty=0.0,
         )
         if candidate is None:
             candidate = _greedy_recombine(recs, incumbent, nv_ceiling=effective_ceiling)
-        if (candidate.feasible
-                and _is_exact_cover(candidate)
-                and candidate.nv <= effective_ceiling
-                and candidate.cost + 1e-6 < incumbent.cost):
+        if (
+            candidate.feasible
+            and _is_exact_cover(candidate)
+            and candidate.nv <= effective_ceiling
+            and candidate.cost + 1e-6 < incumbent.cost
+        ):
             return candidate
         return incumbent.copy()
 
@@ -302,7 +303,9 @@ def recombine_with_route_pool(
     if not use_penalty:
         # Standard recombination: no NV pressure
         candidate = _milp_recombine(
-            recs, incumbent.inst, cfg,
+            recs,
+            incumbent.inst,
+            cfg,
             nv_ceiling=effective_ceiling,
             vehicle_penalty=0.0,
             heatmap=heatmap,
@@ -361,4 +364,8 @@ def recombine_with_route_pool(
     candidate = _greedy_recombine(recs, incumbent, nv_ceiling=effective_ceiling)
     if effective_ceiling is not None and candidate.nv > effective_ceiling:
         return incumbent.copy()
-    return candidate if candidate.feasible and _is_exact_cover(candidate) and candidate.dominates(incumbent) else incumbent.copy()
+    return (
+        candidate
+        if candidate.feasible and _is_exact_cover(candidate) and candidate.dominates(incumbent)
+        else incumbent.copy()
+    )

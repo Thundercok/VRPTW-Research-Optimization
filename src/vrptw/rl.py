@@ -229,6 +229,7 @@ class EliteArchive:
                     )
             except Exception as e:
                 import sys
+
                 print(f"Error saving plan to {path}: {e}", file=sys.stderr)
 
     def best(self, inst_name: str) -> Plan | None:
@@ -386,7 +387,9 @@ class PlateauController:
         if random.random() < self.eps:
             return random.randrange(len(MODES))
         with torch.no_grad():
-            return int(self.q(torch.as_tensor(state, dtype=torch.float32, device=DEVICE).unsqueeze(0))[0].argmax().item())
+            return int(
+                self.q(torch.as_tensor(state, dtype=torch.float32, device=DEVICE).unsqueeze(0))[0].argmax().item()
+            )
 
     def observe(self, s, a, r, ns, done=0.0):
         self.buf.push(s, a, r, ns, done)

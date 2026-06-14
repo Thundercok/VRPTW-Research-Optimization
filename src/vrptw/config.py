@@ -60,7 +60,7 @@ BKS: dict[str, dict[str, float]] = {
     "RC107": {"nv": 11, "td": 1230.48},
     "RC108": {"nv": 10, "td": 1139.82},
     "RC201": {"nv": 4, "td": 1406.94},
-    "RC202": {"nv": 3, "td": 1365.65},
+    "RC202": {"nv": 3, "td": 1159.21},
     "RC203": {"nv": 3, "td": 1049.62},
     "RC204": {"nv": 3, "td": 798.46},
     "RC205": {"nv": 4, "td": 1297.65},
@@ -278,6 +278,7 @@ class Config:
     gnn_pruning_threshold: float = 0.01
     gnn_pruning_threshold_start: float = 0.05
     gnn_pruning_threshold_end: float = 0.003
+    gnn_model_path: str | None = None
 
     def validate(self) -> None:
         """Validate configuration settings to prevent runtime failures during long-running tasks."""

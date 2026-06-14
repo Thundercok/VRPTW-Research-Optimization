@@ -30,6 +30,7 @@ from .config import (
 )
 from .core import Inst, Plan
 from .generators import SyntheticVRPTWGenerator, load_datasets
+from .gnn import GNNEdgePredictor, get_gnn_features, plan_to_adj_matrix
 from .local_search import _iterative_route_elimination
 from .rl import (
     EliteArchive,
@@ -48,7 +49,6 @@ from .solvers import (
     ScheduledHybridSolver,
     run_ortools,
 )
-from .gnn import GNNEdgePredictor, get_gnn_features, plan_to_adj_matrix
 from .train_gnn import train_gnn
 
 __all__ = [

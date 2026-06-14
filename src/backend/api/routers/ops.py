@@ -364,21 +364,22 @@ async def reoptimize(
 ) -> dict[str, Any]:
     try:
         from services.research_adapter import build_inst, plan_to_payload
+
         from vrptw import Plan
         from vrptw.local_search import td_converge_polish
     except ImportError as exc:
         raise HTTPException(
             status_code=503,
             detail=f"Solver is unavailable because research dependencies are missing: {exc}",
-        )
+        ) from exc
 
     try:
         inst = build_inst(body.customers, capacity=body.fleet.capacity, name="Reoptimize")
     except ValueError as val_err:
-        raise HTTPException(status_code=400, detail=str(val_err))
+        raise HTTPException(status_code=400, detail=str(val_err)) from val_err
 
     id_to_idx = {c.id: idx for idx, c in enumerate(body.customers) if c.id is not None}
-    
+
     mapped_routes = []
     for r in body.routes:
         mapped_route = []

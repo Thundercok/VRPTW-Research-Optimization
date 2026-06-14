@@ -367,7 +367,6 @@ def op_route_absorb_disrupt(plan: Plan, size: int) -> tuple[Plan, list[int]]:
     )
     target_idx, target_route = ranked[0]
     removed: list[int] = list(target_route)
-    drop_ids: set = {target_idx}
 
     # Build remaining node list for border-zone disruption
     remaining_nodes = [n for i, r in enumerate(plan.routes) if i != target_idx for n in r]
@@ -484,12 +483,7 @@ def op_neural_shaw(plan: Plan, size: int, heatmap: np.ndarray | None = None) -> 
                 temporal_rel = abs(inst.ready_times[ref_node] - inst.ready_times[n]) / max_tw
                 demand_rel = abs(inst.demands[ref_node] - inst.demands[n]) / inst.capacity
                 avg_heatmap_prob = sum(0.5 * (heatmap[r, n] + heatmap[n, r]) for r in removed) / len(removed)
-                score = (
-                    0.35 * spatial_rel
-                    + 0.25 * temporal_rel
-                    + 0.30 * (1.0 - avg_heatmap_prob)
-                    + 0.10 * demand_rel
-                )
+                score = 0.35 * spatial_rel + 0.25 * temporal_rel + 0.30 * (1.0 - avg_heatmap_prob) + 0.10 * demand_rel
                 candidates.append((n, score))
 
         if not candidates:
@@ -500,10 +494,7 @@ def op_neural_shaw(plan: Plan, size: int, heatmap: np.ndarray | None = None) -> 
                     demand_rel = abs(inst.demands[ref_node] - inst.demands[n]) / inst.capacity
                     avg_heatmap_prob = sum(0.5 * (heatmap[r, n] + heatmap[n, r]) for r in removed) / len(removed)
                     score = (
-                        0.35 * spatial_rel
-                        + 0.25 * temporal_rel
-                        + 0.30 * (1.0 - avg_heatmap_prob)
-                        + 0.10 * demand_rel
+                        0.35 * spatial_rel + 0.25 * temporal_rel + 0.30 * (1.0 - avg_heatmap_prob) + 0.10 * demand_rel
                     )
                     candidates.append((n, score))
 
@@ -543,6 +534,7 @@ def op_greedy(plan: Plan, removed: list[int], heatmap: np.ndarray | None = None,
     inst = plan.inst
     if heatmap is not None and gamma > 0.0:
         from .heuristics import _insert_customer_biased
+
         for node in sorted(removed, key=lambda n: inst.due_times[n]):
             _insert_customer_biased(plan, node, inst, heatmap, gamma)
     else:
@@ -559,6 +551,7 @@ def _regret(plan: Plan, removed: list[int], k: int, heatmap: np.ndarray | None =
         for node in remaining:
             if heatmap is not None and gamma > 0.0:
                 from .heuristics import _best_insert_position_biased
+
                 options = []
                 for ri, route in enumerate(plan.routes):
                     biased, actual, pos = _best_insert_position_biased(node, route, inst, heatmap, gamma)
@@ -572,10 +565,10 @@ def _regret(plan: Plan, removed: list[int], k: int, heatmap: np.ndarray | None =
                     if pos is not None:
                         options.append((delta, delta, ri, pos))
                 options.sort(key=lambda x: x[0])
-                
+
             if not options:
                 continue
-                
+
             regret = (
                 sum(options[i][0] - options[0][0] for i in range(1, k))
                 if len(options) >= k
@@ -584,7 +577,7 @@ def _regret(plan: Plan, removed: list[int], k: int, heatmap: np.ndarray | None =
             if regret > best_regret:
                 # We store best choice, but keep track of actual cost to make insertion correctly
                 best_regret, chosen, choice = regret, node, (options[0][2], options[0][3])
-                
+
         if chosen is not None and choice is not None:
             ri, pos = choice
             plan.routes[ri].insert(pos, chosen)
@@ -609,13 +602,13 @@ def op_tw_greedy(plan: Plan, removed: list[int], heatmap: np.ndarray | None = No
     inst = plan.inst
     if heatmap is not None and gamma > 0.0:
         from .heuristics import _insert_customer_biased
+
         for node in sorted(removed, key=lambda n: inst.due_times[n] - inst.ready_times[n]):
             _insert_customer_biased(plan, node, inst, heatmap, gamma)
     else:
         for node in sorted(removed, key=lambda n: inst.due_times[n] - inst.ready_times[n]):
             _insert_customer(plan, node, inst)
     return Plan(plan.routes, inst, plan.algo)
-
 
 
 def _route_arrivals_wait(route: list[int], inst: Inst) -> tuple[list[float], float]:
@@ -687,7 +680,7 @@ def _fts_best_insert_position_numba(
 ) -> tuple[float, int]:
     best_cost = 1e18
     best_pos = -1
-    
+
     n_nodes = len(route)
     current_load = 0.0
     for idx in range(n_nodes):

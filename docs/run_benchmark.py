@@ -48,6 +48,7 @@ if __name__ == "__main__":
     parser.add_argument("--early-stop", type=int, default=250, help="Early stop patience")
     parser.add_argument("--polish-iters", type=int, default=80, help="Polish iterations")
     parser.add_argument("--max-hours", type=float, default=9.5, help="Max wall-clock execution time limit in hours")
+    parser.add_argument("--gnn-path", type=str, default=None, help="Path to pre-trained GNN model weights")
     parser.add_argument(
         "--algorithms",
         nargs="+",
@@ -79,6 +80,7 @@ if __name__ == "__main__":
         early_stop_patience=args.early_stop,
         polish_iterations=args.polish_iters,
         max_wall_hours=args.max_hours,
+        gnn_model_path=args.gnn_path,
     )
 
     # ── Load Solomon instances ─────────────────────────────────────────────

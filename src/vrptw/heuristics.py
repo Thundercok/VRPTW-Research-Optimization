@@ -19,7 +19,7 @@ def _best_insert_position_numba(
 ) -> tuple[float, int]:
     best_cost = 1e18
     best_pos = -1
-    
+
     n_nodes = len(route)
     current_load = 0.0
     for idx in range(n_nodes):
@@ -33,17 +33,17 @@ def _best_insert_position_numba(
         delta = dist[prev, node] + dist[node, nxt] - dist[prev, nxt]
         if delta >= best_cost:
             continue
-            
+
         t = 0.0
         prev_node = 0
         feasible = True
-        
+
         for idx in range(n_nodes + 1):
             if idx == pos:
                 curr = node
             else:
                 curr = route[idx if idx < pos else idx - 1]
-            
+
             t += dist[prev_node, curr]
             if t < ready[curr]:
                 t = ready[curr]
@@ -52,13 +52,12 @@ def _best_insert_position_numba(
                 break
             t += service[curr]
             prev_node = curr
-            
+
         if feasible and t + dist[prev_node, 0] <= due[0]:
             best_cost = delta
             best_pos = pos
-            
-    return best_cost, best_pos
 
+    return best_cost, best_pos
 
 
 @njit(cache=True)
@@ -76,7 +75,7 @@ def _best_insert_position_pruned_numba(
 ) -> tuple[float, int]:
     best_cost = 1e18
     best_pos = -1
-    
+
     n_nodes = len(route)
     current_load = 0.0
     for idx in range(n_nodes):
@@ -87,25 +86,25 @@ def _best_insert_position_pruned_numba(
     for pos in range(n_nodes + 1):
         prev = route[pos - 1] if pos > 0 else 0
         nxt = route[pos] if pos < n_nodes else 0
-        
+
         # Check GNN heatmap pruning
         if heatmap[prev, node] < pruning_threshold or heatmap[node, nxt] < pruning_threshold:
             continue
-            
+
         delta = dist[prev, node] + dist[node, nxt] - dist[prev, nxt]
         if delta >= best_cost:
             continue
-            
+
         t = 0.0
         prev_node = 0
         feasible = True
-        
+
         for idx in range(n_nodes + 1):
             if idx == pos:
                 curr = node
             else:
                 curr = route[idx if idx < pos else idx - 1]
-            
+
             t += dist[prev_node, curr]
             if t < ready[curr]:
                 t = ready[curr]
@@ -114,11 +113,11 @@ def _best_insert_position_pruned_numba(
                 break
             t += service[curr]
             prev_node = curr
-            
+
         if feasible and t + dist[prev_node, 0] <= due[0]:
             best_cost = delta
             best_pos = pos
-            
+
     return best_cost, best_pos
 
 
@@ -155,7 +154,7 @@ def _best_insert_position_biased_numba(
     best_biased_cost = 1e18
     actual_cost = 1e18
     best_pos = -1
-    
+
     n_nodes = len(route)
     current_load = 0.0
     for idx in range(n_nodes):
@@ -167,25 +166,25 @@ def _best_insert_position_biased_numba(
         prev = route[pos - 1] if pos > 0 else 0
         nxt = route[pos] if pos < n_nodes else 0
         delta = dist[prev, node] + dist[node, nxt] - dist[prev, nxt]
-        
+
         # Apply GNN heatmap edge prediction bias
         p_prev_node = heatmap[prev, node]
         p_node_nxt = heatmap[node, nxt]
         delta_biased = delta * (1.0 - gamma * p_prev_node) * (1.0 - gamma * p_node_nxt)
-        
+
         if delta_biased >= best_biased_cost:
             continue
-            
+
         t = 0.0
         prev_node = 0
         feasible = True
-        
+
         for idx in range(n_nodes + 1):
             if idx == pos:
                 curr = node
             else:
                 curr = route[idx if idx < pos else idx - 1]
-            
+
             t += dist[prev_node, curr]
             if t < ready[curr]:
                 t = ready[curr]
@@ -194,12 +193,12 @@ def _best_insert_position_biased_numba(
                 break
             t += service[curr]
             prev_node = curr
-            
+
         if feasible and t + dist[prev_node, 0] <= due[0]:
             best_biased_cost = delta_biased
             actual_cost = delta
             best_pos = pos
-            
+
     return best_biased_cost, actual_cost, best_pos
 
 
@@ -248,17 +247,16 @@ def _insert_customer_biased(
     heatmap: np.ndarray,
     gamma: float,
 ) -> None:
-    best_biased_cost, best_actual_cost, best_route, best_pos = float("inf"), float("inf"), None, None
+    best_biased_cost, _best_actual_cost, best_route, best_pos = float("inf"), float("inf"), None, None
     for ri, route in enumerate(plan.routes):
         biased, actual, pos = _best_insert_position_biased(node, route, inst, heatmap, gamma)
         if pos is not None and biased < best_biased_cost:
-            best_biased_cost, best_actual_cost, best_route, best_pos = biased, actual, ri, pos
+            best_biased_cost, _best_actual_cost, best_route, best_pos = biased, actual, ri, pos
     if best_route is not None:
         plan.routes[best_route].insert(best_pos, node)
     else:
         plan.routes.append([node])
     plan.invalidate()
-
 
 
 def _route_cost_list(route: list[int], inst: Inst) -> float:
@@ -284,7 +282,14 @@ def _route_avg_slack(route: list[int], inst: Inst) -> float:
     return slack / len(route)
 
 
-def build_greedy(inst: Inst, algo: str = "") -> Plan:
+def build_greedy(inst: Inst, algo: str = "", heatmap: np.ndarray | None = None, gnn_strength: float = 0.0) -> Plan:
+    has_gnn = heatmap is not None and gnn_strength > 0.0
+
+    def get_dist(i, j):
+        if has_gnn:
+            return inst.dist[i, j] * (1.0 - gnn_strength * heatmap[i, j])
+        return inst.dist[i, j]
+
     def arrival(route, pos, node, arrivals):
         prev = route[pos - 1] if pos > 0 else 0
         t = arrivals[pos - 1] if pos > 0 else 0.0
@@ -325,7 +330,7 @@ def build_greedy(inst: Inst, algo: str = "") -> Plan:
                 continue
             prev = route[pos - 1] if pos > 0 else 0
             nxt = route[pos] if pos < len(route) else 0
-            delta = inst.dist[prev, node] + inst.dist[node, nxt] - inst.dist[prev, nxt]
+            delta = get_dist(prev, node) + get_dist(node, nxt) - get_dist(prev, nxt)
             if delta < best_cost:
                 best_cost, best_pos = delta, pos
         return best_cost, best_pos
@@ -333,7 +338,7 @@ def build_greedy(inst: Inst, algo: str = "") -> Plan:
     unrouted = list(range(1, inst.n + 1))
     routes: list[list[int]] = []
     while unrouted:
-        seed = max(unrouted, key=lambda n: inst.dist[0, n])
+        seed = max(unrouted, key=lambda n: get_dist(0, n))
         if max(inst.dist[0, seed], inst.ready_times[seed]) > inst.due_times[seed]:
             seed = min(unrouted, key=lambda n: inst.due_times[n])
         route = [seed]
@@ -348,7 +353,7 @@ def build_greedy(inst: Inst, algo: str = "") -> Plan:
                 c1, pos = best_insert_cost(route, node, arrivals, load)
                 if pos is None:
                     continue
-                c2 = inst.dist[0, node] + inst.dist[node, 0] - c1
+                c2 = get_dist(0, node) + get_dist(node, 0) - c1
                 if c2 > best_regret:
                     best_regret, best_node, best_pos = c2, node, pos
             if best_node is not None:
@@ -377,7 +382,7 @@ def build_greedy(inst: Inst, algo: str = "") -> Plan:
             ]
             if not feasible:
                 break
-            nxt = min(feasible, key=lambda c: inst.dist[node, c])
+            nxt = min(feasible, key=lambda c: get_dist(node, c))
             route_fb.append(nxt)
             unrouted_set.remove(nxt)
             load += inst.demands[nxt]

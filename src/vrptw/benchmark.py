@@ -89,15 +89,29 @@ def run_instance(
             }, None
         history = [plan.cost]
     elif algo == ALGO_ALNS_BASE:
-        plan, history = ALNSSolver(inst, cfg).solve(seed=seed, init=init_plan)
+        solver = ALNSSolver(inst, cfg)
+        if getattr(cfg, "gnn_model_path", None) is not None:
+            solver.load_gnn_model(cfg.gnn_model_path)
+        plan, history = solver.solve(seed=seed, init=init_plan)
     elif algo == ALGO_HYBRID_FIXED:
-        plan, history = HybridFixedSolver(inst, cfg).solve(seed=seed, init=init_plan)
+        solver = HybridFixedSolver(inst, cfg)
+        if getattr(cfg, "gnn_model_path", None) is not None:
+            solver.load_gnn_model(cfg.gnn_model_path)
+        plan, history = solver.solve(seed=seed, init=init_plan)
     elif algo == ALGO_HYBRID_RULE:
-        plan, history = HybridRuleSolver(inst, cfg).solve(seed=seed, init=init_plan)
+        solver = HybridRuleSolver(inst, cfg)
+        if getattr(cfg, "gnn_model_path", None) is not None:
+            solver.load_gnn_model(cfg.gnn_model_path)
+        plan, history = solver.solve(seed=seed, init=init_plan)
     elif algo == ALGO_HYBRID_DDQN:
-        plan, history = HybridDDQNSolver(inst, cfg).solve(seed=seed, init=init_plan)
+        solver = HybridDDQNSolver(inst, cfg)
+        if getattr(cfg, "gnn_model_path", None) is not None:
+            solver.load_gnn_model(cfg.gnn_model_path)
+        plan, history = solver.solve(seed=seed, init=init_plan)
     elif algo in (ALGO_HYBRID_DDQN_TRANSFER, ALGO_HYBRID_DDQN_TRANSFER_RC2, ALGO_HYBRID_DDQN_TRANSFER_DR):
         solver = HybridDDQNSolver(inst, cfg)
+        if getattr(cfg, "gnn_model_path", None) is not None:
+            solver.load_gnn_model(cfg.gnn_model_path)
         if transfer_weights is not None:
             solver.load_weights(transfer_weights)
         plan, history = solver.solve(seed=seed, frozen=True, init=init_plan)
@@ -128,8 +142,9 @@ def _benchmark_worker(packed: tuple) -> tuple[dict, Plan | None]:
 def _benchmark_instance_worker(packed: tuple) -> list[dict]:
     # Restrict thread count to 1 to avoid thread contention across parallel processes
     import os
+
     import torch
-    
+
     os.environ["OMP_NUM_THREADS"] = "1"
     os.environ["MKL_NUM_THREADS"] = "1"
     os.environ["OPENBLAS_NUM_THREADS"] = "1"
@@ -147,7 +162,7 @@ def _benchmark_instance_worker(packed: tuple) -> list[dict]:
     try:
         archive = EliteArchive(k=cfg.elite_archive_k)
         archive.load_plans(plans_folder, {inst.name: inst})
-        
+
         dataset = (
             "RC1"
             if inst.name.upper().startswith("RC1")
@@ -155,35 +170,44 @@ def _benchmark_instance_worker(packed: tuple) -> list[dict]:
             if inst.name.upper().startswith("RC2")
             else inst.name[:2].upper()
         )
-        
+
         inst_rows = []
         log_lines = []
-        
+
         for algo in algorithms:
             algo_label = canonical_algo_label(algo)
             if (inst.name, algo_label) in completed:
                 continue
-                
+
             nv_v, cost_v, time_v, gap_v, nvd_v, ot_v = [], [], [], [], [], []
             n_runs_eff = 1 if algo_label == ALGO_ORTOOLS else cfg.n_runs
-            
+
             best_overall: Plan | None = None
             run_results = []
-            weights = transfer_weights if algo_label in (ALGO_HYBRID_DDQN_TRANSFER, ALGO_HYBRID_DDQN_TRANSFER_RC2, ALGO_HYBRID_DDQN_TRANSFER_DR) else None
-            
+            weights = (
+                transfer_weights
+                if algo_label
+                in (ALGO_HYBRID_DDQN_TRANSFER, ALGO_HYBRID_DDQN_TRANSFER_RC2, ALGO_HYBRID_DDQN_TRANSFER_DR)
+                else None
+            )
+
             for i in range(n_runs_eff):
                 seed = cfg.seed + i
                 init = best_overall.copy() if best_overall is not None else _diversified_init(i, inst, archive, cfg)
-                
+
                 res, plan = run_instance(inst, algo_label, cfg, seed, weights, init)
-                if algo_label in (ALGO_HYBRID_DDQN_TRANSFER, ALGO_HYBRID_DDQN_TRANSFER_RC2, ALGO_HYBRID_DDQN_TRANSFER_DR) and plan is not None:
+                if (
+                    algo_label
+                    in (ALGO_HYBRID_DDQN_TRANSFER, ALGO_HYBRID_DDQN_TRANSFER_RC2, ALGO_HYBRID_DDQN_TRANSFER_DR)
+                    and plan is not None
+                ):
                     plan.algo = algo_label
                 if plan is not None:
                     if best_overall is None or plan.dominates(best_overall) or plan.nv < best_overall.nv:
                         best_overall = plan.copy()
                 run_results.append((res, plan))
-                
-            for i, (res, plan) in enumerate(run_results):
+
+            for res, plan in run_results:
                 if plan is not None:
                     archive.update_and_save(plan, plans_folder)
                 time_v.append(res["time"])
@@ -193,7 +217,7 @@ def _benchmark_instance_worker(packed: tuple) -> list[dict]:
                     gap_v.append(res["td_gap"])
                     nvd_v.append(res["nv_diff"])
                     ot_v.append(res["on_time"])
-                    
+
             if not nv_v:
                 # Store a dummy/failed entry in checkpoint to prevent infinite re-runs
                 row = {
@@ -216,9 +240,9 @@ def _benchmark_instance_worker(packed: tuple) -> list[dict]:
                 }
                 inst_rows.append(row)
                 log_lines.append(f"\n[{inst.name}] {algo_label}")
-                log_lines.append(f"  -> FAILED/INFEASIBLE (no solution found)")
+                log_lines.append("  -> FAILED/INFEASIBLE (no solution found)")
                 continue
-                
+
             bks = BKS.get(inst.name)
             nv_inflated = (
                 bks is not None
@@ -226,7 +250,7 @@ def _benchmark_instance_worker(packed: tuple) -> list[dict]:
                 and all(g is not None for g in gap_v)
                 and float(np.mean(gap_v)) < 0
             )
-            
+
             row = {
                 "Dataset": dataset,
                 "Instance": inst.name,
@@ -246,10 +270,10 @@ def _benchmark_instance_worker(packed: tuple) -> list[dict]:
                 "raw_nv": ";".join(str(n) for n in nv_v),
             }
             inst_rows.append(row)
-            
+
             # Format the output block for this algorithm
             log_lines.append(f"\n[{inst.name}] {algo_label}")
-            for i, (res, plan) in enumerate(run_results):
+            for i, (res, _) in enumerate(run_results):
                 elapsed_h = (time.time() - wall_start) / 3600
                 if res["nv"] is not None:
                     log_lines.append(
@@ -258,13 +282,13 @@ def _benchmark_instance_worker(packed: tuple) -> list[dict]:
                     )
                 else:
                     log_lines.append(f"  run {i + 1}/{n_runs_eff}: FAILED ({res['time']:.1f}s)")
-            
+
             gap_text = f"{row['Gap%']:+.1f}%" if row["Gap%"] is not None else "--"
             log_lines.append(
                 f"  -> nv={row['NV_mean']:.1f}±{row['NV_std']:.1f}  "
                 f"td={row['TD_mean']:.1f}±{row['TD_std']:.1f}  gap={gap_text}"
             )
-            
+
         elapsed = time.time() - t0
         print(f"    [SUCCESS] {inst.name} finished in {int(elapsed)}s", flush=True)
         if log_lines:
@@ -363,17 +387,19 @@ def run_benchmark(
                 for row in inst_rows:
                     rows.append(row)
                     completed.add((row["Instance"], row["Algorithm"]))
-                
+
                 # Check for wall time limit
                 elapsed_h = (time.time() - wall_start) / 3600
                 if elapsed_h >= cfg.max_wall_hours:
                     print(f"\n⚠️  Wall-clock limit {cfg.max_wall_hours:.1f}h reached — stopping early.")
                     pd.DataFrame(rows).to_csv(ckpt_path, index=False)
                     return normalize_algorithm_frame(pd.DataFrame(rows))
-                
+
                 # Save checkpoint and print progress
                 pd.DataFrame(rows).to_csv(ckpt_path, index=False)
-                print(f"  ✓ Checkpoint saved ({len(completed)}/{total} combos complete, {elapsed_h:.2f}h) → {ckpt_path}")
+                print(
+                    f"  ✓ Checkpoint saved ({len(completed)}/{total} combos complete, {elapsed_h:.2f}h) → {ckpt_path}"
+                )
 
     df = normalize_algorithm_frame(pd.DataFrame(rows))
     df.to_csv(result_path, index=False)

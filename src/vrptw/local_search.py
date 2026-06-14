@@ -2,18 +2,24 @@ from __future__ import annotations
 
 import numpy as np
 
-from .core import Inst, Plan, _check_route, _route_ok, _route_cost
-from .heuristics import _best_insert_position, _best_insert_position_numba, _best_insert_position_pruned_numba, _route_cost_list, _route_load
+from .core import Inst, Plan, _check_route, _route_cost
+from .heuristics import (
+    _best_insert_position,
+    _best_insert_position_numba,
+    _best_insert_position_pruned_numba,
+    _route_cost_list,
+    _route_load,
+)
 from .numba_kernels import (
-    _two_opt_best_numba,
-    _or_opt_intra_numba,
-    _intra_route_optimize_numba,
-    _swap_evaluate_numba,
-    _swap_evaluate_pruned_numba,
     _best_segment_insert_numba,
     _best_segment_insert_pruned_numba,
     _cross_exchange_pair_numba,
     _cross_exchange_pair_pruned_numba,
+    _intra_route_optimize_numba,
+    _or_opt_intra_numba,
+    _swap_evaluate_numba,
+    _swap_evaluate_pruned_numba,
+    _two_opt_best_numba,
 )
 
 
@@ -22,8 +28,13 @@ def _two_opt_best(route: list[int], inst: Inst) -> list[int]:
         return route[:]
     route_arr = np.array(route, dtype=np.int64)
     result, _ = _two_opt_best_numba(
-        route_arr, inst.dist, inst.demands, inst.capacity,
-        inst.ready_times, inst.due_times, inst.service_times,
+        route_arr,
+        inst.dist,
+        inst.demands,
+        inst.capacity,
+        inst.ready_times,
+        inst.due_times,
+        inst.service_times,
     )
     return list(result)
 
@@ -41,7 +52,7 @@ def _best_relocate(
     route_arrays = [np.array(r, dtype=np.int64) for r in plan.routes]
     # Pre-calculate route centroids
     centroids = [inst.coords[arr].mean(axis=0) if len(arr) > 0 else inst.coords[0] for arr in route_arrays]
-    
+
     for si in range(len(plan.routes)):
         source_route = plan.routes[si]
         for sp in range(len(source_route)):
@@ -53,27 +64,38 @@ def _best_relocate(
             next_s = source_route[sp + 1] if sp < len(source_route) - 1 else 0
             remove_delta = inst.dist[prev_s, next_s] - inst.dist[prev_s, node] - inst.dist[node, next_s]
             node_coord = inst.coords[node]
-            
+
             for di in range(len(plan.routes)):
                 if di == si:
                     continue
                 # Spatial filter: skip routes whose centroids are too far from node
                 if float(np.linalg.norm(centroids[di] - node_coord)) > 0.55 * max_dist:
                     continue
-                
+
                 # Check if pruning is enabled and heatmap is provided
                 if heatmap is not None and pruning_threshold > 0.0:
                     insert_delta, best_pos = _best_insert_position_pruned_numba(
-                        node, route_arrays[di],
-                        inst.dist, inst.demands, inst.capacity,
-                        inst.ready_times, inst.due_times, inst.service_times,
-                        heatmap, pruning_threshold
+                        node,
+                        route_arrays[di],
+                        inst.dist,
+                        inst.demands,
+                        inst.capacity,
+                        inst.ready_times,
+                        inst.due_times,
+                        inst.service_times,
+                        heatmap,
+                        pruning_threshold,
                     )
                 else:
                     insert_delta, best_pos = _best_insert_position_numba(
-                        node, route_arrays[di],
-                        inst.dist, inst.demands, inst.capacity,
-                        inst.ready_times, inst.due_times, inst.service_times,
+                        node,
+                        route_arrays[di],
+                        inst.dist,
+                        inst.demands,
+                        inst.capacity,
+                        inst.ready_times,
+                        inst.due_times,
+                        inst.service_times,
                     )
                 if best_pos == -1:
                     continue
@@ -111,16 +133,27 @@ def _best_swap(
         for di in range(si + 1, len(plan.routes)):
             if heatmap is not None and pruning_threshold > 0.0:
                 delta, sp, dp = _swap_evaluate_pruned_numba(
-                    route_arrays[si], route_arrays[di],
-                    inst.dist, inst.demands, inst.capacity,
-                    inst.ready_times, inst.due_times, inst.service_times,
-                    heatmap, pruning_threshold
+                    route_arrays[si],
+                    route_arrays[di],
+                    inst.dist,
+                    inst.demands,
+                    inst.capacity,
+                    inst.ready_times,
+                    inst.due_times,
+                    inst.service_times,
+                    heatmap,
+                    pruning_threshold,
                 )
             else:
                 delta, sp, dp = _swap_evaluate_numba(
-                    route_arrays[si], route_arrays[di],
-                    inst.dist, inst.demands, inst.capacity,
-                    inst.ready_times, inst.due_times, inst.service_times,
+                    route_arrays[si],
+                    route_arrays[di],
+                    inst.dist,
+                    inst.demands,
+                    inst.capacity,
+                    inst.ready_times,
+                    inst.due_times,
+                    inst.service_times,
                 )
             if sp >= 0 and delta < best_delta:
                 best_delta, best_move = delta, (si, int(sp), di, int(dp))
@@ -175,23 +208,39 @@ def _cross_exchange(
             # Delegate entire (p1, p2, len1, len2) search to JIT
             if heatmap is not None and pruning_threshold > 0.0:
                 delta, p1, len1, p2, len2 = _cross_exchange_pair_pruned_numba(
-                    r1_arr, r2_arr, max_len1, max_len2,
-                    inst.dist, inst.demands, inst.capacity,
-                    inst.ready_times, inst.due_times, inst.service_times,
-                    old_pair, heatmap, pruning_threshold
+                    r1_arr,
+                    r2_arr,
+                    max_len1,
+                    max_len2,
+                    inst.dist,
+                    inst.demands,
+                    inst.capacity,
+                    inst.ready_times,
+                    inst.due_times,
+                    inst.service_times,
+                    old_pair,
+                    heatmap,
+                    pruning_threshold,
                 )
             else:
                 delta, p1, len1, p2, len2 = _cross_exchange_pair_numba(
-                    r1_arr, r2_arr, max_len1, max_len2,
-                    inst.dist, inst.demands, inst.capacity,
-                    inst.ready_times, inst.due_times, inst.service_times,
+                    r1_arr,
+                    r2_arr,
+                    max_len1,
+                    max_len2,
+                    inst.dist,
+                    inst.demands,
+                    inst.capacity,
+                    inst.ready_times,
+                    inst.due_times,
+                    inst.service_times,
                     old_pair,
                 )
             if p1 >= 0 and delta < best_delta:
-                seg2 = list(r2[p2:p2 + len2])
-                seg1 = list(r1[p1:p1 + len1])
-                nr1 = r1[:p1] + seg2 + r1[p1 + len1:]
-                nr2 = r2[:p2] + seg1 + r2[p2 + len2:]
+                seg2 = list(r2[p2 : p2 + len2])
+                seg1 = list(r1[p1 : p1 + len1])
+                nr1 = r1[:p1] + seg2 + r1[p1 + len1 :]
+                nr2 = r2[:p2] + seg1 + r2[p2 + len2 :]
                 routes = [r[:] for r in plan.routes]
                 routes[i], routes[j] = nr1, nr2
                 best_routes = routes
@@ -246,7 +295,7 @@ def _best_or_opt(
         source_route = plan.routes[si]
         for L in (2, 3):
             for sp in range(len(source_route) - L + 1):
-                seg_arr = np.array(source_route[sp:sp + L], dtype=np.int64)
+                seg_arr = np.array(source_route[sp : sp + L], dtype=np.int64)
                 sn_empty = len(source_route) == L
                 # Compute removal delta in O(1) — removing a segment from a
                 # feasible route always yields a feasible route
@@ -264,16 +313,27 @@ def _best_or_opt(
                     # JIT-compiled segment insertion evaluation
                     if heatmap is not None and pruning_threshold > 0.0:
                         insert_delta, best_pos, rev_int = _best_segment_insert_pruned_numba(
-                            seg_arr, route_arrays[di],
-                            inst.dist, inst.demands, inst.capacity,
-                            inst.ready_times, inst.due_times, inst.service_times,
-                            heatmap, pruning_threshold
+                            seg_arr,
+                            route_arrays[di],
+                            inst.dist,
+                            inst.demands,
+                            inst.capacity,
+                            inst.ready_times,
+                            inst.due_times,
+                            inst.service_times,
+                            heatmap,
+                            pruning_threshold,
                         )
                     else:
                         insert_delta, best_pos, rev_int = _best_segment_insert_numba(
-                            seg_arr, route_arrays[di],
-                            inst.dist, inst.demands, inst.capacity,
-                            inst.ready_times, inst.due_times, inst.service_times,
+                            seg_arr,
+                            route_arrays[di],
+                            inst.dist,
+                            inst.demands,
+                            inst.capacity,
+                            inst.ready_times,
+                            inst.due_times,
+                            inst.service_times,
                         )
                     if best_pos == -1:
                         continue
@@ -633,8 +693,13 @@ def _intra_route_or_opt(plan: Plan, nv_ceiling: int | None = None) -> Plan | Non
             continue
         route_arr = np.array(route, dtype=np.int64)
         result, imp = _or_opt_intra_numba(
-            route_arr, inst.dist, inst.demands, inst.capacity,
-            inst.ready_times, inst.due_times, inst.service_times,
+            route_arr,
+            inst.dist,
+            inst.demands,
+            inst.capacity,
+            inst.ready_times,
+            inst.due_times,
+            inst.service_times,
         )
         if imp:
             improved = True
@@ -659,8 +724,14 @@ def _intra_route_optimize(route: list[int], inst: Inst, max_passes: int = 25) ->
         return route[:]
     route_arr = np.array(route, dtype=np.int64)
     result = _intra_route_optimize_numba(
-        route_arr, inst.dist, inst.demands, inst.capacity,
-        inst.ready_times, inst.due_times, inst.service_times, max_passes,
+        route_arr,
+        inst.dist,
+        inst.demands,
+        inst.capacity,
+        inst.ready_times,
+        inst.due_times,
+        inst.service_times,
+        max_passes,
     )
     return list(result)
 
@@ -686,7 +757,7 @@ def local_search(
     pruning_threshold: float = 0.0,
 ) -> Plan:
     best = plan.copy()
-    
+
     for _ in range(max_passes):
         improved = False
         routes = []
@@ -696,7 +767,7 @@ def local_search(
             if nr != route:
                 improved = True
         best = Plan(routes, best.inst, best.algo)
-        
+
         moves = 0
         while moves < max_ls_moves:
             # 1. Relocate Move
@@ -709,7 +780,7 @@ def local_search(
                     if pool is not None:
                         pool.add_plan(best)  # Immediate hot-commit to active pool
                     continue
-            
+
             # 2. Intra-Route Or-Opt
             intra = _intra_route_or_opt(best, nv_ceiling=nv_ceiling)
             if intra is not None:
@@ -718,7 +789,7 @@ def local_search(
                 if pool is not None:
                     pool.add_plan(best)
                 continue
-            
+
             # 3. Swap Move
             move = _best_swap(best, heatmap=heatmap, pruning_threshold=pruning_threshold)
             if move is not None:
@@ -729,7 +800,7 @@ def local_search(
                     if pool is not None:
                         pool.add_plan(best)
                     continue
-            
+
             # 4. Or-Opt Move
             move = _best_or_opt(best, nv_ceiling=nv_ceiling, heatmap=heatmap, pruning_threshold=pruning_threshold)
             if move is not None:
@@ -740,7 +811,7 @@ def local_search(
                     if pool is not None:
                         pool.add_plan(best)
                     continue
-            
+
             # 5. Cross Exchange
             cross = _cross_exchange(best, nv_ceiling=nv_ceiling, heatmap=heatmap, pruning_threshold=pruning_threshold)
             if cross is not None:
@@ -749,7 +820,7 @@ def local_search(
                 if pool is not None:
                     pool.add_plan(best)
                 continue
-            
+
             # 6. Route Compaction
             compact = _try_route_compact(best, nv_ceiling=nv_ceiling)
             if compact is not None:
@@ -759,7 +830,7 @@ def local_search(
                     pool.add_plan(best)
                 continue
             break
-            
+
         if not improved:
             break
 
@@ -770,7 +841,7 @@ def local_search(
         merged = _try_route_merge(best)
         if merged is not None:
             pool.add_plan(merged)
-            
+
     return best
 
 
@@ -788,7 +859,6 @@ def _try_chain_elimination(plan: Plan, target_idx: int) -> Plan | None:
     routes = [r[:] for i, r in enumerate(plan.routes) if i != target_idx]
 
     for c in sorted(target, key=lambda n: inst.due_times[n] - inst.ready_times[n]):
-
         # ── Level 1: direct insertion ─────────────────────────────────────────
         best_delta, best_ri, best_pos = float("inf"), None, None
         for ri, route in enumerate(routes):
@@ -804,7 +874,7 @@ def _try_chain_elimination(plan: Plan, target_idx: int) -> Plan | None:
         best2 = float("inf")
         for ri, route in enumerate(routes):
             for eject_pos, d in enumerate(route):
-                stripped = route[:eject_pos] + route[eject_pos + 1:]
+                stripped = route[:eject_pos] + route[eject_pos + 1 :]
                 dc, pc = _best_insert_position(c, stripped, inst)
                 if pc is None:
                     continue
@@ -818,7 +888,7 @@ def _try_chain_elimination(plan: Plan, target_idx: int) -> Plan | None:
 
         if chain2 is not None:
             ri, ep, d, rj = chain2
-            stripped_ri = routes[ri][:ep] + routes[ri][ep + 1:]
+            stripped_ri = routes[ri][:ep] + routes[ri][ep + 1 :]
             _, pc = _best_insert_position(c, stripped_ri, inst)
             if pc is None:
                 return None
@@ -834,7 +904,7 @@ def _try_chain_elimination(plan: Plan, target_idx: int) -> Plan | None:
         depth3_candidates: list[tuple[float, int, int, int]] = []  # (cost_c, ri, eject_pos, d)
         for ri, route in enumerate(routes):
             for eject_pos, d in enumerate(route):
-                stripped = route[:eject_pos] + route[eject_pos + 1:]
+                stripped = route[:eject_pos] + route[eject_pos + 1 :]
                 dc, pc = _best_insert_position(c, stripped, inst)
                 if pc is not None:
                     depth3_candidates.append((dc, ri, eject_pos, d))
@@ -842,12 +912,12 @@ def _try_chain_elimination(plan: Plan, target_idx: int) -> Plan | None:
 
         chain3: tuple | None = None
         best3 = float("inf")
-        for dc, ri, eject_pos, d in depth3_candidates[:3]:   # cap at 3
+        for dc, ri, eject_pos, d in depth3_candidates[:3]:  # cap at 3
             for rj in range(len(routes)):
                 if rj == ri:
                     continue
                 for eject_pos_j, e in enumerate(routes[rj]):
-                    stripped_j = routes[rj][:eject_pos_j] + routes[rj][eject_pos_j + 1:]
+                    stripped_j = routes[rj][:eject_pos_j] + routes[rj][eject_pos_j + 1 :]
                     dd, pd = _best_insert_position(d, stripped_j, inst)
                     if pd is None:
                         continue
@@ -860,17 +930,17 @@ def _try_chain_elimination(plan: Plan, target_idx: int) -> Plan | None:
                             chain3 = (ri, eject_pos, d, rj, eject_pos_j, e, rk)
 
         if chain3 is None:
-            return None   # c unplaceable at depth-3; this target route cannot be eliminated
+            return None  # c unplaceable at depth-3; this target route cannot be eliminated
 
         ri, ep_i, d, rj, ep_j, e, rk = chain3
         # Apply depth-3 chain
-        stripped_ri = routes[ri][:ep_i] + routes[ri][ep_i + 1:]
+        stripped_ri = routes[ri][:ep_i] + routes[ri][ep_i + 1 :]
         _, pc = _best_insert_position(c, stripped_ri, inst)
         if pc is None:
             return None
         routes[ri] = stripped_ri[:pc] + [c] + stripped_ri[pc:]
 
-        stripped_rj = routes[rj][:ep_j] + routes[rj][ep_j + 1:]
+        stripped_rj = routes[rj][:ep_j] + routes[rj][ep_j + 1 :]
         _, pd = _best_insert_position(d, stripped_rj, inst)
         if pd is None:
             return None
