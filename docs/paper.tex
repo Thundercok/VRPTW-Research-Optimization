@@ -606,7 +606,7 @@ To evaluate the impact of the proposed Graph Neural Network (GNN) Edge Predictor
 
 \begin{table}[!h]
 \centering
-\caption{Baseline vs. GNN-Guided Hybrid-DDQN (150 Iterations)}
+\caption{Baseline vs.\ GNN-Guided Hybrid-DDQN (150 iterations, low-budget regime).  At 1\,000 iterations, GNN guidance provides $1.2$--$1.7{\times}$ acceleration on random/combination families.}
 \label{tab:gnn_comparison}
 \renewcommand{\arraystretch}{1.08}
 \setlength{\tabcolsep}{4pt}
@@ -625,7 +625,7 @@ To evaluate the impact of the proposed Graph Neural Network (GNN) Edge Predictor
 As shown in \Cref{tab:gnn_comparison}:
 \begin{itemize}
     \item \textbf{Fleet Size and Cost Reduction}: On the highly-constrained \texttt{RC101} instance, the GNN-guided solver successfully reduces the fleet size by \textbf{1 vehicle} (from 16.00 to 15.00) and improves travel distance from 1658.06 to 1645.10 compared to the baseline.
-    \item \textbf{Search Acceleration}: Across all tested instances, GNN-guided routing exhibits a significant runtime reduction (up to \textbf{86.6\% faster} on \texttt{C101}). This speedup is directly attributable to the \textbf{Dynamic Pruning Schedule}, which prunes low-probability local search moves early in the search loop, allowing the solver to conserve CPU resources for high-value neighborhoods.
+    \item \textbf{Search Acceleration}: In this low-budget (150-iteration) regime, GNN-guided routing exhibits significant runtime reduction (up to \textbf{86.6\% faster} on \texttt{C101}).  At full publication budgets (1\,000 iterations), the absolute speedup diminishes but remains meaningful on hard random/combination instances (\texttt{R101}: $1.29{\times}$, \texttt{r2\_4\_1}: $1.65{\times}$).  This speedup is attributable to the \textbf{Dynamic Pruning Schedule}, which prunes low-probability local search moves early in the search loop.
     \item \textbf{Recombination Effectiveness}: The heatmap-biased MILP set-partitioning successfully integrates predicted edge confidence scores, preventing the selection of low-probability edges during route recombination.
 \end{itemize}
 
@@ -648,6 +648,24 @@ Zero-shot transfer is decisive evidence of generalisation: weights are trained o
 synthetic domain-randomized graphs~\cite{tobin2017domain} and never tuned on
 Solomon or Gehring--Homberger data.
 
+\subsection{Computational Cost of Fleet Reduction}
+
+The macro-policy's primary contribution is fleet-size reduction, not search
+acceleration.  At 1\,000 iterations on Homberger-400, Hybrid-DDQN runs
+$2$--$100{\times}$ slower than ALNS-Base on instances where ALNS-Base
+early-stops (e.g.\ \texttt{c2\_4\_1}: 1\,337\,s vs.\ 33\,s), but achieves
+1--2 fewer vehicles and up to 1\,468 units less total distance.  The DDQN
+controller prevents premature convergence by activating route-reduction and
+diversification modes that reset the no-improvement counter, extending the
+effective search horizon.
+
+On hard instances where both algorithms exhaust the full iteration budget
+(\texttt{r1\_4\_1}, \texttt{rc1\_4\_1}), runtimes are comparable
+($1$--$2{\times}$), and Hybrid-DDQN achieves strictly better solutions.  This
+pattern strengthens with problem scale: at 100 customers, the quality advantage
+is marginal; at 400 customers, each eliminated vehicle represents a direct
+operational cost saving.
+
 \subsection{Limitations}
 
 \textbf{RC101 Pareto alternative:}  Convergence to $NV=15$ (vs.\ $NV_{\BKS}=14$)
@@ -659,6 +677,11 @@ reward surfaces because many service orderings share similar marginal costs.
 This explains the absent NV separation between Hybrid-DDQN and Hybrid-Fixed
 (identical vehicle counts), even though distance improvement remains clear
 ($+3.223\%$ vs.\ $+4.677\%$ on the wide-horizon fair subset).
+
+\textbf{Compute--quality trade-off:}  Hybrid-DDQN is $2$--$100{\times}$ slower
+than ALNS-Base on instances where early stopping would otherwise terminate
+search.  This overhead is the cost of the macro-policy's route-reduction
+exploration and should be weighed against the fleet-size savings.
 
 \textbf{Large-scale overhead:}  The $14{\times}$ Numba-JIT speedup makes the
 200-customer pilot practical, but graph-encoding
