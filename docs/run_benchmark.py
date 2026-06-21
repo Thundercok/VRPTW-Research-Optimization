@@ -72,6 +72,12 @@ if __name__ == "__main__":
         action="store_true",
         help="Ignore existing checkpoints and start a fresh run."
     )
+    parser.add_argument(
+        "--ortools-time-limit",
+        type=float,
+        default=15.0,
+        help="Time limit for OR-Tools solver in seconds"
+    )
 
     args = parser.parse_args()
 
@@ -92,6 +98,7 @@ if __name__ == "__main__":
         polish_iterations=args.polish_iters,
         max_wall_hours=args.max_hours,
         gnn_model_path=gnn_path,
+        ortools_time_limit=args.ortools_time_limit,
     )
 
     # ── Load Solomon instances ─────────────────────────────────────────────

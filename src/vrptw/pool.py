@@ -222,7 +222,9 @@ def _milp_recombine(
         bounds=Bounds(np.zeros(n_routes), np.ones(n_routes)),
         options={"time_limit": float(cfg.sp_time_limit), "disp": False},
     )
-    if result is None or not getattr(result, "success", False) or result.x is None:
+    # Relax success check: if the solver hits the time limit but returns a valid 
+    # integer solution x, we should still accept it. We verify feasibility below.
+    if result is None or result.x is None:
         return None
     chosen = [list(route_records[i].nodes) for i, v in enumerate(result.x) if v >= 0.5]
     plan = Plan(chosen, inst, "SP-RECOMBINE")

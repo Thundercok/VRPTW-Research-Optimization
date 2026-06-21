@@ -13,6 +13,7 @@ echo "==========================================================================
 ALGS="ALNS-Base GNN-ALNS-Base Hybrid-Fixed GNN-Hybrid-Fixed Hybrid-Rule GNN-Hybrid-Rule Hybrid-DDQN GNN-Hybrid-DDQN DQN OR-Tools"
 RUNS=3
 ITERS=1000
+ORTOOLS_LIMIT=120
 
 # ── 1. SOLOMON BENCHMARK (100 Customers) ───────────────────────────────────
 echo ""
@@ -27,6 +28,7 @@ PYTHONPATH=src .venv/bin/python -u docs/run_benchmark.py \
   --hybrid-iters $ITERS \
   --algorithms $ALGS \
   --instances "${solomon_insts[@]}" \
+  --ortools-time-limit $ORTOOLS_LIMIT \
   --no-checkpoint
 
 # ── 2. HOMBERGER BENCHMARKS (200 to 1000 Customers) ──────────────────────
@@ -57,6 +59,7 @@ for size in 200 400 600 800 1000; do
     --hybrid-iters $ITERS \
     --algorithms $ALGS \
     --instances "${insts[@]}" \
+    --ortools-time-limit $ORTOOLS_LIMIT \
     --no-checkpoint
 done
 

@@ -80,7 +80,7 @@ def _route_ok(route, demands, capacity, ready, due, service, dist) -> bool:
 
 
 class Plan:
-    __slots__ = ("routes", "inst", "_cost", "_ok", "algo")
+    __slots__ = ("routes", "inst", "_cost", "_ok", "algo", "_route_arrays")
 
     def __init__(self, routes: list[list[int]], inst: Inst, algo: str = ""):
         self.routes = [r for r in routes if r]
@@ -88,11 +88,18 @@ class Plan:
         self._cost: float | None = None
         self._ok: bool | None = None
         self.algo = algo
+        self._route_arrays: list[np.ndarray] | None = None
+
+    @property
+    def route_arrays(self) -> list[np.ndarray]:
+        if self._route_arrays is None:
+            self._route_arrays = [np.array(r, np.int64) for r in self.routes]
+        return self._route_arrays
 
     @property
     def cost(self) -> float:
         if self._cost is None:
-            self._cost = sum(_route_cost(np.array(r, np.int64), self.inst.dist) for r in self.routes)
+            self._cost = sum(_route_cost(arr, self.inst.dist) for arr in self.route_arrays)
         return self._cost
 
     @property
@@ -100,7 +107,7 @@ class Plan:
         if self._ok is None:
             self._ok = all(
                 _route_ok(
-                    np.array(r, np.int64),
+                    arr,
                     self.inst.demands,
                     self.inst.capacity,
                     self.inst.ready_times,
@@ -108,7 +115,7 @@ class Plan:
                     self.inst.service_times,
                     self.inst.dist,
                 )
-                for r in self.routes
+                for arr in self.route_arrays
             )
         return self._ok
 
@@ -146,6 +153,7 @@ class Plan:
     def invalidate(self) -> None:
         self._cost = None
         self._ok = None
+        self._route_arrays = None
 
 
 def _invalidate(plan: Plan) -> Plan:
@@ -208,5 +216,5 @@ def _fleet_fill(plan: Plan) -> float:
     if not plan.routes:
         return 0.0
     capacity = max(plan.inst.capacity, 1)
-    fills = [plan.inst.demands[np.array(r, np.int64)].sum() / capacity for r in plan.routes]
+    fills = [plan.inst.demands[arr].sum() / capacity for arr in plan.route_arrays]
     return float(np.mean(fills))

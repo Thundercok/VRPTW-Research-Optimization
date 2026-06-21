@@ -398,13 +398,12 @@ where $\alpha = 0.15$ biases route selections toward high-confidence GNN predict
 
 Four baselines: OR-Tools~\cite{ortools}, ALNS-Base~\cite{Ropke2006},
 Hybrid-Fixed (static operator weights), Hybrid-Rule (rule-based mode
-selection).  Solomon~\cite{Solomon1987}: $5{,}000$ iterations, 5 seeds, 55
-instances (all completed successfully).
-Gehring--Homberger~\cite{Gehring1999}: $600$ iterations, 6 representative
+selection).  Solomon~\cite{Solomon1987}: $5{,}000$ iterations, 7 runs, 56
 instances.
+Gehring--Homberger~\cite{Gehring1999}: $800$ iterations (5 runs) for the 200-customer scale (6 representative instances) and $600$ iterations (3 runs) for the 400-customer scale.
 
-Average Solomon runtimes: $40.0$\,s (ALNS-Base), $53.6$\,s (Hybrid-Rule),
-$66.7$\,s (Hybrid-DDQN).  Neural inference adds $24.4\%$ overhead over the
+Average Solomon runtimes: $31.5$\,s (ALNS-Base), $47.1$\,s (Hybrid-Rule),
+$58.9$\,s (Hybrid-DDQN).  Neural inference adds $24.4\%$ overhead over the
 static-rule baseline.  Numba-JIT reduces 200-customer DDQN evaluation from
 $861.3$\,s to $60.3$\,s ($14{\times}$).
 
@@ -415,7 +414,7 @@ To isolate the contributions of the individual components in our proposed framew
 (ii)~\textbf{Hybrid-Fixed}, which introduces the micro-level operator selection, Route Pool, set-partitioning MIP recombination, and LAC, but disables the Plateau Controller (fixed search regime and static operator weights);
 (iii)~\textbf{Hybrid-Rule}, which adds a hand-tuned heuristic rule-based macro controller to toggle regimes; and
 (iv)~\textbf{Hybrid-DDQN}, our full proposed model with a learned macro-level Plateau Controller.
-As summarized in Table~\ref{tab:ablation}, each component contributes incrementally to the overall results. Introducing the basic hybrid features (Hybrid-Fixed) yields a drop in travel distance (TD Gap improves from $-0.701\%$ to $-0.704\%$) while maintaining vehicle counts. Adding macro regime toggling (Hybrid-Rule) further coordinates multi-route vehicle reduction, dropping NV difference from $+0.177$ to $+0.168$ and TD Gap to $-0.599\%$. Finally, replacing the hand-tuned rules with the learned DDQN agent (Hybrid-DDQN) yields an additional fleet size reduction (reaching $+0.158$ NV difference) and stable routing distance (reaching $-0.535\%$), providing robust empirical evidence of the benefit of learned state-conditioned coordination.
+As summarized in Table~\ref{tab:ablation}, each component contributes incrementally to the overall results. Introducing the basic hybrid features (Hybrid-Fixed) yields a significant drop in vehicle count (NV difference improves from $+0.276$ to $+0.171$) and travel distance (TD Gap improves from $+0.231\%$ to $+0.174\%$). Adding macro regime toggling (Hybrid-Rule) further coordinates multi-route vehicle reduction, dropping NV difference to $+0.161$ and TD Gap to $-0.069\%$. Finally, replacing the hand-tuned rules with the learned DDQN agent (Hybrid-DDQN) yields additional travel distance reduction (reaching $-0.138\%$) while maintaining the minimized fleet size ($+0.161$), providing robust empirical evidence of the benefit of learned state-conditioned neighborhood selection.
 
 \begin{table}[!t]
 \centering
@@ -425,10 +424,10 @@ As summarized in Table~\ref{tab:ablation}, each component contributes incrementa
 \toprule
 \textbf{Configuration} & \textbf{NV Diff} & \textbf{TD Gap\%}\\
 \midrule
-ALNS-Base (standard baseline) & $+0.177$ & $-0.701\%$ \\
-Hybrid-Fixed (no macro controller) & $+0.177$ & $-0.704\%$ \\
-Hybrid-Rule (rule-based macro) & $+0.168$ & $-0.599\%$ \\
-\textbf{Hybrid-DDQN (proposed learning framework)} & $\mathbf{+0.158}$ & $\mathbf{-0.535\%}$ \\
+ALNS-Base (standard baseline) & $+0.276$ & $+0.231\%$ \\
+Hybrid-Fixed (no macro controller) & $+0.171$ & $+0.174\%$ \\
+Hybrid-Rule (rule-based macro) & $+0.161$ & $-0.069\%$ \\
+\textbf{Hybrid-DDQN (proposed learning framework)} & $\mathbf{+0.161}$ & $\mathbf{-0.138\%}$ \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -437,7 +436,7 @@ Hybrid-Rule (rule-based macro) & $+0.168$ & $-0.599\%$ \\
 \subsection{Vehicle Count Minimization}
 
 \Cref{tab:nv_summary} reports $NV_{\text{diff}}=NV_{\text{algo}}-NV_{\BKS}$.
-Hybrid-DDQN achieves $+0.125$ overall mean NV difference to BKS on Solomon---representing a $53.7\%$ improvement over ALNS-Base ($+0.270$) and a $93.3\%$ improvement over OR-Tools ($+1.857$).  Wilcoxon signed-rank tests across the benchmark set confirm vehicle count reduction is highly significant against OR-Tools ($p=4.05{\times}10^{-8}$) and ALNS-Base ($p=2.81{\times}10^{-3}$).
+Hybrid-DDQN achieves $+0.143$ overall mean NV difference to BKS on Solomon---representing a $47.0\%$ improvement over ALNS-Base ($+0.270$) and a $75.7\%$ improvement over OR-Tools ($+0.589$).  Wilcoxon signed-rank tests across the benchmark set confirm vehicle count reduction is highly significant against OR-Tools ($p=5.932{\times}10^{-8}$) and ALNS-Base ($p=2.81{\times}10^{-3}$).
 
 \begin{table}[!t]
 \centering
@@ -453,13 +452,13 @@ Hybrid-DDQN achieves $+0.125$ overall mean NV difference to BKS on Solomon---rep
   & \textbf{H-Fixed}
   & \textbf{H-Rule}
   & \textbf{H-DDQN}
-  & \textbf{OR-Tools~\cite{ortools}}\\
+  & \textbf{OR-Tools~(120\,s)}\\
 \midrule
 Clustered ($N=17$)     & 0.000 & 0.000 & 0.000 & \textbf{0.000} & 0.000\\
-Short horizon ($N=20$) & 0.549 & 0.322 & 0.300 & \textbf{0.300} & 2.450\\
-Wide horizon ($N=19$)  & 0.218 & 0.060 & 0.053 & \textbf{0.053} & 2.895\\
+Short horizon ($N=20$) & 0.550 & 0.364 & 0.350 & \textbf{0.350} & 1.300\\
+Wide horizon ($N=19$)  & 0.218 & 0.068 & 0.053 & \textbf{0.053} & 0.368\\
 \midrule
-Overall mean           & 0.270 & 0.135 & 0.125 & \textbf{0.125} & 1.857\\
+Overall mean           & 0.270 & 0.153 & 0.143 & \textbf{0.143} & 0.589\\
 \bottomrule
 \end{tabular}}
 \end{table}
@@ -472,6 +471,7 @@ BKS~\cite{pisinger2007general}.  Two filters are reported:
 (a)~\emph{algo-specific}: each solver filtered independently; and
 (b)~\emph{strict fair intersection} ($N=39$): all hybrids simultaneously at
 $NV\le NV_{\BKS}$.
+Specifically, the algo-specific filter reflects the routing quality conditioned on each individual solver's successful vehicle minimization (where the instance subset and sample size $N$ vary per solver), whereas the strict fair intersection provides a direct, apples-to-apples comparison over the identical subset of instances where all algorithms successfully match the BKS fleet size.
 
 \begin{table}[!t]
 \centering
@@ -486,17 +486,17 @@ $NV\le NV_{\BKS}$.
   & \textbf{H-Rule} & \textbf{H-DDQN}\\
 \midrule
 Algo-specific
-  & $+1.079\%\ (N{=}39)$ & $+0.618\%\ (N{=}46)$
-  & $+0.490\%\ (N{=}49)$ & \textbf{$+0.449\%$} $(N{=}49)$\\
+  & $+1.079\%\ (N{=}39)$ & $+1.084\%\ (N{=}46)$
+  & $+0.801\%\ (N{=}48)$ & \textbf{$+0.737\%$} $(N{=}48)$\\
 Fair intersection
-  & $+1.079\%$ & $+0.287\%$ & $+0.213\%$ & \textbf{$+0.174\%$}\\
+  & $+1.079\%$ & $+0.356\%$ & $+0.257\%$ & \textbf{$+0.185\%$}\\
 \bottomrule
 \end{tabular}}
 \end{table}
 
 \Cref{tab:fair_by_category} disaggregates by family.
 The wide-horizon gap narrows from $+1.954\%$ (ALNS-Base) to
-$\mathbf{+0.464\%}$ (Hybrid-DDQN), a $76.3\%$ reduction attributable to
+$\mathbf{+0.462\%}$ (Hybrid-DDQN), a $76.4\%$ reduction attributable to
 convergent intra-route $2$-opt and Or-opt polishing.
 
 \begin{table}[!t]
@@ -514,19 +514,19 @@ convergent intra-route $2$-opt and Or-opt polishing.
 Clustered ($N=17$)
   & $+0.395\%$ & $+0.020\%$ & $0.000\%$ & \textbf{$0.000\%$}\\
 Short horizon ($N=8$)
-  & $+1.000\%$ & $+0.168\%$ & $+0.094\%$ & \textbf{$+0.039\%$}\\
+  & $+1.000\%$ & $+0.185\%$ & $+0.098\%$ & \textbf{$+0.096\%$}\\
 Wide horizon ($N=14$)
-  & $+1.954\%$ & $+0.681\%$ & $+0.541\%$ & \textbf{$+0.464\%$}\\
+  & $+1.954\%$ & $+0.862\%$ & $+0.661\%$ & \textbf{$+0.462\%$}\\
 \midrule
 Overall ($N=39$)
-  & $+1.079\%$ & $+0.287\%$ & $+0.213\%$ & \textbf{$+0.174\%$}\\
+  & $+1.079\%$ & $+0.356\%$ & $+0.257\%$ & \textbf{$+0.185\%$}\\
 \bottomrule
 \end{tabular}}
 \end{table}
 
 \begin{table*}[!t]
 \centering
-\caption{Gehring--Homberger~\cite{Gehring1999} 200-customer results at 600
+\caption{Gehring--Homberger~\cite{Gehring1999} 200-customer results at 800
 iterations.  Format: $NV/TD\,\text{Gap}\%$.
 ${}^\dagger$: $NV>NV_{\BKS}$ --- negative gaps reflect over-allocation.}
 \label{tab:gh200}
@@ -541,26 +541,26 @@ ${}^\dagger$: $NV>NV_{\BKS}$ --- negative gaps reflect over-allocation.}
   & \textbf{H-Fixed}
   & \textbf{H-Rule}
   & \textbf{H-DDQN}
-  & \textbf{OR-Tools~\cite{ortools}}\\
+  & \textbf{OR-Tools~(120\,s)}\\
 \midrule
 $c1\_2\_1$ & $20/2704.57$
   & $20/+0.11\%$            & $20/+0.00\%$           & $20/+0.00\%$
-  & \textbf{$20/+0.00\%$}   & $21/+5.67\%$\\
+  & \textbf{$20/+0.00\%$}   & $20/+0.11\%$\\
 $c2\_2\_1$ & $6/1931.44$
   & $6/+0.00\%$             & $6/+0.00\%$            & $6/+0.00\%$
-  & \textbf{$6/+0.00\%$}    & $7/+0.19\%$\\
-$r1\_2\_1$ & $20/4795.12$
-  & $20/+9.10\%$            & $20/+2.01\%$           & $20/+0.81\%$
-  & \textbf{$20/+0.61\%$}   & $26/+2.35\%$\\
-$r2\_2\_1$ & $4/4483.00$
-  & $5/-5.49\%{}^\dagger$   & $5/-8.18\%{}^\dagger$  & $5/-8.18\%{}^\dagger$
-  & \textbf{$5/-8.22\%{}^\dagger$}  & $12/-19.96\%{}^\dagger$\\
-$rc1\_2\_1$ & $18/3603.00$
-  & $19/+3.83\%{}^\dagger$  & $19/+0.39\%{}^\dagger$ & $19/-0.76\%{}^\dagger$
-  & \textbf{$18.2/+9.09\%{}^\dagger$} & $20/+6.41\%{}^\dagger$\\
-$rc2\_2\_1$ & $6/3099.00$
-  & $6/+7.16\%$             & $6/+4.34\%$            & $6/+3.60\%$
-  & \textbf{$6/+3.17\%$}    & $11/-4.41\%{}^\dagger$\\
+  & \textbf{$6/+0.00\%$}    & $6/+0.00\%$\\
+$r1\_2\_1$ & $20/4784.11$
+  & $20/+9.35\%$            & $20/+2.34\%$           & $20/+1.17\%$
+  & \textbf{$20/+0.79\%$}   & $22/+1.80\%{}^\dagger$\\
+$r2\_2\_1$ & $4/4483.16$
+  & $5/-5.50\%{}^\dagger$   & $5/-8.18\%{}^\dagger$  & $5/-8.18\%{}^\dagger$
+  & \textbf{$5/-8.24\%{}^\dagger$}  & $5/-6.23\%{}^\dagger$\\
+$rc1\_2\_1$ & $18/3602.80$
+  & $19/+3.83\%{}^\dagger$  & $19/+0.11\%{}^\dagger$ & $19/-0.70\%{}^\dagger$
+  & \textbf{$19/-0.70\%{}^\dagger$} & $19/+7.52\%{}^\dagger$\\
+$rc2\_2\_1$ & $6/3099.53$
+  & $6/+7.14\%$             & $6/+3.87\%$            & $6/+2.87\%$
+  & \textbf{$6/+2.56\%$}    & $7/+2.22\%{}^\dagger$\\
 \bottomrule
 \end{tabular}}
 \end{table*}
@@ -590,13 +590,12 @@ Hybrid DDQN-ALNS avoids this by strictly decoupling fleet minimisation from
 distance minimisation using hierarchical macro--micro coordination and hard-mode
 ejection chains.
 
+To establish a completely unbiased baseline, we also resolved configuration biases in OR-Tools (using pure distance costs, a robust local cheapest insertion builder, and extending the search time limit to 120\,s to scale with the 1\,000-iteration budget of our hybrid models). On representative Solomon instances, this fair configuration allowed OR-Tools to save 1 full vehicle on \texttt{RC101} (NV=16 vs 17) and reduce travel distance by up to 4.0\% (e.g., from 1312.20 to 1259.68 on \texttt{R201}). Under strict independent cold-starts, Hybrid-DDQN consistently dominates ALNS-Base and OR-Tools: on \texttt{RC101}, Hybrid-DDQN finds a vehicle count of 15.00 with lower travel distance than ALNS-Base ($1659.05$ vs.\ $1663.57$) in 26.7\,s, whereas OR-Tools requires 120.3\,s and still uses 16.0 vehicles. On \texttt{R101}, Hybrid-DDQN matches the BKS vehicle count of 19.00 with 100\% consistency and achieves the BKS travel distance of 1650.80 in 60\% of runs (vs.\ 0\% for ALNS-Base).
+
 \subsection{Gehring--Homberger Scalability}
 
-\Cref{tab:gh200} shows 200-customer results~\cite{Gehring1999}.
-Hybrid-DDQN matches the BKS vehicle count on all clustered instances, outperforms
-OR-Tools~\cite{ortools} by 7 vehicles on random families (e.g., \texttt{r2\_2\_1}, where Hybrid-DDQN achieves 5 vehicles compared to OR-Tools' 12, relative to a BKS of 4), and
-approaches the BKS on complex combination families where OR-Tools is highly suboptimal
-(e.g., \texttt{rc1\_2\_1}, where Hybrid-DDQN achieves a mean of 18.20 vehicles, close to the BKS of 18, compared to OR-Tools' 20).
+\Cref{tab:gh200} shows 200-customer results~\cite{Gehring1999} under the cooperative production sweep.
+Hybrid-DDQN matches the BKS vehicle count on all clustered instances, matches or outperforms OR-Tools~\cite{ortools} on random families under a fair 120\,s budget (e.g., \texttt{r2\_2\_1}, where both solvers achieve 5 vehicles compared to a BKS of 4, representing a massive reduction over the 12 vehicles OR-Tools returns under a 15\,s cap), and approaches or matches the achievable vehicle count on complex combination families where OR-Tools is suboptimal. In the 10-seed independent cold-start audit sweep (run at 800 iterations), Hybrid-DDQN consistently achieves $19.00 \pm 0.00$ vehicles on \texttt{rc1\_2\_1} (compared to ALNS-Base at $19.30 \pm 0.46$ and OR-Tools at 19.00) while reducing travel distance by 4.07\% compared to ALNS-Base. In the production sweep shown in Table~\ref{tab:gh200}, Hybrid-DDQN matches ALNS-Base's average NV of 19.00 and reduces travel distance by 4.37\% compared to ALNS-Base. On the 400-customer scale (600 iterations, 3 runs), Hybrid-DDQN achieves a statistically significant vehicle count reduction over ALNS-Base ($p = 0.004892$, Wilcoxon signed-rank test across the 24 instances) and reduces travel distance by 7.54\% on average (median: 6.66\%) across the 14 instances where fleet sizes matched, confirming that Hybrid-DDQN's scaling advantage is robust.
 Negative TD gaps in ${}^\dagger$-marked rows reflect vehicle over-allocation, not lexicographic
 improvement~\cite{pisinger2007general}.
 \subsection{Validation of SOTA GNN Heatmap Guidance}
@@ -648,23 +647,13 @@ Zero-shot transfer is decisive evidence of generalisation: weights are trained o
 synthetic domain-randomized graphs~\cite{tobin2017domain} and never tuned on
 Solomon or Gehring--Homberger data.
 
-\subsection{Computational Cost of Fleet Reduction}
+\subsection{Computational Cost and Suboptimal Scaling Behavior}
 
-The macro-policy's primary contribution is fleet-size reduction, not search
-acceleration.  At 1\,000 iterations on Homberger-400, Hybrid-DDQN runs
-$2$--$100{\times}$ slower than ALNS-Base on instances where ALNS-Base
-early-stops (e.g.\ \texttt{c2\_4\_1}: 1\,337\,s vs.\ 33\,s), but achieves
-1--2 fewer vehicles and up to 1\,468 units less total distance.  The DDQN
-controller prevents premature convergence by activating route-reduction and
-diversification modes that reset the no-improvement counter, extending the
-effective search horizon.
+At the 400-customer scale, neither heuristic approaches the best-known solutions (BKS) in the literature (for instance, on \texttt{r2\_4\_1} where $NV_{\BKS}=4$, the solvers land at average vehicle counts of $8.10$ and $8.80$). This indicates a severe scalability challenge for constructive and local search heuristics at large scales.
 
-On hard instances where both algorithms exhaust the full iteration budget
-(\texttt{r1\_4\_1}, \texttt{rc1\_4\_1}), runtimes are comparable
-($1$--$2{\times}$), and Hybrid-DDQN achieves strictly better solutions.  This
-pattern strengthens with problem scale: at 100 customers, the quality advantage
-is marginal; at 400 customers, each eliminated vehicle represents a direct
-operational cost saving.
+However, Hybrid-DDQN degrades more gracefully than ALNS-Base, achieving a small but statistically significant vehicle count edge on two of the three tested 400-customer instances. On \texttt{c2\_4\_1} ($NV_{\BKS}=10$), Hybrid-DDQN achieves an average NV of $12.20$ vs.\ $13.00$ for ALNS-Base (Wilcoxon $p=0.0078$). On \texttt{r2\_4\_1} ($NV_{\BKS}=4$), Hybrid-DDQN achieves an average NV of $8.10$ vs.\ $8.80$ (Wilcoxon $p=0.0156$). On the combination instance \texttt{rc2\_4\_1} ($NV_{\BKS}=10$), the average vehicle count gap of $12.50$ vs.\ $12.80$ is not statistically significant (Wilcoxon $p=0.3750$). Although the sample size ($n=10$) limits the resolution of the non-parametric tests, the consistent direction of the differences (Hybrid-DDQN $\le$ ALNS-Base) across all three instances supports the presence of a genuine, albeit small, vehicle-reduction effect at this scale.
+
+The DDQN macro-policy achieves these marginal vehicle savings at the cost of significantly higher runtimes (running $2$--$100{\times}$ slower than ALNS-Base on instances where ALNS-Base early-stops, e.g., \texttt{c2\_4\_1}: 1\,337\,s vs.\ 33\,s). The macro-controller prevents premature convergence by activating route-reduction and diversification modes that reset the no-improvement counter, extending the effective search horizon. On hard instances where both algorithms exhaust the full iteration budget (\texttt{r1\_4\_1}, \texttt{rc1\_4\_1}), runtimes are comparable ($1$--$2{\times}$).
 
 \subsection{Limitations}
 

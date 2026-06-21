@@ -1571,11 +1571,11 @@ def run_ortools(inst: Inst, cfg: Config) -> tuple[Plan | None, float]:
     dist_mat = np.round(inst.dist * scale).astype(np.int64)
     serv_int = np.round(inst.service_times * scale).astype(np.int64)
 
-    # Pre-compute the full transit matrix (dist + service time) as a 2D list of integers.
-    # This avoids expensive Python-to-C++ callbacks and GIL locks in the solver loop.
-    transit_matrix = (dist_mat + serv_int[:, None]).tolist()
-    transit_idx = routing.RegisterTransitMatrix(transit_matrix)
-    routing.SetArcCostEvaluatorOfAllVehicles(transit_idx)
+    # 1. Cost Evaluator: pure travel distance (avoids GLS search bias from service times)
+    cost_matrix = dist_mat.tolist()
+    cost_idx = routing.RegisterTransitMatrix(cost_matrix)
+    routing.SetArcCostEvaluatorOfAllVehicles(cost_idx)
+    
     # Set a large fixed cost per vehicle to ensure OR-Tools prioritizes vehicle count minimization (fleet size)
     routing.SetFixedCostOfAllVehicles(int(100000 * scale))
     demands_int = inst.demands.astype(int)
@@ -1585,6 +1585,10 @@ def run_ortools(inst: Inst, cfg: Config) -> tuple[Plan | None, float]:
 
     demand_idx = routing.RegisterUnaryTransitCallback(demand_cb)
     routing.AddDimensionWithVehicleCapacity(demand_idx, 0, [int(inst.capacity)] * n_vehicles, True, "Capacity")
+    
+    # 2. Time Dimension: travel distance + service time (required for time windows)
+    transit_matrix = (dist_mat + serv_int[:, None]).tolist()
+    transit_idx = routing.RegisterTransitMatrix(transit_matrix)
     routing.AddDimension(
         transit_idx, int(np.round(inst.horizon * scale)), int(np.round(inst.horizon * scale)), False, "Time"
     )
@@ -1598,7 +1602,7 @@ def run_ortools(inst: Inst, cfg: Config) -> tuple[Plan | None, float]:
         routing.AddVariableMinimizedByFinalizer(time_dim.CumulVar(routing.Start(v)))
         routing.AddVariableMinimizedByFinalizer(time_dim.CumulVar(routing.End(v)))
     params = pywrapcp.DefaultRoutingSearchParameters()
-    params.first_solution_strategy = routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC
+    params.first_solution_strategy = routing_enums_pb2.FirstSolutionStrategy.LOCAL_CHEAPEST_INSERTION
     params.local_search_metaheuristic = routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH
     params.time_limit.seconds = int(cfg.ortools_time_limit)
     params.log_search = False

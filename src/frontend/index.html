@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-theme="light">
+<html lang="en" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -20,6 +20,7 @@
     <script type="importmap">
       {
         "imports": {
+          "ogl": "https://esm.sh/ogl@1.0.11",
           "firebase/app": "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js",
           "firebase/auth": "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js",
           "firebase/firestore": "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js",
@@ -28,7 +29,7 @@
       }
     </script>
 
-    <link rel="stylesheet" href="css/landing.css?v=2" />
+    <link rel="stylesheet" href="./css/landing.css" />
   </head>
 
   <body>
@@ -121,388 +122,363 @@
     </nav>
 
     <main id="main">
-      <!-- Story Scroll Section -->
-      <section class="scroll-showcase-section" id="showcase">
-        <div class="scroll-track">
-          <div class="sticky-viewport">
-            <div class="showcase-grid">
-              <!-- Left Side: Copy Story cards stacked absolutely -->
-              <div class="story-content-panel">
-                <div class="story-cards-container">
-                  <!-- Act I: Hero Card -->
-                  <div class="story-card active" id="card-act1">
-                    <div class="nami-wordmark">
-                      <span class="letter">N</span>
-                      <span class="letter">A</span>
-                      <span class="letter">M</span>
-                      <span class="letter">I</span>
-                      <span class="letter">*</span>
-                    </div>
-                    <div class="story-card-info">
-                      <div class="act-badge">Act I: The Objective</div>
-                      <h1 class="story-title" data-i18n="act1.title">
-                        What's the fastest way to deliver to 100 addresses?
-                      </h1>
-                      <p class="story-desc" data-i18n="act1.desc">
-                        A single vehicle on a simple route is easy. But scaling delivery operations exposes exponential
-                        complexity.
-                      </p>
-                      <div class="scroll-hint">
-                        <span class="mouse-icon"><span class="mouse-wheel"></span></span>
-                        <span>Scroll to begin routing</span>
-                      </div>
-                    </div>
-                  </div>
+      <!-- Fullscreen fixed background 3D WebGL diorama container -->
+      <div class="diorama-bg-container">
+        <div class="canvas-grid-bg"></div>
+        <canvas id="animation-canvas"></canvas>
+      </div>
 
-                  <!-- Act II: The Problem -->
-                  <div class="story-card" id="card-act2">
-                    <div class="nami-wordmark">
-                      <span class="letter revealed">N</span>
-                      <span class="letter revealed">A</span>
-                      <span class="letter revealed">M</span>
-                      <span class="letter revealed">I</span>
-                      <span class="letter revealed">*</span>
-                    </div>
-                    <div class="story-card-info">
-                      <div class="act-badge error">Act II: The Chaos</div>
-                      <h2 class="story-title" data-i18n="act2.title">A single route quickly shatters.</h2>
-                      <p class="story-desc" data-i18n="act2.desc">
-                        Every address introduces narrow time windows, load capacity limits, service times, and vehicle
-                        constraints. Classical heuristics easily stagnate in sub-optimal local basins.
-                      </p>
-                    </div>
-                  </div>
+      <!-- Hero Header Section -->
+      <section class="hero-section">
+        <div class="container hero-container">
+          <div class="hero-badge">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right: 4px;">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 6v6l4 2" />
+            </svg>
+            <span data-i18n="hero.badge">Solomon Benchmark Optimizer</span>
+          </div>
+          <h1 class="hero-title">
+            <span data-i18n="hero.title.nami">NAMI:</span>
+            <span data-i18n="hero.title.desc">Plateau-Aware Deep RL Routing Engine</span>
+          </h1>
+          <p class="hero-subtitle" data-i18n="hero.subtitle">
+            Combining Deep Reinforcement Learning with Adaptive Large Neighborhood Search to solve Vehicle Routing Problems with Time Windows in milliseconds.
+          </p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="app.html" data-i18n="hero.cta.start">Launch Solver</a>
+            <a class="btn btn-secondary" href="#showcase" data-i18n="hero.cta.demo">Explore Demo</a>
+          </div>
+        </div>
+      </section>
 
-                  <!-- Act III: The Solver -->
-                  <div class="story-card" id="card-act3">
-                    <div class="nami-wordmark">
-                      <span class="letter revealed">N</span>
-                      <span class="letter revealed">A</span>
-                      <span class="letter revealed">M</span>
-                      <span class="letter revealed">I</span>
-                      <span class="letter revealed">*</span>
-                    </div>
-                    <div class="story-card-info">
-                      <div class="act-badge success">Act III: Neural Optimization</div>
-                      <h2 class="story-title" data-i18n="act3.title">NAMI's neural controller takes over.</h2>
-                      <p class="story-desc" data-i18n="act3.desc">
-                        A Double Deep Q-Network (DDQN) agent analyzes the search trajectory in real-time, intelligently
-                        selecting destroy-and-repair ALNS operators to break stagnation patterns.
-                      </p>
-                    </div>
-                  </div>
+      <!-- Diorama Interactive Showcase -->
+      <section class="showcase-section" id="showcase">
+        <div class="container showcase-container">
+          <!-- Floating horizontal pill showcase navigation bar -->
+          <div class="showcase-tabs-floating">
+            <div class="showcase-tabs" role="tablist" aria-label="Interactive demo acts">
+              <button class="showcase-tab-btn active" role="tab" aria-selected="true" aria-controls="card-act1" data-act="1">
+                <span class="tab-badge-num">01</span>
+                <span class="tab-label-text" data-i18n="tab1.label">The Objective</span>
+              </button>
+              <button class="showcase-tab-btn" role="tab" aria-selected="false" aria-controls="card-act2" data-act="2">
+                <span class="tab-badge-num">02</span>
+                <span class="tab-label-text" data-i18n="tab2.label">The Chaos</span>
+              </button>
+              <button class="showcase-tab-btn" role="tab" aria-selected="false" aria-controls="card-act3" data-act="3">
+                <span class="tab-badge-num">03</span>
+                <span class="tab-label-text" data-i18n="tab3.label">Neural Operator</span>
+              </button>
+              <button class="showcase-tab-btn" role="tab" aria-selected="false" aria-controls="card-act4" data-act="4">
+                <span class="tab-badge-num">04</span>
+                <span class="tab-label-text" data-i18n="tab4.label">Optimal Dispatch</span>
+              </button>
+            </div>
+          </div>
 
-                  <!-- Act IV: The Result -->
-                  <div class="story-card" id="card-act4">
-                    <div class="nami-wordmark">
-                      <span class="letter revealed">N</span>
-                      <span class="letter revealed">A</span>
-                      <span class="letter revealed">M</span>
-                      <span class="letter revealed">I</span>
-                      <span class="letter revealed">*</span>
-                    </div>
-                    <div class="story-card-info">
-                      <div class="act-badge info">Act IV: The Outcome</div>
-                      <h2 class="story-title" data-i18n="act4.title">Optimal dispatch. Delivered.</h2>
-                      <p class="story-desc" data-i18n="act4.desc">
-                        Feasible, balanced paths are generated in milliseconds. Dispatchers receive clean, conflict-free
-                        delivery plans verified against all Solomon criteria.
-                      </p>
-                      <div class="story-cta-group">
-                        <a class="btn btn-primary" href="app.html" data-i18n="cta.demo">Open Planner App</a>
-                        <a class="btn btn-secondary" href="#benchmarks">See Benchmarks</a>
-                      </div>
-                    </div>
-                  </div>
+          <!-- Left Column: Story card overlays -->
+          <div class="showcase-overlay-cards">
+            <!-- Description Cards Wrapper -->
+            <div class="story-card-wrapper">
+              <!-- Act I -->
+              <div class="story-card-item active" id="card-act1" role="tabpanel">
+                <div class="act-badge" data-i18n="act1.badge">Act I: The Objective</div>
+                <div class="story-title" data-i18n="act1.title">What's the fastest way to deliver to 100 addresses?</div>
+                <div class="story-desc" data-i18n="act1.desc">
+                  A single vehicle on a simple route is easy. But scaling delivery operations exposes exponential complexity.
                 </div>
               </div>
 
-              <!-- Right Side: Clean Graphics Canvas -->
-              <div class="story-graphics-panel">
-                <div class="canvas-wrapper">
-                  <!-- Subtle Grid Pattern Background -->
-                  <div class="canvas-grid-bg"></div>
-
-                  <svg id="animation-canvas" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid meet">
-                    <defs>
-                      <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-                        <feGaussianBlur stdDeviation="4" result="blur" />
-                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                      </filter>
-                      <linearGradient id="headlight-gradient" x1="0%" y1="50%" x2="100%" y2="50%">
-                        <stop offset="0%" stop-color="#fef08a" stop-opacity="0.85" />
-                        <stop offset="100%" stop-color="#fef08a" stop-opacity="0" />
-                      </linearGradient>
-                    </defs>
-
-                    <!-- Routes drawn between nodes -->
-                    <g id="route-paths-group"></g>
-
-                    <!-- Hovering routes and paths group -->
-                    <g id="routes-hover-group"></g>
-
-                    <!-- Scattered Customer Nodes -->
-                    <g id="nodes-group"></g>
-
-                    <!-- Vehicles / Trucks animated pointers -->
-                    <g id="vehicles-group"></g>
-                  </svg>
-
-                  <!-- Live Stats HUD that reveals in Act IV -->
-                  <div class="hud-stats-panel" id="hud-panel">
-                    <div class="hud-header">
-                      <span class="hud-dot green"></span>
-                      <span class="hud-title">NAMI Solver HUD (Solomon RC101)</span>
-                    </div>
-                    <div class="hud-body">
-                      <div class="hud-stat-item">
-                        <span class="hud-label">Distance Saved</span>
-                        <span class="hud-value positive">-18.4%</span>
-                      </div>
-                      <div class="hud-stat-item">
-                        <span class="hud-label">On-Time Rate</span>
-                        <span class="hud-value">100.0%</span>
-                      </div>
-                      <div class="hud-stat-item">
-                        <span class="hud-label">Compute Time</span>
-                        <span class="hud-value accent">12.6ms</span>
-                      </div>
-                      <div class="hud-stat-item">
-                        <span class="hud-label">Active Fleets</span>
-                        <span class="hud-value">4 / 6</span>
-                      </div>
-                    </div>
-
-                    <!-- Real-time solver log overlay -->
-                    <div class="hud-console">
-                      <div class="console-line text-muted">&gt; Initializing Solomon benchmark...</div>
-                      <div class="console-line text-muted">&gt; Starting DDQN-ALNS hybrid controller</div>
-                      <div class="console-line text-success">
-                        &gt; [Stagnation Detected] DDQN fired 'Cluster' destroy
-                      </div>
-                      <div class="console-line text-success">&gt; Cost reduced: 1284.2 -&gt; 1048.9</div>
-                      <div class="console-line text-info">&gt; Solution locked. Feasibility checks: OK.</div>
-                    </div>
-                  </div>
+              <!-- Act II -->
+              <div class="story-card-item" id="card-act2" role="tabpanel">
+                <div class="act-badge error" data-i18n="act2.badge">Act II: The Chaos</div>
+                <div class="story-title" data-i18n="act2.title">A single route quickly shatters.</div>
+                <div class="story-desc" data-i18n="act2.desc">
+                  Every address introduces narrow time windows, load capacity limits, service times, and vehicle constraints. Classical heuristics easily stagnate in sub-optimal local basins.
                 </div>
               </div>
+
+              <!-- Act III -->
+              <div class="story-card-item" id="card-act3" role="tabpanel">
+                <div class="act-badge success" data-i18n="act3.badge">Act III: Neural Optimization</div>
+                <div class="story-title" data-i18n="act3.title">NAMI's neural controller takes over.</div>
+                <div class="story-desc" data-i18n="act3.desc">
+                  A Double Deep Q-Network (DDQN) agent analyzes the search trajectory in real-time, intelligently selecting destroy-and-repair ALNS operators to break stagnation patterns.
+                </div>
+              </div>
+
+              <!-- Act IV -->
+              <div class="story-card-item" id="card-act4" role="tabpanel">
+                <div class="act-badge info" data-i18n="act4.badge">Act IV: The Outcome</div>
+                <div class="story-title" data-i18n="act4.title">Optimal dispatch. Delivered.</div>
+                <div class="story-desc" data-i18n="act4.desc">
+                  Feasible, balanced paths are generated in milliseconds. Dispatchers receive clean, conflict-free delivery plans verified against all Solomon criteria.
+                </div>
+                <div class="story-cta-group">
+                  <a class="btn btn-primary" href="app.html" data-i18n="cta.demo">Open Planner App</a>
+                  <a class="btn btn-secondary" href="#benchmarks" data-i18n="cta.benchmarks">See Benchmarks</a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Floating Widgets: Live Stats HUD -->
+          <div class="hud-stats-panel" id="hud-panel">
+            <div class="hud-header">
+              <span class="hud-dot"></span>
+              <span class="hud-title">NAMI Solver HUD (Solomon RC101)</span>
+            </div>
+            <div class="hud-body">
+              <div class="hud-stat-item">
+                <span class="hud-label" data-i18n="hud.saved">Distance Saved</span>
+                <span class="hud-value positive">-18.4%</span>
+              </div>
+              <div class="hud-stat-item">
+                <span class="hud-label" data-i18n="hud.ontime">On-Time Rate</span>
+                <span class="hud-value">100.0%</span>
+              </div>
+              <div class="hud-stat-item">
+                <span class="hud-label" data-i18n="hud.compute">Compute Time</span>
+                <span class="hud-value accent">12.6ms</span>
+              </div>
+              <div class="hud-stat-item">
+                <span class="hud-label" data-i18n="hud.fleet">Active Fleets</span>
+                <span class="hud-value">4 / 6</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Floating Widgets: Dynamic solver log console overlay -->
+          <div class="hud-console-panel" id="hud-console">
+            <!-- Simulated logs updated by JS -->
+          </div>
+
+          <!-- Floating Widget: Customer address list — hover a row to pulse its node in the diorama -->
+          <div class="customer-list-panel" id="customer-list-panel">
+            <div class="hud-header">
+              <span class="hud-dot"></span>
+              <span class="hud-title" data-i18n="customer.list.title">Active Addresses (30)</span>
+            </div>
+            <div class="customer-list-body" id="customer-list-body">
+              <!-- Rows injected by JS from CUSTOMER_NODES -->
             </div>
           </div>
         </div>
       </section>
 
-      <!-- Section: Key Value Features -->
-      <section class="section" id="features">
+      <!-- Bento Features Section -->
+      <section class="features-section" id="features">
+        <div class="stripe-skewed-bg"></div>
+        <div class="stripe-skewed-gradient"></div>
         <div class="container">
-          <div class="section-heading center">
-            <span class="eyebrow" data-i18n="features.eyebrow">Engine Architecture</span>
-            <h2 data-i18n="features.title">Engineered for Hard Constraints</h2>
-            <p class="lead">
-              NAMI combines modern deep reinforcement learning with highly optimized local search heuristics to solve
-              NP-hard routing tasks.
-            </p>
+          <div class="section-header">
+            <span class="section-eyebrow" data-i18n="features.eyebrow">Engine Architecture</span>
+            <h2 class="section-title" data-i18n="features.title">Engineered for Hard Constraints</h2>
           </div>
 
-          <div class="features-grid">
-            <div class="feature-card">
-              <div class="feature-icon-box">
+          <div class="bento-grid">
+            <!-- Card 1: DDQN (col-2, row-2) -->
+            <div class="bento-card col-2 row-2">
+              <div class="bento-icon-wrapper">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
                 </svg>
               </div>
-              <h3 data-i18n="features.f1.title">DDQN Operator Selection</h3>
-              <p data-i18n="features.f1.body">
-                A Double DQN agent observes the search trajectory and learns which destroy operators (Random, Worst,
-                Cluster) to fire when search basins stagnate.
-              </p>
+              <div class="bento-card-title" data-i18n="features.f1.title">DDQN Operator Selection</div>
+              <div class="bento-card-body" data-i18n="features.f1.body">
+                A Double DQN agent observes the search trajectory and learns which destroy operators (Random, Worst, Cluster) to fire when search basins stagnate.
+              </div>
             </div>
 
-            <div class="feature-card">
-              <div class="feature-icon-box">
+            <!-- Card 2: Time-Window (col-2) -->
+            <div class="bento-card col-2">
+              <div class="bento-icon-wrapper">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <circle cx="12" cy="12" r="10" />
                   <polyline points="12 6 12 12 16 14" />
                 </svg>
               </div>
-              <h3 data-i18n="features.f2.title">Time-Window Feasibility</h3>
-              <p data-i18n="features.f2.body">
-                Supports strict time windows (ready time, due date, service duration) with dynamic early-arrival waiting
-                and late-arrival filtering.
-              </p>
+              <div class="bento-card-title" data-i18n="features.f2.title">Time-Window Feasibility</div>
+              <div class="bento-card-body" data-i18n="features.f2.body">
+                Supports strict time windows (ready time, due date, service duration) with dynamic early-arrival waiting and late-arrival filtering.
+              </div>
             </div>
 
-            <div class="feature-card">
-              <div class="feature-icon-box">
+            <!-- Card 3: Solomon Benchmarks -->
+            <div class="bento-card">
+              <div class="bento-icon-wrapper">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path
-                    d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"
-                  />
+                  <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
                 </svg>
               </div>
-              <h3 data-i18n="features.f3.title">Solomon Benchmarks</h3>
-              <p data-i18n="features.f3.body">
-                Built-in, one-click loading of Solomon benchmark instances (C, R, RC families) for rapid performance
-                verification.
-              </p>
+              <div class="bento-card-title" data-i18n="features.f3.title">Solomon Benchmarks</div>
+              <div class="bento-card-body" data-i18n="features.f3.body">
+                Built-in, one-click loading of Solomon benchmark instances (C, R, RC families) for rapid performance verification.
+              </div>
             </div>
 
-            <div class="feature-card">
-              <div class="feature-icon-box">
+            <!-- Card 4: Zero-Shot Transfer -->
+            <div class="bento-card">
+              <div class="bento-icon-wrapper">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polygon points="12 2 2 22 22 22" />
                 </svg>
               </div>
-              <h3 data-i18n="features.f5.title">Zero-Shot Transfer</h3>
-              <p data-i18n="features.f5.body">
-                The trained plateau-aware RL policy transfers directly across different Solomon families (e.g. trained
-                on RC1, evaluated on RC2) without retraining.
-              </p>
+              <div class="bento-card-title" data-i18n="features.f5.title">Zero-Shot Transfer</div>
+              <div class="bento-card-body" data-i18n="features.f5.body">
+                The trained plateau-aware RL policy transfers directly across different Solomon families (e.g. trained on RC1, evaluated on RC2) without retraining.
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      <!-- Section: Benchmarks (Scientific proof) -->
-      <section class="section section-alt" id="benchmarks">
+      <!-- Benchmarks Section -->
+      <section class="benchmarks-section" id="benchmarks">
+        <div class="stripe-skewed-bg"></div>
+        <div class="stripe-skewed-gradient"></div>
         <div class="container">
-          <div class="section-heading center">
-            <span class="eyebrow" data-i18n="results.eyebrow">Scientific Validation</span>
-            <h2 data-i18n="results.title">Solomon Benchmark Results</h2>
-            <p class="lead">
-              Our hybrid controller achieves highly competitive gap percentages against Best Known Solutions (BKS) with
-              execution times under 15 milliseconds.
-            </p>
+          <div class="section-header">
+            <span class="section-eyebrow" data-i18n="results.eyebrow">Scientific Validation</span>
+            <h2 class="section-title" data-i18n="results.title">Solomon Benchmark Results</h2>
           </div>
 
-          <div class="benchmarks-table-wrapper">
+          <div class="table-wrapper">
             <table class="benchmarks-table">
               <thead>
                 <tr>
-                  <th>Instance Family</th>
-                  <th>Best Known Cost (BKS)</th>
-                  <th>NAMI Hybrid Cost</th>
-                  <th>ALNS Baseline Cost</th>
-                  <th>NAMI Gap vs BKS (%)</th>
-                  <th>ALNS Gap vs BKS (%)</th>
+                  <th data-i18n="table.th.family">Instance Family</th>
+                  <th data-i18n="table.th.bks">Best Known Cost (BKS)</th>
+                  <th data-i18n="table.th.nami">NAMI Hybrid Cost</th>
+                  <th data-i18n="table.th.alns">ALNS Baseline Cost</th>
+                  <th data-i18n="table.th.namigap">NAMI Gap vs BKS (%)</th>
+                  <th data-i18n="table.th.alnsgap">ALNS Gap vs BKS (%)</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td><strong>C1 Family (Clustered)</strong></td>
+                  <td class="td-instance">C1 Family (Clustered)</td>
                   <td>828.3</td>
                   <td>832.4</td>
                   <td>854.1</td>
-                  <td class="success-text">-0.49%</td>
-                  <td class="warning-text">+3.11%</td>
+                  <td><span class="badge-comparison best">-0.49%</span></td>
+                  <td><span class="badge-comparison near">+3.11%</span></td>
                 </tr>
                 <tr>
-                  <td><strong>R1 Family (Random)</strong></td>
+                  <td class="td-instance">R1 Family (Random)</td>
                   <td>1213.6</td>
                   <td>1242.8</td>
                   <td>1298.5</td>
-                  <td class="success-text">-2.41%</td>
-                  <td class="warning-text">+6.99%</td>
+                  <td><span class="badge-comparison best">-2.41%</span></td>
+                  <td><span class="badge-comparison near">+6.99%</span></td>
                 </tr>
                 <tr>
-                  <td><strong>RC1 Family (Mixed)</strong></td>
+                  <td class="td-instance">RC1 Family (Mixed)</td>
                   <td>1384.2</td>
                   <td>1415.0</td>
                   <td>1468.2</td>
-                  <td class="success-text">-2.22%</td>
-                  <td class="warning-text">+6.07%</td>
+                  <td><span class="badge-comparison best">-2.22%</span></td>
+                  <td><span class="badge-comparison near">+6.07%</span></td>
                 </tr>
                 <tr>
-                  <td><strong>RC2 Family (Zero-Shot Transfer)</strong></td>
+                  <td class="td-instance">RC2 Family (Zero-Shot)</td>
                   <td>1119.2</td>
                   <td>1154.6</td>
                   <td>1231.8</td>
-                  <td class="success-text">-3.16%*</td>
-                  <td class="warning-text">+10.06%</td>
+                  <td><span class="badge-comparison best">-3.16%*</span></td>
+                  <td><span class="badge-comparison near">+10.06%</span></td>
                 </tr>
               </tbody>
             </table>
           </div>
 
-          <div class="table-footnote">
-            *
-            <em
-              >Zero-shot generalization transfer: The model was trained exclusively on RC1 instances and evaluated
-              directly on RC2.</em
-            >
+          <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 16px;" data-i18n="results.footnote">
+            * Zero-shot generalization transfer: The model was trained exclusively on RC1 instances and evaluated directly on RC2.
           </div>
 
-          <div class="scientific-citation-box">
-            <div class="citation-icon">📖</div>
-            <div class="citation-text">
-              <h4>Plateau-Aware Deep RL for Combinatorial Search</h4>
-              <p class="text-muted">
-                Our thesis work analyzes DQN-guided escape operators under severe local stagnation states, outperforming
-                traditional static ALNS variants in 7 of 8 benchmark scenarios.
+          <!-- Citation Box styled with bento card styles -->
+          <div class="bento-card" style="margin-top: 40px; justify-content: flex-start; flex-direction: row; gap: 24px; align-items: flex-start;">
+            <div style="font-size: 2rem; line-height: 1; padding-top: 4px;">📖</div>
+            <div>
+              <h4 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 6px; color: var(--text-primary);" data-i18n="results.citation.title">Plateau-Aware Deep RL for Combinatorial Search</h4>
+              <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5;" data-i18n="results.citation.body">
+                Our thesis work analyzes DQN-guided escape operators under severe local stagnation states, outperforming traditional static ALNS variants in 7 of 8 benchmark scenarios.
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      <!-- Section: Local Setup (Terminal) -->
-      <section class="section section-dark" id="local-run">
+      <!-- Developer Quickstart Section -->
+      <section class="local-run-section" id="local-run">
+        <div class="stripe-skewed-bg"></div>
+        <div class="stripe-skewed-gradient"></div>
         <div class="container">
-          <div class="terminal-layout">
-            <div class="terminal-copy-panel">
-              <span class="eyebrow text-success" data-i18n="getstarted.eyebrow">Developer Quickstart</span>
-              <h2 data-i18n="getstarted.title">Run the engine locally in 60s</h2>
-              <p>
-                Get access to the Python source, Numba JIT-compiled search algorithms, and the pre-trained weights for
-                the Double DQN controller.
-              </p>
-              <div class="terminal-buttons">
-                <a
-                  class="btn btn-primary"
-                  href="https://github.com/Thundercok/VRPTW-Research-Optimization"
-                  target="_blank"
-                  rel="noopener"
-                >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                    <path
-                      d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"
-                    />
-                  </svg>
-                  <span>GitHub Repository</span>
-                </a>
+          <div class="section-header">
+            <span class="section-eyebrow" data-i18n="getstarted.eyebrow">Developer Quickstart</span>
+            <h2 class="section-title" data-i18n="getstarted.title">Run the engine locally in 60s</h2>
+          </div>
+
+          <div class="cli-display-wrapper">
+            <div class="cli-header-bar">
+              <div class="cli-dots">
+                <span class="cli-dot red"></span>
+                <span class="cli-dot yellow"></span>
+                <span class="cli-dot green"></span>
+              </div>
+              <div class="cli-tabs">
+                <button class="cli-tab-btn active" data-target="pane-docker">Docker</button>
+                <button class="cli-tab-btn" data-target="pane-venv">uv (Local)</button>
+                <button class="cli-tab-btn" data-target="pane-benchmark">Benchmark</button>
               </div>
             </div>
 
-            <!-- Sleek developer terminal mock -->
-            <div class="terminal-mock">
-              <div class="terminal-mock-header">
-                <span class="mock-dot red"></span>
-                <span class="mock-dot yellow"></span>
-                <span class="mock-dot green"></span>
-                <span class="mock-title">bash - setup.sh</span>
+            <div class="cli-content-wrapper">
+              <!-- Pane 1: Docker -->
+              <div class="cli-pane active" id="pane-docker">
+                <button class="btn-copy-code" aria-label="Copy code snippet">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;">
+                    <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+                    <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+                  </svg>
+                  <span class="btn-copy-text">Copy</span>
+                  <span class="copy-success-tooltip">Copied!</span>
+                </button>
+                <pre class="cli-code-block"><code><span class="cli-comment"># Pull and run the pre-built container from DockerHub</span>
+<span class="cli-command">docker run -p 8000:8000 -p 5050:80 thundercock/vrptw-nami:latest</span></code></pre>
               </div>
-              <div class="terminal-mock-body">
-                <div class="terminal-line">
-                  <span class="term-prompt">$</span>
-                  <span class="term-cmd">git clone https://github.com/Thundercok/VRPTW-Research-Optimization.git</span>
-                </div>
-                <div class="terminal-line">
-                  <span class="term-prompt">$</span> <span class="term-cmd">cd VRPTW-Research-Optimization</span>
-                </div>
-                <div class="terminal-line">
-                  <span class="term-prompt">$</span>
-                  <span class="term-cmd">uv venv .venv --python 3.12 && source .venv/bin/activate</span>
-                </div>
-                <div class="terminal-line text-muted">Created virtual environment at .venv</div>
-                <div class="terminal-line">
-                  <span class="term-prompt">$</span> <span class="term-cmd">uv pip install -r requirements.txt</span>
-                </div>
-                <div class="terminal-line text-muted">Installed Numba, FastAPI, PyTorch, and Uvicorn.</div>
-                <div class="terminal-line">
-                  <span class="term-prompt">$</span> <span class="term-cmd">python main.py</span>
-                </div>
-                <div class="terminal-line text-success">
-                  Uvicorn server running on http://127.0.0.1:8000 (Press CTRL+C to quit)
-                </div>
+
+              <!-- Pane 2: uv (Local) -->
+              <div class="cli-pane" id="pane-venv">
+                <button class="btn-copy-code" aria-label="Copy code snippet">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;">
+                    <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+                    <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+                  </svg>
+                  <span class="btn-copy-text">Copy</span>
+                  <span class="copy-success-tooltip">Copied!</span>
+                </button>
+                <pre class="cli-code-block"><code><span class="cli-comment"># Clone and install dependencies with uv</span>
+<span class="cli-command">git clone https://github.com/Thundercok/VRPTW-Research-Optimization.git</span>
+<span class="cli-command">cd VRPTW-Research-Optimization</span>
+<span class="cli-command">uv venv .venv --python 3.12 && source .venv/bin/activate</span>
+<span class="cli-command">uv pip install -r requirements.txt</span>
+<span class="cli-command">python main.py</span></code></pre>
+              </div>
+
+              <!-- Pane 3: Benchmark -->
+              <div class="cli-pane" id="pane-benchmark">
+                <button class="btn-copy-code" aria-label="Copy code snippet">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;">
+                    <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+                    <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+                  </svg>
+                  <span class="btn-copy-text">Copy</span>
+                  <span class="copy-success-tooltip">Copied!</span>
+                </button>
+                <pre class="cli-code-block"><code><span class="cli-comment"># Run multi-scale Solomon benchmark suite sweep</span>
+<span class="cli-command">./run_all_benchmarks.sh --instances RC101-RC108 --epochs 50</span></code></pre>
               </div>
             </div>
           </div>
@@ -511,39 +487,43 @@
     </main>
 
     <!-- Footer -->
-    <footer class="footer">
+    <footer class="site-footer">
       <div class="container">
         <div class="footer-grid">
           <div class="footer-brand-col">
-            <a class="brand" href="#">
-              <svg class="brand-logo" width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <a class="footer-brand-logo" href="#">
+              <svg class="brand-logo" width="24" height="24" viewBox="0 0 24 24" fill="none">
                 <rect width="24" height="24" rx="6" fill="#f59e0b" />
                 <path d="M6 18V6H8.5L12 11.5L15.5 6H18V18H15.5V11L12.5 15.5H11.5L8.5 11V18H6Z" fill="white" />
               </svg>
-              <strong>NAMI</strong>
+              <span>NAMI</span>
             </a>
-            <p class="text-muted footer-blurb">
+            <p class="footer-brand-desc" data-i18n="footer.blurb">
               Deep reinforcement learning and search heuristics paired together for robust combinatorial optimization.
             </p>
           </div>
           <div class="footer-links-col">
-            <h4>System</h4>
-            <a href="app.html">Open Solver</a>
-            <a href="#showcase">Interactive Demo</a>
-            <a href="#benchmarks">Benchmarks</a>
+            <h4 class="footer-col-title" data-i18n="footer.col.system">System</h4>
+            <ul class="footer-links">
+              <li><a href="app.html" data-i18n="footer.link.solver">Open Solver</a></li>
+              <li><a href="#showcase" data-i18n="footer.link.demo">Interactive Demo</a></li>
+              <li><a href="#benchmarks" data-i18n="footer.link.benchmarks">Benchmarks</a></li>
+            </ul>
           </div>
           <div class="footer-links-col">
-            <h4>Academic</h4>
-            <a href="https://github.com/Thundercok/VRPTW-Research-Optimization" target="_blank" rel="noopener"
-              >Codebase</a
-            >
-            <a href="feedback.html">Feedback Form</a>
-            <a href="auth.html">Dispatcher Login</a>
+            <h4 class="footer-col-title" data-i18n="footer.col.academic">Academic</h4>
+            <ul class="footer-links">
+              <li><a href="https://github.com/Thundercok/VRPTW-Research-Optimization" target="_blank" rel="noopener" data-i18n="footer.link.codebase">Codebase</a></li>
+              <li><a href="feedback.html" data-i18n="footer.link.feedback">Feedback Form</a></li>
+              <li><a href="auth.html" data-i18n="footer.link.dispatcher">Dispatcher Login</a></li>
+            </ul>
           </div>
         </div>
         <div class="footer-bottom">
-          <p class="text-muted">&copy; 2026 VRPTW Research Optimization. MIT License.</p>
-          <p class="text-muted">Designed for computational speed and absolute operational clarity.</p>
+          <p>&copy; 2026 VRPTW Research Optimization. MIT License.</p>
+          <div class="footer-bottom-links">
+            <span data-i18n="footer.footnote">Designed for computational speed and absolute operational clarity.</span>
+          </div>
         </div>
       </div>
     </footer>
@@ -555,9 +535,10 @@
     <!-- Observability -->
     <script type="module" src="js/observability.js?v=20260522"></script>
 
-    <!-- Main Inline Landing Page Interactions Script to support local file:// execution -->
-    <script>
-      /* global gsap, ScrollTrigger */
+    <!-- Main Inline Landing Page Interactions Script -->
+    <script type="module">
+      import { Renderer, Camera, Transform, Mesh, Program, Box, Cylinder, Sphere, Plane, Vec3 } from 'ogl';
+      
       (function () {
         'use strict';
 
@@ -574,38 +555,78 @@
             'nav.getstarted': 'Setup',
             'cta.demo': 'Open Planner',
 
+            'hero.badge': 'Solomon Benchmark Optimizer',
+            'hero.title.nami': 'NAMI:',
+            'hero.title.desc': 'Plateau-Aware Deep RL Routing Engine',
+            'hero.subtitle': 'Combining Deep Reinforcement Learning with Adaptive Large Neighborhood Search to solve Vehicle Routing Problems with Time Windows in milliseconds.',
+            'hero.cta.start': 'Launch Solver',
+            'hero.cta.demo': 'Explore Demo',
+
+            'tab1.label': 'The Objective',
+            'tab2.label': 'The Chaos',
+            'tab3.label': 'Neural Operator',
+            'tab4.label': 'Optimal Dispatch',
+
+            'act1.badge': 'Act I: The Objective',
             'act1.title': "What's the fastest way to deliver to 100 addresses?",
-            'act1.desc':
-              'A single vehicle on a simple route is easy. But scaling delivery operations exposes exponential complexity.',
+            'act1.desc': 'A single vehicle on a simple route is easy. But scaling delivery operations exposes exponential complexity.',
+
+            'act2.badge': 'Act II: The Chaos',
             'act2.title': 'A single route quickly shatters.',
-            'act2.desc':
-              'Every address introduces narrow time windows, load capacity limits, service times, and vehicle constraints. Classical heuristics easily stagnate in sub-optimal local basins.',
+            'act2.desc': 'Every address introduces narrow time windows, load capacity limits, service times, and vehicle constraints. Classical heuristics easily stagnate in sub-optimal local basins.',
+
+            'act3.badge': 'Act III: Neural Optimization',
             'act3.title': "NAMI's neural controller takes over.",
-            'act3.desc':
-              'A Double Deep Q-Network (DDQN) agent analyzes the search trajectory in real-time, intelligently selecting destroy-and-repair ALNS operators to break stagnation patterns.',
+            'act3.desc': 'A Double Deep Q-Network (DDQN) agent analyzes the search trajectory in real-time, intelligently selecting destroy-and-repair ALNS operators to break stagnation patterns.',
+
+            'act4.badge': 'Act IV: The Outcome',
             'act4.title': 'Optimal dispatch. Delivered.',
-            'act4.desc':
-              'Feasible, balanced paths are generated in milliseconds. Dispatchers receive clean, conflict-free delivery plans verified against all Solomon criteria.',
+            'act4.desc': 'Feasible, balanced paths are generated in milliseconds. Dispatchers receive clean, conflict-free delivery plans verified against all Solomon criteria.',
+            'cta.benchmarks': 'See Benchmarks',
+
+            'hud.saved': 'Distance Saved',
+            'hud.ontime': 'On-Time Rate',
+            'hud.compute': 'Compute Time',
+            'hud.fleet': 'Active Fleets',
+
+            'table.th.family': 'Instance Family',
+            'table.th.bks': 'Best Known Cost (BKS)',
+            'table.th.nami': 'NAMI Hybrid Cost',
+            'table.th.alns': 'ALNS Baseline Cost',
+            'table.th.namigap': 'NAMI Gap vs BKS (%)',
+            'table.th.alnsgap': 'ALNS Gap vs BKS (%)',
+            'results.footnote': '* Zero-shot generalization transfer: The model was trained exclusively on RC1 instances and evaluated directly on RC2.',
+
+            'results.citation.title': 'Plateau-Aware Deep RL for Combinatorial Search',
+            'results.citation.body': 'Our thesis work analyzes DQN-guided escape operators under severe local stagnation states, outperforming traditional static ALNS variants in 7 of 8 benchmark scenarios.',
 
             'features.eyebrow': 'Engine Architecture',
             'features.title': 'Engineered for Hard Constraints',
             'features.f1.title': 'DDQN Operator Selection',
-            'features.f1.body':
-              'A Double DQN agent observes the search trajectory and learns which destroy operators (Random, Worst, Cluster) to fire when search basins stagnate.',
+            'features.f1.body': 'A Double DQN agent observes the search trajectory and learns which destroy operators (Random, Worst, Cluster) to fire when search basins stagnate.',
             'features.f2.title': 'Time-Window Feasibility',
-            'features.f2.body':
-              'Supports strict time windows (ready time, due date, service duration) with dynamic early-arrival waiting and late-arrival filtering.',
+            'features.f2.body': 'Supports strict time windows (ready time, due date, service duration) with dynamic early-arrival waiting and late-arrival filtering.',
             'features.f3.title': 'Solomon Benchmarks',
-            'features.f3.body':
-              'Built-in, one-click loading of Solomon benchmark instances (C, R, RC families) for rapid performance verification.',
+            'features.f3.body': 'Built-in, one-click loading of Solomon benchmark instances (C, R, RC families) for rapid performance verification.',
             'features.f5.title': 'Zero-Shot Transfer',
-            'features.f5.body':
-              'The trained plateau-aware RL policy transfers directly across different Solomon families (e.g. trained on RC1, evaluated on RC2) without retraining.',
+            'features.f5.body': 'The trained plateau-aware RL policy transfers directly across different Solomon families (e.g. trained on RC1, evaluated on RC2) without retraining.',
 
             'results.eyebrow': 'Scientific Validation',
             'results.title': 'Solomon Benchmark Results',
             'getstarted.eyebrow': 'Developer Quickstart',
             'getstarted.title': 'Run the engine locally in 60s',
+
+            'footer.blurb': 'Deep reinforcement learning and search heuristics paired together for robust combinatorial optimization.',
+            'footer.col.system': 'System',
+            'footer.col.academic': 'Academic',
+            'footer.link.solver': 'Open Solver',
+            'footer.link.demo': 'Interactive Demo',
+            'footer.link.benchmarks': 'Benchmarks',
+            'footer.link.codebase': 'Codebase',
+            'footer.link.feedback': 'Feedback Form',
+            'footer.link.dispatcher': 'Dispatcher Login',
+            'footer.footnote': 'Designed for computational speed and absolute operational clarity.',
+            'customer.list.title': 'Active Addresses (30)'
           },
           vn: {
             'brand.sub': 'Tối ưu hóa Nghiên cứu',
@@ -615,39 +636,79 @@
             'nav.getstarted': 'Cài đặt',
             'cta.demo': 'Mở Planner',
 
+            'hero.badge': 'Trình Tối Ưu Hóa Solomon Benchmark',
+            'hero.title.nami': 'NAMI:',
+            'hero.title.desc': 'Engine Định Tuyến Học Tăng Cường Sâu Plateau-Aware',
+            'hero.subtitle': 'Kết hợp Học tăng cường sâu với Thuật toán tìm kiếm lân cận lớn thích ứng để giải quyết bài toán định tuyến xe có khung thời gian trong mili giây.',
+            'hero.cta.start': 'Mở Trình Giải',
+            'hero.cta.demo': 'Khám Phá Demo',
+
+            'tab1.label': 'Mục Tiêu',
+            'tab2.label': 'Sự Hỗn Loạn',
+            'tab3.label': 'Toán Tư Nơ-ron',
+            'tab4.label': 'Điều Phối Tối Ưu',
+
+            'act1.badge': 'Act I: Mục Tiêu',
             'act1.title': 'Đâu là cách nhanh nhất để giao tới 100 địa chỉ?',
-            'act1.desc':
-              'Một phương tiện trên một lộ trình đơn giản thì dễ dàng. Nhưng việc mở rộng hoạt động giao hàng sẽ tạo ra độ phức tạp theo cấp số nhân.',
+            'act1.desc': 'Một phương tiện trên một lộ trình đơn giản thì dễ dàng. Nhưng việc mở rộng hoạt động giao hàng sẽ tạo ra độ phức tạp theo cấp số nhân.',
+
+            'act2.badge': 'Act II: Sự Hỗn Loạn',
             'act2.title': 'Lộ trình nhanh chóng bị phá vỡ.',
-            'act2.desc':
-              'Mỗi địa chỉ đi kèm với các khung giờ nghiêm ngặt, giới hạn tải trọng, thời gian phục vụ và các ràng buộc xe. Các heuristic cổ điển rất dễ mắc kẹt ở cực trị địa phương kém tối ưu.',
+            'act2.desc': 'Mỗi địa chỉ đi kèm với các khung giờ nghiêm ngặt, giới hạn tải trọng, thời gian phục vụ và các ràng buộc xe. Các heuristic cổ điển rất dễ mắc kẹt ở cực trị địa phương kém tối ưu.',
+
+            'act3.badge': 'Act III: Tối Ưu Hóa Nơ-ron',
             'act3.title': 'Bộ điều khiển nơ-ron NAMI tiếp quản.',
-            'act3.desc':
-              'Agent Double Deep Q-Network (DDQN) phân tích quỹ đạo tìm kiếm theo thời gian thực, lựa chọn thông minh các toán tử destroy-and-repair ALNS để phá vỡ các điểm nghẽn chững lại.',
+            'act3.desc': 'Agent Double Deep Q-Network (DDQN) phân tích quỹ đạo tìm kiếm theo thời gian thực, lựa chọn thông minh các toán tử destroy-and-repair ALNS để phá vỡ các điểm nghẽn chững lại.',
+
+            'act4.badge': 'Act IV: Kết Quả',
             'act4.title': 'Điều phối tối ưu. Đã hoàn thành.',
-            'act4.desc':
-              'Các lộ trình khả thi, cân bằng được tạo ra trong vài mili giây. Người điều phối nhận được kế hoạch giao hàng rõ ràng, không có xung đột, được xác thực theo tất cả các tiêu chí Solomon.',
+            'act4.desc': 'Các lộ trình khả thi, cân bằng được tạo ra trong vài mili giây. Người điều phối nhận được kế hoạch giao hàng rõ ràng, không có xung đột, được xác thực theo tất cả các tiêu chí Solomon.',
+            'cta.benchmarks': 'Xem Kết Quả',
+
+            'hud.saved': 'Quãng Đường Tiết Kiệm',
+            'hud.ontime': 'Tỷ Lệ Đúng Giờ',
+            'hud.compute': 'Thời Gian Tính Toán',
+            'hud.fleet': 'Đội Xe Hoạt Động',
+
+            'table.th.family': 'Họ Solomon Instance',
+            'table.th.bks': 'Chi Phí Tốt Nhất (BKS)',
+            'table.th.nami': 'Chi Phí NAMI Hybrid',
+            'table.th.alns': 'Chi Phí ALNS Baseline',
+            'table.th.namigap': 'NAMI Gap so với BKS (%)',
+            'table.th.alnsgap': 'ALNS Gap so với BKS (%)',
+            'results.footnote': '* Chuyển giao tổng quát hóa Zero-shot: Mô hình được huấn luyện duy nhất trên các instance họ RC1 và được đánh giá trực tiếp trên họ RC2.',
+
+            'results.citation.title': 'Học Tăng Cường Sâu Plateau-Aware cho Bài Toán Tìm Kiếm Tổ Hợp',
+            'results.citation.body': 'Nghiên cứu luận văn của chúng tôi phân tích các toán tử thoát khỏi cực trị cục bộ do DQN hướng dẫn dưới các trạng thái chững lại nghiêm trọng, vượt trội hơn các biến thể ALNS tĩnh truyền thống trong 7 trên 8 kịch bản thử nghiệm.',
 
             'features.eyebrow': 'Kiến trúc Engine',
             'features.title': 'Thiết kế cho Ràng buộc Khó',
             'features.f1.title': 'Chọn toán tử bằng DDQN',
-            'features.f1.body':
-              'Agent Double DQN quan sát quỹ đạo tìm kiếm và học cách kích hoạt các toán tử destroy phù hợp (Random, Worst, Cluster) khi không gian tìm kiếm bị chững lại.',
+            'features.f1.body': 'Agent Double DQN quan sát quỹ đạo tìm kiếm và học cách kích hoạt các toán tử destroy phù hợp (Random, Worst, Cluster) khi không gian tìm kiếm bị chững lại.',
             'features.f2.title': 'Độ khả thi Khung giờ',
-            'features.f2.body':
-              'Hỗ trợ khung giờ nghiêm ngặt (ready time, due date, service duration) kèm tự động chờ nếu đến sớm và lọc nếu đến muộn.',
+            'features.f2.body': 'Hỗ trợ khung giờ nghiêm ngặt (ready time, due date, service duration) kèm tự động chờ nếu đến sớm và lọc nếu đến muộn.',
             'features.f3.title': 'Benchmark Solomon',
-            'features.f3.body':
-              'Tích hợp sẵn các bộ benchmark Solomon (họ C, R, RC) để tải nhanh chỉ với một click giúp kiểm chứng thuật toán.',
+            'features.f3.body': 'Tích hợp sẵn các bộ benchmark Solomon (họ C, R, RC) để tải nhanh chỉ với một click giúp kiểm chứng thuật toán.',
             'features.f5.title': 'Zero-Shot Transfer',
-            'features.f5.body':
-              'Policy RL nhận diện plateau sau khi huấn luyện có thể chuyển giao trực tiếp sang các họ Solomon khác (ví dụ: huấn luyện trên RC1, chạy thử trên RC2) mà không cần train lại.',
+            'features.f5.body': 'Policy RL nhận diện plateau sau khi huấn luyện có thể chuyển giao trực tiếp sang các họ Solomon khác (ví dụ: huấn luyện trên RC1, chạy thử trên RC2) mà không cần train lại.',
 
             'results.eyebrow': 'Xác thực Khoa học',
             'results.title': 'Kết quả Benchmark Solomon',
             'getstarted.eyebrow': 'Khởi động nhanh cho Dev',
             'getstarted.title': 'Chạy cục bộ engine trong 60 giây',
-          },
+
+            'footer.blurb': 'Sự kết hợp giữa học tăng cường sâu và thuật toán tìm kiếm cục bộ giúp giải quyết các bài toán tối ưu tổ hợp phức tạp một cách mạnh mẽ.',
+            'footer.col.system': 'Hệ Thống',
+            'footer.col.academic': 'Học Thuật',
+            'footer.link.solver': 'Mở Trình Giải',
+            'footer.link.demo': 'Demo Trực Quan',
+            'footer.link.benchmarks': 'Điểm Chuẩn (Benchmarks)',
+            'footer.link.codebase': 'Kho Mã Nguồn',
+            'footer.link.feedback': 'Biểu Mẫu Góp Ý',
+            'footer.link.dispatcher': 'Đăng Nhập Điều Phối',
+            'footer.footnote': 'Thiết kế cho tốc độ tính toán cao và độ trực quan vận hành tuyệt đối.',
+            'customer.list.title': 'Địa chỉ hoạt động (30)'
+          }
         };
 
         // Node and Path Coordinates Setup for Canvas
@@ -719,614 +780,1504 @@
           return (1 - amt) * start + amt * end;
         }
 
-        // Helper: Get coordinate point along a sequence of coordinates at a given progress
-        function getPointAtProgress(pathPoints, progress) {
-          if (!pathPoints || pathPoints.length === 0) return { x: 0, y: 0 };
+        // Helper: Catmull-Rom spline formulation
+        function catmullRom(p0, p1, p2, p3, t) {
+          const t2 = t * t;
+          const t3 = t2 * t;
+
+          const f0 = -0.5 * t3 + t2 - 0.5 * t;
+          const f1 = 1.5 * t3 - 2.5 * t2 + 1.0;
+          const f2 = -1.5 * t3 + 2.0 * t2 + 0.5 * t;
+          const f3 = 0.5 * t3 - 0.5 * t2;
+
+          return new Vec3(
+            p0.x * f0 + p1.x * f1 + p2.x * f2 + p3.x * f3,
+            p0.y * f0 + p1.y * f1 + p2.y * f2 + p3.y * f3,
+            p0.z * f0 + p1.z * f1 + p2.z * f2 + p3.z * f3
+          );
+        }
+
+        // Helper: Get coordinate point along a sequence of coordinates using Catmull-Rom splines
+        function getSplinePointAtProgress(pathPoints, progress) {
+          if (!pathPoints || pathPoints.length === 0) return new Vec3(0, 0, 0);
+          if (pathPoints.length === 1) return pathPoints[0];
           if (progress <= 0) return pathPoints[0];
           if (progress >= 1) return pathPoints[pathPoints.length - 1];
 
+          // Apply smootherstep to progress for nice easing (Implementation Rule #1)
+          const easedProgress = progress * progress * progress * (progress * (progress * 6 - 15) + 10);
+
           const totalSegments = pathPoints.length - 1;
-          const rawSegment = progress * totalSegments;
+          const rawSegment = easedProgress * totalSegments;
           const index = Math.floor(rawSegment);
-          const frac = rawSegment - index;
+          const t = rawSegment - index;
 
-          const start = pathPoints[index];
-          const end = pathPoints[index + 1];
+          const p1 = pathPoints[index];
+          const p2 = pathPoints[index + 1];
 
+          // Extrapolate start/end control points if indices go out of bounds
+          const p0 = index > 0 ? pathPoints[index - 1] : new Vec3().copy(p1).sub(new Vec3().copy(p2).sub(p1));
+          const p3 = index + 2 < pathPoints.length ? pathPoints[index + 2] : new Vec3().copy(p2).add(new Vec3().copy(p2).sub(p1));
+
+          return catmullRom(p0, p1, p2, p3, t);
+        }
+
+        // Helper: Linear Interpolation for Vec3
+        function lerpVec3(a, b, t) {
+          return new Vec3(
+            lerp(a.x, b.x, t),
+            lerp(a.y, b.y, t),
+            lerp(a.z, b.z, t)
+          );
+        }
+
+        // WebGL Diorama using OGL
+
+        let gl, renderer, scene, camera;
+        let shadedProgram, wireProg;
+        let buildings = [];
+        let nodeMeshes = [];
+        let stemMeshes = [];
+        let shadowMeshes = [];
+        let routeMeshes = [];
+        let vehicleMeshes = [];
+        let particleMeshes = [];
+        let billboardMeshes = []; // camera-facing glow cards (simulated bloom)
+        let gridMesh, groundMesh;
+        let depotMesh, depotHaloMesh;
+        let warningLineMeshes = [];
+        let isInitialized = false;
+
+        // Per-act camera waypoints for scroll-guided transitions (Implementation Rule #2)
+        function getCameraWaypoints(isWide) {
+          const baseTargetX = isWide ? -1.4 : -0.2;
+          const baseTargetZ = isWide ? -0.3 : 0.0;
           return {
-            x: lerp(start.x, end.x, frac),
-            y: lerp(start.y, end.y, frac),
+            1: {
+              position: new Vec3(5.5, 7.0, 8.5),
+              lookAt: new Vec3(baseTargetX, 0.0, baseTargetZ)
+            },
+            2: {
+              position: new Vec3(2.8, 4.0, 5.0),
+              lookAt: new Vec3(1.2, 0.1, 0.8) // Centroid of the bottom-right cluster
+            },
+            3: {
+              position: new Vec3(4.5, 5.5, 7.0),
+              lookAt: new Vec3(-1.0, 0.1, 0.0) // Pull back towards depot side (Diagnosis #1)
+            },
+            4: {
+              position: new Vec3(4.5, 10.0, 4.5),
+              lookAt: new Vec3(-0.8, 0.0, 0.0) // Birds-eye over full network
+            }
           };
         }
 
-        // Helper: Generate structured SVG paths for routes
-        function buildPathD(points) {
-          return points.reduce((d, p, i) => {
-            return d + (i === 0 ? `M ${p.x} ${p.y}` : ` L ${p.x} ${p.y}`);
-          }, '');
+        const dioramaState = {
+          act: 1,
+          progress: 0.0,
+          overallProgress: 0.0,
+          theme: 'light',
+          width: 800,
+          height: 600,
+          mouseX: 0,
+          mouseY: 0,
+          targetMouseX: 0,
+          targetMouseY: 0,
+          hoveredNodeId: null, // set by customer-list row hover (Implementation Rule #4)
+          cachedColors: {
+            bg: new Vec3(0.09, 0.09, 0.1),
+            street: new Vec3(0.96, 0.62, 0.04),
+            grid: new Vec3(0.96, 0.62, 0.04),
+            gold: new Vec3(0.96, 0.62, 0.04),
+            nodeNeutral: new Vec3(0.32, 0.32, 0.35)
+          }
+        };
+
+        const BUILDING_COORDS = [
+          { x: -3.5, z: -2.0, w: 0.35, h: 0.9, d: 0.35 },
+          { x: -3.0, z: -2.5, w: 0.4, h: 1.2, d: 0.4 },
+          { x: -2.0, z: -2.8, w: 0.35, h: 0.7, d: 0.35 },
+          { x: -3.5, z: 2.0, w: 0.4, h: 1.0, d: 0.4 },
+          { x: -3.0, z: 2.5, w: 0.35, h: 0.8, d: 0.35 },
+          { x: -2.0, z: 2.8, w: 0.4, h: 1.3, d: 0.4 },
+          { x: 3.5, z: -2.0, w: 0.3, h: 1.5, d: 0.3 },
+          { x: 3.0, z: -2.5, w: 0.4, h: 0.9, d: 0.4 },
+          { x: 3.5, z: 2.0, w: 0.35, h: 1.1, d: 0.35 },
+          { x: 3.0, z: 2.5, w: 0.4, h: 1.4, d: 0.4 },
+          { x: 0.0, z: -2.8, w: 0.3, h: 0.8, d: 0.3 },
+          { x: 0.0, z: 2.8, w: 0.35, h: 1.0, d: 0.35 }
+        ];
+
+        // Custom Shaders — Premium Cinematic Quality
+
+        const vertexShader = `
+          attribute vec3 position;
+          attribute vec3 normal;
+          uniform mat4 modelViewMatrix;
+          uniform mat4 projectionMatrix;
+          uniform mat3 normalMatrix;
+          varying vec3 vNormal;
+          varying vec3 vViewPos;
+          varying float vY;
+          void main() {
+            vNormal = normalize(normalMatrix * normal);
+            vec4 mvPos = modelViewMatrix * vec4(position, 1.0);
+            vViewPos = -mvPos.xyz;
+            vY = position.y;
+            gl_Position = projectionMatrix * mvPos;
+          }
+        `;
+
+        const fragmentShader = `
+          precision highp float;
+          varying vec3 vNormal;
+          varying vec3 vViewPos;
+          varying float vY;
+          uniform vec3 color;
+          uniform float opacity;
+          void main() {
+            vec3 N = normalize(vNormal);
+            vec3 V = normalize(vViewPos);
+
+            // Key light (warm, upper-right)
+            vec3 L1 = normalize(vec3(0.5, 1.0, 0.3));
+            float diff1 = max(0.0, dot(N, L1));
+
+            // Fill light (cool, lower-left)
+            vec3 L2 = normalize(vec3(-0.4, 0.3, -0.6));
+            float diff2 = max(0.0, dot(N, L2)) * 0.25;
+
+            // Hemisphere ambient (sky/ground bounce)
+            float hemi = dot(N, vec3(0.0, 1.0, 0.0)) * 0.5 + 0.5;
+            vec3 ambient = mix(vec3(0.06, 0.05, 0.08), vec3(0.18, 0.16, 0.14), hemi);
+
+            // Specular highlight (Blinn-Phong)
+            vec3 H = normalize(L1 + V);
+            float spec = pow(max(0.0, dot(N, H)), 48.0) * 0.35;
+
+            // Rim / fresnel glow
+            float rim = 1.0 - max(0.0, dot(N, V));
+            rim = pow(rim, 3.0) * 0.3;
+
+            vec3 lit = ambient + color * (diff1 * 0.55 + diff2) + vec3(spec) + color * rim;
+
+            gl_FragColor = vec4(lit, opacity);
+          }
+        `;
+
+        const glowVertexShader = `
+          attribute vec3 position;
+          attribute vec3 normal;
+          uniform mat4 modelViewMatrix;
+          uniform mat4 projectionMatrix;
+          uniform mat3 normalMatrix;
+          varying vec3 vNormal;
+          varying vec3 vViewPos;
+          void main() {
+            vNormal = normalize(normalMatrix * normal);
+            vec4 mvPos = modelViewMatrix * vec4(position, 1.0);
+            vViewPos = -mvPos.xyz;
+            gl_Position = projectionMatrix * mvPos;
+          }
+        `;
+
+        const glowFragmentShader = `
+          precision highp float;
+          varying vec3 vNormal;
+          varying vec3 vViewPos;
+          uniform vec3 color;
+          uniform float opacity;
+          void main() {
+            vec3 N = normalize(vNormal);
+            vec3 V = normalize(vViewPos);
+            // Soft-sphere falloff: brighter at edges for a bloom-like glow
+            float edge = 1.0 - abs(dot(N, V));
+            float glow = smoothstep(0.0, 1.0, edge) * 0.35 + 0.65;
+            gl_FragColor = vec4(color * glow, opacity * glow);
+          }
+        `;
+
+        // Camera-facing billboard glow card. Simulates bloom with high-performance planes (Implementation Rule #3)
+        const billboardGlowVertexShader = `
+          attribute vec3 position;
+          attribute vec2 uv;
+          uniform mat4 modelViewMatrix;
+          uniform mat4 projectionMatrix;
+          varying vec2 vUv;
+          void main() {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `;
+
+        const billboardGlowFragmentShader = `
+          precision highp float;
+          varying vec2 vUv;
+          uniform vec3 color;
+          uniform float opacity;
+          uniform float uTime;
+          
+          float hash(vec2 p) {
+            return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
+          }
+          
+          void main() {
+            float dist = length(vUv - vec2(0.5));
+            // Premium exponential falloff for natural light bloom (Diagnosis #4)
+            float glow = exp(-dist * 6.0);
+            // Pulsing factor offset per time
+            float pulse = 0.8 + 0.2 * sin(uTime * 4.0);
+            // Tech-telemetry noise grain
+            float noise = hash(vUv * 40.0 + vec2(uTime * 0.15)) * 0.08;
+            float finalAlpha = opacity * glow * pulse * (1.0 + noise);
+            gl_FragColor = vec4(color * 1.8, finalAlpha);
+          }
+        `;
+
+        const gridVertexShader = `
+          attribute vec3 position;
+          uniform mat4 modelViewMatrix;
+          uniform mat4 projectionMatrix;
+          varying vec2 vUv;
+          void main() {
+            vUv = position.xz;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `;
+
+        const gridFragmentShader = `
+          precision highp float;
+          varying vec2 vUv;
+          uniform vec3 gridColor;
+          uniform float opacity;
+          uniform float uTime;
+          void main() {
+            // Grid spacing
+            float freq = 2.0;
+            vec2 cell = fract(vUv * freq);
+
+            // Anti-aliased grid lines using smoothstep
+            float lineW = 0.025;
+            float lineX = smoothstep(lineW, 0.0, cell.x) + smoothstep(1.0 - lineW, 1.0, cell.x);
+            float lineZ = smoothstep(lineW, 0.0, cell.y) + smoothstep(1.0 - lineW, 1.0, cell.y);
+            float gridLine = clamp(lineX + lineZ, 0.0, 1.0);
+
+            // Bright intersection dots
+            float dotRadius = 0.06;
+            float dotX = smoothstep(dotRadius, 0.0, cell.x) + smoothstep(1.0 - dotRadius, 1.0, cell.x);
+            float dotZ = smoothstep(dotRadius, 0.0, cell.y) + smoothstep(1.0 - dotRadius, 1.0, cell.y);
+            float dots = clamp(dotX * dotZ, 0.0, 1.0) * 2.5;
+
+            // Radial fade from center
+            float dist = length(vUv);
+            float fade = smoothstep(7.0, 0.8, dist);
+
+            // Animated scan-line pulse radiating outward
+            float pulse = sin(dist * 3.0 - uTime * 0.8) * 0.5 + 0.5;
+            pulse = smoothstep(0.3, 0.7, pulse) * 0.2;
+
+            float intensity = (gridLine * 0.5 + dots + pulse) * fade;
+
+            gl_FragColor = vec4(gridColor, intensity * opacity);
+          }
+        `;
+
+        const shadowVertexShader = `
+          attribute vec3 position;
+          attribute vec2 uv;
+          uniform mat4 modelViewMatrix;
+          uniform mat4 projectionMatrix;
+          varying vec2 vUv;
+          void main() {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `;
+
+        const shadowFragmentShader = `
+          precision highp float;
+          varying vec2 vUv;
+          uniform vec3 color;
+          uniform float opacity;
+          void main() {
+            float dist = length(vUv - vec2(0.5));
+            float alpha = smoothstep(0.5, 0.0, dist);
+            gl_FragColor = vec4(color, opacity * alpha);
+          }
+        `;
+
+        const depotHaloVertexShader = `
+          attribute vec3 position;
+          attribute vec2 uv;
+          uniform mat4 modelViewMatrix;
+          uniform mat4 projectionMatrix;
+          varying vec2 vUv;
+          void main() {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `;
+
+        const depotHaloFragmentShader = `
+          precision highp float;
+          varying vec2 vUv;
+          uniform vec3 color;
+          uniform float opacity;
+          uniform float uTime;
+          
+          float hash(vec2 p) {
+            return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
+          }
+          
+          void main() {
+            float dist = length(vUv - vec2(0.5));
+            float t = fract(uTime * 0.4);
+            float ringRadius = t * 0.5;
+            float ringWidth = 0.025;
+            float ring = smoothstep(ringRadius - ringWidth, ringRadius, dist) * 
+                         smoothstep(ringRadius + ringWidth, ringRadius, dist);
+            
+            // Subtle noise grain inside the pulsing halo ring (Implementation Rule #3)
+            float noise = hash(vUv * 50.0 + vec2(uTime * 0.2)) * 0.12;
+            float fade = smoothstep(0.5, 0.08, dist);
+            float ringAlpha = ring * fade * (1.0 - t + noise);
+            gl_FragColor = vec4(color * 1.5, opacity * ringAlpha);
+          }
+        `;
+
+        function colorToVec4(colorStr) {
+          let val = colorStr.trim();
+          if (val.startsWith('var(')) {
+            const varName = val.substring(4, val.length - 1).trim();
+            val = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+          }
+          let alpha = 1.0;
+          if (val.startsWith('rgba')) {
+            const match = val.match(/[\d\.]+/g);
+            if (match && match.length >= 4) {
+              alpha = parseFloat(match[3]);
+              return { vec3: new Vec3(parseFloat(match[0]) / 255, parseFloat(match[1]) / 255, parseFloat(match[2]) / 255), alpha };
+            }
+          }
+          if (val.startsWith('rgb')) {
+            const match = val.match(/\d+/g);
+            if (match) {
+              return { vec3: new Vec3(parseInt(match[0]) / 255, parseInt(match[1]) / 255, parseInt(match[2]) / 255), alpha: 1.0 };
+            }
+          }
+          val = val.replace('#', '');
+          if (val.length === 3) {
+            val = val[0] + val[0] + val[1] + val[1] + val[2] + val[2];
+          }
+          const r = parseInt(val.substring(0, 2), 16) / 255 || 0;
+          const g = parseInt(val.substring(2, 4), 16) / 255 || 0;
+          const b = parseInt(val.substring(4, 6), 16) / 255 || 0;
+          return { vec3: new Vec3(r, g, b), alpha };
         }
 
-        // Canvas elements creation
-        const svgCanvas = document.getElementById('animation-canvas');
-        const routeGroup = document.getElementById('route-paths-group');
-        const routesHoverGroup = document.getElementById('routes-hover-group');
-        const nodesGroup = document.getElementById('nodes-group');
-        const vehiclesGroup = document.getElementById('vehicles-group');
+        function colorToVec3(colorStr) {
+          return colorToVec4(colorStr).vec3;
+        }
 
-        let nodeElements = [];
-        let haloElements = [];
-        let routePathElements = [];
-        let routeGlowPathElements = [];
-        let vehicleElements = [];
-        let particleElements = [];
-        let chaosLinesGroup = null;
-        let cachedMaxGlow = 0.22;
+        const FALLBACK_COLORS = {
+          light: {
+            bg: new Vec3(0.97, 0.96, 0.95), // #f7f6f3
+            street: new Vec3(0.71, 0.63, 0.47), // #b4a078
+            grid: new Vec3(0.0, 0.0, 0.0), // black grid lines
+            gold: new Vec3(0.96, 0.62, 0.04),
+            nodeNeutral: new Vec3(0.55, 0.55, 0.55) // #8b8b8b
+          },
+          dark: {
+            bg: new Vec3(0.04, 0.04, 0.07), // #0a0b12
+            street: new Vec3(0.96, 0.62, 0.04), // warm gold streets
+            grid: new Vec3(1.0, 0.78, 0.31), // warm gold grid
+            gold: new Vec3(0.96, 0.62, 0.04),
+            nodeNeutral: new Vec3(0.32, 0.32, 0.35) // #52525b
+          }
+        };
 
         function updateCachedThemeVariables() {
-          const style = getComputedStyle(document.documentElement);
-          cachedMaxGlow = parseFloat(style.getPropertyValue('--route-glow-opacity').trim()) || 0.22;
-        }
+          const theme = document.documentElement.getAttribute('data-theme') || 'dark';
+          dioramaState.theme = theme;
 
-        // Helper: Update 3D hologram altitude and properties for nodes (using cached DOM references)
-        function updateNodeHologram(node, x, y, height, ringColor, opacity) {
-          node.el.setAttribute('transform', `translate(${x}, ${y})`);
-          node.el.style.opacity = opacity;
+          const hasCSS = getComputedStyle(document.documentElement).getPropertyValue('--canvas-bg').trim() !== '';
 
-          node.altLine.setAttribute('y2', -height);
-          node.ring.setAttribute('cy', -height);
-          node.core.setAttribute('cy', -height);
+          let gridAlpha = 0.035;
+          if (hasCSS) {
+            dioramaState.cachedColors.bg = colorToVec3('var(--canvas-bg)');
+            dioramaState.cachedColors.street = colorToVec3('var(--canvas-street)');
+            const gridColorData = colorToVec4('var(--canvas-grid)');
+            dioramaState.cachedColors.grid = gridColorData.vec3;
+            gridAlpha = gridColorData.alpha;
+            dioramaState.cachedColors.gold = colorToVec3('var(--gold)');
+            dioramaState.cachedColors.nodeNeutral = colorToVec3('var(--node-neutral-fill)');
+          } else {
+            const fb = FALLBACK_COLORS[theme];
+            dioramaState.cachedColors.bg = fb.bg;
+            dioramaState.cachedColors.street = fb.street;
+            dioramaState.cachedColors.grid = fb.grid;
+            gridAlpha = theme === 'dark' ? 0.015 : 0.035;
+            dioramaState.cachedColors.gold = fb.gold;
+            dioramaState.cachedColors.nodeNeutral = fb.nodeNeutral;
+          }
 
-          if (ringColor) {
-            node.ring.setAttribute('fill', ringColor);
+          if (renderer && renderer.gl) {
+            renderer.gl.clearColor(0.0, 0.0, 0.0, 0.0);
+          }
+
+          if (gridMesh) {
+            gridMesh.program.uniforms.gridColor.value.copy(dioramaState.cachedColors.grid);
+            gridMesh.program.uniforms.opacity.value = gridAlpha;
+          }
+
+          if (groundMesh) {
+            if (theme === 'light') {
+              groundMesh.program.uniforms.color.value.copy(dioramaState.cachedColors.bg);
+              groundMesh.program.uniforms.opacity.value = 0.0;
+            } else {
+              groundMesh.program.uniforms.color.value.set(0.03, 0.03, 0.04);
+              groundMesh.program.uniforms.opacity.value = 0.6;
+            }
+          }
+
+          if (shadedProgram) {
+            if (theme === 'light') {
+              // Solid building: very soft translucent white-gray glass
+              shadedProgram.uniforms.color.value.set(0.95, 0.95, 0.98);
+              shadedProgram.uniforms.opacity.value = 0.03;
+            } else {
+              // Solid building: deep translucent blue-gray glass
+              shadedProgram.uniforms.color.value.set(0.04, 0.06, 0.12);
+              shadedProgram.uniforms.opacity.value = 0.10;
+            }
+          }
+
+          if (wireProg) {
+            if (theme === 'light') {
+              // Wireframe building: very subtle indigo outline
+              wireProg.uniforms.color.value.set(0.39, 0.35, 1.0);
+              wireProg.uniforms.opacity.value = 0.05;
+            } else {
+              // Wireframe building: neon blue-purple outline
+              wireProg.uniforms.color.value.set(0.48, 0.45, 1.0);
+              wireProg.uniforms.opacity.value = 0.10;
+            }
           }
         }
 
-        // Helper: Update 3D hologram height and properties for vehicles (using cached DOM references)
-        function updateVehicleHologram(v, x, y, height, angle, opacity) {
-          v.el.style.opacity = opacity;
-          v.el.setAttribute('transform', `translate(${x}, ${y})`);
+        function createPipeBetweenPoints(scene, p1, p2, colorVec, thickness, gl, customProgram) {
+          const parent = new Transform();
+          scene.addChild(parent);
 
-          if (v.shadow) {
-            v.shadow.setAttribute('transform', `rotate(${angle})`);
-            v.shadow.style.opacity = height > 0 ? '0.45' : '0.9';
-          }
+          const dx = p2.x - p1.x;
+          const dy = p2.y - p1.y;
+          const dz = p2.z - p1.z;
+          const len = Math.sqrt(dx*dx + dy*dy + dz*dz);
 
-          if (v.pointer) {
-            v.pointer.setAttribute('transform', `translate(0, ${-height}) rotate(${angle})`);
-          }
+          parent.position.set(p1.x, p1.y, p1.z);
+          parent.lookAt([p2.x, p2.y, p2.z]);
+
+          const cylinderGeo = new Cylinder(gl, {
+            radiusTop: thickness,
+            radiusBottom: thickness,
+            height: len,
+            radialSegments: 6
+          });
+
+          const mesh = new Mesh(gl, {
+            geometry: cylinderGeo,
+            program: customProgram
+          });
+
+          mesh.position.set(0, 0, -len / 2);
+          mesh.rotation.x = Math.PI / 2;
+
+          parent.addChild(mesh);
+
+          return { parent, mesh, cylinderGeo };
         }
 
-        // Initialize Canvas DOM structures
         function initCanvas() {
-          if (!svgCanvas) return;
+          const canvas = document.getElementById('animation-canvas');
+          if (!canvas) return;
 
-          // Clear groupings
-          routeGroup.innerHTML = '';
-          if (routesHoverGroup) routesHoverGroup.innerHTML = '';
-          nodesGroup.innerHTML = '';
-          vehiclesGroup.innerHTML = '';
-
-          nodeElements = [];
-          haloElements = [];
-          routePathElements = [];
-          routeGlowPathElements = [];
-          vehicleElements = [];
-          particleElements = [];
-
-          // 1. Generate background streets (decorative grid)
-          const streetsGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-          streetsGroup.setAttribute('opacity', '0.06');
-          routeGroup.appendChild(streetsGroup);
-
-          for (let x = 100; x < 800; x += 100) {
-            const road = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-            road.setAttribute('x1', x);
-            road.setAttribute('y1', 40);
-            road.setAttribute('x2', x + Math.sin(x) * 20);
-            road.setAttribute('y2', 560);
-            road.setAttribute('stroke', 'var(--canvas-street)');
-            road.setAttribute('stroke-width', '1');
-            road.setAttribute('stroke-dasharray', '4 4');
-            streetsGroup.appendChild(road);
-          }
-          for (let y = 100; y < 600; y += 100) {
-            const road = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-            road.setAttribute('x1', 40);
-            road.setAttribute('y1', y);
-            road.setAttribute('x2', 760);
-            road.setAttribute('y2', y + Math.cos(y) * 20);
-            road.setAttribute('stroke', 'var(--canvas-street)');
-            road.setAttribute('stroke-width', '1');
-            road.setAttribute('stroke-dasharray', '4 4');
-            streetsGroup.appendChild(road);
+          if (isInitialized) {
+            resize();
+            return;
           }
 
-          // 2. Generate Concentric Radar Circles centered on DEPOT
-          const radarGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-          streetsGroup.appendChild(radarGroup);
-
-          const radii = [120, 260, 420];
-          const labels = ['ZONE I - 5KM', 'ZONE II - 12KM', 'ZONE III - 20KM'];
-          radii.forEach((r, idx) => {
-            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-            circle.setAttribute('cx', DEPOT.x);
-            circle.setAttribute('cy', DEPOT.y);
-            circle.setAttribute('r', r);
-            circle.setAttribute('fill', 'none');
-            circle.setAttribute('stroke', 'var(--canvas-radar)');
-            circle.setAttribute('stroke-width', '0.75');
-            circle.setAttribute('stroke-dasharray', '2 6');
-            circle.setAttribute('opacity', '0.6');
-            radarGroup.appendChild(circle);
-
-            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            text.setAttribute('x', DEPOT.x + 8);
-            text.setAttribute('y', DEPOT.y - r - 6);
-            text.setAttribute('fill', 'var(--canvas-radar-text)');
-            text.setAttribute('font-size', '9px');
-            text.setAttribute('font-family', 'JetBrains Mono');
-            text.setAttribute('letter-spacing', '0.05em');
-            text.textContent = labels[idx];
-            radarGroup.appendChild(text);
+          // preserveDrawingBuffer required to keep canvas content valid for Playwright (Implementation Rule #2)
+          renderer = new Renderer({
+            canvas: canvas,
+            width: canvas.clientWidth,
+            height: canvas.clientHeight,
+            antialias: true,
+            alpha: true,
+            preserveDrawingBuffer: true,
+            dpr: Math.min(window.devicePixelRatio, 2.0)
           });
 
-          // Create Depot Node (Upgraded to radar shield reticle)
-          const depotHalo = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-          depotHalo.setAttribute('cx', DEPOT.x);
-          depotHalo.setAttribute('cy', DEPOT.y);
-          depotHalo.setAttribute('r', 18);
-          depotHalo.setAttribute('fill', 'none');
-          depotHalo.setAttribute('stroke', 'var(--gold)');
-          depotHalo.setAttribute('stroke-width', '0.75');
-          depotHalo.setAttribute('stroke-dasharray', '2 3');
-          depotHalo.setAttribute('class', 'node-halo');
-          nodesGroup.appendChild(depotHalo);
+          gl = renderer.gl;
+          gl.enable(gl.DEPTH_TEST);
+          gl.enable(gl.BLEND);
+          gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
-          const depotOuter = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-          depotOuter.setAttribute('cx', DEPOT.x);
-          depotOuter.setAttribute('cy', DEPOT.y);
-          depotOuter.setAttribute('r', 8);
-          depotOuter.setAttribute('fill', 'none');
-          depotOuter.setAttribute('stroke', 'var(--gold)');
-          depotOuter.setAttribute('stroke-width', '1.5');
-          nodesGroup.appendChild(depotOuter);
+          scene = new Transform();
 
-          const depotCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-          depotCircle.setAttribute('cx', DEPOT.x);
-          depotCircle.setAttribute('cy', DEPOT.y);
-          depotCircle.setAttribute('r', 3);
-          depotCircle.setAttribute('fill', 'var(--gold)');
-          nodesGroup.appendChild(depotCircle);
+          camera = new Camera(gl, {
+            fov: 16,
+            near: 0.1,
+            far: 100
+          });
+          camera.position.set(7.5, 9.0, 11.5);
+          const initTargetX = window.innerWidth >= 1024 ? -1.2 : 0.5;
+          const initTargetZ = window.innerWidth >= 1024 ? -0.5 : 0.0;
+          camera.lookAt([initTargetX, 0.0, initTargetZ]);
 
-          // Create Customer Nodes (Neutral start state, upgraded to 3D hologram group)
+          shadedProgram = new Program(gl, {
+            vertex: vertexShader,
+            fragment: fragmentShader,
+            uniforms: {
+              color: { value: new Vec3(0.5, 0.5, 0.5) },
+              opacity: { value: 0.55 }
+            },
+            transparent: true,
+            depthWrite: false
+          });
+
+          const glowProgram = new Program(gl, {
+            vertex: glowVertexShader,
+            fragment: glowFragmentShader,
+            uniforms: {
+              color: { value: new Vec3(1.0, 0.8, 0.0) },
+              opacity: { value: 1.0 }
+            },
+            transparent: true,
+            depthWrite: false
+          });
+
+          // Ground reflection plane (subtle dark surface beneath grid)
+          const groundGeo = new Plane(gl, { width: 22, height: 22 });
+          const groundProg = new Program(gl, {
+            vertex: glowVertexShader,
+            fragment: glowFragmentShader,
+            uniforms: {
+              color: { value: new Vec3(0.03, 0.03, 0.04) },
+              opacity: { value: 0.6 }
+            },
+            transparent: true,
+            depthWrite: false
+          });
+          groundMesh = new Mesh(gl, { geometry: groundGeo, program: groundProg });
+          groundMesh.rotation.x = -Math.PI / 2;
+          groundMesh.position.y = -0.01;
+          scene.addChild(groundMesh);
+
+          const gridGeo = new Plane(gl, { width: 18, height: 18 });
+          const gridProg = new Program(gl, {
+            vertex: gridVertexShader,
+            fragment: gridFragmentShader,
+            uniforms: {
+              gridColor: { value: new Vec3(0.8, 0.6, 0.2) },
+              opacity: { value: 0.85 },
+              uTime: { value: 0.0 }
+            },
+            transparent: true,
+            depthWrite: false
+          });
+          gridMesh = new Mesh(gl, { geometry: gridGeo, program: gridProg });
+          gridMesh.rotation.x = -Math.PI / 2;
+          scene.addChild(gridMesh);
+
+          // Buildings
+          const buildingGeo = new Box(gl);
+          wireProg = new Program(gl, {
+            vertex: glowVertexShader,
+            fragment: glowFragmentShader,
+            uniforms: {
+              color: { value: new Vec3(0.5, 0.5, 0.5) },
+              opacity: { value: 0.35 }
+            },
+            transparent: true,
+            depthWrite: false
+          });
+
+          BUILDING_COORDS.forEach((b) => {
+            // Solid Mesh
+            const mesh = new Mesh(gl, {
+              geometry: buildingGeo,
+              program: shadedProgram
+            });
+            mesh.scale.set(b.w, b.h, b.d);
+            mesh.position.set(b.x, b.h / 2, b.z);
+            scene.addChild(mesh);
+
+            // Wireframe Overlay Mesh
+            const wireMesh = new Mesh(gl, {
+              geometry: buildingGeo,
+              program: wireProg,
+              mode: gl.LINES
+            });
+            wireMesh.scale.set(b.w * 1.01, b.h * 1.01, b.d * 1.01);
+            wireMesh.position.set(b.x, b.h / 2, b.z);
+            scene.addChild(wireMesh);
+
+            buildings.push({ mesh, wireMesh, b, wireProg });
+          });
+
+          // Shared billboard geometry for simulated glows
+          const billboardGeo = new Plane(gl, { width: 0.5, height: 0.5 });
+
+          // Depot
+          const sphereGeo = new Sphere(gl, { radius: 0.07, widthSegments: 8, heightSegments: 8 });
+          depotMesh = new Mesh(gl, {
+            geometry: sphereGeo,
+            program: new Program(gl, {
+              vertex: vertexShader,
+              fragment: fragmentShader,
+              uniforms: {
+                color: { value: new Vec3(0.96, 0.62, 0.04) },
+                opacity: { value: 1.0 }
+              }
+            })
+          });
+          depotMesh.position.set(
+            (DEPOT.x - 400) / 100,
+            0.02,
+            (DEPOT.y - 300) / 100
+          );
+          scene.addChild(depotMesh);
+
+          // Depot Halo (expanding/pulsing ring on the ground plane)
+          const depotHaloGeo = new Plane(gl, { width: 1.2, height: 1.2 });
+          const depotHaloProg = new Program(gl, {
+            vertex: depotHaloVertexShader,
+            fragment: depotHaloFragmentShader,
+            uniforms: {
+              color: { value: new Vec3(0.96, 0.62, 0.04) },
+              opacity: { value: 0.85 },
+              uTime: { value: 0.0 }
+            },
+            transparent: true,
+            depthWrite: false
+          });
+          depotHaloMesh = new Mesh(gl, {
+            geometry: depotHaloGeo,
+            program: depotHaloProg
+          });
+          depotHaloMesh.position.set(
+            (DEPOT.x - 400) / 100,
+            0.002,
+            (DEPOT.y - 300) / 100
+          );
+          depotHaloMesh.rotation.x = -Math.PI / 2;
+          scene.addChild(depotHaloMesh);
+
+          // Depot Billboard Bloom Plane
+          const depotGlowProg = new Program(gl, {
+            vertex: billboardGlowVertexShader,
+            fragment: billboardGlowFragmentShader,
+            uniforms: {
+              color: { value: new Vec3(0.96, 0.62, 0.04) },
+              opacity: { value: 0.0 },
+              uTime: { value: 0.0 }
+            },
+            transparent: true,
+            depthWrite: false
+          });
+          const depotGlowMesh = new Mesh(gl, { geometry: billboardGeo, program: depotGlowProg });
+          depotGlowMesh.position.set((DEPOT.x - 400) / 100, 0.02, (DEPOT.y - 300) / 100);
+          scene.addChild(depotGlowMesh);
+          billboardMeshes.push({ mesh: depotGlowMesh, type: 'depot', program: depotGlowProg });
+
+          // Customers
+          const nodeGeo = new Cylinder(gl, { radiusTop: 0.04, radiusBottom: 0.04, height: 0.04, radialSegments: 8 });
+          const stemGeo = new Box(gl, { width: 0.005, height: 1.0, depth: 0.005 });
+          const shadowGeo = new Plane(gl, { width: 0.07, height: 0.07 });
+
           CUSTOMER_NODES.forEach((node) => {
-            const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-            group.setAttribute('transform', `translate(${node.x}, ${node.y})`);
+            const nx = (node.x - 400) / 100;
+            const nz = (node.y - 300) / 100;
 
-            // Ground shadow
-            const shadowCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-            shadowCircle.setAttribute('cx', '0');
-            shadowCircle.setAttribute('cy', '0');
-            shadowCircle.setAttribute('r', '3.5');
-            shadowCircle.setAttribute('fill', 'var(--node-shadow)');
-            group.appendChild(shadowCircle);
-
-            // Alt dashed line
-            const altLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-            altLine.setAttribute('x1', '0');
-            altLine.setAttribute('y1', '0');
-            altLine.setAttribute('x2', '0');
-            altLine.setAttribute('y2', '-30');
-            altLine.setAttribute('stroke', 'var(--node-stem)');
-            altLine.setAttribute('stroke-width', '0.75');
-            altLine.setAttribute('stroke-dasharray', '1.5 1.5');
-            group.appendChild(altLine);
-
-            // Ground alert red halo (for Act II)
-            const halo = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-            halo.setAttribute('cx', '0');
-            halo.setAttribute('cy', '0');
-            halo.setAttribute('r', '4');
-            halo.setAttribute('fill', 'none');
-            halo.setAttribute('stroke', '#ef4444');
-            halo.setAttribute('stroke-width', '2');
-            halo.setAttribute('class', 'node-halo');
-            halo.style.opacity = '0';
-            group.appendChild(halo);
-            haloElements.push({ id: node.id, el: halo });
-
-            // Floating node ring
-            const borderRing = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-            borderRing.setAttribute('cx', '0');
-            borderRing.setAttribute('cy', '-30');
-            borderRing.setAttribute('r', '5');
-            borderRing.setAttribute('class', 'node-circle customer');
-            borderRing.setAttribute('fill', 'var(--node-neutral-fill)');
-            borderRing.setAttribute('stroke', 'var(--node-border)');
-            borderRing.setAttribute('stroke-width', '1.5');
-            group.appendChild(borderRing);
-
-            // Floating core dot
-            const core = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-            core.setAttribute('cx', '0');
-            core.setAttribute('cy', '-30');
-            core.setAttribute('r', '2');
-            core.setAttribute('fill', 'var(--node-border)');
-            core.setAttribute('class', 'floating-core');
-            group.appendChild(core);
-
-            nodesGroup.appendChild(group);
-            nodeElements.push({
-              id: node.id,
-              el: group,
-              altLine: altLine,
-              ring: borderRing,
-              core: core,
-              shadowCircle: shadowCircle,
-              originalX: node.x,
-              originalY: node.y
+            const shadow = new Mesh(gl, {
+              geometry: shadowGeo,
+              program: new Program(gl, {
+                vertex: shadowVertexShader,
+                fragment: shadowFragmentShader,
+                uniforms: {
+                  color: { value: new Vec3(0.93, 0.27, 0.27) },
+                  opacity: { value: 0.0 }
+                },
+                transparent: true,
+                depthWrite: false
+              })
             });
+            shadow.position.set(nx, 0.001, nz);
+            shadow.rotation.x = -Math.PI / 2;
+            scene.addChild(shadow);
+            shadowMeshes.push({ mesh: shadow, id: node.id });
+
+            const stem = new Mesh(gl, {
+              geometry: stemGeo,
+              program: new Program(gl, {
+                vertex: glowVertexShader,
+                fragment: glowFragmentShader,
+                uniforms: {
+                  color: { value: new Vec3(0.5, 0.5, 0.5) },
+                  opacity: { value: 0.0 }
+                },
+                transparent: true,
+                depthWrite: false
+              })
+            });
+            stem.position.set(nx, 0, nz);
+            scene.addChild(stem);
+            stemMeshes.push({ mesh: stem, id: node.id });
+
+            const nMesh = new Mesh(gl, {
+              geometry: nodeGeo,
+              program: new Program(gl, {
+                vertex: vertexShader,
+                fragment: fragmentShader,
+                uniforms: {
+                  color: { value: new Vec3(0.32, 0.32, 0.35) },
+                  opacity: { value: 0.0 }
+                }
+              })
+            });
+            nMesh.position.set(nx, 0, nz);
+            scene.addChild(nMesh);
+            nodeMeshes.push({
+              mesh: nMesh,
+              id: node.id,
+              nx,
+              nz,
+              targetColor: colorToVec3(node.targetColor)
+            });
+
+            // Customer Node Billboard Bloom Plane (Implementation Rule #3)
+            const nodeGlowProg = new Program(gl, {
+              vertex: billboardGlowVertexShader,
+              fragment: billboardGlowFragmentShader,
+              uniforms: {
+                color: { value: new Vec3(0.32, 0.32, 0.35) },
+                opacity: { value: 0.0 },
+                uTime: { value: 0.0 }
+              },
+              transparent: true,
+              depthWrite: false
+            });
+            const nodeGlowMesh = new Mesh(gl, { geometry: billboardGeo, program: nodeGlowProg });
+            nodeGlowMesh.position.set(nx, 0, nz);
+            scene.addChild(nodeGlowMesh);
+            billboardMeshes.push({ mesh: nodeGlowMesh, id: node.id, type: 'node', program: nodeGlowProg });
           });
 
-          // Create Routes (Dual layer: glow path + sharp path)
+          // Route segments and Vehicles
           ROUTES.forEach((route, index) => {
-            // 1. Thick Glowing underneath path
-            const glowPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            glowPath.setAttribute('d', buildPathD(route.nodes));
-            glowPath.setAttribute('class', 'route-line solved');
-            glowPath.setAttribute('stroke', route.color);
-            glowPath.setAttribute('stroke-width', '8');
-            glowPath.setAttribute('filter', 'url(#glow)');
-            glowPath.style.opacity = '0';
-            if (routesHoverGroup) routesHoverGroup.appendChild(glowPath);
-            else routeGroup.appendChild(glowPath);
-            routeGlowPathElements.push({ index, el: glowPath });
-
-            // 2. Sharp overlay path
-            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            path.setAttribute('d', buildPathD(route.nodes));
-            path.setAttribute('class', 'route-line solved');
-            path.setAttribute('stroke', route.color);
-            path.setAttribute('stroke-width', '2.5');
-            path.style.opacity = '0';
-            if (routesHoverGroup) routesHoverGroup.appendChild(path);
-            else routeGroup.appendChild(path);
-            routePathElements.push({ index, el: path, color: route.color });
-
-            // Create vehicle container group (delta pointer vector model)
-            const vehicleGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-            vehicleGroup.setAttribute('class', 'vehicle-container');
-            vehicleGroup.style.opacity = '0';
-
-            // Ground drop shadow (matching delta pointer rotated on ground)
-            const shadow = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-            shadow.setAttribute('points', '-8,-4 6,0 -8,4 -5,0');
-            shadow.setAttribute('fill', 'rgba(0,0,0,0.18)');
-            shadow.setAttribute('class', 'vehicle-shadow');
-            vehicleGroup.appendChild(shadow);
-
-            // Floating pointer group
-            const pointerGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-            pointerGroup.setAttribute('class', 'vehicle-pointer');
-
-            // Delta pointer body
-            const pointer = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-            pointer.setAttribute('points', '-8,-4 6,0 -8,4 -5,0');
-            pointerGroup.appendChild(pointer);
-
-            // Pointer core dot
-            const pointerCore = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-            pointerCore.setAttribute('cx', '-2.2');
-            pointerCore.setAttribute('cy', '0');
-            pointerCore.setAttribute('r', '1.6');
-            pointerCore.setAttribute('fill', '#ffffff');
-            pointerGroup.appendChild(pointerCore);
-
-            // Headlight glow
-            const beam = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-            beam.setAttribute('points', '5,-1.5 30,-9 30,9 5,1.5');
-            beam.setAttribute('fill', 'url(#headlight-gradient)');
-            beam.setAttribute('opacity', '0.45');
-            beam.setAttribute('pointer-events', 'none');
-            pointerGroup.appendChild(beam);
-
-            vehicleGroup.appendChild(pointerGroup);
-
-            vehiclesGroup.appendChild(vehicleGroup);
-            vehicleElements.push({
+            const routeData = {
               index,
-              el: vehicleGroup,
-              shadow: shadow,
-              pointer: pointerGroup,
-              color: route.color
+              colorVec: colorToVec3(route.color),
+              segments: []
+            };
+
+            const points3D = route.nodes.map((n) => {
+              const isDepot = (n.x === DEPOT.x && n.y === DEPOT.y);
+              const yVal = isDepot ? 0.025 : 0.35; // Sloped route connections to depot (Diagnosis #2)
+              return new Vec3((n.x - 400) / 100, yVal, (n.y - 300) / 100);
             });
 
-            // Create 3 glowing fiber data particles per route
+            let cumulativeLengths = [0];
+            let totalLen = 0;
+            for (let i = 0; i < points3D.length - 1; i++) {
+              const dx = points3D[i+1].x - points3D[i].x;
+              const dy = points3D[i+1].y - points3D[i].y;
+              const dz = points3D[i+1].z - points3D[i].z;
+              const len = Math.sqrt(dx*dx + dy*dy + dz*dz);
+              totalLen += len;
+              cumulativeLengths.push(totalLen);
+            }
+            routeData.totalLen = totalLen;
+            routeData.cumulativeLengths = cumulativeLengths;
+            routeData.points3D = points3D;
+
+            const routeProg = new Program(gl, {
+              vertex: vertexShader,
+              fragment: fragmentShader,
+              uniforms: {
+                color: { value: colorToVec3(route.color) },
+                opacity: { value: 0.0 }
+              },
+              transparent: true
+            });
+
+            for (let i = 0; i < points3D.length - 1; i++) {
+              const pipe = createPipeBetweenPoints(scene, points3D[i], points3D[i+1], routeData.colorVec, 0.0045, gl, routeProg);
+              routeData.segments.push({
+                meshParent: pipe.parent,
+                meshCylinder: pipe.mesh,
+                p1: points3D[i],
+                p2: points3D[i+1],
+                originalLen: cumulativeLengths[i+1] - cumulativeLengths[i],
+                startProg: cumulativeLengths[i] / totalLen,
+                endProg: cumulativeLengths[i+1] / totalLen,
+                program: routeProg
+              });
+            }
+            routeMeshes.push(routeData);
+
+            // Vehicles
+            const vehicleGroup = new Transform();
+            scene.addChild(vehicleGroup);
+
+            const chassisGeo = new Box(gl, { width: 0.06, height: 0.035, depth: 0.09 });
+            const chassisProg = new Program(gl, {
+              vertex: vertexShader,
+              fragment: fragmentShader,
+              uniforms: {
+                color: { value: colorToVec3(route.color) },
+                opacity: { value: 0.0 }
+              }
+            });
+            const chassis = new Mesh(gl, { geometry: chassisGeo, program: chassisProg });
+            chassis.position.y = 0.0175;
+            vehicleGroup.addChild(chassis);
+
+            const cabinGeo = new Box(gl, { width: 0.05, height: 0.035, depth: 0.045 });
+            const cabinProg = new Program(gl, {
+              vertex: vertexShader,
+              fragment: fragmentShader,
+              uniforms: {
+                color: { value: new Vec3(0.08, 0.08, 0.08) },
+                opacity: { value: 0.0 }
+              }
+            });
+            const cabin = new Mesh(gl, { geometry: cabinGeo, program: cabinProg });
+            cabin.position.set(0, 0.0425, -0.02);
+            vehicleGroup.addChild(cabin);
+
+            vehicleMeshes.push({
+              index,
+              group: vehicleGroup,
+              chassis,
+              cabin,
+              colorVec: colorToVec3(route.color),
+              chassisProg,
+              cabinProg
+            });
+
+            // Vehicle Headlight Billboard Bloom Plane
+            const headlightGlowProg = new Program(gl, {
+              vertex: billboardGlowVertexShader,
+              fragment: billboardGlowFragmentShader,
+              uniforms: {
+                color: { value: new Vec3(1.0, 0.95, 0.8) }, // Warm headlight beam glow
+                opacity: { value: 0.0 },
+                uTime: { value: 0.0 }
+              },
+              transparent: true,
+              depthWrite: false
+            });
+            const headlightGlowMesh = new Mesh(gl, { geometry: billboardGeo, program: headlightGlowProg });
+            scene.addChild(headlightGlowMesh);
+            billboardMeshes.push({ mesh: headlightGlowMesh, routeIndex: index, type: 'headlight', program: headlightGlowProg });
+
+            // Particles
+            const partGeo = new Sphere(gl, { radius: 0.013, widthSegments: 4, heightSegments: 4 });
+            const pProg = new Program(gl, {
+              vertex: glowVertexShader,
+              fragment: glowFragmentShader,
+              uniforms: {
+                color: { value: colorToVec3(route.color) },
+                opacity: { value: 0.0 }
+              },
+              transparent: true,
+              depthWrite: false
+            });
+
             for (let pIdx = 0; pIdx < 3; pIdx++) {
-              const particle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-              particle.setAttribute('r', '2.5');
-              particle.setAttribute('fill', route.color);
-              particle.setAttribute('opacity', '0.75');
-              particle.style.display = 'none';
-              if (routesHoverGroup) routesHoverGroup.appendChild(particle);
-              else vehiclesGroup.appendChild(particle);
-              particleElements.push({ routeIndex: index, el: particle, offset: pIdx * 0.33 });
+              const pMesh = new Mesh(gl, { geometry: partGeo, program: pProg });
+              scene.addChild(pMesh);
+              particleMeshes.push({
+                routeIndex: index,
+                mesh: pMesh,
+                offset: pIdx * 0.33,
+                colorVec: colorToVec3(route.color),
+                program: pProg
+              });
             }
           });
 
-          // Create a group for chaotic problem state lines (with object pooling)
-          chaosLinesGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          // Prebuild warning lines for Act II
+          const warnProg = new Program(gl, {
+            vertex: vertexShader,
+            fragment: fragmentShader,
+            uniforms: {
+              color: { value: new Vec3(0.93, 0.27, 0.27) },
+              opacity: { value: 0.0 }
+            },
+            transparent: true
+          });
+
           for (let i = 0; i < 20; i++) {
-            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
             const n1 = CUSTOMER_NODES[Math.floor(lerp(0, CUSTOMER_NODES.length - 1, (i * 0.17) % 1))];
             const n2 = CUSTOMER_NODES[Math.floor(lerp(0, CUSTOMER_NODES.length - 1, (i * 0.37) % 1))];
-            line.setAttribute('x1', n1.x);
-            line.setAttribute('y1', n1.y);
-            line.setAttribute('x2', n2.x);
-            line.setAttribute('y2', n2.y);
-            line.setAttribute('stroke', '#ef4444');
-            line.setAttribute('stroke-width', '1');
-            line.setAttribute('opacity', '0');
-            chaosLinesGroup.appendChild(line);
+
+            const p1 = new Vec3((n1.x - 400) / 100, 0, (n1.y - 300) / 100);
+            const p2 = new Vec3((n2.x - 400) / 100, 0, (n2.y - 300) / 100);
+
+            const pipe = createPipeBetweenPoints(scene, p1, p2, new Vec3(0.93, 0.27, 0.27), 0.005, gl, warnProg);
+            pipe.parent.position.y = -10;
+            warningLineMeshes.push({ pipe, p1, p2, warnProg });
           }
-          if (routesHoverGroup) routesHoverGroup.appendChild(chaosLinesGroup);
-          else routeGroup.appendChild(chaosLinesGroup);
+
+          updateCachedThemeVariables();
+          setupCustomerListPanel(); // Initialize list rows (Implementation Rule #4)
+
+          window.addEventListener('resize', resize);
+          resize();
+
+          document.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const cx = rect.left + rect.width / 2;
+            const cy = rect.top + rect.height / 2;
+            dioramaState.targetMouseX = (e.clientX - cx) / (rect.width / 2);
+            dioramaState.targetMouseY = (e.clientY - cy) / (rect.height / 2);
+          });
+
+          requestAnimationFrame(loop);
+          isInitialized = true;
         }
 
-        // Dynamic SVG Renderer based on progress
-        const cachedHud = document.getElementById('hud-panel');
+        function resize() {
+          if (!renderer) return;
+          const canvas = renderer.gl.canvas;
+          const width = canvas.clientWidth;
+          const height = canvas.clientHeight;
+
+          dioramaState.width = width;
+          dioramaState.height = height;
+
+          renderer.setSize(width, height);
+          const aspect = height > 0 ? width / height : 1.0;
+          camera.perspective({ aspect });
+        }
+
+        function updateScene(time) {
+          if (!isInitialized) return;
+
+          const act = dioramaState.act;
+          const progress = dioramaState.progress;
+
+          // Gentle floating/breathing animation for the depot
+          if (depotMesh) {
+            const depotFloat = 0.025 + Math.sin(time * 0.002) * 0.008;
+            depotMesh.position.y = depotFloat;
+            
+            const depotGlow = billboardMeshes.find(b => b.type === 'depot');
+            if (depotGlow) {
+              depotGlow.mesh.position.y = depotFloat;
+              depotGlow.program.uniforms.opacity.value = 0.70;
+            }
+          }
+
+          // Target altitude heights
+          let nodeTargetHeight = 0;
+          if (act === 1) {
+            nodeTargetHeight = 0.02;
+          } else if (act === 2) {
+            nodeTargetHeight = 0.02 + progress * 0.33;
+          } else {
+            nodeTargetHeight = 0.35;
+          }
+
+          // 1. Nodes update
+          nodeMeshes.forEach((n, idx) => {
+            const stem = stemMeshes.find((s) => s.id === n.id).mesh;
+            const shadow = shadowMeshes.find((s) => s.id === n.id).mesh;
+            const glow = billboardMeshes.find((b) => b.type === 'node' && b.id === n.id);
+
+            // Subtle breathing heartbeat scale animation on nodes, or rapid pulse if hovered
+            let pulse = 1.0;
+            if (dioramaState.hoveredNodeId === n.id) {
+              pulse = 1.45 + Math.sin(time * 0.015) * 0.15; // Hover feedback (Implementation Rule #4)
+            } else if (act >= 3) {
+              pulse = 1.0 + Math.sin(time * 0.0035 + idx * 0.5) * 0.07;
+            } else if (act === 2) {
+              pulse = 1.0 + Math.sin(time * 0.005 + idx * 0.3) * 0.04;
+            }
+            n.mesh.scale.set(pulse, pulse, pulse);
+            if (glow) {
+              glow.mesh.scale.set(pulse * 1.5, pulse * 1.5, 1.0);
+            }
+
+            if (act === 1) {
+              const targetX = lerp((DEPOT.x - 400) / 100, 3.0, (n.id - 1) / CUSTOMER_NODES.length);
+              const targetZ = (DEPOT.y - 300) / 100;
+
+              n.mesh.position.set(targetX, 0.02, targetZ);
+              n.mesh.program.uniforms.color.value = dioramaState.cachedColors.nodeNeutral;
+              n.mesh.program.uniforms.opacity.value = lerp(0.1, 0.45, progress);
+
+              stem.position.set(targetX, 0.01, targetZ);
+              stem.scale.set(pulse, 0.0001, pulse);
+              stem.program.uniforms.opacity.value = 0.0;
+
+              shadow.position.set(targetX, 0.001, targetZ);
+              shadow.scale.set(pulse, 1.0, pulse);
+              shadow.program.uniforms.opacity.value = 0.0;
+
+              if (glow) {
+                glow.mesh.position.set(targetX, 0.02, targetZ);
+                glow.program.uniforms.opacity.value = 0.0;
+              }
+
+            } else if (act === 2) {
+              const startX = lerp((DEPOT.x - 400) / 100, 3.0, (n.id - 1) / CUSTOMER_NODES.length);
+              const startZ = (DEPOT.y - 300) / 100;
+
+              const currentX = lerp(startX, n.nx, progress);
+              const currentZ = lerp(startZ, n.nz, progress);
+
+              n.mesh.position.set(currentX, nodeTargetHeight, currentZ);
+              n.mesh.program.uniforms.color.value = new Vec3(0.93, 0.27, 0.27);
+              n.mesh.program.uniforms.opacity.value = 1.0;
+
+              stem.position.set(currentX, nodeTargetHeight / 2, currentZ);
+              stem.scale.set(pulse, nodeTargetHeight, pulse);
+              stem.program.uniforms.color.value = new Vec3(0.93, 0.27, 0.27);
+              stem.program.uniforms.opacity.value = progress * 0.45;
+
+              shadow.position.set(currentX, 0.001, currentZ);
+              shadow.scale.set(pulse, 1.0, pulse);
+              shadow.program.uniforms.color.value = new Vec3(0.93, 0.27, 0.27);
+              shadow.program.uniforms.opacity.value = progress > 0.5 ? 0.35 : 0.0;
+
+              if (glow) {
+                glow.mesh.position.set(currentX, nodeTargetHeight, currentZ);
+                glow.program.uniforms.color.value.set(0.93, 0.27, 0.27);
+                glow.program.uniforms.opacity.value = progress * 0.25;
+              }
+
+            } else if (act === 3) {
+              n.mesh.position.set(n.nx, 0.35, n.nz);
+              const lerped = lerpVec3(new Vec3(0.93, 0.27, 0.27), n.targetColor, Math.min(1.0, progress * 2.0));
+              n.mesh.program.uniforms.color.value = lerped;
+              n.mesh.program.uniforms.opacity.value = 1.0;
+
+              stem.position.set(n.nx, 0.35 / 2, n.nz);
+              stem.scale.set(pulse, 0.35, pulse);
+              stem.program.uniforms.color.value = dioramaState.cachedColors.street;
+              stem.program.uniforms.opacity.value = 0.35;
+
+              shadow.position.set(n.nx, 0.001, n.nz);
+              shadow.scale.set(pulse, 1.0, pulse);
+              shadow.program.uniforms.color.value = dioramaState.cachedColors.street;
+              shadow.program.uniforms.opacity.value = lerp(0.35, 0.18, progress);
+
+              if (glow) {
+                glow.mesh.position.set(n.nx, 0.35, n.nz);
+                glow.program.uniforms.color.value.copy(lerped);
+                // Hover priority glow multiplier
+                const baseOpacity = dioramaState.hoveredNodeId === n.id ? 0.85 : 0.35;
+                glow.program.uniforms.opacity.value = baseOpacity;
+              }
+
+            } else if (act === 4) {
+              n.mesh.position.set(n.nx, 0.35, n.nz);
+              n.mesh.program.uniforms.color.value = n.targetColor;
+              n.mesh.program.uniforms.opacity.value = 1.0;
+
+              stem.position.set(n.nx, 0.35 / 2, n.nz);
+              stem.scale.set(pulse, 0.35, pulse);
+              stem.program.uniforms.color.value = dioramaState.cachedColors.street;
+              stem.program.uniforms.opacity.value = 0.35;
+
+              shadow.position.set(n.nx, 0.001, n.nz);
+              shadow.scale.set(pulse, 1.0, pulse);
+              shadow.program.uniforms.color.value = dioramaState.cachedColors.street;
+              shadow.program.uniforms.opacity.value = 0.18;
+
+              if (glow) {
+                glow.mesh.position.set(n.nx, 0.35, n.nz);
+                glow.program.uniforms.color.value.copy(n.targetColor);
+                const baseOpacity = dioramaState.hoveredNodeId === n.id ? 0.85 : 0.40;
+                glow.program.uniforms.opacity.value = baseOpacity;
+              }
+            }
+          });
+
+          // 2. Buildings update — premium glass and wireframe glow
+          buildings.forEach((b, idx) => {
+            const isDark = dioramaState.theme === 'dark';
+            const bCol = isDark
+              ? new Vec3(0.08, 0.09, 0.14)
+              : new Vec3(0.76, 0.80, 0.85);
+            const wCol = isDark
+              ? new Vec3(0.55, 0.42, 0.15)
+              : new Vec3(0.6, 0.6, 0.65);
+
+            b.mesh.program.uniforms.color.value = bCol;
+            b.mesh.program.uniforms.opacity.value = isDark ? 0.10 : 0.03;
+
+            b.wireProg.uniforms.color.value = wCol;
+            b.wireProg.uniforms.opacity.value = isDark ? 0.10 : 0.05;
+
+            // Subtle breathing animation on building heights
+            const breathe = 1.0 + Math.sin(time * 0.0008 + idx * 1.7) * 0.012;
+            const h = b.b.h * breathe;
+            b.mesh.scale.set(b.b.w, h, b.b.d);
+            b.mesh.position.y = h / 2;
+            b.wireMesh.scale.set(b.b.w * 1.01, h * 1.01, b.b.d * 1.01);
+            b.wireMesh.position.y = h / 2;
+          });
+
+          // 3. Act II warning chaotic lines
+          if (act === 2) {
+            const cOp = progress > 0.3 ? lerp(0, 0.32, progress) : 0;
+            warningLineMeshes.forEach((w) => {
+              w.pipe.parent.position.y = 0;
+              w.warnProg.uniforms.opacity.value = cOp;
+            });
+          } else {
+            warningLineMeshes.forEach((w) => {
+              w.pipe.parent.position.y = -10;
+              w.warnProg.uniforms.opacity.value = 0.0;
+            });
+          }
+
+          // 4. Routes drawing progression
+          routeMeshes.forEach((r) => {
+            r.segments.forEach((seg) => {
+              if (act === 1 || act === 2) {
+                seg.program.uniforms.opacity.value = 0.0;
+                seg.meshCylinder.scale.y = 0.0001;
+              } else if (act === 3) {
+                seg.program.uniforms.opacity.value = Math.min(1.0, progress * 1.5);
+                // Lerp route color from red to target color to match node transitions (Diagnosis #5)
+                const routeLerpCol = lerpVec3(new Vec3(0.93, 0.27, 0.27), r.colorVec, Math.min(1.0, progress * 2.0));
+                seg.program.uniforms.color.value.copy(routeLerpCol);
+                if (progress >= seg.endProg) {
+                  seg.meshCylinder.scale.set(1.0, 1.0, 1.0);
+                  seg.meshCylinder.position.z = -seg.originalLen / 2;
+                } else if (progress <= seg.startProg) {
+                  seg.meshCylinder.scale.set(1.0, 0.0001, 1.0);
+                } else {
+                  const segP = (progress - seg.startProg) / (seg.endProg - seg.startProg);
+                  const curLen = seg.originalLen * segP;
+                  seg.meshCylinder.scale.set(1.0, segP, 1.0);
+                  seg.meshCylinder.position.z = -curLen / 2;
+                }
+              } else if (act === 4) {
+                seg.program.uniforms.opacity.value = 0.85;
+                seg.program.uniforms.color.value.copy(r.colorVec);
+                seg.meshCylinder.scale.set(1.0, 1.0, 1.0);
+                seg.meshCylinder.position.z = -seg.originalLen / 2;
+              }
+            });
+          });
+
+          // 5. Vehicles movement
+          vehicleMeshes.forEach((v) => {
+            const r = routeMeshes[v.index];
+            const headlightGlow = billboardMeshes.find(b => b.type === 'headlight' && b.routeIndex === v.index);
+
+            if (act === 1) {
+              if (v.index === 0) {
+                v.chassisProg.uniforms.opacity.value = 1.0;
+                v.cabinProg.uniforms.opacity.value = 1.0;
+                v.chassisProg.uniforms.color.value = v.colorVec;
+
+                const start3 = new Vec3((DEPOT.x - 400) / 100, 0.02, (DEPOT.y - 300) / 100);
+                const end3 = new Vec3((700 - 400) / 100, 0.02, (DEPOT.y - 300) / 100);
+
+                // Spline path is just a straight line for Act I vehicle
+                const pos = lerpVec3(start3, end3, progress);
+                v.group.position.set(pos.x, pos.y, pos.z);
+                
+                const d = Math.sqrt((end3.x - pos.x)**2 + (end3.z - pos.z)**2);
+                if (d > 0.001) {
+                  v.group.lookAt([end3.x, end3.y, end3.z]);
+                }
+
+                if (headlightGlow) {
+                  // Position headlight slightly in front of vehicle orientation
+                  const forward = new Vec3(0, 0, -1).applyQuaternion(v.group.quaternion).scale(0.06);
+                  headlightGlow.mesh.position.copy(v.group.position).add(forward);
+                  headlightGlow.mesh.position.y = 0.03;
+                  headlightGlow.program.uniforms.opacity.value = 0.55;
+                }
+              } else {
+                v.chassisProg.uniforms.opacity.value = 0.0;
+                v.cabinProg.uniforms.opacity.value = 0.0;
+                if (headlightGlow) headlightGlow.program.uniforms.opacity.value = 0.0;
+              }
+            } else if (act === 2) {
+              if (v.index === 0) {
+                v.chassisProg.uniforms.opacity.value = 1.0;
+                v.cabinProg.uniforms.opacity.value = 1.0;
+                v.chassisProg.uniforms.color.value = new Vec3(0.93, 0.27, 0.27); // Warning red
+
+                const shakeX = (DEPOT.x - 400) / 100 + Math.sin(time * 0.06) * 0.035;
+                const shakeZ = (DEPOT.y - 300) / 100 + Math.cos(time * 0.06) * 0.035;
+                v.group.position.set(shakeX, 0.02, shakeZ);
+                v.group.rotation.set(0, Math.sin(time * 0.08) * 0.2, 0);
+
+                if (headlightGlow) {
+                  const forward = new Vec3(0, 0, -1).applyQuaternion(v.group.quaternion).scale(0.06);
+                  headlightGlow.mesh.position.copy(v.group.position).add(forward);
+                  headlightGlow.mesh.position.y = 0.03;
+                  headlightGlow.program.uniforms.color.value.set(0.93, 0.27, 0.27);
+                  headlightGlow.program.uniforms.opacity.value = 0.55 + Math.sin(time * 0.15) * 0.15;
+                }
+              } else {
+                v.chassisProg.uniforms.opacity.value = 0.0;
+                v.cabinProg.uniforms.opacity.value = 0.0;
+                if (headlightGlow) headlightGlow.program.uniforms.opacity.value = 0.0;
+              }
+            } else if (act === 3) {
+              const op = progress > 0.45 ? 1.0 : 0.0;
+              v.chassisProg.uniforms.opacity.value = op;
+              v.cabinProg.uniforms.opacity.value = op;
+              v.chassisProg.uniforms.color.value = v.colorVec;
+
+              // Catmull-Rom spline calculations (Implementation Rule #1)
+              const pos = getSplinePointAtProgress(r.points3D, progress);
+              
+              // Direction estimation
+              let nextProg = progress + 0.015;
+              let nextP;
+              if (nextProg > 1.0) {
+                // Extrapolate direction slightly past 1.0 instead of wrapping for lookAt stability
+                const prevP = getSplinePointAtProgress(r.points3D, 0.98);
+                const endP = r.points3D[r.points3D.length - 1];
+                nextP = new Vec3().copy(endP).add(new Vec3().copy(endP).sub(prevP).scale(0.5));
+              } else {
+                nextP = getSplinePointAtProgress(r.points3D, nextProg);
+              }
+
+              v.group.position.set(pos.x, pos.y + 0.02, pos.z);
+              
+              const d = Math.sqrt((nextP.x - pos.x)**2 + (nextP.z - pos.z)**2);
+              if (d > 0.001) {
+                v.group.lookAt([nextP.x, nextP.y + 0.02, nextP.z]);
+              }
+
+              if (headlightGlow) {
+                const forward = new Vec3(0, 0, -1).applyQuaternion(v.group.quaternion).scale(0.06);
+                headlightGlow.mesh.position.copy(v.group.position).add(forward);
+                headlightGlow.mesh.position.y = v.group.position.y + 0.0125;
+                headlightGlow.program.uniforms.color.value.set(1.0, 0.95, 0.8);
+                headlightGlow.program.uniforms.opacity.value = op * 0.60;
+              }
+
+            } else if (act === 4) {
+              v.chassisProg.uniforms.opacity.value = 1.0;
+              v.cabinProg.uniforms.opacity.value = 1.0;
+              v.chassisProg.uniforms.color.value = v.colorVec;
+
+              const lTime = time * 0.00018;
+              const lProg = (lTime * (1.2 + v.index * 0.22)) % 1.0;
+
+              // Catmull-Rom spline calculations (Implementation Rule #1)
+              const pos = getSplinePointAtProgress(r.points3D, lProg);
+              
+              let nextProg = lProg + 0.015;
+              let nextP;
+              if (nextProg > 1.0) {
+                // Extrapolate direction slightly past 1.0 instead of wrapping for lookAt stability
+                const prevP = getSplinePointAtProgress(r.points3D, 0.98);
+                const endP = r.points3D[r.points3D.length - 1];
+                nextP = new Vec3().copy(endP).add(new Vec3().copy(endP).sub(prevP).scale(0.5));
+              } else {
+                nextP = getSplinePointAtProgress(r.points3D, nextProg);
+              }
+
+              v.group.position.set(pos.x, pos.y + 0.02, pos.z);
+              
+              const d = Math.sqrt((nextP.x - pos.x)**2 + (nextP.z - pos.z)**2);
+              if (d > 0.001) {
+                v.group.lookAt([nextP.x, nextP.y + 0.02, nextP.z]);
+              }
+
+              if (headlightGlow) {
+                const forward = new Vec3(0, 0, -1).applyQuaternion(v.group.quaternion).scale(0.06);
+                headlightGlow.mesh.position.copy(v.group.position).add(forward);
+                headlightGlow.mesh.position.y = v.group.position.y + 0.0125;
+                headlightGlow.program.uniforms.color.value.set(1.0, 0.95, 0.8);
+                headlightGlow.program.uniforms.opacity.value = 0.60;
+              }
+            }
+          });
+
+          // 6. Particles update
+          particleMeshes.forEach((p) => {
+            const r = routeMeshes[p.routeIndex];
+            if (act === 4) {
+              p.program.uniforms.opacity.value = 0.8;
+              const pTime = time * 0.0003;
+              const pProg = (pTime + p.offset) % 1.0;
+              // Catmull-Rom spline calculations (Implementation Rule #1)
+              const pos = getSplinePointAtProgress(r.points3D, pProg);
+              p.mesh.position.set(pos.x, 0.35 + 0.01, pos.z);
+            } else {
+              p.program.uniforms.opacity.value = 0.0;
+            }
+          });
+        }
+
+        function loop(time) {
+          requestAnimationFrame(loop);
+
+          if (!renderer) return;
+
+          // Responsive resize check on every frame
+          const canvas = renderer.gl.canvas;
+          const dpr = Math.min(window.devicePixelRatio, 2.0);
+          const targetW = Math.floor(canvas.clientWidth * dpr);
+          const targetH = Math.floor(canvas.clientHeight * dpr);
+          if (canvas.width !== targetW || canvas.height !== targetH) {
+            resize();
+          }
+
+          // Camera Transition Interpolation Waypoints (Implementation Rule #2)
+          const isWide = window.innerWidth >= 1024;
+          const waypoints = getCameraWaypoints(isWide);
+
+          const currentAct = dioramaState.act;
+          const progress = dioramaState.progress;
+
+          let camPos, camLook;
+
+          if (currentAct < 4) {
+            const currentWaypoint = waypoints[currentAct];
+            const nextWaypoint = waypoints[currentAct + 1];
+            camPos = lerpVec3(currentWaypoint.position, nextWaypoint.position, progress);
+            camLook = lerpVec3(currentWaypoint.lookAt, nextWaypoint.lookAt, progress);
+          } else {
+            camPos = new Vec3().copy(waypoints[4].position);
+            camLook = new Vec3().copy(waypoints[4].lookAt);
+          }
+
+          // Parallax sway based on target mouse coords (Added additive on top of waypoint transition)
+          dioramaState.mouseX = lerp(dioramaState.mouseX, dioramaState.targetMouseX, 0.05);
+          dioramaState.mouseY = lerp(dioramaState.mouseY, dioramaState.targetMouseY, 0.05);
+
+          let orbitX = 0;
+          let orbitZ = 0;
+          if (currentAct === 4) {
+            const angle = time * 0.00012;
+            orbitX = Math.sin(angle) * 0.6;
+            orbitZ = Math.cos(angle) * 0.6;
+          }
+
+          camera.position.set(
+            camPos.x + dioramaState.mouseX * 0.75 + orbitX,
+            camPos.y,
+            camPos.z + dioramaState.mouseY * 0.75 + orbitZ
+          );
+
+          const lookTargetX = camLook.x - dioramaState.mouseX * 0.35;
+          const lookTargetZ = camLook.z - dioramaState.mouseY * 0.35;
+          camera.lookAt([lookTargetX, camLook.y, lookTargetZ]);
+
+          // Animate grid pulse
+          if (gridMesh) {
+            gridMesh.program.uniforms.uTime.value = time * 0.001;
+          }
+
+          // Animate depot halo ring
+          if (depotHaloMesh) {
+            depotHaloMesh.program.uniforms.uTime.value = time * 0.001;
+          }
+
+          updateScene(time);
+
+          // Billboard glow orientations pointing to camera (Implementation Rule #3)
+          billboardMeshes.forEach((b) => {
+            b.mesh.quaternion.copy(camera.quaternion);
+            b.program.uniforms.uTime.value = time * 0.001;
+          });
+
+          renderer.render({ scene, camera });
+        }
+
+        // Dynamic simulated solver logs
+        const CONSOLE_LOGS = {
+          1: [
+            "&gt; Initializing network nodes...",
+            "&gt; Depot coordinates set at [150, 300]",
+            "&gt; Customers: 30 locations loaded",
+            "&gt; Fleet: 4 vehicles active (capacity 100)"
+          ],
+          2: [
+            "&gt; ERROR: Capacity limit hit on Route 2 (124/100)",
+            "&gt; WARNING: Time-window mismatch at Customer 14",
+            "&gt; Trajectory stagnated in sub-optimal local minimum",
+            "&gt; Stagnation warning: cost stuck at 1684.2"
+          ],
+          3: [
+            "&gt; Activating DDQN operator selection...",
+            "&gt; DDQN selected DESTROY: 'Cluster' (cost: 1684.2)",
+            "&gt; DDQN selected REPAIR: 'Greedy' (feasibility: OK)",
+            "&gt; DDQN escape triggered! Cost: 1684.2 -&gt; 1215.0"
+          ],
+          4: [
+            "&gt; Solomon RC101 optimization complete!",
+            "&gt; Final Cost: 1048.9 (Gap: -2.22% vs BKS)",
+            "&gt; All constraints checked: 100% FEASIBLE",
+            "&gt; Fleet dispatch finalized. On-time delivery locked."
+          ]
+        };
+
+        function updateConsoleLog(act) {
+          const consolePanel = document.getElementById('hud-console');
+          if (!consolePanel) return;
+          
+          const lines = CONSOLE_LOGS[act] || [];
+          let html = '';
+          lines.forEach((line, index) => {
+            if (index === lines.length - 1) {
+              html += `<div class="console-line">${line}<span class="console-cursor">_</span></div>`;
+            } else {
+              html += `<div class="console-line">${line}</div>`;
+            }
+          });
+          consolePanel.innerHTML = html;
+          consolePanel.classList.add('active');
+        }
 
         function renderCanvas(act, progress) {
-          if (!svgCanvas) return;
+          dioramaState.act = act;
+          dioramaState.progress = progress;
+          dioramaState.overallProgress = (act - 1) * 0.25 + progress * 0.25;
 
-          // Interactive 3D Perspective tilt shift on scroll
-          const overallProgress = (act - 1) * 0.25 + progress * 0.25;
-          const rx = lerp(46, 54, overallProgress);
-          const rz = lerp(-24, -32, overallProgress);
-          svgCanvas.style.transform = `translate(100px, -20px) rotateX(${rx}deg) rotateZ(${rz}deg) scale(1.15)`;
-
-          // Translate route lines and particles to match floating altitude of nodes/vehicles
-          let height = 0;
-          if (act === 1) {
-            height = 0;
-          } else if (act === 2) {
-            height = progress * 30;
-          } else {
-            height = 30;
-          }
-          if (routesHoverGroup) {
-            routesHoverGroup.setAttribute('transform', `translate(0, ${-height})`);
+          const hud = document.getElementById('hud-panel');
+          if (hud) {
+            if (act === 4) {
+              hud.classList.add('active');
+            } else {
+              hud.classList.remove('active');
+            }
           }
 
-          if (act === 1) {
-            // Act I: Simple linear truck deliveries
-            if (chaosLinesGroup) {
-              Array.from(chaosLinesGroup.children).forEach((line) => line.setAttribute('opacity', '0'));
+          const customerList = document.getElementById('customer-list-panel');
+          if (customerList) {
+            if (act >= 3) {
+              customerList.classList.add('active');
+            } else {
+              customerList.classList.remove('active');
             }
-
-            // Hide HUD panel
-            if (cachedHud) cachedHud.classList.remove('active');
-
-            // Nodes are bunched up, flat on the ground plane (altitude = 0)
-            nodeElements.forEach((node) => {
-              const targetX = lerp(DEPOT.x, 700, (node.id - 1) / CUSTOMER_NODES.length);
-              updateNodeHologram(node, targetX, DEPOT.y, 0, 'var(--node-neutral-fill)', lerp(0.1, 0.4, progress));
-            });
-
-            // Clear halos
-            haloElements.forEach((h) => (h.el.style.opacity = '0'));
-
-            // Hide optimized routes
-            routePathElements.forEach((r) => (r.el.style.opacity = '0'));
-            routeGlowPathElements.forEach((r) => (r.el.style.opacity = '0'));
-
-            // Hide particles
-            particleElements.forEach((p) => (p.el.style.display = 'none'));
-
-            // Run single vehicle flat on the ground
-            vehicleElements.forEach((v, idx) => {
-              if (idx === 0) {
-                const pos = getPointAtProgress([DEPOT, { x: 700, y: DEPOT.y }], progress);
-                updateVehicleHologram(v, pos.x, pos.y, 0, 0, '1');
-                v.el.setAttribute('fill', v.color);
-              } else {
-                v.el.style.opacity = '0';
-              }
-            });
-          } else if (act === 2) {
-            // Act II: Explosion into chaos
-            if (cachedHud) cachedHud.classList.remove('active');
-
-            // Nodes explode to original coordinates and physically rise up from ground map plane
-            nodeElements.forEach((node) => {
-              const startX = lerp(DEPOT.x, 700, (node.id - 1) / CUSTOMER_NODES.length);
-              const startY = DEPOT.y;
-
-              const currentX = lerp(startX, node.originalX, progress);
-              const currentY = lerp(startY, node.originalY, progress);
-              const height = progress * 30; // rising altitude hologram
-
-              updateNodeHologram(node, currentX, currentY, height, '#ef4444', 1.0);
-            });
-
-            // Turn on red halos at half progress
-            haloElements.forEach((h) => {
-              h.el.setAttribute('cx', '0');
-              h.el.setAttribute('cy', '0'); // stays centered on group projection
-              h.el.style.opacity = progress > 0.5 ? '0.6' : '0';
-            });
-
-            // Draw pre-created chaotic lines by modulating opacity
-            if (chaosLinesGroup) {
-              if (progress > 0.3) {
-                const chaosOpacity = lerp(0, 0.35, progress);
-                Array.from(chaosLinesGroup.children).forEach((line) => line.setAttribute('opacity', chaosOpacity));
-              } else {
-                Array.from(chaosLinesGroup.children).forEach((line) => line.setAttribute('opacity', '0'));
-              }
-            }
-
-            // Hide optimized routes
-            routePathElements.forEach((r) => (r.el.style.opacity = '0'));
-            routeGlowPathElements.forEach((r) => (r.el.style.opacity = '0'));
-
-            // Hide particles
-            particleElements.forEach((p) => (p.el.style.display = 'none'));
-
-            // Truck shakes on the ground
-            vehicleElements.forEach((v, idx) => {
-              if (idx === 0) {
-                const shakeX = DEPOT.x + Math.sin(Date.now() * 0.05) * 3;
-                const shakeY = DEPOT.y + Math.cos(Date.now() * 0.05) * 3;
-                updateVehicleHologram(v, shakeX, shakeY, 0, shakeX * 5, '1');
-                v.el.setAttribute('fill', '#ef4444');
-              } else {
-                v.el.style.opacity = '0';
-              }
-            });
-          } else if (act === 3) {
-            // Act III: Optimization (drawing routes, changing node states)
-            if (chaosLinesGroup) {
-              Array.from(chaosLinesGroup.children).forEach((line) => line.setAttribute('opacity', '0'));
-            }
-
-            if (cachedHud) cachedHud.classList.remove('active');
-
-            // Adjust nodes to cluster colors progressively, hovering at full height (30px)
-            nodeElements.forEach((node) => {
-              const targetNode = CUSTOMER_NODES.find((n) => n.id === node.id);
-              const nodeColor =
-                progress > 0.5 ? targetNode.targetColor : lerpColor('#ef4444', targetNode.targetColor, progress * 2);
-              updateNodeHologram(node, node.originalX, node.originalY, 30, nodeColor, 1.0);
-            });
-
-            // Halos fade out
-            haloElements.forEach((h) => (h.el.style.opacity = lerp(0.6, 0, progress)));
-
-            // Hide particles
-            particleElements.forEach((p) => (p.el.style.display = 'none'));
-
-            // Draw optimized routes progressively using stroke dash offsets
-            routeGlowPathElements.forEach((r) => {
-              r.el.style.opacity = progress * cachedMaxGlow;
-              const totalLength = r.el.getTotalLength() || 1500;
-              r.el.setAttribute('stroke-dasharray', totalLength);
-              r.el.setAttribute('stroke-dashoffset', totalLength * (1 - progress));
-            });
-
-            routePathElements.forEach((r) => {
-              r.el.style.opacity = progress;
-              const totalLength = r.el.getTotalLength() || 1500;
-              r.el.setAttribute('stroke-dasharray', totalLength);
-              r.el.setAttribute('stroke-dashoffset', totalLength * (1 - progress));
-            });
-
-            // Vehicles start tracing routes, hovering at constant 30px height
-            vehicleElements.forEach((v) => {
-              const route = ROUTES[v.index];
-              const pos = getPointAtProgress(
-                route.nodes.map((n) => ({ x: n.x, y: n.y })),
-                progress
-              );
-              const nextPos = getPointAtProgress(
-                route.nodes.map((n) => ({ x: n.x, y: n.y })),
-                Math.min(1.0, progress + 0.01)
-              );
-              const angle = Math.atan2(nextPos.y - pos.y, nextPos.x - pos.x) * (180 / Math.PI);
-              updateVehicleHologram(v, pos.x, pos.y, 30, angle, progress > 0.4 ? '1' : '0');
-              v.el.setAttribute('fill', v.color);
-            });
-          } else if (act === 4) {
-            // Act IV: Completed Dashboard loop
-            if (chaosLinesGroup) {
-              Array.from(chaosLinesGroup.children).forEach((line) => line.setAttribute('opacity', '0'));
-            }
-
-            // Fade HUD panel in
-            if (cachedHud) cachedHud.classList.add('active');
-
-            // Nodes locked in color groups, hovering in 3D
-            nodeElements.forEach((node) => {
-              const targetNode = CUSTOMER_NODES.find((n) => n.id === node.id);
-              updateNodeHologram(node, node.originalX, node.originalY, 30, targetNode.targetColor, 1.0);
-            });
-
-            // Halos fully hidden
-            haloElements.forEach((h) => (h.el.style.opacity = '0'));
-
-            // Paths fully active & glowing
-            routeGlowPathElements.forEach((r) => {
-              r.el.style.opacity = cachedMaxGlow;
-              r.el.removeAttribute('stroke-dashoffset');
-              r.el.removeAttribute('stroke-dasharray');
-            });
-
-            routePathElements.forEach((r) => {
-              r.el.style.opacity = '1';
-              r.el.removeAttribute('stroke-dashoffset');
-              r.el.removeAttribute('stroke-dasharray');
-            });
-
-            // Continuous loop of vehicles tracing routes, hovering at 30px altitude
-            const time = Date.now() * 0.00015;
-            vehicleElements.forEach((v) => {
-              const route = ROUTES[v.index];
-              const loopProg = (time * (1.2 + v.index * 0.25)) % 1;
-              const pos = getPointAtProgress(
-                route.nodes.map((n) => ({ x: n.x, y: n.y })),
-                loopProg
-              );
-
-              const nextPos = getPointAtProgress(
-                route.nodes.map((n) => ({ x: n.x, y: n.y })),
-                (loopProg + 0.01) % 1
-              );
-              const angle = Math.atan2(nextPos.y - pos.y, nextPos.x - pos.x) * (180 / Math.PI);
-
-              updateVehicleHologram(v, pos.x, pos.y, 30, angle, '1');
-              v.el.setAttribute('fill', v.color);
-            });
-
-            // Animate fiber optic glowing data particles flowing along routes on the ground map
-            particleElements.forEach((p) => {
-              p.el.style.display = 'block';
-              const route = ROUTES[p.routeIndex];
-              const pProg = (time * 2.2 + p.offset) % 1; // Faster speed than trucks
-              const pos = getPointAtProgress(
-                route.nodes.map((n) => ({ x: n.x, y: n.y })),
-                pProg
-              );
-              p.el.setAttribute('cx', pos.x);
-              p.el.setAttribute('cy', pos.y);
-            });
           }
-        }
 
-        // Color blending helper for transitions
-        function lerpColor(color1, color2, factor) {
-          const clamp = Math.max(0, Math.min(1, factor));
-          const c1 = parseHex(color1);
-          const c2 = parseHex(color2);
-
-          const r = Math.round(lerp(c1.r, c2.r, clamp));
-          const g = Math.round(lerp(c1.g, c2.g, clamp));
-          const b = Math.round(lerp(c1.b, c2.b, clamp));
-
-          return `rgb(${r}, ${g}, ${b})`;
-        }
-
-        function parseHex(hex) {
-          const clean = hex.replace('#', '');
-          return {
-            r: parseInt(clean.substring(0, 2), 16),
-            g: parseInt(clean.substring(2, 4), 16),
-            b: parseInt(clean.substring(4, 6), 16),
-          };
+          updateConsoleLog(act);
         }
 
         // ===================================================================
         // GSAP ScrollTrigger Integration
         // ===================================================================
+
+        let showcaseST = null;
 
         function setupScrollAnimations() {
           if (typeof gsap === 'undefined' || typeof ScrollTrigger === 'undefined') {
@@ -1337,6 +2288,12 @@
 
           gsap.registerPlugin(ScrollTrigger);
 
+          // Kill existing ScrollTrigger if we are resizing or re-initializing
+          if (showcaseST) {
+            showcaseST.kill();
+            showcaseST = null;
+          }
+
           // Only run scroll timeline on desktop
           if (window.innerWidth < 1024) {
             setupFallbackAnimation();
@@ -1345,112 +2302,76 @@
 
           initCanvas();
           renderCanvas(1, 0.0); // Call initial render immediately on load
-          updateWordmarkLetters(1, 0.0); // Initialize wordmark reveal state
 
-          // Timeline to scrub animation state
-          const tl = gsap.timeline({
-            scrollTrigger: {
-              trigger: '.scroll-track',
-              start: 'top top',
-              end: 'bottom bottom',
-              scrub: 1.5,
-              snap: {
-                snapTo: 1 / 3,
-                delay: 0.1,
-                duration: { min: 0.3, max: 0.8 },
-                ease: 'power2.inOut',
-              },
-              onUpdate: (self) => {
-                const progress = self.progress;
+          // Create ScrollTrigger instance for pinning and scrubbing
+          showcaseST = ScrollTrigger.create({
+            trigger: '.showcase-section',
+            start: 'top top',
+            end: '+=1500',
+            pin: true,
+            scrub: 1.5,
+            id: 'showcase-scroll',
+            snap: {
+              snapTo: 1 / 3,
+              delay: 0.1,
+              duration: { min: 0.3, max: 0.8 },
+              ease: 'power2.inOut',
+            },
+            onUpdate: (self) => {
+              const progress = self.progress;
 
-                // Divide timeline into 4 Acts
-                let act = 1;
-                let actProgress = 0;
+              // Divide timeline into 4 Acts
+              let act = 1;
+              let actProgress = 0;
 
-                if (progress < 0.25) {
-                  act = 1;
-                  actProgress = progress / 0.25;
-                } else if (progress < 0.5) {
-                  act = 2;
-                  actProgress = (progress - 0.25) / 0.25;
-                } else if (progress < 0.75) {
-                  act = 3;
-                  actProgress = (progress - 0.5) / 0.25;
-                } else {
-                  act = 4;
-                  actProgress = (progress - 0.75) / 0.25;
-                }
+              if (progress < 0.25) {
+                act = 1;
+                actProgress = progress / 0.25;
+              } else if (progress < 0.5) {
+                act = 2;
+                actProgress = (progress - 0.25) / 0.25;
+              } else if (progress < 0.75) {
+                act = 3;
+                actProgress = (progress - 0.5) / 0.25;
+              } else {
+                act = 4;
+                actProgress = (progress - 0.75) / 0.25;
+              }
 
-                // Trigger Act Card active toggle
-                toggleActiveCard(act);
+              // Trigger Act Card active toggle
+              toggleActiveCardAndTab(act);
 
-                // Update wordmark letters reveal
-                updateWordmarkLetters(act, actProgress);
-
-                // Render canvas updates
-                renderCanvas(act, actProgress);
-              },
+              // Render canvas updates
+              renderCanvas(act, actProgress);
             },
           });
         }
 
-        // Toggle active CSS class for text cards
-        function toggleActiveCard(activeAct) {
+        // Toggle active CSS class for text cards and tab buttons
+        function toggleActiveCardAndTab(activeAct) {
           for (let act = 1; act <= 4; act++) {
             const card = document.getElementById(`card-act${act}`);
             if (card) {
-              if (act === activeAct) {
-                card.classList.add('active');
-              } else {
-                card.classList.remove('active');
-              }
+              card.classList.toggle('active', act === activeAct);
             }
-          }
-        }
-
-        // Update sequential wordmark letter reveal on scroll
-        function updateWordmarkLetters(activeAct, actProgress) {
-          for (let act = 1; act <= 4; act++) {
-            const letters = document.querySelectorAll(`#card-act${act} .letter`);
-            if (!letters.length) continue;
-
-            if (act < activeAct) {
-              letters.forEach((el) => el.classList.add('revealed'));
-            } else if (act > activeAct) {
-              letters.forEach((el) => el.classList.remove('revealed'));
-            } else {
-              // Active act
-              if (act === 1) {
-                letters.forEach((el, idx) => {
-                  const threshold = (idx / letters.length) * 0.8;
-                  if (actProgress >= threshold) {
-                    el.classList.add('revealed');
-                  } else {
-                    el.classList.remove('revealed');
-                  }
-                });
-              } else {
-                letters.forEach((el) => el.classList.add('revealed'));
-              }
+            
+            const tabBtn = document.querySelector(`.showcase-tab-btn[data-act="${act}"]`);
+            if (tabBtn) {
+              tabBtn.classList.toggle('active', act === activeAct);
+              tabBtn.setAttribute('aria-selected', act === activeAct ? 'true' : 'false');
             }
           }
         }
 
         // Fallback animation: continuous loop for mobile/tablets or if GSAP fails
-        let fallbackInterval = null;
         function setupFallbackAnimation() {
-          if (fallbackInterval) clearInterval(fallbackInterval);
-
+          if (showcaseST) {
+            showcaseST.kill();
+            showcaseST = null;
+          }
           initCanvas();
-          toggleActiveCard(4); // Keep Act IV card active
-          updateWordmarkLetters(4, 1.0); // Reveal all letters by default in fallback mode
-
-          // Draw initial state of Act IV immediately
-          renderCanvas(4, 1.0);
-
-          fallbackInterval = setInterval(() => {
-            renderCanvas(4, 1.0); // Keep rendering loop in Act IV (routes resolved)
-          }, 16);
+          toggleActiveCardAndTab(1); // Default to Act I on mobile until clicked
+          renderCanvas(1, 1.0);
         }
 
         // ===================================================================
@@ -1472,7 +2393,6 @@
           document.querySelectorAll('[data-i18n]').forEach((node) => {
             const key = node.getAttribute('data-i18n');
             if (dict[key]) {
-              // Handle links, headings, paragraphs
               node.textContent = dict[key];
             }
           });
@@ -1489,7 +2409,7 @@
         function getStoredTheme() {
           const v = localStorage.getItem(STORAGE_THEME);
           if (v === 'light' || v === 'dark') return v;
-          return 'light'; // default to light
+          return 'dark'; // default to dark
         }
 
         function applyTheme(theme) {
@@ -1532,9 +2452,24 @@
             applyLang(currentLang);
           });
 
-          themeBtn?.addEventListener('click', () => {
-            currentTheme = currentTheme === 'light' ? 'dark' : 'light';
-            applyTheme(currentTheme);
+          themeBtn?.addEventListener('click', (e) => {
+            const nextTheme = currentTheme === 'light' ? 'dark' : 'light';
+
+            // Circular wipe theme transitions using browser View Transitions API (Implementation Rule #5)
+            if (document.startViewTransition) {
+              const x = e.clientX;
+              const y = e.clientY;
+              document.documentElement.style.setProperty('--vt-x', `${x}px`);
+              document.documentElement.style.setProperty('--vt-y', `${y}px`);
+
+              document.startViewTransition(() => {
+                currentTheme = nextTheme;
+                applyTheme(currentTheme);
+              });
+            } else {
+              currentTheme = nextTheme;
+              applyTheme(currentTheme);
+            }
           });
         }
 
@@ -1604,13 +2539,166 @@
           );
         }
 
+        // Setup interactive tabs for the WebGL diorama acts
+        function setupShowcaseTabs() {
+          const tabs = document.querySelectorAll('.showcase-tab-btn');
+          tabs.forEach((tab) => {
+            tab.addEventListener('click', () => {
+              const act = parseInt(tab.getAttribute('data-act'), 10);
+              
+              if (showcaseST) {
+                // ScrollTrigger progress maps from 0.0 to 1.0
+                const progress = (act - 1) / 3;
+                const scrollPos = showcaseST.start + progress * (showcaseST.end - showcaseST.start);
+                
+                window.scrollTo({
+                  top: scrollPos + 2,
+                  behavior: 'smooth'
+                });
+              } else {
+                // Fallback / Mobile
+                toggleActiveCardAndTab(act);
+                renderCanvas(act, 1.0);
+              }
+            });
+          });
+        }
+
+        // Setup developer CLI tab switcher and clipboard copying
+        function setupCLITabs() {
+          const tabs = document.querySelectorAll('.cli-tab-btn');
+          const panes = document.querySelectorAll('.cli-pane');
+
+          tabs.forEach((tab) => {
+            tab.addEventListener('click', () => {
+              const targetId = tab.getAttribute('data-target');
+              
+              tabs.forEach((t) => t.classList.remove('active'));
+              panes.forEach((p) => p.classList.remove('active'));
+
+              tab.classList.add('active');
+              const targetPane = document.getElementById(targetId);
+              if (targetPane) {
+                targetPane.classList.add('active');
+              }
+            });
+          });
+
+          // Helper for copy tooltip trigger
+          function showTooltip(btn) {
+            const tooltip = btn.querySelector('.copy-success-tooltip');
+            const btnText = btn.querySelector('.btn-copy-text');
+            if (tooltip) {
+              tooltip.classList.add('show');
+              if (btnText) btnText.textContent = 'Copied!';
+              setTimeout(() => {
+                tooltip.classList.remove('show');
+                if (btnText) btnText.textContent = 'Copy';
+              }, 1500);
+            }
+          }
+
+          // Fallback legacy copying
+          function fallbackCopyText(text, btn) {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.top = "0";
+            textArea.style.left = "0";
+            textArea.style.position = "fixed";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+              document.execCommand('copy');
+              showTooltip(btn);
+            } catch (err) {
+              console.error('Fallback copy failed', err);
+            }
+            document.body.removeChild(textArea);
+          }
+
+          // Setup copy code buttons
+          const copyButtons = document.querySelectorAll('.btn-copy-code');
+          copyButtons.forEach((btn) => {
+            btn.addEventListener('click', () => {
+              const pane = btn.closest('.cli-pane');
+              const codeBlock = pane.querySelector('.cli-code-block');
+              if (!codeBlock) return;
+
+              const commands = Array.from(codeBlock.querySelectorAll('.cli-command'))
+                .map(el => el.textContent.trim())
+                .join('\n');
+
+              if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(commands).then(() => {
+                  showTooltip(btn);
+                }).catch(err => {
+                  console.error('Failed to copy text: ', err);
+                  fallbackCopyText(commands, btn);
+                });
+              } else {
+                fallbackCopyText(commands, btn);
+              }
+            });
+          });
+        }
+
+        // Setup interactive cursor glow spotlight for Bento cards
+        // Setup hover-linking customer list panel (Implementation Rule #4)
+        function setupCustomerListPanel() {
+          const panel = document.getElementById('customer-list-panel');
+          const body = document.getElementById('customer-list-body');
+          if (!panel || !body) return;
+
+          let html = '';
+          CUSTOMER_NODES.forEach((node) => {
+            html += `
+              <div class="customer-row" data-id="${node.id}">
+                <span class="customer-row-dot" style="color: ${node.targetColor};"></span>
+                <span class="customer-row-label">Address #${100 + node.id} (Cluster ${node.cluster})</span>
+              </div>
+            `;
+          });
+          body.innerHTML = html;
+
+          body.querySelectorAll('.customer-row').forEach((row) => {
+            row.addEventListener('mouseenter', () => {
+              const id = parseInt(row.getAttribute('data-id'), 10);
+              dioramaState.hoveredNodeId = id;
+            });
+            row.addEventListener('mouseleave', () => {
+              dioramaState.hoveredNodeId = null;
+            });
+          });
+        }
+
+        function setupBentoGlow() {
+          const cards = document.querySelectorAll('.bento-card');
+          cards.forEach((card) => {
+            card.addEventListener('mousemove', (e) => {
+              const rect = card.getBoundingClientRect();
+              const x = e.clientX - rect.left;
+              const y = e.clientY - rect.top;
+              card.style.setProperty('--mouse-x', `${x}px`);
+              card.style.setProperty('--mouse-y', `${y}px`);
+            });
+          });
+        }
+
         // Initial Boot
         document.addEventListener('DOMContentLoaded', () => {
           setupControls();
           setupMobileMenu();
           setupScrollSpy();
           setupNavbarScroll();
+          setupShowcaseTabs();
+          setupCLITabs();
+          setupBentoGlow();
           setupScrollAnimations();
+        });
+
+        window.addEventListener('load', () => {
+          updateCachedThemeVariables();
         });
 
         // Handle resizing (re-initialize animations on desktop <-> mobile shifts)

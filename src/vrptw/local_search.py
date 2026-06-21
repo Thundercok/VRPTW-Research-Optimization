@@ -48,10 +48,16 @@ def _best_relocate(
     inst = plan.inst
     best_delta, best_move = -1e-9, None
     max_dist = max(inst.max_dist, 1.0)
-    # Pre-convert all routes to arrays once
-    route_arrays = [np.array(r, dtype=np.int64) for r in plan.routes]
+    # Use cached route arrays
+    route_arrays = plan.route_arrays
     # Pre-calculate route centroids
     centroids = [inst.coords[arr].mean(axis=0) if len(arr) > 0 else inst.coords[0] for arr in route_arrays]
+
+    # Build node-to-route index for kNN filtering
+    node_to_route = {}
+    for ri, route in enumerate(plan.routes):
+        for node in route:
+            node_to_route[node] = ri
 
     for si in range(len(plan.routes)):
         source_route = plan.routes[si]
@@ -65,13 +71,20 @@ def _best_relocate(
             remove_delta = inst.dist[prev_s, next_s] - inst.dist[prev_s, node] - inst.dist[node, next_s]
             node_coord = inst.coords[node]
 
-            for di in range(len(plan.routes)):
-                if di == si:
-                    continue
-                # Spatial filter: skip routes whose centroids are too far from node
-                if float(np.linalg.norm(centroids[di] - node_coord)) > 0.55 * max_dist:
-                    continue
+            # kNN-filtered destination routes
+            candidate_routes = set()
+            if node < len(inst.neighbors_k):
+                for neighbor in inst.neighbors_k[node]:
+                    if neighbor in node_to_route:
+                        candidate_routes.add(node_to_route[neighbor])
+            candidate_routes.discard(si)
+            # Fallback: if kNN yields too few candidates, use centroid filter
+            if len(candidate_routes) < 3:
+                for di in range(len(plan.routes)):
+                    if di != si and float(np.linalg.norm(centroids[di] - node_coord)) <= 0.55 * max_dist:
+                        candidate_routes.add(di)
 
+            for di in candidate_routes:
                 # Check if pruning is enabled and heatmap is provided
                 if heatmap is not None and pruning_threshold > 0.0:
                     insert_delta, best_pos = _best_insert_position_pruned_numba(
@@ -106,8 +119,12 @@ def _best_relocate(
                 if new_nv < plan.nv:
                     delta -= 1000.0
                 if delta < best_delta:
-                    best_delta, best_move = delta, (si, sp, di, int(best_pos))
-    return best_move
+                    best_delta = delta
+                    best_move = (si, sp, di, int(best_pos))
+                    best_cost_delta = remove_delta + insert_delta
+    if best_move is None:
+        return None
+    return best_move, best_cost_delta
 
 
 def _apply_relocate(plan: Plan, move: tuple[int, int, int, int]) -> Plan:
@@ -128,9 +145,15 @@ def _best_swap(
 ):
     inst = plan.inst
     best_delta, best_move = -1e-9, None
-    route_arrays = [np.array(r, dtype=np.int64) for r in plan.routes]
+    route_arrays = plan.route_arrays
+    max_dist = max(inst.max_dist, 1.0)
+    centroids = [inst.coords[arr].mean(axis=0) if len(arr) > 0 else inst.coords[0] for arr in route_arrays]
+
     for si in range(len(plan.routes)):
         for di in range(si + 1, len(plan.routes)):
+            # Spatial filter: skip route pairs whose centroids are too far apart
+            if float(np.linalg.norm(centroids[si] - centroids[di])) > 0.65 * max_dist:
+                continue
             if heatmap is not None and pruning_threshold > 0.0:
                 delta, sp, dp = _swap_evaluate_pruned_numba(
                     route_arrays[si],
@@ -156,8 +179,11 @@ def _best_swap(
                     inst.service_times,
                 )
             if sp >= 0 and delta < best_delta:
-                best_delta, best_move = delta, (si, int(sp), di, int(dp))
-    return best_move
+                best_delta = delta
+                best_move = (si, int(sp), di, int(dp))
+    if best_move is None:
+        return None
+    return best_move, best_delta
 
 
 def _apply_swap(plan: Plan, move: tuple[int, int, int, int]) -> Plan:
@@ -180,8 +206,8 @@ def _cross_exchange(
     best_delta = -1e-9
     best_routes: list[list[int]] | None = None
 
-    # Pre-convert routes to arrays once
-    route_arrays = [np.array(r, dtype=np.int64) for r in plan.routes]
+    # Use cached route arrays
+    route_arrays = plan.route_arrays
 
     # Pre-calculate route metrics for filtering
     route_coords_mean = [inst.coords[arr].mean(axis=0) if len(arr) > 0 else np.zeros(2) for arr in route_arrays]
@@ -245,7 +271,12 @@ def _cross_exchange(
                 routes[i], routes[j] = nr1, nr2
                 best_routes = routes
                 best_delta = delta
-    return Plan(best_routes, inst, plan.algo) if best_routes is not None else None
+    if best_routes is not None:
+        cand = Plan(best_routes, inst, plan.algo)
+        cand._cost = plan.cost + best_delta
+        cand._ok = True
+        return cand
+    return None
 
 
 def _try_route_compact(plan: Plan, nv_ceiling: int | None = None) -> Plan | None:
@@ -290,7 +321,16 @@ def _best_or_opt(
 ):
     inst = plan.inst
     best_delta, best_move = -1e-9, None
-    route_arrays = [np.array(r, dtype=np.int64) for r in plan.routes]
+    route_arrays = plan.route_arrays
+    max_dist = max(inst.max_dist, 1.0)
+    centroids = [inst.coords[arr].mean(axis=0) if len(arr) > 0 else inst.coords[0] for arr in route_arrays]
+
+    # Build node-to-route index for kNN filtering
+    node_to_route = {}
+    for ri, route in enumerate(plan.routes):
+        for node in route:
+            node_to_route[node] = ri
+
     for si in range(len(plan.routes)):
         source_route = plan.routes[si]
         for L in (2, 3):
@@ -307,9 +347,23 @@ def _best_or_opt(
                     remove_dist += inst.dist[source_route[sp + k], source_route[sp + k + 1]]
                 remove_dist += inst.dist[source_route[sp + L - 1], next_s]
                 remove_delta = inst.dist[prev_s, next_s] - remove_dist
-                for di in range(len(plan.routes)):
-                    if di == si:
-                        continue
+
+                # kNN-filtered destination routes (using first node of segment)
+                seg_node = source_route[sp]
+                candidate_routes = set()
+                if seg_node < len(inst.neighbors_k):
+                    for neighbor in inst.neighbors_k[seg_node]:
+                        if neighbor in node_to_route:
+                            candidate_routes.add(node_to_route[neighbor])
+                candidate_routes.discard(si)
+                # Fallback: if kNN yields too few candidates, add centroid-close routes
+                if len(candidate_routes) < 3:
+                    seg_center = inst.coords[seg_arr].mean(axis=0)
+                    for di in range(len(plan.routes)):
+                        if di != si and float(np.linalg.norm(centroids[di] - seg_center)) <= 0.55 * max_dist:
+                            candidate_routes.add(di)
+
+                for di in candidate_routes:
                     # JIT-compiled segment insertion evaluation
                     if heatmap is not None and pruning_threshold > 0.0:
                         insert_delta, best_pos, rev_int = _best_segment_insert_pruned_numba(
@@ -344,8 +398,12 @@ def _best_or_opt(
                     if new_nv < plan.nv:
                         delta -= 1000.0
                     if delta < best_delta:
-                        best_delta, best_move = delta, (si, sp, L, di, int(best_pos), bool(rev_int))
-    return best_move
+                        best_delta = delta
+                        best_move = (si, sp, L, di, int(best_pos), bool(rev_int))
+                        best_cost_delta = remove_delta + insert_delta
+    if best_move is None:
+        return None
+    return best_move, best_cost_delta
 
 
 def _apply_or_opt(plan: Plan, move: tuple[int, int, int, int, int, bool]) -> Plan:
@@ -707,8 +765,7 @@ def _intra_route_or_opt(plan: Plan, nv_ceiling: int | None = None) -> Plan | Non
     if not improved:
         return None
     cand = Plan(routes, inst, plan.algo)
-    if not cand.feasible:
-        return None
+    cand._ok = True
     if nv_ceiling is not None and cand.nv > nv_ceiling:
         return None
     return cand if cand.dominates(plan) else None
@@ -756,6 +813,8 @@ def local_search(
     heatmap: np.ndarray | None = None,
     pruning_threshold: float = 0.0,
 ) -> Plan:
+    if not plan.feasible:
+        return plan
     best = plan.copy()
 
     for _ in range(max_passes):
@@ -766,15 +825,20 @@ def local_search(
             routes.append(nr)
             if nr != route:
                 improved = True
-        best = Plan(routes, best.inst, best.algo)
+        if improved:
+            best = Plan(routes, best.inst, best.algo)
+            best._ok = True
 
         moves = 0
         while moves < max_ls_moves:
             # 1. Relocate Move
-            move = _best_relocate(best, nv_ceiling=nv_ceiling, heatmap=heatmap, pruning_threshold=pruning_threshold)
-            if move is not None:
+            res = _best_relocate(best, nv_ceiling=nv_ceiling, heatmap=heatmap, pruning_threshold=pruning_threshold)
+            if res is not None:
+                move, cost_delta = res
                 cand = _apply_relocate(best, move)
-                if cand.feasible and (cand.dominates(best) or (cand.nv == best.nv and cand.cost + 1e-9 < best.cost)):
+                cand._cost = best.cost + cost_delta
+                cand._ok = True
+                if cand.dominates(best) or (cand.nv == best.nv and cand.cost + 1e-9 < best.cost):
                     best, improved = cand, True
                     moves += 1
                     if pool is not None:
@@ -791,10 +855,13 @@ def local_search(
                 continue
 
             # 3. Swap Move
-            move = _best_swap(best, heatmap=heatmap, pruning_threshold=pruning_threshold)
-            if move is not None:
+            res = _best_swap(best, heatmap=heatmap, pruning_threshold=pruning_threshold)
+            if res is not None:
+                move, cost_delta = res
                 cand = _apply_swap(best, move)
-                if cand.feasible and cand.cost + 1e-9 < best.cost:
+                cand._cost = best.cost + cost_delta
+                cand._ok = True
+                if cand.cost + 1e-9 < best.cost:
                     best, improved = cand, True
                     moves += 1
                     if pool is not None:
@@ -802,10 +869,13 @@ def local_search(
                     continue
 
             # 4. Or-Opt Move
-            move = _best_or_opt(best, nv_ceiling=nv_ceiling, heatmap=heatmap, pruning_threshold=pruning_threshold)
-            if move is not None:
+            res = _best_or_opt(best, nv_ceiling=nv_ceiling, heatmap=heatmap, pruning_threshold=pruning_threshold)
+            if res is not None:
+                move, cost_delta = res
                 cand = _apply_or_opt(best, move)
-                if cand.feasible and (cand.dominates(best) or (cand.nv == best.nv and cand.cost + 1e-9 < best.cost)):
+                cand._cost = best.cost + cost_delta
+                cand._ok = True
+                if cand.dominates(best) or (cand.nv == best.nv and cand.cost + 1e-9 < best.cost):
                     best, improved = cand, True
                     moves += 1
                     if pool is not None:

@@ -1,18 +1,17 @@
 # CLAUDE.md — Handoff Guide for VRPTW Optimizer
 
-This guide details the current architecture, completed work, environment commands, and next steps for the incoming chatbot/assistant taking over.
+This guide details the current architecture, completed work, environment commands, and next steps for the incoming assistant.
 
 ---
 
 ## 1. Project Status & Current Baseline
-We have implemented and verified targeted refinements to resolve vehicle count (NV) and total distance (TD) gaps across 55 Solomon instances:
-1. **Intra-Route Sequence Polish (Block 1)**: Added `_intra_route_optimize` and `td_converge_polish` in `src/vrptw/local_search.py`. This runs 2-opt + or-opt(1,2,3) to convergence per route independently (no move budget constraints) to optimize wide time-window customer sequences (RC2/R2).
-2. **Hard-Mode Ejection Chains (Block 2)**: Added `hard_mode=True` to `_buffered_route_elimination` in `src/vrptw/local_search.py` (doubles beam width to 32, increases max ejections to 10) to eliminate the final residual route when exactly one vehicle above the BKS floor.
-3. **Two-Phase MILP Recombination (Block 3)**: Added `td_only` parameter to `recombine_with_route_pool` in `src/vrptw/pool.py`. Triggers a final pure TD-only recombination pass (`vehicle_penalty=0.0` at BKS NV) in `src/vrptw/solvers.py` to select the globally cheapest partition from the pool without penalty distortion.
+We have implemented and verified targeted refinements to resolve vehicle count (NV) and total distance (TD) gaps under strict independent cold-starts (cleared archive, empty cache).
 
-### Data Leakage & Overfitting Verified:
-- **Zero-Bias BKS Floor Guards**: Diagnostic runs (mocking BKS mapping to empty) prove BKS lookup has **zero impact on solution quality** (identical NV and TD). It acts strictly as a safe CPU-cycle speedup.
-- **Zero-Shot DDQN Generalization**: The DDQN model is trained *only* on synthetic instances via a domain randomization curriculum, so its Solomon evaluation is a true zero-leakage out-of-distribution (OOD) test.
+### Verified Findings:
+1. **Budget Propagation Audit**: Verified empirically via child-worker log trace that CLI overrides propagate correctly (confirmed `cfg.alns_iterations=1000` inside a spawned worker).
+2. **Scale-Aware Divergence (Solomon + H200)**: Under cold-starts, NV-flattening holds. Both ALNS-Base and Hybrid-DDQN converge to the same minimum vehicle count floor (e.g. Solomon `R101`/`RC101` and Homberger `r1_2_1`/`rc1_2_1`). Hybrid-DDQN wins on **consistency** (hitting floor in 100% of runs vs. 30%–70% for ALNS-Base) and **TD minimization** (1.75% to 4.07% gap reduction at matched NV).
+3. **Large Scale Graceful Degradation (H400)**: Neither solver approaches BKS at 400 customers. However, Hybrid-DDQN achieves a small but statistically significant vehicle count edge on `c2_4_1` ($p=0.0078$) and `r2_4_1` ($p=0.0156$). The $0.30$-vehicle delta on `rc2_4_1` is **not statistically significant** ($p=0.3750$). Sign consistency of differences across all three instances supports a genuine small effect.
+4. **LaTeX Updates**: Updated `docs/paper.tex` to honestly state the large gap-to-BKS, Wilcoxon p-values, and the significance boundary. PDF compiled successfully.
 
 ---
 
@@ -23,6 +22,10 @@ We have implemented and verified targeted refinements to resolve vehicle count (
   ```bash
   .venv/bin/python -c "import vrptw.solvers; import vrptw.local_search; import vrptw.pool; print('Imports OK!')"
   ```
+- **Recompile Paper PDF**:
+  ```bash
+  pdflatex -interaction=nonstopmode -output-directory=docs docs/paper.tex
+  ```
 
 ### Smoke & Validation Tests
 - **Quick validation run on RC207 (30 iterations)**:
@@ -30,27 +33,9 @@ We have implemented and verified targeted refinements to resolve vehicle count (
   .venv/bin/python docs/run_benchmark.py --data-path data/Solomon --runs 1 --hybrid-iters 30 --alns-iters 30 --instances rc207 --algorithms Hybrid-DDQN --output-dir scratch/smoke_test_rc207
   ```
 
-### Full Benchmark Sweep
-- **Step 1: Set up combined folder (56 Solomon + 6 H&G 200)**:
-  ```bash
-  .venv/bin/python scratch/prepare_combined_sweep.py
-  ```
-- **Step 2: Run combined sweep (1 run, 600 iterations, takes ~3 hours)**:
-  ```bash
-  .venv/bin/python docs/run_benchmark.py --data-path data/combined_sweep --runs 1 --hybrid-iters 600 --alns-iters 600 --polish-iters 40 --early-stop 120 --max-hours 4.0 --output-dir results/quick_verification_run
-  ```
-
-### Results Analysis & Wilcoxon Tests
-- **Compute Averages, Gaps, and Wilcoxon p-values**:
-  ```bash
-  .venv/bin/python results/overnight_run/analyze_results.py
-  ```
-
 ---
 
 ## 3. Next Steps for the Incoming Assistant
-1. **Relaunch the Combined Sweep**: The user canceled the active benchmark task (`task-2832`) to finalize handoff. The incoming assistant should re-run the combined sweep using the commands in Section 2.
-2. **Analyze the Results**: Update `results/overnight_run/analyze_results.py` to read the new combined outputs (`results/quick_verification_run/benchmark_clean.csv`) and run Wilcoxon signed-rank tests to confirm that the new sequence polish, hard-mode ejections, and TD-only MILP have successfully reduced the remaining gaps:
-   - RC2 TD gap (+3.61%) and R2 TD gap (+2.15%).
-   - R1 NV gap (+4.37%) and RC1 NV gap (+4.24%).
-3. **Draft the Results Section**: Draft the Results & Discussion section of the paper utilizing these final, gap-resolved metrics.
+1. **Resume Production Sweep**: Run `./run_full_production.sh`. Because the 15s-capped OR-Tools rows have been purged from the checkpoints and `run_full_production.sh` is now updated with `--ortools-time-limit 120`, resuming the script will automatically run only the missing OR-Tools baselines under the correct 120s budget for the completed shards (Solomon, H200, H400), before finishing H600/800/1000.
+2. **Tabulate and Analyze**: Once the sweep finishes, run results analysis and generate the final publication tables.
+3. **Verify paper.pdf Typesetting**: Verify the compiled PDF for proper alignment and typesetting of updated tables.

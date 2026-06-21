@@ -32,35 +32,85 @@ def _two_opt_best_numba(
     if n < 4:
         return route_arr.copy(), False
 
-    best_cost = _route_cost(route_arr, dist)
-    best_arr = route_arr.copy()
-    improved = False
-    cand = np.empty(n, dtype=np.int64)
+    # Precompute arrival times and departure times for the original route
+    arrival = np.empty(n)
+    departure = np.empty(n)
+    t = 0.0
+    prev = 0
+    for k in range(n):
+        node = route_arr[k]
+        t += dist[prev, node]
+        arrival[k] = t
+        t = max(t, ready[node]) + service[node]
+        departure[k] = t
+        prev = node
+
+    best_delta = -1e-9
+    best_i = -1
+    best_j = -1
 
     for i in range(n - 2):
         for j in range(i + 2, n):
-            # Build candidate: prefix | reversed segment | suffix
-            idx = 0
-            for k in range(0, i):
-                cand[idx] = route_arr[k]
-                idx += 1
-            for k in range(j, i - 1, -1):
-                cand[idx] = route_arr[k]
-                idx += 1
-            for k in range(j + 1, n):
-                cand[idx] = route_arr[k]
-                idx += 1
+            u = route_arr[i - 1] if i > 0 else 0
+            v = route_arr[i]
+            w = route_arr[j]
+            x = route_arr[j + 1] if j < n - 1 else 0
 
-            if not _route_ok(cand, demands, capacity, ready, due, service, dist):
+            # O(1) cost delta check
+            delta = dist[u, w] + dist[v, x] - dist[u, v] - dist[w, x]
+            if delta >= best_delta:
                 continue
-            cc = _route_cost(cand, dist)
-            if cc + 1e-9 < best_cost:
-                best_cost = cc
-                for k in range(n):
-                    best_arr[k] = cand[k]
-                improved = True
 
-    return best_arr, improved
+            # Feasibility check: only check if delta is better than best_delta
+            dep_prev = departure[i - 1] if i > 0 else 0.0
+            prev_node = u
+            feasible = True
+            
+            # Traverse reversed segment: route_arr[j] down to route_arr[i]
+            for k in range(j, i - 1, -1):
+                node = route_arr[k]
+                arr_time = dep_prev + dist[prev_node, node]
+                if arr_time > due[node]:
+                    feasible = False
+                    break
+                dep_prev = max(arr_time, ready[node]) + service[node]
+                prev_node = node
+
+            if not feasible:
+                continue
+
+            # Suffix: route_arr[j+1] to route_arr[n-1]
+            for k in range(j + 1, n):
+                node = route_arr[k]
+                arr_time = dep_prev + dist[prev_node, node]
+                if arr_time > due[node]:
+                    feasible = False
+                    break
+                dep_prev = max(arr_time, ready[node]) + service[node]
+                prev_node = node
+
+            if not feasible:
+                continue
+
+            # Return to depot
+            if dep_prev + dist[prev_node, 0] > due[0]:
+                continue
+
+            # If we reach here, it's feasible and improves best_delta
+            best_delta = delta
+            best_i = i
+            best_j = j
+
+    if best_i != -1:
+        # Reconstruct best route
+        best_arr = route_arr.copy()
+        idx = best_i
+        for k in range(best_j, best_i - 1, -1):
+            best_arr[idx] = route_arr[k]
+            idx += 1
+        return best_arr, True
+
+    return route_arr.copy(), False
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -80,7 +130,11 @@ def _or_opt_intra_numba(
 ):
     """Return (best_route, improved) after trying all intra-route or-opt moves."""
     n = len(route_arr)
+    if n < 4:
+        return route_arr.copy(), False
+
     best_cost = _route_cost(route_arr, dist)
+    original_cost = best_cost
     best_arr = route_arr.copy()
     improved = False
 
@@ -104,9 +158,26 @@ def _or_opt_intra_numba(
                     rn += 1
             # rn == n - L
 
+            # Precalculate segment boundaries in original route
+            prev_seg = route_arr[sp - 1] if sp > 0 else 0
+            next_seg = route_arr[sp + L] if sp + L < n else 0
+            orig_edges_cost = dist[prev_seg, route_arr[sp]] + dist[route_arr[sp + L - 1], next_seg]
+
             for ip in range(rn + 1):
+                u_rem = remainder[ip - 1] if ip > 0 else 0
+                v_rem = remainder[ip] if ip < rn else 0
+
                 for rev in range(2):  # 0 = forward, 1 = reversed
-                    # Build candidate: remainder[:ip] + seg + remainder[ip:]
+                    first_seg_node = seg[L - 1] if rev == 1 else seg[0]
+                    last_seg_node = seg[0] if rev == 1 else seg[L - 1]
+
+                    # O(1) cost delta calculation
+                    delta = (dist[prev_seg, next_seg] + dist[u_rem, first_seg_node] + dist[last_seg_node, v_rem]) - (orig_edges_cost + dist[u_rem, v_rem])
+                    
+                    if original_cost + delta >= best_cost - 1e-9:
+                        continue
+
+                    # Build candidate only if cost is promising
                     ci = 0
                     for k in range(ip):
                         cand[ci] = remainder[k]
@@ -123,7 +194,7 @@ def _or_opt_intra_numba(
                         cand[ci] = remainder[k]
                         ci += 1
 
-                    # Skip identity move (element-by-element comparison)
+                    # Skip identity move
                     is_identity = True
                     for k in range(n):
                         if cand[k] != route_arr[k]:
@@ -134,12 +205,12 @@ def _or_opt_intra_numba(
 
                     if not _route_ok(cand, demands, capacity, ready, due, service, dist):
                         continue
-                    cc = _route_cost(cand, dist)
-                    if cc + 1e-9 < best_cost:
-                        best_cost = cc
-                        for k in range(n):
-                            best_arr[k] = cand[k]
-                        improved = True
+
+                    # Feasible and improves best_cost
+                    best_cost = original_cost + delta
+                    for k in range(n):
+                        best_arr[k] = cand[k]
+                    improved = True
 
     return best_arr, improved
 
@@ -364,6 +435,14 @@ def _cross_exchange_pair_numba(
     best_p2 = -1
     best_l2 = -1
 
+    # Precompute route loads for capacity early-exit
+    load1 = 0.0
+    for k in range(n1):
+        load1 += demands[r1[k]]
+    load2 = 0.0
+    for k in range(n2):
+        load2 += demands[r2[k]]
+
     for len1 in range(1, max_len1 + 1):
         if n1 < len1:
             continue
@@ -371,7 +450,21 @@ def _cross_exchange_pair_numba(
             if n2 < len2:
                 continue
             for p1 in range(n1 - len1 + 1):
+                # Precompute segment 1 load
+                seg1_load = 0.0
+                for k in range(p1, p1 + len1):
+                    seg1_load += demands[r1[k]]
                 for p2 in range(n2 - len2 + 1):
+                    # Precompute segment 2 load
+                    seg2_load = 0.0
+                    for k in range(p2, p2 + len2):
+                        seg2_load += demands[r2[k]]
+                    # Capacity early-exit: skip if either swapped route exceeds capacity
+                    new_load1 = load1 - seg1_load + seg2_load
+                    new_load2 = load2 - seg2_load + seg1_load
+                    if new_load1 > capacity or new_load2 > capacity:
+                        continue
+
                     # Build nr1 = r1[:p1] + r2[p2:p2+len2] + r1[p1+len1:]
                     cn1 = 0
                     for k in range(p1):
@@ -597,6 +690,14 @@ def _cross_exchange_pair_pruned_numba(
     best_p2 = -1
     best_l2 = -1
 
+    # Precompute route loads for capacity early-exit
+    load1 = 0.0
+    for k in range(n1):
+        load1 += demands[r1[k]]
+    load2 = 0.0
+    for k in range(n2):
+        load2 += demands[r2[k]]
+
     for len1 in range(1, max_len1 + 1):
         if n1 < len1:
             continue
@@ -607,9 +708,24 @@ def _cross_exchange_pair_pruned_numba(
                 prev1 = r1[p1 - 1] if p1 > 0 else 0
                 nxt1 = r1[p1 + len1] if p1 + len1 < n1 else 0
 
+                # Precompute segment 1 load
+                seg1_load = 0.0
+                for k in range(p1, p1 + len1):
+                    seg1_load += demands[r1[k]]
+
                 for p2 in range(n2 - len2 + 1):
                     prev2 = r2[p2 - 1] if p2 > 0 else 0
                     nxt2 = r2[p2 + len2] if p2 + len2 < n2 else 0
+
+                    # Precompute segment 2 load
+                    seg2_load = 0.0
+                    for k in range(p2, p2 + len2):
+                        seg2_load += demands[r2[k]]
+                    # Capacity early-exit
+                    new_load1 = load1 - seg1_load + seg2_load
+                    new_load2 = load2 - seg2_load + seg1_load
+                    if new_load1 > capacity or new_load2 > capacity:
+                        continue
 
                     # GNN boundary edge checks
                     if (
