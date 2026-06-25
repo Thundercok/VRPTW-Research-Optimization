@@ -843,7 +843,7 @@ h1, h2, h3, h4, h5, h6 {
   position: absolute;
   top: 100px;
   left: 40px;
-  width: 220px;
+  width: 200px;
   max-height: 320px;
   background-color: var(--console-bg);
   border: 1px solid var(--console-border);
@@ -914,8 +914,6 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 0.7rem;
   color: var(--text-secondary);
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .customer-row:hover .customer-row-label,

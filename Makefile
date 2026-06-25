@@ -74,7 +74,7 @@ test-e2e: dist
 		-d '{"email":"test@vrptw.local","password":"testpass123","returnSecureToken":true}' \
 		> /dev/null 2>&1 || true
 	@echo "Starting backend with emulator auth..."
-	@FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099 PYTHONPATH=./src/backend \
+	@TESTING=true FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099 PYTHONPATH=./src/backend \
 		uv run uvicorn src.backend.main:app --host 127.0.0.1 --port 8000 &
 	@for i in $$(seq 1 15); do \
 		nc -z 127.0.0.1 8000 2>/dev/null && echo "  Backend ready." && break; \

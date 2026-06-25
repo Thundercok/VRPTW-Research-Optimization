@@ -820,19 +820,19 @@
           // back slowly to reveal the empty network waiting to be solved. This is
           // the "establishing shot" — slow, deliberate, no rotation.
           1: [
-            { t: 0.0, originXFrac: 0.5,  originYFrac: 0.48, scale: 230, rotation: 0.0 },
-            { t: 0.35, originXFrac: 0.52, originYFrac: 0.48, scale: 150, rotation: 0.0 },
-            { t: 1.0, originXFrac: 0.58, originYFrac: 0.50, scale: 78,  rotation: 0.0 }
+            { t: 0.0, originXFrac: 0.58, originYFrac: 0.48, scale: 230, rotation: 0.0 },
+            { t: 0.35, originXFrac: 0.60, originYFrac: 0.48, scale: 150, rotation: 0.0 },
+            { t: 1.0, originXFrac: 0.66, originYFrac: 0.50, scale: 78,  rotation: 0.0 }
           ],
 
           // ACT II — The Chaos: customer nodes scatter out from the depot. Camera
           // orbits around the densest/most chaotic cluster, rotation accelerating
           // as chaos increases, conveying loss of control.
           2: [
-            { t: 0.0,  originXFrac: 0.55, originYFrac: 0.46, scale: 90,  rotation: 0.0 },
-            { t: 0.3,  originXFrac: 0.42, originYFrac: 0.42, scale: 105, rotation: 0.25 },
-            { t: 0.65, originXFrac: 0.36, originYFrac: 0.40, scale: 122, rotation: 0.55 },
-            { t: 1.0,  originXFrac: 0.40, originYFrac: 0.40, scale: 115, rotation: 0.85 }
+            { t: 0.0,  originXFrac: 0.63, originYFrac: 0.46, scale: 90,  rotation: 0.0 },
+            { t: 0.3,  originXFrac: 0.50, originYFrac: 0.42, scale: 105, rotation: 0.25 },
+            { t: 0.65, originXFrac: 0.44, originYFrac: 0.40, scale: 122, rotation: 0.55 },
+            { t: 1.0,  originXFrac: 0.48, originYFrac: 0.40, scale: 115, rotation: 0.85 }
           ],
 
           // ACT III — Neural Operator (ALNS): THIS IS THE MOST IMPORTANT ACT.
@@ -842,21 +842,21 @@
           // Each cut should land on a noticeably different framing (different
           // originXFrac/scale/rotation) so the cut is visually obvious, not subtle.
           3: [
-            { t: 0.0,  originXFrac: 0.50, originYFrac: 0.50, scale: 100, rotation: 0.0 },
-            { t: 0.15, originXFrac: 0.30, originYFrac: 0.55, scale: 140, rotation: 0.15, cut: true },
-            { t: 0.30, originXFrac: 0.65, originYFrac: 0.40, scale: 135, rotation: -0.20, cut: true },
-            { t: 0.45, originXFrac: 0.40, originYFrac: 0.60, scale: 150, rotation: 0.30, cut: true },
-            { t: 0.60, originXFrac: 0.58, originYFrac: 0.35, scale: 130, rotation: -0.10, cut: true },
-            { t: 0.75, originXFrac: 0.45, originYFrac: 0.50, scale: 145, rotation: 0.20, cut: true },
-            { t: 0.90, originXFrac: 0.52, originYFrac: 0.48, scale: 100, rotation: 0.05, cut: true },
-            { t: 1.0,  originXFrac: 0.50, originYFrac: 0.50, scale: 92,  rotation: 0.0 }
+            { t: 0.0,  originXFrac: 0.58, originYFrac: 0.50, scale: 100, rotation: 0.0 },
+            { t: 0.15, originXFrac: 0.38, originYFrac: 0.55, scale: 140, rotation: 0.15, cut: true },
+            { t: 0.30, originXFrac: 0.73, originYFrac: 0.40, scale: 135, rotation: -0.20, cut: true },
+            { t: 0.45, originXFrac: 0.48, originYFrac: 0.60, scale: 150, rotation: 0.30, cut: true },
+            { t: 0.60, originXFrac: 0.66, originYFrac: 0.35, scale: 130, rotation: -0.10, cut: true },
+            { t: 0.75, originXFrac: 0.53, originYFrac: 0.50, scale: 145, rotation: 0.20, cut: true },
+            { t: 0.90, originXFrac: 0.60, originYFrac: 0.48, scale: 100, rotation: 0.05, cut: true },
+            { t: 1.0,  originXFrac: 0.58, originYFrac: 0.50, scale: 92,  rotation: 0.0 }
           ],
 
           // ACT IV — Optimal Dispatch: rise to birds-eye, continuous slow 360°
           // orbit showing the whole resolved network operating in harmony.
           4: [
-            { t: 0.0, originXFrac: 0.50, originYFrac: 0.46, scale: 92, rotation: 0.0 },
-            { t: 1.0, originXFrac: 0.50, originYFrac: 0.40, scale: 68, rotation: Math.PI * 2 }
+            { t: 0.0, originXFrac: 0.58, originYFrac: 0.46, scale: 92, rotation: 0.0 },
+            { t: 1.0, originXFrac: 0.58, originYFrac: 0.40, scale: 68, rotation: Math.PI * 2 }
           ]
         };
 
@@ -1173,9 +1173,9 @@
           // Calculate elevated target height Y
           let elevatedY = 0;
           if (act === 2) {
-            elevatedY = progress * 0.6;
+            elevatedY = progress * 0.35;
           } else if (act >= 3) {
-            elevatedY = 0.6;
+            elevatedY = 0.35;
           }
 
           // 3. Draw Customer Nodes
@@ -1235,7 +1235,7 @@
               color = node.targetColor;
             }
 
-            const size = diframeScale(8, node.id);
+            const size = diframeScale(11, node.id);
             drawDiamond(ctx, pElevated.x, pElevated.y, size, color, time, idx);
           });
 
@@ -1911,7 +1911,7 @@
             html += `
               <div class="customer-row" data-id="${node.id}">
                 <span class="customer-row-dot" style="background-color: ${node.targetColor}; color: ${node.targetColor};"></span>
-                <span class="customer-row-label">Address #${100 + node.id} (Cluster ${node.cluster})</span>
+                <span class="customer-row-label">#${100 + node.id} · C${node.cluster}</span>
               </div>
             `;
           });
