@@ -370,14 +370,18 @@ class UCBActionAugmenter:
 # DDQN controllers  (now using PrioritizedReplayBuffer)
 # ---------------------------------------------------------------------------
 class PlateauController:
-    def __init__(self, cfg: Config):
+    def __init__(self, cfg: Config, n_modes: int = 6):
         self.cfg = cfg
-        self.q = QNet(cfg.ctrl_state_dim, len(MODES), cfg.ctrl_hidden).to(DEVICE)
-        self.q_t = QNet(cfg.ctrl_state_dim, len(MODES), cfg.ctrl_hidden).to(DEVICE)
+        self.n_modes = n_modes
+        self.q = QNet(cfg.ctrl_state_dim, n_modes, cfg.ctrl_hidden).to(DEVICE)
+        self.q_t = QNet(cfg.ctrl_state_dim, n_modes, cfg.ctrl_hidden).to(DEVICE)
         self.q_t.load_state_dict(self.q.state_dict())
         self.opt = optim.Adam(self.q.parameters(), lr=cfg.ctrl_lr)
+        from torch.optim.lr_scheduler import CosineAnnealingLR
+        self.scheduler = CosineAnnealingLR(self.opt, T_max=5000, eta_min=1e-5)
         self.buf = PrioritizedReplayBuffer(cfg.ctrl_buffer, expected_steps=cfg.per_beta_steps)
         self.eps = cfg.ctrl_eps_start
+        self.eps_decay = 0.02 ** (1.0 / max(cfg.hybrid_iterations * 0.8, 1))
         self.step = 0
 
     def reset(self) -> None:
@@ -385,7 +389,7 @@ class PlateauController:
 
     def act(self, state: np.ndarray) -> int:
         if random.random() < self.eps:
-            return random.randrange(len(MODES))
+            return random.randrange(self.n_modes)
         with torch.no_grad():
             return int(
                 self.q(torch.as_tensor(state, dtype=torch.float32, device=DEVICE).unsqueeze(0))[0].argmax().item()
@@ -416,10 +420,11 @@ class PlateauController:
         loss.backward()
         nn.utils.clip_grad_norm_(self.q.parameters(), 1.0)
         self.opt.step()
-        tau = self.cfg.op_tau
+        self.scheduler.step()
+        tau = self.cfg.ctrl_tau
         for target_param, local_param in zip(self.q_t.parameters(), self.q.parameters()):
             target_param.data.copy_(tau * local_param.data + (1.0 - tau) * target_param.data)
-        self.eps = max(self.cfg.ctrl_eps_end, self.eps * self.cfg.ctrl_eps_decay)
+        self.eps = max(self.cfg.ctrl_eps_end, self.eps * self.eps_decay)
 
 
 class OperatorController:
@@ -429,8 +434,11 @@ class OperatorController:
         self.q_t = QNet(cfg.op_state_dim, N_ACTIONS, cfg.op_hidden).to(DEVICE)
         self.q_t.load_state_dict(self.q.state_dict())
         self.opt = optim.Adam(self.q.parameters(), lr=cfg.op_lr)
+        from torch.optim.lr_scheduler import CosineAnnealingLR
+        self.scheduler = CosineAnnealingLR(self.opt, T_max=5000, eta_min=1e-5)
         self.buf = PrioritizedReplayBuffer(cfg.op_buffer, expected_steps=cfg.per_beta_steps)
         self.eps = cfg.op_eps_start
+        self.eps_decay = 0.02 ** (1.0 / max(cfg.hybrid_iterations * 0.8, 1))
         self.step = 0
 
     def reset(self) -> None:
@@ -513,10 +521,11 @@ class OperatorController:
         loss.backward()
         nn.utils.clip_grad_norm_(self.q.parameters(), 1.0)
         self.opt.step()
-        tau = self.cfg.ctrl_tau
+        self.scheduler.step()
+        tau = self.cfg.op_tau
         for target_param, local_param in zip(self.q_t.parameters(), self.q.parameters()):
             target_param.data.copy_(tau * local_param.data + (1.0 - tau) * target_param.data)
-        self.eps = max(self.cfg.op_eps_end, self.eps * self.cfg.op_eps_decay)
+        self.eps = max(self.cfg.op_eps_end, self.eps * self.eps_decay)
 
 
 # ---------------------------------------------------------------------------
@@ -526,11 +535,15 @@ class LearnedAcceptanceCriterion:
     def __init__(self, cfg: Config):
         self.cfg = cfg
         self.net = nn.Sequential(
-            nn.Linear(cfg.lac_state_dim, cfg.lac_hidden),
+            nn.Linear(cfg.lac_state_dim, 64),
+            nn.LayerNorm(64),
             nn.ReLU(),
-            nn.Linear(cfg.lac_hidden, cfg.lac_hidden // 2),
+            nn.Dropout(0.1),
+            nn.Linear(64, 48),
             nn.ReLU(),
-            nn.Linear(cfg.lac_hidden // 2, 1),
+            nn.Linear(48, 32),
+            nn.ReLU(),
+            nn.Linear(32, 1),
             nn.Sigmoid(),
         ).to(DEVICE)
         self.opt = optim.Adam(self.net.parameters(), lr=cfg.lac_lr)

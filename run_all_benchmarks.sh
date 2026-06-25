@@ -48,6 +48,12 @@ execute_benchmark_safe() {
         echo "    GNN Model : $GNN_PATH"
     fi
 
+    local workers_arg=()
+    if [[ -n "${MAX_WORKERS:-}" ]]; then
+        workers_arg+=(--max-workers "$MAX_WORKERS")
+        echo "    Workers   : $MAX_WORKERS (Force Limit)"
+    fi
+
     if PYTHONPATH=src .venv/bin/python -u docs/run_benchmark.py \
         --data-path "$data_path" \
         --output-dir "$output_dir" \
@@ -57,7 +63,8 @@ execute_benchmark_safe() {
         --early-stop "$early_stop" \
         --polish-iters "$polish_iters" \
         --algorithms $ALGS \
-        "${gnn_arg[@]}" \
+        ${gnn_arg[@]+"${gnn_arg[@]}"} \
+        ${workers_arg[@]+"${workers_arg[@]}"} \
         --instances "${instances[@]}" 2>&1 < /dev/null | tee "$LOG_DIR/shard_${shard_log_name}.log"; then
 
         echo "--> [SUCCESS] Shard $shard_name completed."

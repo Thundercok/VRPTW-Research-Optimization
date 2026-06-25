@@ -17,6 +17,12 @@ if command -v caffeinate &> /dev/null; then
     trap 'kill $CAFF_PID 2>/dev/null || true' EXIT
 fi
 
+workers_arg=()
+if [[ -n "${MAX_WORKERS:-}" ]]; then
+    workers_arg+=(--max-workers "$MAX_WORKERS")
+    echo "--> [CONFIG] Using Max Workers: $MAX_WORKERS"
+fi
+
 # ─────────────────────────────────────────────────────────────────────────────
 # SOLOMON BENCHMARK (56 instances, 7 runs, 5000 iters)
 # ─────────────────────────────────────────────────────────────────────────────
@@ -24,7 +30,7 @@ fi
 # ── SHARD 1: CLUSTERED INSTANCES (C1 & C2) ──────────────────────────────────
 echo ""
 echo "--> Shard 1: Solomon Clustered (C1/C2) — 17 instances, 7 runs"
-PYTHONPATH=src .venv/bin/python docs/run_benchmark.py \
+PYTHONPATH=src .venv/bin/python docs/run_benchmark.py "${workers_arg[@]}" \
   --data-path data/Solomon \
   --output-dir "$OUTPUT_BASE/solomon_clustered" \
   --runs 7 \
@@ -39,7 +45,7 @@ PYTHONPATH=src .venv/bin/python docs/run_benchmark.py \
 # ── SHARD 2: RANDOM/MIXED SHORT HORIZON (R1 & RC1) ──────────────────────────
 echo ""
 echo "--> Shard 2: Solomon Short-Horizon (R1/RC1) — 20 instances, 7 runs"
-PYTHONPATH=src .venv/bin/python docs/run_benchmark.py \
+PYTHONPATH=src .venv/bin/python docs/run_benchmark.py "${workers_arg[@]}" \
   --data-path data/Solomon \
   --output-dir "$OUTPUT_BASE/solomon_short_horizon" \
   --runs 7 \
@@ -54,7 +60,7 @@ PYTHONPATH=src .venv/bin/python docs/run_benchmark.py \
 # ── SHARD 3: RANDOM/MIXED WIDE HORIZON (R2 & RC2) ───────────────────────────
 echo ""
 echo "--> Shard 3: Solomon Wide-Horizon (R2/RC2) — 20 instances, 7 runs"
-PYTHONPATH=src .venv/bin/python docs/run_benchmark.py \
+PYTHONPATH=src .venv/bin/python docs/run_benchmark.py "${workers_arg[@]}" \
   --data-path data/Solomon \
   --output-dir "$OUTPUT_BASE/solomon_wide_horizon" \
   --runs 7 \
@@ -72,7 +78,7 @@ PYTHONPATH=src .venv/bin/python docs/run_benchmark.py \
 
 echo ""
 echo "--> Shard 4: Homberger-200 (All 60 instances) — 5 runs"
-PYTHONPATH=src .venv/bin/python docs/run_benchmark.py \
+PYTHONPATH=src .venv/bin/python docs/run_benchmark.py "${workers_arg[@]}" \
   --data-path data/Gehring_Homberger/homberger_200_customer_instances \
   --output-dir "$OUTPUT_BASE/gehring_homberger_200" \
   --runs 5 \
@@ -97,7 +103,7 @@ PYTHONPATH=src .venv/bin/python docs/run_benchmark.py \
 
 echo ""
 echo "--> Shard 5: Homberger-400 (24 instances) — 3 runs"
-PYTHONPATH=src .venv/bin/python docs/run_benchmark.py \
+PYTHONPATH=src .venv/bin/python docs/run_benchmark.py "${workers_arg[@]}" \
   --data-path data/Gehring_Homberger/homberger_400_customer_instances \
   --output-dir "$OUTPUT_BASE/gehring_homberger_400" \
   --runs 3 \
@@ -122,7 +128,7 @@ PYTHONPATH=src .venv/bin/python docs/run_benchmark.py \
 
 echo ""
 echo "--> Shard 6: Homberger-600 (12 instances) — 3 runs"
-PYTHONPATH=src .venv/bin/python docs/run_benchmark.py \
+PYTHONPATH=src .venv/bin/python docs/run_benchmark.py "${workers_arg[@]}" \
   --data-path data/Gehring_Homberger/homberger_600_customer_instances \
   --output-dir "$OUTPUT_BASE/gehring_homberger_600" \
   --runs 3 \
@@ -147,7 +153,7 @@ PYTHONPATH=src .venv/bin/python docs/run_benchmark.py \
 
 echo ""
 echo "--> Shard 7: Homberger-800 (6 instances) — 3 runs"
-PYTHONPATH=src .venv/bin/python docs/run_benchmark.py \
+PYTHONPATH=src .venv/bin/python docs/run_benchmark.py "${workers_arg[@]}" \
   --data-path data/Gehring_Homberger/homberger_800_customer_instances \
   --output-dir "$OUTPUT_BASE/gehring_homberger_800" \
   --runs 3 \
@@ -167,7 +173,7 @@ PYTHONPATH=src .venv/bin/python docs/run_benchmark.py \
 
 echo ""
 echo "--> Shard 8: Homberger-1000 STRESS (6 instances) — 3 runs"
-PYTHONPATH=src .venv/bin/python docs/run_benchmark.py \
+PYTHONPATH=src .venv/bin/python docs/run_benchmark.py "${workers_arg[@]}" \
   --data-path data/Gehring_Homberger/homberger_1000_customer_instances \
   --output-dir "$OUTPUT_BASE/gehring_homberger_1000" \
   --runs 3 \

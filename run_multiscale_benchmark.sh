@@ -15,19 +15,25 @@ RUNS=3
 ITERS=1000
 ORTOOLS_LIMIT=120
 
+workers_arg=()
+if [[ -n "${MAX_WORKERS:-}" ]]; then
+    workers_arg+=(--max-workers "$MAX_WORKERS")
+    echo "Using Max Workers: $MAX_WORKERS"
+fi
+
 # ── 1. SOLOMON BENCHMARK (100 Customers) ───────────────────────────────────
 echo ""
 echo ">>> [RUNNING] Solomon (100 Customers)..."
 solomon_insts=("C101" "C201" "R101" "R201" "RC101" "RC201")
 
-PYTHONPATH=src .venv/bin/python -u docs/run_benchmark.py \
+PYTHONPATH=src .venv/bin/python -u docs/run_benchmark.py ${workers_arg[@]+"${workers_arg[@]}"} \
   --data-path "data/Solomon" \
   --output-dir "$OUTPUT_BASE/solomon_100" \
   --runs $RUNS \
   --alns-iters $ITERS \
   --hybrid-iters $ITERS \
   --algorithms $ALGS \
-  --instances "${solomon_insts[@]}" \
+  --instances ${solomon_insts[@]+"${solomon_insts[@]}"} \
   --ortools-time-limit $ORTOOLS_LIMIT \
   --no-checkpoint
 
@@ -51,14 +57,14 @@ for size in 200 400 600 800 1000; do
   echo "    Iterations : $ITERS"
   echo "    Runs       : $RUNS"
   
-  PYTHONPATH=src .venv/bin/python -u docs/run_benchmark.py \
+  PYTHONPATH=src .venv/bin/python -u docs/run_benchmark.py ${workers_arg[@]+"${workers_arg[@]}"} \
     --data-path "data/Gehring_Homberger/homberger_${size}_customer_instances" \
     --output-dir "$OUTPUT_BASE/homberger_$size" \
     --runs $RUNS \
     --alns-iters $ITERS \
     --hybrid-iters $ITERS \
     --algorithms $ALGS \
-    --instances "${insts[@]}" \
+    --instances ${insts[@]+"${insts[@]}"} \
     --ortools-time-limit $ORTOOLS_LIMIT \
     --no-checkpoint
 done

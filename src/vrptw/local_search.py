@@ -15,8 +15,12 @@ from .numba_kernels import (
     _best_segment_insert_pruned_numba,
     _cross_exchange_pair_numba,
     _cross_exchange_pair_pruned_numba,
+    _cross_tail_pair_numba,
+    _cross_tail_pair_pruned_numba,
     _intra_route_optimize_numba,
     _or_opt_intra_numba,
+    _string_relocate_pair_numba,
+    _string_relocate_pair_pruned_numba,
     _swap_evaluate_numba,
     _swap_evaluate_pruned_numba,
     _two_opt_best_numba,
@@ -279,6 +283,96 @@ def _cross_exchange(
     return None
 
 
+def _cross_tail(
+    plan: Plan,
+    nv_ceiling: int | None = None,
+    heatmap: np.ndarray | None = None,
+    pruning_threshold: float = 0.0,
+) -> Plan | None:
+    inst = plan.inst
+    if nv_ceiling is not None and plan.nv > nv_ceiling:
+        return None
+    max_dist = max(inst.max_dist, 1.0)
+    best_delta = -1e-9
+    best_routes: list[list[int]] | None = None
+    best_cost_delta = 0.0
+
+    route_arrays = plan.route_arrays
+    centroids = [inst.coords[arr].mean(axis=0) if len(arr) > 0 else inst.coords[0] for arr in route_arrays]
+
+    for i in range(len(plan.routes)):
+        for j in range(i + 1, len(plan.routes)):
+            r1, r2 = plan.routes[i], plan.routes[j]
+            if not r1 or not r2:
+                continue
+
+            # Spatial filter: skip route pairs whose centroids are too far apart
+            if float(np.linalg.norm(centroids[i] - centroids[j])) > 0.65 * max_dist:
+                continue
+
+            r1_arr, r2_arr = route_arrays[i], route_arrays[j]
+            old_pair = float(_route_cost(r1_arr, inst.dist)) + float(_route_cost(r2_arr, inst.dist))
+
+            if heatmap is not None and pruning_threshold > 0.0:
+                delta, split_i, split_j = _cross_tail_pair_pruned_numba(
+                    r1_arr,
+                    r2_arr,
+                    inst.dist,
+                    inst.demands,
+                    inst.capacity,
+                    inst.ready_times,
+                    inst.due_times,
+                    inst.service_times,
+                    old_pair,
+                    heatmap,
+                    pruning_threshold,
+                )
+            else:
+                delta, split_i, split_j = _cross_tail_pair_numba(
+                    r1_arr,
+                    r2_arr,
+                    inst.dist,
+                    inst.demands,
+                    inst.capacity,
+                    inst.ready_times,
+                    inst.due_times,
+                    inst.service_times,
+                    old_pair,
+                )
+
+            if split_i >= 0:
+                # A vehicle is eliminated if either tail swap makes a route empty.
+                len1_new = split_i + (len(r2) - split_j)
+                len2_new = split_j + (len(r1) - split_i)
+                reduced = (len1_new == 0) or (len2_new == 0)
+
+                new_nv = plan.nv - (1 if reduced else 0)
+                if nv_ceiling is not None and new_nv > nv_ceiling:
+                    continue
+
+                actual_delta = delta
+                if new_nv < plan.nv:
+                    actual_delta -= 1000.0
+
+                if actual_delta < best_delta:
+                    best_delta = actual_delta
+                    nr1 = list(r1[:split_i]) + list(r2[split_j:])
+                    nr2 = list(r2[:split_j]) + list(r1[split_i:])
+                    routes = [r[:] for r in plan.routes]
+                    routes[i], routes[j] = nr1, nr2
+                    routes = [r for r in routes if r]
+                    best_routes = routes
+                    best_cost_delta = delta
+
+    if best_routes is not None:
+        cand = Plan(best_routes, inst, plan.algo)
+        cand._cost = plan.cost + best_cost_delta
+        cand._ok = True
+        return cand
+    return None
+
+
+
 def _try_route_compact(plan: Plan, nv_ceiling: int | None = None) -> Plan | None:
     if len(plan.routes) <= 1:
         return None
@@ -321,86 +415,69 @@ def _best_or_opt(
 ):
     inst = plan.inst
     best_delta, best_move = -1e-9, None
+    best_cost_delta = 0.0
     route_arrays = plan.route_arrays
     max_dist = max(inst.max_dist, 1.0)
     centroids = [inst.coords[arr].mean(axis=0) if len(arr) > 0 else inst.coords[0] for arr in route_arrays]
 
-    # Build node-to-route index for kNN filtering
-    node_to_route = {}
-    for ri, route in enumerate(plan.routes):
-        for node in route:
-            node_to_route[node] = ri
-
     for si in range(len(plan.routes)):
-        source_route = plan.routes[si]
-        for L in (2, 3):
-            for sp in range(len(source_route) - L + 1):
-                seg_arr = np.array(source_route[sp : sp + L], dtype=np.int64)
-                sn_empty = len(source_route) == L
-                # Compute removal delta in O(1) — removing a segment from a
-                # feasible route always yields a feasible route
-                prev_s = source_route[sp - 1] if sp > 0 else 0
-                next_s = source_route[sp + L] if sp + L < len(source_route) else 0
-                # Distance of removed arc chain: prev→seg[0]→...→seg[-1]→next
-                remove_dist = inst.dist[prev_s, source_route[sp]]
-                for k in range(L - 1):
-                    remove_dist += inst.dist[source_route[sp + k], source_route[sp + k + 1]]
-                remove_dist += inst.dist[source_route[sp + L - 1], next_s]
-                remove_delta = inst.dist[prev_s, next_s] - remove_dist
+        for di in range(si + 1, len(plan.routes)):
+            # Spatial filter: skip route pairs whose centroids are too far apart
+            if float(np.linalg.norm(centroids[si] - centroids[di])) > 0.65 * max_dist:
+                continue
 
-                # kNN-filtered destination routes (using first node of segment)
-                seg_node = source_route[sp]
-                candidate_routes = set()
-                if seg_node < len(inst.neighbors_k):
-                    for neighbor in inst.neighbors_k[seg_node]:
-                        if neighbor in node_to_route:
-                            candidate_routes.add(node_to_route[neighbor])
-                candidate_routes.discard(si)
-                # Fallback: if kNN yields too few candidates, add centroid-close routes
-                if len(candidate_routes) < 3:
-                    seg_center = inst.coords[seg_arr].mean(axis=0)
-                    for di in range(len(plan.routes)):
-                        if di != si and float(np.linalg.norm(centroids[di] - seg_center)) <= 0.55 * max_dist:
-                            candidate_routes.add(di)
+            r1_arr, r2_arr = route_arrays[si], route_arrays[di]
+            old_pair = float(_route_cost(r1_arr, inst.dist)) + float(_route_cost(r2_arr, inst.dist))
 
-                for di in candidate_routes:
-                    # JIT-compiled segment insertion evaluation
-                    if heatmap is not None and pruning_threshold > 0.0:
-                        insert_delta, best_pos, rev_int = _best_segment_insert_pruned_numba(
-                            seg_arr,
-                            route_arrays[di],
-                            inst.dist,
-                            inst.demands,
-                            inst.capacity,
-                            inst.ready_times,
-                            inst.due_times,
-                            inst.service_times,
-                            heatmap,
-                            pruning_threshold,
-                        )
-                    else:
-                        insert_delta, best_pos, rev_int = _best_segment_insert_numba(
-                            seg_arr,
-                            route_arrays[di],
-                            inst.dist,
-                            inst.demands,
-                            inst.capacity,
-                            inst.ready_times,
-                            inst.due_times,
-                            inst.service_times,
-                        )
-                    if best_pos == -1:
-                        continue
-                    new_nv = plan.nv - (1 if sn_empty else 0)
-                    if nv_ceiling is not None and new_nv > nv_ceiling:
-                        continue
-                    delta = remove_delta + insert_delta
-                    if new_nv < plan.nv:
-                        delta -= 1000.0
-                    if delta < best_delta:
-                        best_delta = delta
-                        best_move = (si, sp, L, di, int(best_pos), bool(rev_int))
-                        best_cost_delta = remove_delta + insert_delta
+            if heatmap is not None and pruning_threshold > 0.0:
+                delta, direction, p1, L, p2, rev = _string_relocate_pair_pruned_numba(
+                    r1_arr,
+                    r2_arr,
+                    inst.dist,
+                    inst.demands,
+                    inst.capacity,
+                    inst.ready_times,
+                    inst.due_times,
+                    inst.service_times,
+                    old_pair,
+                    heatmap,
+                    pruning_threshold,
+                )
+            else:
+                delta, direction, p1, L, p2, rev = _string_relocate_pair_numba(
+                    r1_arr,
+                    r2_arr,
+                    inst.dist,
+                    inst.demands,
+                    inst.capacity,
+                    inst.ready_times,
+                    inst.due_times,
+                    inst.service_times,
+                    old_pair,
+                )
+
+            if direction != -1:
+                if direction == 1:
+                    # Relocate from si to di
+                    source_idx, dest_idx = si, di
+                else:
+                    # Relocate from di to si
+                    source_idx, dest_idx = di, si
+
+                sn_empty = len(plan.routes[source_idx]) == L
+                new_nv = plan.nv - (1 if sn_empty else 0)
+                if nv_ceiling is not None and new_nv > nv_ceiling:
+                    continue
+
+                actual_delta = delta
+                if new_nv < plan.nv:
+                    actual_delta -= 1000.0
+
+                if actual_delta < best_delta:
+                    best_delta = actual_delta
+                    best_move = (source_idx, int(p1), int(L), dest_idx, int(p2), bool(rev))
+                    best_cost_delta = delta
+
     if best_move is None:
         return None
     return best_move, best_cost_delta
@@ -845,6 +922,20 @@ def local_search(
                         pool.add_plan(best)  # Immediate hot-commit to active pool
                     continue
 
+            # 1.5. String Relocate (Or-Opt Move)
+            res = _best_or_opt(best, nv_ceiling=nv_ceiling, heatmap=heatmap, pruning_threshold=pruning_threshold)
+            if res is not None:
+                move, cost_delta = res
+                cand = _apply_or_opt(best, move)
+                cand._cost = best.cost + cost_delta
+                cand._ok = True
+                if cand.dominates(best) or (cand.nv == best.nv and cand.cost + 1e-9 < best.cost):
+                    best, improved = cand, True
+                    moves += 1
+                    if pool is not None:
+                        pool.add_plan(best)
+                    continue
+
             # 2. Intra-Route Or-Opt
             intra = _intra_route_or_opt(best, nv_ceiling=nv_ceiling)
             if intra is not None:
@@ -868,21 +959,16 @@ def local_search(
                         pool.add_plan(best)
                     continue
 
-            # 4. Or-Opt Move
-            res = _best_or_opt(best, nv_ceiling=nv_ceiling, heatmap=heatmap, pruning_threshold=pruning_threshold)
-            if res is not None:
-                move, cost_delta = res
-                cand = _apply_or_opt(best, move)
-                cand._cost = best.cost + cost_delta
-                cand._ok = True
-                if cand.dominates(best) or (cand.nv == best.nv and cand.cost + 1e-9 < best.cost):
-                    best, improved = cand, True
-                    moves += 1
-                    if pool is not None:
-                        pool.add_plan(best)
-                    continue
+            # 3.5. CROSS Tail-Swap
+            cross_tail = _cross_tail(best, nv_ceiling=nv_ceiling, heatmap=heatmap, pruning_threshold=pruning_threshold)
+            if cross_tail is not None:
+                best, improved = cross_tail, True
+                moves += 1
+                if pool is not None:
+                    pool.add_plan(best)
+                continue
 
-            # 5. Cross Exchange
+            # 4. Cross Exchange
             cross = _cross_exchange(best, nv_ceiling=nv_ceiling, heatmap=heatmap, pruning_threshold=pruning_threshold)
             if cross is not None:
                 best, improved = cross, True
@@ -891,7 +977,7 @@ def local_search(
                     pool.add_plan(best)
                 continue
 
-            # 6. Route Compaction
+            # 5. Route Compaction
             compact = _try_route_compact(best, nv_ceiling=nv_ceiling)
             if compact is not None:
                 best, improved = compact, True

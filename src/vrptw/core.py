@@ -62,6 +62,28 @@ def _route_cost(route: np.ndarray, dist: np.ndarray) -> float:
 
 
 @njit(cache=True)
+def _route_violations(route, demands, capacity, ready, due, service, dist):
+    load = 0.0
+    tw_violation = 0.0
+    t, prev = 0.0, 0
+    for node in route:
+        load += demands[node]
+        t += dist[prev, node]
+        if t > due[node]:
+            tw_violation += t - due[node]
+        t = max(t, ready[node]) + service[node]
+        prev = node
+    
+    # Return to depot
+    t += dist[prev, 0]
+    if t > due[0]:
+        tw_violation += t - due[0]
+        
+    cap_violation = max(0.0, load - capacity)
+    return cap_violation, tw_violation
+
+
+@njit(cache=True)
 def _route_ok(route, demands, capacity, ready, due, service, dist) -> bool:
     load = 0.0
     t, prev = 0.0, 0
@@ -80,7 +102,16 @@ def _route_ok(route, demands, capacity, ready, due, service, dist) -> bool:
 
 
 class Plan:
-    __slots__ = ("routes", "inst", "_cost", "_ok", "algo", "_route_arrays")
+    __slots__ = (
+        "routes",
+        "inst",
+        "_cost",
+        "_ok",
+        "algo",
+        "_route_arrays",
+        "_violation_capacity",
+        "_violation_tw",
+    )
 
     def __init__(self, routes: list[list[int]], inst: Inst, algo: str = ""):
         self.routes = [r for r in routes if r]
@@ -89,6 +120,8 @@ class Plan:
         self._ok: bool | None = None
         self.algo = algo
         self._route_arrays: list[np.ndarray] | None = None
+        self._violation_capacity: float | None = None
+        self._violation_tw: float | None = None
 
     @property
     def route_arrays(self) -> list[np.ndarray]:
@@ -118,6 +151,36 @@ class Plan:
                 for arr in self.route_arrays
             )
         return self._ok
+
+    @property
+    def violation_capacity(self) -> float:
+        if self._violation_capacity is None:
+            self._compute_violations()
+        return self._violation_capacity
+
+    @property
+    def violation_tw(self) -> float:
+        if self._violation_tw is None:
+            self._compute_violations()
+        return self._violation_tw
+
+    def _compute_violations(self) -> None:
+        cap_viol = 0.0
+        tw_viol = 0.0
+        for arr in self.route_arrays:
+            c_v, t_v = _route_violations(
+                arr,
+                self.inst.demands,
+                self.inst.capacity,
+                self.inst.ready_times,
+                self.inst.due_times,
+                self.inst.service_times,
+                self.inst.dist,
+            )
+            cap_viol += c_v
+            tw_viol += t_v
+        self._violation_capacity = cap_viol
+        self._violation_tw = tw_viol
 
     @property
     def nv(self) -> int:
@@ -154,6 +217,8 @@ class Plan:
         self._cost = None
         self._ok = None
         self._route_arrays = None
+        self._violation_capacity = None
+        self._violation_tw = None
 
 
 def _invalidate(plan: Plan) -> Plan:

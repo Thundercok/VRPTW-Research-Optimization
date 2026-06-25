@@ -346,6 +346,7 @@ def run_benchmark(
     archive: EliteArchive | None = None,
     checkpoint_path: str | None = None,
     no_checkpoint: bool = False,
+    max_workers: int | None = None,
 ) -> pd.DataFrame:
     cfg.validate()
     instances = list(instances)
@@ -392,10 +393,10 @@ def run_benchmark(
             print(f"    [SUCCESS] {inst.name} finished in 0s", flush=True)
 
     if worker_args:
-        max_workers = min(len(worker_args), max(1, os.cpu_count() - 1))
-        print(f"Parallelizing benchmark at the INSTANCE level across {max_workers} worker(s)...")
+        workers_count = max_workers if max_workers is not None else min(len(worker_args), max(1, os.cpu_count() - 1))
+        print(f"Parallelizing benchmark at the INSTANCE level across {workers_count} worker(s)...")
         ctx = mp.get_context("spawn")
-        with ProcessPoolExecutor(max_workers=max_workers, mp_context=ctx) as ex:
+        with ProcessPoolExecutor(max_workers=workers_count, mp_context=ctx) as ex:
             for inst_rows in ex.map(_benchmark_instance_worker, worker_args):
                 for row in inst_rows:
                     rows.append(row)

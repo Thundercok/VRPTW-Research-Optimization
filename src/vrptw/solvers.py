@@ -26,6 +26,7 @@ from .config import (
     MODE_POOL_RECOMBINE,
     MODE_ROUTE_REDUCE,
     MODE_TW_RESCUE,
+    MODE_INFEASIBLE_DESCENT,
     MODES,
     Config,
 )
@@ -48,10 +49,12 @@ from .operators import (
     REPAIR,
     accept,
     accept_with_nv_ceiling,
+    accept_penalized,
     destroy_size,
     op_neural_shaw,
     op_neural_worst,
 )
+from .penalty import PenaltyManager, eliminate_route_infeasible
 from .pool import RoutePool, recombine_with_route_pool
 from .rl import (
     DEVICE,
@@ -199,13 +202,14 @@ class HybridDDQNSolver:
     def __init__(self, inst: Inst, cfg: Config):
         self.inst = inst
         self.cfg = cfg
-        self.ctrl = PlateauController(cfg)
+        self.modes = MODES if cfg.penalty_search_enabled else MODES[:6]
+        self.ctrl = PlateauController(cfg, len(self.modes))
         self.op_ctrl = OperatorController(cfg)
         self.lac = LearnedAcceptanceCriterion(cfg)
         self.ls_budget = LSBudgetController(ls_time_frac=0.30)
         self.ucb_aug = UCBActionAugmenter(n_actions=N_D * N_R)
         self.reward_norm = WelfordRewardNormalizer(clip_sigma=8.0, warmup=128)
-        self.mode_bandits: list[ThompsonBandit] = [ThompsonBandit(N_D, N_R) for _ in MODES]
+        self.mode_bandits: list[ThompsonBandit] = [ThompsonBandit(N_D, N_R) for _ in self.modes]
         self._segment_recombine_used = False
         self._pool_seeding_done: bool = False  # guard: fires once per solve()
         self._init_nv = 1
@@ -913,7 +917,13 @@ class HybridDDQNSolver:
         for ap in archive_plans:
             pool.add_plan(ap)
 
-        cur = start.copy()
+        if cfg.penalty_search_enabled:
+            penalty_manager = PenaltyManager(inst)
+            cur = eliminate_route_infeasible(start, penalty_manager)
+        else:
+            penalty_manager = None
+            cur = start.copy()
+
         best_found: Plan | None = None
         best_cost_at_target_nv_plus_1 = start.cost
         temp = cfg.temp_control * cur.cost / math.log(2) * 4.0
@@ -938,9 +948,14 @@ class HybridDDQNSolver:
                 # Try to build a different starting topology via pool recombination
                 restart_plan = recombine_with_route_pool(start, pool, cfg, nv_ceiling=start.nv, heatmap=self.heatmap)
                 if restart_plan.feasible and restart_plan.nv <= start.nv:
-                    cur = restart_plan
+                    base_plan = restart_plan
                 else:
-                    cur = start.copy()
+                    base_plan = start
+
+                if cfg.penalty_search_enabled:
+                    cur = eliminate_route_infeasible(base_plan, penalty_manager)
+                else:
+                    cur = base_plan.copy()
                 bandit = ThompsonBandit(N_D, N_R)  # fresh bandit for new topology
 
             di, ri = bandit.select()
@@ -952,66 +967,86 @@ class HybridDDQNSolver:
                 pool.add_route(route)
 
             score = 0
-            if cand.feasible and cand.nv <= target_nv:
-                pool.add_plan(cand)
-                cur = cand
-                if best_found is None or cand.dominates(best_found) or cand.nv < best_found.nv:
-                    best_found = cand.copy()
-                    score = cfg.sigma1
-
-            elif cand.feasible and cand.nv == target_nv + 1:
-                is_improving = cand.cost < best_cost_at_target_nv_plus_1
-                if is_improving:
-                    best_cost_at_target_nv_plus_1 = cand.cost
-
-                # 1. Try local search reduction (run only if improving or periodically)
-                if is_improving or it % 15 == 0:
-                    reduced = self._local_search(
-                        cand,
-                        max_passes=1,
-                        nv_ceiling=cand.nv,
-                        max_ls_moves=cfg.max_ls_moves,
-                        pool=pool,
-                    )
-                else:
-                    reduced = cand.copy()
-
-                # 2. Try ejection chains (if local search failed)
-                if not (reduced.feasible and reduced.nv <= target_nv):
-                    if is_improving or it % 30 == 0:
-                        chain = _ejection_chain_eliminate(cand)
-                        if chain is not None and chain.feasible and chain.nv <= target_nv:
-                            reduced = chain
-
-                # 2.5. Try buffered route elimination (multi-route beam search)
-                if not (reduced.feasible and reduced.nv <= target_nv):
-                    if is_improving or it % 40 == 0:
-                        from .local_search import _buffered_route_elimination
-
-                        _bks_entry = BKS.get(inst.name)
-                        _bks_nv = int(_bks_entry["nv"]) if _bks_entry else 0
-                        buff = _buffered_route_elimination(cand, pool=pool, hard_mode=(target_nv == _bks_nv))
-                        if buff.feasible and buff.nv <= target_nv:
-                            reduced = buff
-
-                # 3. Try MILP recombination
-                if not (reduced.feasible and reduced.nv <= target_nv):
-                    if is_improving or it % 50 == 0:
-                        rec = recombine_with_route_pool(cand, pool, cfg, nv_target=target_nv, heatmap=self.heatmap)
-                        if rec.feasible and rec.nv <= target_nv:
-                            reduced = rec
-
-                # If we successfully dropped to target_nv vehicles:
-                if reduced.feasible and reduced.nv <= target_nv:
-                    pool.add_plan(reduced)
-                    cur = reduced
-                    if best_found is None or reduced.dominates(best_found) or reduced.nv < best_found.nv:
-                        best_found = reduced.copy()
-                        score = cfg.sigma1
-                else:
-                    # Accept the near-miss candidate via SA to keep exploring
-                    if cand.cost <= cur.cost or random.random() < math.exp(-(cand.cost - cur.cost) / max(temp, 1e-6)):
+            if cfg.penalty_search_enabled:
+                if cand.nv <= target_nv:
+                    accepted = accept_penalized(cur, cand, temp, penalty_manager)
+                    if accepted:
                         cur = cand
+                        penalty_manager.record_solution(cand)
+                        if cand.feasible:
+                            cand = self._local_search(
+                                cand, max_passes=1, nv_ceiling=target_nv, max_ls_moves=cfg.max_ls_moves, pool=pool
+                            )
+                            pool.add_plan(cand)
+                            if best_found is None or cand.dominates(best_found) or cand.nv < best_found.nv:
+                                best_found = cand.copy()
+                                score = cfg.sigma1
+                        else:
+                            score = cfg.sigma3
+
+                if it > 0 and it % 100 == 0:
+                    penalty_manager.update_penalties()
+            else:
+                if cand.feasible and cand.nv <= target_nv:
+                    pool.add_plan(cand)
+                    cur = cand
+                    if best_found is None or cand.dominates(best_found) or cand.nv < best_found.nv:
+                        best_found = cand.copy()
+                        score = cfg.sigma1
+
+                elif cand.feasible and cand.nv == target_nv + 1:
+                    is_improving = cand.cost < best_cost_at_target_nv_plus_1
+                    if is_improving:
+                        best_cost_at_target_nv_plus_1 = cand.cost
+
+                    # 1. Try local search reduction (run only if improving or periodically)
+                    if is_improving or it % 15 == 0:
+                        reduced = self._local_search(
+                            cand,
+                            max_passes=1,
+                            nv_ceiling=cand.nv,
+                            max_ls_moves=cfg.max_ls_moves,
+                            pool=pool,
+                        )
+                    else:
+                        reduced = cand.copy()
+
+                    # 2. Try ejection chains (if local search failed)
+                    if not (reduced.feasible and reduced.nv <= target_nv):
+                        if is_improving or it % 30 == 0:
+                            chain = _ejection_chain_eliminate(cand)
+                            if chain is not None and chain.feasible and chain.nv <= target_nv:
+                                reduced = chain
+
+                    # 2.5. Try buffered route elimination (multi-route beam search)
+                    if not (reduced.feasible and reduced.nv <= target_nv):
+                        if is_improving or it % 40 == 0:
+                            from .local_search import _buffered_route_elimination
+
+                            _bks_entry = BKS.get(inst.name)
+                            _bks_nv = int(_bks_entry["nv"]) if _bks_entry else 0
+                            buff = _buffered_route_elimination(cand, pool=pool, hard_mode=(target_nv == _bks_nv))
+                            if buff.feasible and buff.nv <= target_nv:
+                                reduced = buff
+
+                    # 3. Try MILP recombination
+                    if not (reduced.feasible and reduced.nv <= target_nv):
+                        if is_improving or it % 50 == 0:
+                            rec = recombine_with_route_pool(cand, pool, cfg, nv_target=target_nv, heatmap=self.heatmap)
+                            if rec.feasible and rec.nv <= target_nv:
+                                reduced = rec
+
+                    # If we successfully dropped to target_nv vehicles:
+                    if reduced.feasible and reduced.nv <= target_nv:
+                        pool.add_plan(reduced)
+                        cur = reduced
+                        if best_found is None or reduced.dominates(best_found) or reduced.nv < best_found.nv:
+                            best_found = reduced.copy()
+                            score = cfg.sigma1
+                    else:
+                        # Accept the near-miss candidate via SA to keep exploring
+                        if cand.cost <= cur.cost or random.random() < math.exp(-(cand.cost - cur.cost) / max(temp, 1e-6)):
+                            cur = cand
 
             bandit.update(di, ri, score, cfg.sigma1)
             temp *= cfg.temp_decay
@@ -1042,7 +1077,7 @@ class HybridDDQNSolver:
             norm = self.reward_norm
         if getattr(self, "use_op_rl", True):
             self.lac = LearnedAcceptanceCriterion(cfg)
-        self.mode_bandits = [ThompsonBandit(N_D, N_R) for _ in MODES]
+        self.mode_bandits = [ThompsonBandit(N_D, N_R) for _ in self.modes]
         # Initialize GNN edge predictor heatmap once per solve()
         self.heatmap = None
         self.gamma = 0.0
@@ -1058,6 +1093,10 @@ class HybridDDQNSolver:
                 self.gamma = getattr(cfg, "gnn_guidance_strength", 0.45)
 
         pool = RoutePool(self.inst, cfg)
+        if cfg.penalty_search_enabled:
+            self.penalty_manager = PenaltyManager(self.inst)
+        else:
+            self.penalty_manager = None
         cur = (
             init.copy()
             if init is not None
@@ -1069,8 +1108,8 @@ class HybridDDQNSolver:
         temp = cfg.temp_control * cur.cost / math.log(2)
         if _warm_start:
             temp *= 2.0
-        all_dw = np.ones((len(MODES), N_D), dtype=np.float32)
-        all_rw = np.ones((len(MODES), N_R), dtype=np.float32)
+        all_dw = np.ones((len(self.modes), N_D), dtype=np.float32)
+        all_rw = np.ones((len(self.modes), N_R), dtype=np.float32)
         history: list[float] = [best.cost]
         recent_improvements: deque[int] = deque(maxlen=cfg.segment_size)
         no_imp = 0
@@ -1093,7 +1132,7 @@ class HybridDDQNSolver:
 
             state_before = self._state(cur, best, no_imp, temp, imp_rate, progress, pool)
             action, ctrl_active = self._select_action(state_before, cur, best, no_imp, progress, pool, frozen)
-            mode = MODES[action]
+            mode = self.modes[action]
             dw = all_dw[action].copy()
             rw = all_rw[action].copy()
             biased_dw = np.maximum(dw * np.array(mode.destroy_bias, np.float32), 0.1)
@@ -1138,44 +1177,55 @@ class HybridDDQNSolver:
 
                 lac_decided = False
                 allow_nv_increase = action == MODE_DIVERSIFY
-                if not cand.feasible:
-                    accepted = False
-                elif cand.nv > cur.nv and not (allow_nv_increase and cand.nv == cur.nv + 1):
-                    accepted = False
-                elif cand.nv < cur.nv or (cand.nv == cur.nv and cand.cost <= cur.cost):
-                    accepted = True
-                elif cand.nv == cur.nv + 1:
-                    accepted = accept(cur, cand, temp, allow_nv_increase=True)
-                else:
-                    if cfg.lac_enabled and getattr(self, "use_op_rl", True) and not frozen:
-                        t0_init = cfg.temp_control * max(best.cost, 1.0) / math.log(2)
-                        lac_feats = self.lac.features(
-                            cost_delta=cand.cost - cur.cost,
-                            cur_cost=cur.cost,
-                            temp=temp,
-                            temp_init=t0_init,
-                            no_imp=no_imp,
-                            patience=cfg.early_stop_patience,
-                            nv_diff=cand.nv - cur.nv,
-                            progress=it / max(cfg.hybrid_iterations, 1),
-                            tw_tight_frac=self.inst.tw_tight_frac,
-                            fleet_fill=_fleet_fill(cur),
-                            avg_slack_val=_avg_slack(cur),
-                        )
-                        accepted, _ = self.lac.decide(lac_feats, best.cost)
-                        lac_decided = True
+                if cfg.penalty_search_enabled and action == MODE_INFEASIBLE_DESCENT:
+                    if cand.nv > cur.nv and not (allow_nv_increase and cand.nv == cur.nv + 1):
+                        accepted = False
                     else:
-                        accepted = random.random() < math.exp(-(cand.cost - cur.cost) / max(temp, 1e-6))
+                        accepted = accept_penalized(cur, cand, temp, self.penalty_manager)
+                else:
+                    if not cand.feasible:
+                        accepted = False
+                    elif cand.nv > cur.nv and not (allow_nv_increase and cand.nv == cur.nv + 1):
+                        accepted = False
+                    elif cand.nv < cur.nv or (cand.nv == cur.nv and cand.cost <= cur.cost):
+                        accepted = True
+                    elif cand.nv == cur.nv + 1:
+                        accepted = accept(cur, cand, temp, allow_nv_increase=True)
+                    else:
+                        if cfg.lac_enabled and getattr(self, "use_op_rl", True) and not frozen:
+                            t0_init = cfg.temp_control * max(best.cost, 1.0) / math.log(2)
+                            lac_feats = self.lac.features(
+                                cost_delta=cand.cost - cur.cost,
+                                cur_cost=cur.cost,
+                                temp=temp,
+                                temp_init=t0_init,
+                                no_imp=no_imp,
+                                patience=cfg.early_stop_patience,
+                                nv_diff=cand.nv - cur.nv,
+                                progress=it / max(cfg.hybrid_iterations, 1),
+                                tw_tight_frac=self.inst.tw_tight_frac,
+                                fleet_fill=_fleet_fill(cur),
+                                avg_slack_val=_avg_slack(cur),
+                            )
+                            accepted, _ = self.lac.decide(lac_feats, best.cost)
+                            lac_decided = True
+                        else:
+                            accepted = random.random() < math.exp(-(cand.cost - cur.cost) / max(temp, 1e-6))
 
                 if lac_decided:
                     self.lac.observe(best.cost)
+
+                if cfg.penalty_search_enabled and action == MODE_INFEASIBLE_DESCENT:
+                    self.penalty_manager.record_solution(cand)
+                    if it > 0 and it % 100 == 0:
+                        self.penalty_manager.update_penalties()
 
                 score = 0
                 improved = False
                 if accepted:
                     accepted_moves += 1
-                    is_new_best = cand.dominates(best)
-                    if not frozen and self.ls_budget.should_trigger(action, True, is_new_best, MODES):
+                    is_new_best = cand.feasible and cand.dominates(best)
+                    if cand.feasible and not frozen and self.ls_budget.should_trigger(action, True, is_new_best, self.modes):
                         t_ls = time.time()
                         cost_pre = cand.cost
                         nv_cap = (
@@ -1184,12 +1234,12 @@ class HybridDDQNSolver:
                             else None
                         )
                         cand = self._local_search(
-                            cand, max_passes=MODES[action].ls_passes, nv_ceiling=nv_cap, max_ls_moves=cfg.max_ls_moves
+                            cand, max_passes=self.modes[action].ls_passes, nv_ceiling=nv_cap, max_ls_moves=cfg.max_ls_moves
                         )
                         self.ls_budget.record(time.time() - t_ls, cost_pre, cand.cost)
                     improved = cand.dominates(cur)
                     pool.add_plan(cand)
-                    if cand.nv <= best.nv and cand.dominates(best):
+                    if cand.feasible and cand.nv <= best.nv and cand.dominates(best):
                         best, score, no_imp = cand.copy(), cfg.sigma1, 0
                         pool.add_plan(best)
                     elif improved:

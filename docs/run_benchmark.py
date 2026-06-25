@@ -73,10 +73,21 @@ if __name__ == "__main__":
         help="Ignore existing checkpoints and start a fresh run."
     )
     parser.add_argument(
+        "--max-workers",
+        type=int,
+        default=None,
+        help="Maximum number of parallel workers (set to 1 for sequential)"
+    )
+    parser.add_argument(
         "--ortools-time-limit",
         type=float,
         default=15.0,
         help="Time limit for OR-Tools solver in seconds"
+    )
+    parser.add_argument(
+        "--penalty-search",
+        action="store_true",
+        help="Enable penalty-based infeasible search"
     )
 
     args = parser.parse_args()
@@ -99,6 +110,7 @@ if __name__ == "__main__":
         max_wall_hours=args.max_hours,
         gnn_model_path=gnn_path,
         ortools_time_limit=args.ortools_time_limit,
+        penalty_search_enabled=args.penalty_search,
     )
 
     # ── Load Solomon instances ─────────────────────────────────────────────
@@ -132,6 +144,7 @@ if __name__ == "__main__":
         result_path=os.path.join(cfg.output_dir, "benchmark_clean.csv"),
         checkpoint_path=os.path.join(cfg.output_dir, "benchmark_checkpoint.csv"),
         no_checkpoint=args.no_checkpoint,
+        max_workers=args.max_workers,
     )
 
     print("\n\n═══ BENCHMARK SUMMARY ═══")

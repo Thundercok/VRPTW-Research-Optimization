@@ -218,6 +218,7 @@ class Config:
     nv_increase_penalty: float = 15.0
     rl_recombine_min_routes: int = 24
     ctrl_tau: float = 0.005  # soft target update rate for PlateauController
+    per_beta_auto_scale: bool = True
     per_beta_steps: int = 50_000  # steps over which beta anneals 0.4 → 1.0
     # ── operator controller ────────────────────────────────────────────────
     op_state_dim: int = 15
@@ -299,6 +300,14 @@ class Config:
     gnn_pruning_threshold_start: float = 0.05
     gnn_pruning_threshold_end: float = 0.003
     gnn_model_path: str | None = None
+    
+    # ── Penalty-Based Infeasible Search ───────────────────────────────────
+    penalty_search_enabled: bool = False
+
+    def __post_init__(self) -> None:
+        if self.per_beta_auto_scale:
+            self.per_beta_steps = self.hybrid_iterations * 10
+        self.validate()
 
     def validate(self) -> None:
         """Validate configuration settings to prevent runtime failures during long-running tasks."""
@@ -407,7 +416,18 @@ MODES: tuple[ModeSpec, ...] = (
         1,
         True,
     ),
+    ModeSpec(
+        "infeasible_descent",
+        1.10,
+        1.05,
+        0.998,
+        (1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0),
+        (1.0, 1.0, 1.0, 1.0, 1.0),
+        1,
+        False,
+    ),
 )
 
 MODE_DEFAULT, MODE_INTENSIFY, MODE_DIVERSIFY = 0, 1, 2
 MODE_TW_RESCUE, MODE_POOL_RECOMBINE, MODE_ROUTE_REDUCE = 3, 4, 5
+MODE_INFEASIBLE_DESCENT = 6

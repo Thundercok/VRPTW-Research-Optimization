@@ -43,6 +43,7 @@ def cmd_solve(args):
         hybrid_iterations=args.iters,
         early_stop_patience=args.early_stop,
         polish_iterations=args.polish,
+        penalty_search_enabled=args.penalty_search,
     )
 
     if args.algo == "ALNS-Base":
@@ -87,6 +88,7 @@ def cmd_benchmark(args):
         early_stop_patience=args.early_stop,
         polish_iterations=args.polish,
         seed=args.seed,
+        penalty_search_enabled=args.penalty_search,
     )
 
     print(f"Loading datasets from: {cfg.data_path}")
@@ -122,6 +124,7 @@ def cmd_benchmark(args):
         cfg=cfg,
         result_path=os.path.join(cfg.output_dir, "benchmark_clean.csv"),
         checkpoint_path=os.path.join(cfg.output_dir, "benchmark_checkpoint.csv"),
+        max_workers=getattr(args, "max_workers", None),
     )
 
     print("\n\n═══ BENCHMARK SUMMARY ═══")
@@ -154,6 +157,7 @@ def main():
     p_solve.add_argument("--early-stop", type=int, default=250, help="Early stop patience")
     p_solve.add_argument("--polish", type=int, default=80, help="Local search polishing iterations")
     p_solve.add_argument("--seed", type=int, default=42, help="Random seed")
+    p_solve.add_argument("--penalty-search", action="store_true", help="Enable penalty-based infeasible search")
     p_solve.set_defaults(func=cmd_solve)
 
     # Benchmark command
@@ -174,6 +178,8 @@ def main():
     p_bench.add_argument("--seed", type=int, default=42, help="Random seed")
     p_bench.add_argument("--data-path", type=str, default=None, help="Path to Solomon datasets")
     p_bench.add_argument("--output-dir", type=str, default=None, help="Directory to save logs/results")
+    p_bench.add_argument("--max-workers", type=int, default=None, help="Maximum number of parallel workers")
+    p_bench.add_argument("--penalty-search", action="store_true", help="Enable penalty-based infeasible search")
     p_bench.set_defaults(func=cmd_benchmark)
 
     args = parser.parse_args()

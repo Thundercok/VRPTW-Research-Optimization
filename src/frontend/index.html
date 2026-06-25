@@ -124,7 +124,6 @@
     <main id="main">
       <!-- Fullscreen fixed background 3D WebGL diorama container -->
       <div class="diorama-bg-container">
-        <div class="canvas-grid-bg"></div>
         <canvas id="animation-canvas"></canvas>
       </div>
 
@@ -537,8 +536,6 @@
 
     <!-- Main Inline Landing Page Interactions Script -->
     <script type="module">
-      import { Renderer, Camera, Transform, Mesh, Program, Box, Cylinder, Sphere, Plane, Vec3 } from 'ogl';
-      
       (function () {
         'use strict';
 
@@ -711,1032 +708,275 @@
           }
         };
 
-        // Node and Path Coordinates Setup for Canvas
-        const DEPOT = { x: 150, y: 300 };
-        const neutralNodeColor = '#57534e';
-
+        // 3D Isometric Coordinates System
+        const DEPOT = { x: 0, z: 0 };
         const CUSTOMER_NODES = [
-          // Cluster 1 (Top Right)
-          { id: 1, x: 550, y: 150, targetColor: '#fb7185', cluster: 1 }, // Peach Rose Route
-          { id: 2, x: 580, y: 120, targetColor: '#fb7185', cluster: 1 },
-          { id: 3, x: 520, y: 180, targetColor: '#fb7185', cluster: 1 },
-          { id: 4, x: 620, y: 140, targetColor: '#fb7185', cluster: 1 },
-          { id: 5, x: 600, y: 190, targetColor: '#fb7185', cluster: 1 },
-          { id: 6, x: 490, y: 160, targetColor: '#fb7185', cluster: 1 },
-          { id: 7, x: 560, y: 210, targetColor: '#fb7185', cluster: 1 },
+          // Cluster 1 (North-East - Red/Rose Theme)
+          { id: 1, x: 1.2, z: -1.2, targetColor: '#fb7185', cluster: 1 }, 
+          { id: 2, x: 1.8, z: -1.0, targetColor: '#fb7185', cluster: 1 },
+          { id: 3, x: 1.0, z: -1.6, targetColor: '#fb7185', cluster: 1 },
+          { id: 4, x: 2.2, z: -1.5, targetColor: '#fb7185', cluster: 1 },
+          { id: 5, x: 1.5, z: -2.0, targetColor: '#fb7185', cluster: 1 },
+          { id: 6, x: 0.8, z: -1.1, targetColor: '#fb7185', cluster: 1 },
+          { id: 7, x: 2.0, z: -0.7, targetColor: '#fb7185', cluster: 1 },
 
-          // Cluster 2 (Bottom Right)
-          { id: 8, x: 580, y: 450, targetColor: '#f97316', cluster: 2 }, // Copper Orange Route
-          { id: 9, x: 620, y: 420, targetColor: '#f97316', cluster: 2 },
-          { id: 10, x: 540, y: 480, targetColor: '#f97316', cluster: 2 },
-          { id: 11, x: 650, y: 470, targetColor: '#f97316', cluster: 2 },
-          { id: 12, x: 510, y: 430, targetColor: '#f97316', cluster: 2 },
-          { id: 13, x: 600, y: 380, targetColor: '#f97316', cluster: 2 },
-          { id: 14, x: 640, y: 510, targetColor: '#f97316', cluster: 2 },
+          // Cluster 2 (South-East - Copper/Orange Theme)
+          { id: 8, x: 1.6, z: 1.4, targetColor: '#f97316', cluster: 2 }, 
+          { id: 9, x: 2.1, z: 1.0, targetColor: '#f97316', cluster: 2 },
+          { id: 10, x: 1.2, z: 1.8, targetColor: '#f97316', cluster: 2 },
+          { id: 11, x: 2.4, z: 1.7, targetColor: '#f97316', cluster: 2 },
+          { id: 12, x: 0.9, z: 1.3, targetColor: '#f97316', cluster: 2 },
+          { id: 13, x: 1.8, z: 0.7, targetColor: '#f97316', cluster: 2 },
+          { id: 14, x: 2.3, z: 2.1, targetColor: '#f97316', cluster: 2 },
 
-          // Cluster 3 (Middle Right)
-          { id: 15, x: 450, y: 320, targetColor: '#fbbf24', cluster: 3 }, // Amber Route
-          { id: 16, x: 480, y: 290, targetColor: '#fbbf24', cluster: 3 },
-          { id: 17, x: 420, y: 350, targetColor: '#fbbf24', cluster: 3 },
-          { id: 18, x: 490, y: 340, targetColor: '#fbbf24', cluster: 3 },
-          { id: 19, x: 390, y: 300, targetColor: '#fbbf24', cluster: 3 },
-          { id: 20, x: 430, y: 270, targetColor: '#fbbf24', cluster: 3 },
+          // Cluster 3 (North-West - Amber/Yellow Theme)
+          { id: 15, x: -1.1, z: -1.0, targetColor: '#fbbf24', cluster: 3 }, 
+          { id: 16, x: -1.7, z: -1.2, targetColor: '#fbbf24', cluster: 3 },
+          { id: 17, x: -0.8, z: -1.6, targetColor: '#fbbf24', cluster: 3 },
+          { id: 18, x: -2.0, z: -0.7, targetColor: '#fbbf24', cluster: 3 },
+          { id: 19, x: -1.4, z: -1.9, targetColor: '#fbbf24', cluster: 3 },
+          { id: 20, x: -0.6, z: -1.1, targetColor: '#fbbf24', cluster: 3 },
 
-          // Scattered Random Group
-          { id: 21, x: 300, y: 180, targetColor: '#f59e0b', cluster: 4 }, // Warm Gold Route
-          { id: 22, x: 350, y: 240, targetColor: '#f59e0b', cluster: 4 },
-          { id: 23, x: 280, y: 400, targetColor: '#f59e0b', cluster: 4 },
-          { id: 24, x: 340, y: 450, targetColor: '#f59e0b', cluster: 4 },
-          { id: 25, x: 220, y: 220, targetColor: '#f59e0b', cluster: 4 },
-          { id: 26, x: 250, y: 480, targetColor: '#f59e0b', cluster: 4 },
-          { id: 27, x: 410, y: 530, targetColor: '#f59e0b', cluster: 4 },
-          { id: 28, x: 480, y: 490, targetColor: '#f59e0b', cluster: 4 },
-          { id: 29, x: 320, y: 110, targetColor: '#f59e0b', cluster: 4 },
-          { id: 30, x: 240, y: 140, targetColor: '#f59e0b', cluster: 4 },
+          // Scattered Group (South-West - Warm Gold Theme)
+          { id: 21, x: -1.2, z: 1.2, targetColor: '#f59e0b', cluster: 4 }, 
+          { id: 22, x: -1.8, z: 0.9, targetColor: '#f59e0b', cluster: 4 },
+          { id: 23, x: -0.9, z: 1.6, targetColor: '#f59e0b', cluster: 4 },
+          { id: 24, x: -2.2, z: 1.4, targetColor: '#f59e0b', cluster: 4 },
+          { id: 25, x: -1.5, z: 2.0, targetColor: '#f59e0b', cluster: 4 },
+          { id: 26, x: -0.7, z: 1.0, targetColor: '#f59e0b', cluster: 4 },
+          { id: 27, x: -2.0, z: 2.3, targetColor: '#f59e0b', cluster: 4 },
+          { id: 28, x: -1.1, z: 2.1, targetColor: '#f59e0b', cluster: 4 },
+          { id: 29, x: -0.5, z: 1.8, targetColor: '#f59e0b', cluster: 4 },
+          { id: 30, x: -1.7, z: 1.6, targetColor: '#f59e0b', cluster: 4 },
         ];
 
-        // Map route configurations to coordinates
         const ROUTES = [
-          {
-            color: '#fb7185', // Peach Rose
-            nodes: [DEPOT, ...CUSTOMER_NODES.filter((n) => n.cluster === 1), DEPOT],
-          },
-          {
-            color: '#f97316', // Copper Orange
-            nodes: [DEPOT, ...CUSTOMER_NODES.filter((n) => n.cluster === 2), DEPOT],
-          },
-          {
-            color: '#fbbf24', // Amber
-            nodes: [DEPOT, ...CUSTOMER_NODES.filter((n) => n.cluster === 3), DEPOT],
-          },
-          {
-            color: '#f59e0b', // Warm Gold
-            nodes: [DEPOT, ...CUSTOMER_NODES.filter((n) => n.cluster === 4), DEPOT],
-          },
+          { color: '#fb7185', nodes: [DEPOT, ...CUSTOMER_NODES.filter(n => n.cluster === 1), DEPOT] },
+          { color: '#f97316', nodes: [DEPOT, ...CUSTOMER_NODES.filter(n => n.cluster === 2), DEPOT] },
+          { color: '#fbbf24', nodes: [DEPOT, ...CUSTOMER_NODES.filter(n => n.cluster === 3), DEPOT] },
+          { color: '#f59e0b', nodes: [DEPOT, ...CUSTOMER_NODES.filter(n => n.cluster === 4), DEPOT] }
         ];
 
-        // Helper: Linear Interpolation between two points
-        function lerp(start, end, amt) {
-          return (1 - amt) * start + amt * end;
-        }
-
-        // Helper: Catmull-Rom spline formulation
-        function catmullRom(p0, p1, p2, p3, t) {
-          const t2 = t * t;
-          const t3 = t2 * t;
-
-          const f0 = -0.5 * t3 + t2 - 0.5 * t;
-          const f1 = 1.5 * t3 - 2.5 * t2 + 1.0;
-          const f2 = -1.5 * t3 + 2.0 * t2 + 0.5 * t;
-          const f3 = 0.5 * t3 - 0.5 * t2;
-
-          return new Vec3(
-            p0.x * f0 + p1.x * f1 + p2.x * f2 + p3.x * f3,
-            p0.y * f0 + p1.y * f1 + p2.y * f2 + p3.y * f3,
-            p0.z * f0 + p1.z * f1 + p2.z * f2 + p3.z * f3
-          );
-        }
-
-        // Helper: Get coordinate point along a sequence of coordinates using Catmull-Rom splines
-        function getSplinePointAtProgress(pathPoints, progress) {
-          if (!pathPoints || pathPoints.length === 0) return new Vec3(0, 0, 0);
-          if (pathPoints.length === 1) return pathPoints[0];
-          if (progress <= 0) return pathPoints[0];
-          if (progress >= 1) return pathPoints[pathPoints.length - 1];
-
-          // Apply smootherstep to progress for nice easing (Implementation Rule #1)
-          const easedProgress = progress * progress * progress * (progress * (progress * 6 - 15) + 10);
-
-          const totalSegments = pathPoints.length - 1;
-          const rawSegment = easedProgress * totalSegments;
-          const index = Math.floor(rawSegment);
-          const t = rawSegment - index;
-
-          const p1 = pathPoints[index];
-          const p2 = pathPoints[index + 1];
-
-          // Extrapolate start/end control points if indices go out of bounds
-          const p0 = index > 0 ? pathPoints[index - 1] : new Vec3().copy(p1).sub(new Vec3().copy(p2).sub(p1));
-          const p3 = index + 2 < pathPoints.length ? pathPoints[index + 2] : new Vec3().copy(p2).add(new Vec3().copy(p2).sub(p1));
-
-          return catmullRom(p0, p1, p2, p3, t);
-        }
-
-        // Helper: Linear Interpolation for Vec3
-        function lerpVec3(a, b, t) {
-          return new Vec3(
-            lerp(a.x, b.x, t),
-            lerp(a.y, b.y, t),
-            lerp(a.z, b.z, t)
-          );
-        }
-
-        // WebGL Diorama using OGL
-
-        let gl, renderer, scene, camera;
-        let shadedProgram, wireProg;
-        let buildings = [];
-        let nodeMeshes = [];
-        let stemMeshes = [];
-        let shadowMeshes = [];
-        let routeMeshes = [];
-        let vehicleMeshes = [];
-        let particleMeshes = [];
-        let billboardMeshes = []; // camera-facing glow cards (simulated bloom)
-        let gridMesh, groundMesh;
-        let depotMesh, depotHaloMesh;
-        let warningLineMeshes = [];
+        // 2D Canvas context variables
+        let canvas, ctx;
         let isInitialized = false;
-
-        // Per-act camera waypoints for scroll-guided transitions (Implementation Rule #2)
-        function getCameraWaypoints(isWide) {
-          const baseTargetX = isWide ? -1.4 : -0.2;
-          const baseTargetZ = isWide ? -0.3 : 0.0;
-          return {
-            1: {
-              position: new Vec3(5.5, 7.0, 8.5),
-              lookAt: new Vec3(baseTargetX, 0.0, baseTargetZ)
-            },
-            2: {
-              position: new Vec3(2.8, 4.0, 5.0),
-              lookAt: new Vec3(1.2, 0.1, 0.8) // Centroid of the bottom-right cluster
-            },
-            3: {
-              position: new Vec3(4.5, 5.5, 7.0),
-              lookAt: new Vec3(-1.0, 0.1, 0.0) // Pull back towards depot side (Diagnosis #1)
-            },
-            4: {
-              position: new Vec3(4.5, 10.0, 4.5),
-              lookAt: new Vec3(-0.8, 0.0, 0.0) // Birds-eye over full network
-            }
-          };
-        }
+        let animationFrameId = null;
+        let lastTime = null;
 
         const dioramaState = {
           act: 1,
           progress: 0.0,
           overallProgress: 0.0,
-          theme: 'light',
+          theme: 'dark',
           width: 800,
           height: 600,
           mouseX: 0,
           mouseY: 0,
           targetMouseX: 0,
           targetMouseY: 0,
-          hoveredNodeId: null, // set by customer-list row hover (Implementation Rule #4)
-          cachedColors: {
-            bg: new Vec3(0.09, 0.09, 0.1),
-            street: new Vec3(0.96, 0.62, 0.04),
-            grid: new Vec3(0.96, 0.62, 0.04),
-            gold: new Vec3(0.96, 0.62, 0.04),
-            nodeNeutral: new Vec3(0.32, 0.32, 0.35)
-          }
+          hoveredNodeId: null,
+          time: 0,
+          camera: null
         };
 
-        const BUILDING_COORDS = [
-          { x: -3.5, z: -2.0, w: 0.35, h: 0.9, d: 0.35 },
-          { x: -3.0, z: -2.5, w: 0.4, h: 1.2, d: 0.4 },
-          { x: -2.0, z: -2.8, w: 0.35, h: 0.7, d: 0.35 },
-          { x: -3.5, z: 2.0, w: 0.4, h: 1.0, d: 0.4 },
-          { x: -3.0, z: 2.5, w: 0.35, h: 0.8, d: 0.35 },
-          { x: -2.0, z: 2.8, w: 0.4, h: 1.3, d: 0.4 },
-          { x: 3.5, z: -2.0, w: 0.3, h: 1.5, d: 0.3 },
-          { x: 3.0, z: -2.5, w: 0.4, h: 0.9, d: 0.4 },
-          { x: 3.5, z: 2.0, w: 0.35, h: 1.1, d: 0.35 },
-          { x: 3.0, z: 2.5, w: 0.4, h: 1.4, d: 0.4 },
-          { x: 0.0, z: -2.8, w: 0.3, h: 0.8, d: 0.3 },
-          { x: 0.0, z: 2.8, w: 0.35, h: 1.0, d: 0.35 }
-        ];
-
-        // Custom Shaders — Premium Cinematic Quality
-
-        const vertexShader = `
-          attribute vec3 position;
-          attribute vec3 normal;
-          uniform mat4 modelViewMatrix;
-          uniform mat4 projectionMatrix;
-          uniform mat3 normalMatrix;
-          varying vec3 vNormal;
-          varying vec3 vViewPos;
-          varying float vY;
-          void main() {
-            vNormal = normalize(normalMatrix * normal);
-            vec4 mvPos = modelViewMatrix * vec4(position, 1.0);
-            vViewPos = -mvPos.xyz;
-            vY = position.y;
-            gl_Position = projectionMatrix * mvPos;
+        function projectIsometric(x, y, z) {
+          const rotation = dioramaState.camera ? (dioramaState.camera.rotation || 0) : 0;
+          let rx = x;
+          let rz = z;
+          if (rotation !== 0) {
+            const cosR = Math.cos(rotation);
+            const sinR = Math.sin(rotation);
+            rx = x * cosR - z * sinR;
+            rz = x * sinR + z * cosR;
           }
-        `;
-
-        const fragmentShader = `
-          precision highp float;
-          varying vec3 vNormal;
-          varying vec3 vViewPos;
-          varying float vY;
-          uniform vec3 color;
-          uniform float opacity;
-          void main() {
-            vec3 N = normalize(vNormal);
-            vec3 V = normalize(vViewPos);
-
-            // Key light (warm, upper-right)
-            vec3 L1 = normalize(vec3(0.5, 1.0, 0.3));
-            float diff1 = max(0.0, dot(N, L1));
-
-            // Fill light (cool, lower-left)
-            vec3 L2 = normalize(vec3(-0.4, 0.3, -0.6));
-            float diff2 = max(0.0, dot(N, L2)) * 0.25;
-
-            // Hemisphere ambient (sky/ground bounce)
-            float hemi = dot(N, vec3(0.0, 1.0, 0.0)) * 0.5 + 0.5;
-            vec3 ambient = mix(vec3(0.06, 0.05, 0.08), vec3(0.18, 0.16, 0.14), hemi);
-
-            // Specular highlight (Blinn-Phong)
-            vec3 H = normalize(L1 + V);
-            float spec = pow(max(0.0, dot(N, H)), 48.0) * 0.35;
-
-            // Rim / fresnel glow
-            float rim = 1.0 - max(0.0, dot(N, V));
-            rim = pow(rim, 3.0) * 0.3;
-
-            vec3 lit = ambient + color * (diff1 * 0.55 + diff2) + vec3(spec) + color * rim;
-
-            gl_FragColor = vec4(lit, opacity);
-          }
-        `;
-
-        const glowVertexShader = `
-          attribute vec3 position;
-          attribute vec3 normal;
-          uniform mat4 modelViewMatrix;
-          uniform mat4 projectionMatrix;
-          uniform mat3 normalMatrix;
-          varying vec3 vNormal;
-          varying vec3 vViewPos;
-          void main() {
-            vNormal = normalize(normalMatrix * normal);
-            vec4 mvPos = modelViewMatrix * vec4(position, 1.0);
-            vViewPos = -mvPos.xyz;
-            gl_Position = projectionMatrix * mvPos;
-          }
-        `;
-
-        const glowFragmentShader = `
-          precision highp float;
-          varying vec3 vNormal;
-          varying vec3 vViewPos;
-          uniform vec3 color;
-          uniform float opacity;
-          void main() {
-            vec3 N = normalize(vNormal);
-            vec3 V = normalize(vViewPos);
-            // Soft-sphere falloff: brighter at edges for a bloom-like glow
-            float edge = 1.0 - abs(dot(N, V));
-            float glow = smoothstep(0.0, 1.0, edge) * 0.35 + 0.65;
-            gl_FragColor = vec4(color * glow, opacity * glow);
-          }
-        `;
-
-        // Camera-facing billboard glow card. Simulates bloom with high-performance planes (Implementation Rule #3)
-        const billboardGlowVertexShader = `
-          attribute vec3 position;
-          attribute vec2 uv;
-          uniform mat4 modelViewMatrix;
-          uniform mat4 projectionMatrix;
-          varying vec2 vUv;
-          void main() {
-            vUv = uv;
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-          }
-        `;
-
-        const billboardGlowFragmentShader = `
-          precision highp float;
-          varying vec2 vUv;
-          uniform vec3 color;
-          uniform float opacity;
-          uniform float uTime;
-          
-          float hash(vec2 p) {
-            return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
-          }
-          
-          void main() {
-            float dist = length(vUv - vec2(0.5));
-            // Premium exponential falloff for natural light bloom (Diagnosis #4)
-            float glow = exp(-dist * 6.0);
-            // Pulsing factor offset per time
-            float pulse = 0.8 + 0.2 * sin(uTime * 4.0);
-            // Tech-telemetry noise grain
-            float noise = hash(vUv * 40.0 + vec2(uTime * 0.15)) * 0.08;
-            float finalAlpha = opacity * glow * pulse * (1.0 + noise);
-            gl_FragColor = vec4(color * 1.8, finalAlpha);
-          }
-        `;
-
-        const gridVertexShader = `
-          attribute vec3 position;
-          uniform mat4 modelViewMatrix;
-          uniform mat4 projectionMatrix;
-          varying vec2 vUv;
-          void main() {
-            vUv = position.xz;
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-          }
-        `;
-
-        const gridFragmentShader = `
-          precision highp float;
-          varying vec2 vUv;
-          uniform vec3 gridColor;
-          uniform float opacity;
-          uniform float uTime;
-          void main() {
-            // Grid spacing
-            float freq = 2.0;
-            vec2 cell = fract(vUv * freq);
-
-            // Anti-aliased grid lines using smoothstep
-            float lineW = 0.025;
-            float lineX = smoothstep(lineW, 0.0, cell.x) + smoothstep(1.0 - lineW, 1.0, cell.x);
-            float lineZ = smoothstep(lineW, 0.0, cell.y) + smoothstep(1.0 - lineW, 1.0, cell.y);
-            float gridLine = clamp(lineX + lineZ, 0.0, 1.0);
-
-            // Bright intersection dots
-            float dotRadius = 0.06;
-            float dotX = smoothstep(dotRadius, 0.0, cell.x) + smoothstep(1.0 - dotRadius, 1.0, cell.x);
-            float dotZ = smoothstep(dotRadius, 0.0, cell.y) + smoothstep(1.0 - dotRadius, 1.0, cell.y);
-            float dots = clamp(dotX * dotZ, 0.0, 1.0) * 2.5;
-
-            // Radial fade from center
-            float dist = length(vUv);
-            float fade = smoothstep(7.0, 0.8, dist);
-
-            // Animated scan-line pulse radiating outward
-            float pulse = sin(dist * 3.0 - uTime * 0.8) * 0.5 + 0.5;
-            pulse = smoothstep(0.3, 0.7, pulse) * 0.2;
-
-            float intensity = (gridLine * 0.5 + dots + pulse) * fade;
-
-            gl_FragColor = vec4(gridColor, intensity * opacity);
-          }
-        `;
-
-        const shadowVertexShader = `
-          attribute vec3 position;
-          attribute vec2 uv;
-          uniform mat4 modelViewMatrix;
-          uniform mat4 projectionMatrix;
-          varying vec2 vUv;
-          void main() {
-            vUv = uv;
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-          }
-        `;
-
-        const shadowFragmentShader = `
-          precision highp float;
-          varying vec2 vUv;
-          uniform vec3 color;
-          uniform float opacity;
-          void main() {
-            float dist = length(vUv - vec2(0.5));
-            float alpha = smoothstep(0.5, 0.0, dist);
-            gl_FragColor = vec4(color, opacity * alpha);
-          }
-        `;
-
-        const depotHaloVertexShader = `
-          attribute vec3 position;
-          attribute vec2 uv;
-          uniform mat4 modelViewMatrix;
-          uniform mat4 projectionMatrix;
-          varying vec2 vUv;
-          void main() {
-            vUv = uv;
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-          }
-        `;
-
-        const depotHaloFragmentShader = `
-          precision highp float;
-          varying vec2 vUv;
-          uniform vec3 color;
-          uniform float opacity;
-          uniform float uTime;
-          
-          float hash(vec2 p) {
-            return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
-          }
-          
-          void main() {
-            float dist = length(vUv - vec2(0.5));
-            float t = fract(uTime * 0.4);
-            float ringRadius = t * 0.5;
-            float ringWidth = 0.025;
-            float ring = smoothstep(ringRadius - ringWidth, ringRadius, dist) * 
-                         smoothstep(ringRadius + ringWidth, ringRadius, dist);
-            
-            // Subtle noise grain inside the pulsing halo ring (Implementation Rule #3)
-            float noise = hash(vUv * 50.0 + vec2(uTime * 0.2)) * 0.12;
-            float fade = smoothstep(0.5, 0.08, dist);
-            float ringAlpha = ring * fade * (1.0 - t + noise);
-            gl_FragColor = vec4(color * 1.5, opacity * ringAlpha);
-          }
-        `;
-
-        function colorToVec4(colorStr) {
-          let val = colorStr.trim();
-          if (val.startsWith('var(')) {
-            const varName = val.substring(4, val.length - 1).trim();
-            val = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
-          }
-          let alpha = 1.0;
-          if (val.startsWith('rgba')) {
-            const match = val.match(/[\d\.]+/g);
-            if (match && match.length >= 4) {
-              alpha = parseFloat(match[3]);
-              return { vec3: new Vec3(parseFloat(match[0]) / 255, parseFloat(match[1]) / 255, parseFloat(match[2]) / 255), alpha };
-            }
-          }
-          if (val.startsWith('rgb')) {
-            const match = val.match(/\d+/g);
-            if (match) {
-              return { vec3: new Vec3(parseInt(match[0]) / 255, parseInt(match[1]) / 255, parseInt(match[2]) / 255), alpha: 1.0 };
-            }
-          }
-          val = val.replace('#', '');
-          if (val.length === 3) {
-            val = val[0] + val[0] + val[1] + val[1] + val[2] + val[2];
-          }
-          const r = parseInt(val.substring(0, 2), 16) / 255 || 0;
-          const g = parseInt(val.substring(2, 4), 16) / 255 || 0;
-          const b = parseInt(val.substring(4, 6), 16) / 255 || 0;
-          return { vec3: new Vec3(r, g, b), alpha };
+          const angle = Math.PI / 6; // 30 degrees
+          const isoX = (rx - rz) * Math.cos(angle);
+          const isoY = (rx + rz) * Math.sin(angle) - y;
+          return { x: isoX, y: isoY };
         }
 
-        function colorToVec3(colorStr) {
-          return colorToVec4(colorStr).vec3;
+        // Standard damping pattern helper (Three.js/R3F style)
+        function damp(current, target, lambda, dt) {
+          return current + (target - current) * (1 - Math.exp(-lambda * dt));
         }
 
-        const FALLBACK_COLORS = {
-          light: {
-            bg: new Vec3(0.97, 0.96, 0.95), // #f7f6f3
-            street: new Vec3(0.71, 0.63, 0.47), // #b4a078
-            grid: new Vec3(0.0, 0.0, 0.0), // black grid lines
-            gold: new Vec3(0.96, 0.62, 0.04),
-            nodeNeutral: new Vec3(0.55, 0.55, 0.55) // #8b8b8b
-          },
-          dark: {
-            bg: new Vec3(0.04, 0.04, 0.07), // #0a0b12
-            street: new Vec3(0.96, 0.62, 0.04), // warm gold streets
-            grid: new Vec3(1.0, 0.78, 0.31), // warm gold grid
-            gold: new Vec3(0.96, 0.62, 0.04),
-            nodeNeutral: new Vec3(0.32, 0.32, 0.35) // #52525b
-          }
+        // ===================================================================
+        // Cinematic Camera Timeline
+        // Each act has its own array of keyframes. Each keyframe has:
+        //   t: 0.0–1.0, position within the act (matches dioramaState.progress range)
+        //   originXFrac, originYFrac: where on screen the scene origin sits (0–1 of canvas width/height)
+        //   scale: px-per-scene-unit zoom level (lower = more zoomed out)
+        //   rotation: radians, rotation of the whole iso scene around the vertical axis
+        //   cut: optional boolean. If true, the transition INTO this keyframe from the
+        //        previous one is an instant snap (no interpolation) once local
+        //        progress between the two keyframes passes 0.5. This simulates a
+        //        hard camera cut, the way ALNS destroy/repair iterations jump
+        //        between candidate solutions rather than smoothly morphing.
+        // Keyframes within an act MUST be sorted by ascending t. The first keyframe
+        // of an act MUST have t: 0.0. The last MUST have t: 1.0.
+        // ===================================================================
+        const CAMERA_TIMELINE = {
+          // ACT I — The Objective: open on the depot alone (macro/close), then pull
+          // back slowly to reveal the empty network waiting to be solved. This is
+          // the "establishing shot" — slow, deliberate, no rotation.
+          1: [
+            { t: 0.0, originXFrac: 0.5,  originYFrac: 0.48, scale: 230, rotation: 0.0 },
+            { t: 0.35, originXFrac: 0.52, originYFrac: 0.48, scale: 150, rotation: 0.0 },
+            { t: 1.0, originXFrac: 0.58, originYFrac: 0.50, scale: 78,  rotation: 0.0 }
+          ],
+
+          // ACT II — The Chaos: customer nodes scatter out from the depot. Camera
+          // orbits around the densest/most chaotic cluster, rotation accelerating
+          // as chaos increases, conveying loss of control.
+          2: [
+            { t: 0.0,  originXFrac: 0.55, originYFrac: 0.46, scale: 90,  rotation: 0.0 },
+            { t: 0.3,  originXFrac: 0.42, originYFrac: 0.42, scale: 105, rotation: 0.25 },
+            { t: 0.65, originXFrac: 0.36, originYFrac: 0.40, scale: 122, rotation: 0.55 },
+            { t: 1.0,  originXFrac: 0.40, originYFrac: 0.40, scale: 115, rotation: 0.85 }
+          ],
+
+          // ACT III — Neural Operator (ALNS): THIS IS THE MOST IMPORTANT ACT.
+          // Camera HARD-CUTS between keyframes (cut: true on every keyframe except
+          // the first) to simulate the solver jumping between candidate solutions
+          // during destroy/repair iterations. Do NOT smooth these transitions.
+          // Each cut should land on a noticeably different framing (different
+          // originXFrac/scale/rotation) so the cut is visually obvious, not subtle.
+          3: [
+            { t: 0.0,  originXFrac: 0.50, originYFrac: 0.50, scale: 100, rotation: 0.0 },
+            { t: 0.15, originXFrac: 0.30, originYFrac: 0.55, scale: 140, rotation: 0.15, cut: true },
+            { t: 0.30, originXFrac: 0.65, originYFrac: 0.40, scale: 135, rotation: -0.20, cut: true },
+            { t: 0.45, originXFrac: 0.40, originYFrac: 0.60, scale: 150, rotation: 0.30, cut: true },
+            { t: 0.60, originXFrac: 0.58, originYFrac: 0.35, scale: 130, rotation: -0.10, cut: true },
+            { t: 0.75, originXFrac: 0.45, originYFrac: 0.50, scale: 145, rotation: 0.20, cut: true },
+            { t: 0.90, originXFrac: 0.52, originYFrac: 0.48, scale: 100, rotation: 0.05, cut: true },
+            { t: 1.0,  originXFrac: 0.50, originYFrac: 0.50, scale: 92,  rotation: 0.0 }
+          ],
+
+          // ACT IV — Optimal Dispatch: rise to birds-eye, continuous slow 360°
+          // orbit showing the whole resolved network operating in harmony.
+          4: [
+            { t: 0.0, originXFrac: 0.50, originYFrac: 0.46, scale: 92, rotation: 0.0 },
+            { t: 1.0, originXFrac: 0.50, originYFrac: 0.40, scale: 68, rotation: Math.PI * 2 }
+          ]
         };
 
-        function updateCachedThemeVariables() {
-          const theme = document.documentElement.getAttribute('data-theme') || 'dark';
-          dioramaState.theme = theme;
-
-          const hasCSS = getComputedStyle(document.documentElement).getPropertyValue('--canvas-bg').trim() !== '';
-
-          let gridAlpha = 0.035;
-          if (hasCSS) {
-            dioramaState.cachedColors.bg = colorToVec3('var(--canvas-bg)');
-            dioramaState.cachedColors.street = colorToVec3('var(--canvas-street)');
-            const gridColorData = colorToVec4('var(--canvas-grid)');
-            dioramaState.cachedColors.grid = gridColorData.vec3;
-            gridAlpha = gridColorData.alpha;
-            dioramaState.cachedColors.gold = colorToVec3('var(--gold)');
-            dioramaState.cachedColors.nodeNeutral = colorToVec3('var(--node-neutral-fill)');
-          } else {
-            const fb = FALLBACK_COLORS[theme];
-            dioramaState.cachedColors.bg = fb.bg;
-            dioramaState.cachedColors.street = fb.street;
-            dioramaState.cachedColors.grid = fb.grid;
-            gridAlpha = theme === 'dark' ? 0.015 : 0.035;
-            dioramaState.cachedColors.gold = fb.gold;
-            dioramaState.cachedColors.nodeNeutral = fb.nodeNeutral;
-          }
-
-          if (renderer && renderer.gl) {
-            renderer.gl.clearColor(0.0, 0.0, 0.0, 0.0);
-          }
-
-          if (gridMesh) {
-            gridMesh.program.uniforms.gridColor.value.copy(dioramaState.cachedColors.grid);
-            gridMesh.program.uniforms.opacity.value = gridAlpha;
-          }
-
-          if (groundMesh) {
-            if (theme === 'light') {
-              groundMesh.program.uniforms.color.value.copy(dioramaState.cachedColors.bg);
-              groundMesh.program.uniforms.opacity.value = 0.0;
-            } else {
-              groundMesh.program.uniforms.color.value.set(0.03, 0.03, 0.04);
-              groundMesh.program.uniforms.opacity.value = 0.6;
-            }
-          }
-
-          if (shadedProgram) {
-            if (theme === 'light') {
-              // Solid building: very soft translucent white-gray glass
-              shadedProgram.uniforms.color.value.set(0.95, 0.95, 0.98);
-              shadedProgram.uniforms.opacity.value = 0.03;
-            } else {
-              // Solid building: deep translucent blue-gray glass
-              shadedProgram.uniforms.color.value.set(0.04, 0.06, 0.12);
-              shadedProgram.uniforms.opacity.value = 0.10;
-            }
-          }
-
-          if (wireProg) {
-            if (theme === 'light') {
-              // Wireframe building: very subtle indigo outline
-              wireProg.uniforms.color.value.set(0.39, 0.35, 1.0);
-              wireProg.uniforms.opacity.value = 0.05;
-            } else {
-              // Wireframe building: neon blue-purple outline
-              wireProg.uniforms.color.value.set(0.48, 0.45, 1.0);
-              wireProg.uniforms.opacity.value = 0.10;
-            }
-          }
+        function ler(start, end, amt) {
+          return (1 - amt) * start + amt * end;
         }
 
-        function createPipeBetweenPoints(scene, p1, p2, colorVec, thickness, gl, customProgram) {
-          const parent = new Transform();
-          scene.addChild(parent);
+        // Cubic ease-in-out, used for ALL non-cut keyframe interpolation
+        function cameraEase(t) {
+          return t * t * t * (t * (t * 6 - 15) + 10);
+        }
 
-          const dx = p2.x - p1.x;
-          const dy = p2.y - p1.y;
-          const dz = p2.z - p1.z;
-          const len = Math.sqrt(dx*dx + dy*dy + dz*dz);
+        function lerpCameraKeyframe(a, b, t) {
+          return {
+            originXFrac: ler(a.originXFrac, b.originXFrac, t),
+            originYFrac: ler(a.originYFrac, b.originYFrac, t),
+            scale: ler(a.scale, b.scale, t),
+            rotation: ler(a.rotation, b.rotation, t)
+          };
+        }
 
-          parent.position.set(p1.x, p1.y, p1.z);
-          parent.lookAt([p2.x, p2.y, p2.z]);
+        // Samples the camera timeline for the current act at the current
+        // within-act progress (0.0–1.0). Finds the two surrounding keyframes,
+        // computes local progress between them, and either:
+        //   - snaps instantly to keyframe B once local progress crosses 0.5, if
+        //     keyframe B has cut: true
+        //   - smoothly eases between A and B otherwise
+        function sampleCameraTimeline(act, actProgress) {
+          const keyframes = CAMERA_TIMELINE[act];
+          const clampedProgress = Math.min(1.0, Math.max(0.0, actProgress));
 
-          const cylinderGeo = new Cylinder(gl, {
-            radiusTop: thickness,
-            radiusBottom: thickness,
-            height: len,
-            radialSegments: 6
-          });
+          let i = 0;
+          while (i < keyframes.length - 2 && keyframes[i + 1].t <= clampedProgress) {
+            i++;
+          }
+          const a = keyframes[i];
+          const b = keyframes[Math.min(i + 1, keyframes.length - 1)];
 
-          const mesh = new Mesh(gl, {
-            geometry: cylinderGeo,
-            program: customProgram
-          });
+          const span = b.t - a.t;
+          const localT = span > 0.0001 ? (clampedProgress - a.t) / span : 1.0;
+          const clampedLocalT = Math.min(1.0, Math.max(0.0, localT));
 
-          mesh.position.set(0, 0, -len / 2);
-          mesh.rotation.x = Math.PI / 2;
+          if (b.cut) {
+            // Hard cut: stay on keyframe A while local progress is strictly before
+            // the midpoint, snap to B at the midpoint and beyond.
+            // (localT === 0.5 exactly lands on B, not A — verified behavior.)
+            return clampedLocalT < 0.5 ? a : b;
+          }
 
-          parent.addChild(mesh);
+          return lerpCameraKeyframe(a, b, cameraEase(clampedLocalT));
+        }
 
-          return { parent, mesh, cylinderGeo };
+        function toScreen(isoPoint) {
+          const isDesktop = window.innerWidth >= 1024;
+          const defaultXFrac = isDesktop ? 0.35 : 0.50;
+          const defaultYFrac = isDesktop ? 0.48 : 0.50;
+          const defaultScale = isDesktop ? 135 : 100;
+
+          const camera = dioramaState.camera || {
+            originXFrac: defaultXFrac,
+            originYFrac: defaultYFrac,
+            scale: defaultScale
+          };
+
+          const scaleX = camera.scale;
+          const scaleY = camera.scale;
+
+          const mouseParallaxX = Math.max(-25, Math.min(25, dioramaState.mouseX * 25));
+          const mouseParallaxY = Math.max(-25, Math.min(25, dioramaState.mouseY * 25));
+
+          const centerX = dioramaState.width * camera.originXFrac + mouseParallaxX;
+          const centerY = dioramaState.height * camera.originYFrac + mouseParallaxY;
+
+          return {
+            x: centerX + isoPoint.x * scaleX,
+            y: centerY + isoPoint.y * scaleY
+          };
+        }
+
+        // Get coordinates along a Bezier path
+        function getBezierPoint(p0, p1, p2, t) {
+          const u = 1 - t;
+          const tt = t * t;
+          const uu = u * u;
+          return {
+            x: uu * p0.x + 2 * u * t * p1.x + tt * p2.x,
+            y: uu * p0.y + 2 * u * t * p1.y + tt * p2.y
+          };
+        }
+
+        function getBezierRoutePoint(points, progress) {
+          if (points.length < 2) return points[0] || { x: 0, y: 0 };
+          const totalSegments = points.length - 1;
+          const rawSegment = progress * totalSegments;
+          const index = Math.floor(rawSegment);
+          const t = rawSegment - index;
+
+          const p0 = points[index];
+          const p2 = points[index + 1];
+          // Mid-point curve control point to create elegant curved arcs (Diagnosis #5)
+          const p1 = {
+            x: (p0.x + p2.x) / 2 + (p2.y - p0.y) * 0.15,
+            y: (p0.y + p2.y) / 2 - (p2.x - p0.x) * 0.15
+          };
+          return getBezierPoint(p0, p1, p2, t);
         }
 
         function initCanvas() {
-          const canvas = document.getElementById('animation-canvas');
+          canvas = document.getElementById('animation-canvas');
           if (!canvas) return;
 
-          if (isInitialized) {
-            resize();
-            return;
-          }
-
-          // preserveDrawingBuffer required to keep canvas content valid for Playwright (Implementation Rule #2)
-          renderer = new Renderer({
-            canvas: canvas,
-            width: canvas.clientWidth,
-            height: canvas.clientHeight,
-            antialias: true,
-            alpha: true,
-            preserveDrawingBuffer: true,
-            dpr: Math.min(window.devicePixelRatio, 2.0)
-          });
-
-          gl = renderer.gl;
-          gl.enable(gl.DEPTH_TEST);
-          gl.enable(gl.BLEND);
-          gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-
-          scene = new Transform();
-
-          camera = new Camera(gl, {
-            fov: 16,
-            near: 0.1,
-            far: 100
-          });
-          camera.position.set(7.5, 9.0, 11.5);
-          const initTargetX = window.innerWidth >= 1024 ? -1.2 : 0.5;
-          const initTargetZ = window.innerWidth >= 1024 ? -0.5 : 0.0;
-          camera.lookAt([initTargetX, 0.0, initTargetZ]);
-
-          shadedProgram = new Program(gl, {
-            vertex: vertexShader,
-            fragment: fragmentShader,
-            uniforms: {
-              color: { value: new Vec3(0.5, 0.5, 0.5) },
-              opacity: { value: 0.55 }
-            },
-            transparent: true,
-            depthWrite: false
-          });
-
-          const glowProgram = new Program(gl, {
-            vertex: glowVertexShader,
-            fragment: glowFragmentShader,
-            uniforms: {
-              color: { value: new Vec3(1.0, 0.8, 0.0) },
-              opacity: { value: 1.0 }
-            },
-            transparent: true,
-            depthWrite: false
-          });
-
-          // Ground reflection plane (subtle dark surface beneath grid)
-          const groundGeo = new Plane(gl, { width: 22, height: 22 });
-          const groundProg = new Program(gl, {
-            vertex: glowVertexShader,
-            fragment: glowFragmentShader,
-            uniforms: {
-              color: { value: new Vec3(0.03, 0.03, 0.04) },
-              opacity: { value: 0.6 }
-            },
-            transparent: true,
-            depthWrite: false
-          });
-          groundMesh = new Mesh(gl, { geometry: groundGeo, program: groundProg });
-          groundMesh.rotation.x = -Math.PI / 2;
-          groundMesh.position.y = -0.01;
-          scene.addChild(groundMesh);
-
-          const gridGeo = new Plane(gl, { width: 18, height: 18 });
-          const gridProg = new Program(gl, {
-            vertex: gridVertexShader,
-            fragment: gridFragmentShader,
-            uniforms: {
-              gridColor: { value: new Vec3(0.8, 0.6, 0.2) },
-              opacity: { value: 0.85 },
-              uTime: { value: 0.0 }
-            },
-            transparent: true,
-            depthWrite: false
-          });
-          gridMesh = new Mesh(gl, { geometry: gridGeo, program: gridProg });
-          gridMesh.rotation.x = -Math.PI / 2;
-          scene.addChild(gridMesh);
-
-          // Buildings
-          const buildingGeo = new Box(gl);
-          wireProg = new Program(gl, {
-            vertex: glowVertexShader,
-            fragment: glowFragmentShader,
-            uniforms: {
-              color: { value: new Vec3(0.5, 0.5, 0.5) },
-              opacity: { value: 0.35 }
-            },
-            transparent: true,
-            depthWrite: false
-          });
-
-          BUILDING_COORDS.forEach((b) => {
-            // Solid Mesh
-            const mesh = new Mesh(gl, {
-              geometry: buildingGeo,
-              program: shadedProgram
-            });
-            mesh.scale.set(b.w, b.h, b.d);
-            mesh.position.set(b.x, b.h / 2, b.z);
-            scene.addChild(mesh);
-
-            // Wireframe Overlay Mesh
-            const wireMesh = new Mesh(gl, {
-              geometry: buildingGeo,
-              program: wireProg,
-              mode: gl.LINES
-            });
-            wireMesh.scale.set(b.w * 1.01, b.h * 1.01, b.d * 1.01);
-            wireMesh.position.set(b.x, b.h / 2, b.z);
-            scene.addChild(wireMesh);
-
-            buildings.push({ mesh, wireMesh, b, wireProg });
-          });
-
-          // Shared billboard geometry for simulated glows
-          const billboardGeo = new Plane(gl, { width: 0.5, height: 0.5 });
-
-          // Depot
-          const sphereGeo = new Sphere(gl, { radius: 0.07, widthSegments: 8, heightSegments: 8 });
-          depotMesh = new Mesh(gl, {
-            geometry: sphereGeo,
-            program: new Program(gl, {
-              vertex: vertexShader,
-              fragment: fragmentShader,
-              uniforms: {
-                color: { value: new Vec3(0.96, 0.62, 0.04) },
-                opacity: { value: 1.0 }
-              }
-            })
-          });
-          depotMesh.position.set(
-            (DEPOT.x - 400) / 100,
-            0.02,
-            (DEPOT.y - 300) / 100
-          );
-          scene.addChild(depotMesh);
-
-          // Depot Halo (expanding/pulsing ring on the ground plane)
-          const depotHaloGeo = new Plane(gl, { width: 1.2, height: 1.2 });
-          const depotHaloProg = new Program(gl, {
-            vertex: depotHaloVertexShader,
-            fragment: depotHaloFragmentShader,
-            uniforms: {
-              color: { value: new Vec3(0.96, 0.62, 0.04) },
-              opacity: { value: 0.85 },
-              uTime: { value: 0.0 }
-            },
-            transparent: true,
-            depthWrite: false
-          });
-          depotHaloMesh = new Mesh(gl, {
-            geometry: depotHaloGeo,
-            program: depotHaloProg
-          });
-          depotHaloMesh.position.set(
-            (DEPOT.x - 400) / 100,
-            0.002,
-            (DEPOT.y - 300) / 100
-          );
-          depotHaloMesh.rotation.x = -Math.PI / 2;
-          scene.addChild(depotHaloMesh);
-
-          // Depot Billboard Bloom Plane
-          const depotGlowProg = new Program(gl, {
-            vertex: billboardGlowVertexShader,
-            fragment: billboardGlowFragmentShader,
-            uniforms: {
-              color: { value: new Vec3(0.96, 0.62, 0.04) },
-              opacity: { value: 0.0 },
-              uTime: { value: 0.0 }
-            },
-            transparent: true,
-            depthWrite: false
-          });
-          const depotGlowMesh = new Mesh(gl, { geometry: billboardGeo, program: depotGlowProg });
-          depotGlowMesh.position.set((DEPOT.x - 400) / 100, 0.02, (DEPOT.y - 300) / 100);
-          scene.addChild(depotGlowMesh);
-          billboardMeshes.push({ mesh: depotGlowMesh, type: 'depot', program: depotGlowProg });
-
-          // Customers
-          const nodeGeo = new Cylinder(gl, { radiusTop: 0.04, radiusBottom: 0.04, height: 0.04, radialSegments: 8 });
-          const stemGeo = new Box(gl, { width: 0.005, height: 1.0, depth: 0.005 });
-          const shadowGeo = new Plane(gl, { width: 0.07, height: 0.07 });
-
-          CUSTOMER_NODES.forEach((node) => {
-            const nx = (node.x - 400) / 100;
-            const nz = (node.y - 300) / 100;
-
-            const shadow = new Mesh(gl, {
-              geometry: shadowGeo,
-              program: new Program(gl, {
-                vertex: shadowVertexShader,
-                fragment: shadowFragmentShader,
-                uniforms: {
-                  color: { value: new Vec3(0.93, 0.27, 0.27) },
-                  opacity: { value: 0.0 }
-                },
-                transparent: true,
-                depthWrite: false
-              })
-            });
-            shadow.position.set(nx, 0.001, nz);
-            shadow.rotation.x = -Math.PI / 2;
-            scene.addChild(shadow);
-            shadowMeshes.push({ mesh: shadow, id: node.id });
-
-            const stem = new Mesh(gl, {
-              geometry: stemGeo,
-              program: new Program(gl, {
-                vertex: glowVertexShader,
-                fragment: glowFragmentShader,
-                uniforms: {
-                  color: { value: new Vec3(0.5, 0.5, 0.5) },
-                  opacity: { value: 0.0 }
-                },
-                transparent: true,
-                depthWrite: false
-              })
-            });
-            stem.position.set(nx, 0, nz);
-            scene.addChild(stem);
-            stemMeshes.push({ mesh: stem, id: node.id });
-
-            const nMesh = new Mesh(gl, {
-              geometry: nodeGeo,
-              program: new Program(gl, {
-                vertex: vertexShader,
-                fragment: fragmentShader,
-                uniforms: {
-                  color: { value: new Vec3(0.32, 0.32, 0.35) },
-                  opacity: { value: 0.0 }
-                }
-              })
-            });
-            nMesh.position.set(nx, 0, nz);
-            scene.addChild(nMesh);
-            nodeMeshes.push({
-              mesh: nMesh,
-              id: node.id,
-              nx,
-              nz,
-              targetColor: colorToVec3(node.targetColor)
-            });
-
-            // Customer Node Billboard Bloom Plane (Implementation Rule #3)
-            const nodeGlowProg = new Program(gl, {
-              vertex: billboardGlowVertexShader,
-              fragment: billboardGlowFragmentShader,
-              uniforms: {
-                color: { value: new Vec3(0.32, 0.32, 0.35) },
-                opacity: { value: 0.0 },
-                uTime: { value: 0.0 }
-              },
-              transparent: true,
-              depthWrite: false
-            });
-            const nodeGlowMesh = new Mesh(gl, { geometry: billboardGeo, program: nodeGlowProg });
-            nodeGlowMesh.position.set(nx, 0, nz);
-            scene.addChild(nodeGlowMesh);
-            billboardMeshes.push({ mesh: nodeGlowMesh, id: node.id, type: 'node', program: nodeGlowProg });
-          });
-
-          // Route segments and Vehicles
-          ROUTES.forEach((route, index) => {
-            const routeData = {
-              index,
-              colorVec: colorToVec3(route.color),
-              segments: []
-            };
-
-            const points3D = route.nodes.map((n) => {
-              const isDepot = (n.x === DEPOT.x && n.y === DEPOT.y);
-              const yVal = isDepot ? 0.025 : 0.35; // Sloped route connections to depot (Diagnosis #2)
-              return new Vec3((n.x - 400) / 100, yVal, (n.y - 300) / 100);
-            });
-
-            let cumulativeLengths = [0];
-            let totalLen = 0;
-            for (let i = 0; i < points3D.length - 1; i++) {
-              const dx = points3D[i+1].x - points3D[i].x;
-              const dy = points3D[i+1].y - points3D[i].y;
-              const dz = points3D[i+1].z - points3D[i].z;
-              const len = Math.sqrt(dx*dx + dy*dy + dz*dz);
-              totalLen += len;
-              cumulativeLengths.push(totalLen);
-            }
-            routeData.totalLen = totalLen;
-            routeData.cumulativeLengths = cumulativeLengths;
-            routeData.points3D = points3D;
-
-            const routeProg = new Program(gl, {
-              vertex: vertexShader,
-              fragment: fragmentShader,
-              uniforms: {
-                color: { value: colorToVec3(route.color) },
-                opacity: { value: 0.0 }
-              },
-              transparent: true
-            });
-
-            for (let i = 0; i < points3D.length - 1; i++) {
-              const pipe = createPipeBetweenPoints(scene, points3D[i], points3D[i+1], routeData.colorVec, 0.0045, gl, routeProg);
-              routeData.segments.push({
-                meshParent: pipe.parent,
-                meshCylinder: pipe.mesh,
-                p1: points3D[i],
-                p2: points3D[i+1],
-                originalLen: cumulativeLengths[i+1] - cumulativeLengths[i],
-                startProg: cumulativeLengths[i] / totalLen,
-                endProg: cumulativeLengths[i+1] / totalLen,
-                program: routeProg
-              });
-            }
-            routeMeshes.push(routeData);
-
-            // Vehicles
-            const vehicleGroup = new Transform();
-            scene.addChild(vehicleGroup);
-
-            const chassisGeo = new Box(gl, { width: 0.06, height: 0.035, depth: 0.09 });
-            const chassisProg = new Program(gl, {
-              vertex: vertexShader,
-              fragment: fragmentShader,
-              uniforms: {
-                color: { value: colorToVec3(route.color) },
-                opacity: { value: 0.0 }
-              }
-            });
-            const chassis = new Mesh(gl, { geometry: chassisGeo, program: chassisProg });
-            chassis.position.y = 0.0175;
-            vehicleGroup.addChild(chassis);
-
-            const cabinGeo = new Box(gl, { width: 0.05, height: 0.035, depth: 0.045 });
-            const cabinProg = new Program(gl, {
-              vertex: vertexShader,
-              fragment: fragmentShader,
-              uniforms: {
-                color: { value: new Vec3(0.08, 0.08, 0.08) },
-                opacity: { value: 0.0 }
-              }
-            });
-            const cabin = new Mesh(gl, { geometry: cabinGeo, program: cabinProg });
-            cabin.position.set(0, 0.0425, -0.02);
-            vehicleGroup.addChild(cabin);
-
-            vehicleMeshes.push({
-              index,
-              group: vehicleGroup,
-              chassis,
-              cabin,
-              colorVec: colorToVec3(route.color),
-              chassisProg,
-              cabinProg
-            });
-
-            // Vehicle Headlight Billboard Bloom Plane
-            const headlightGlowProg = new Program(gl, {
-              vertex: billboardGlowVertexShader,
-              fragment: billboardGlowFragmentShader,
-              uniforms: {
-                color: { value: new Vec3(1.0, 0.95, 0.8) }, // Warm headlight beam glow
-                opacity: { value: 0.0 },
-                uTime: { value: 0.0 }
-              },
-              transparent: true,
-              depthWrite: false
-            });
-            const headlightGlowMesh = new Mesh(gl, { geometry: billboardGeo, program: headlightGlowProg });
-            scene.addChild(headlightGlowMesh);
-            billboardMeshes.push({ mesh: headlightGlowMesh, routeIndex: index, type: 'headlight', program: headlightGlowProg });
-
-            // Particles
-            const partGeo = new Sphere(gl, { radius: 0.013, widthSegments: 4, heightSegments: 4 });
-            const pProg = new Program(gl, {
-              vertex: glowVertexShader,
-              fragment: glowFragmentShader,
-              uniforms: {
-                color: { value: colorToVec3(route.color) },
-                opacity: { value: 0.0 }
-              },
-              transparent: true,
-              depthWrite: false
-            });
-
-            for (let pIdx = 0; pIdx < 3; pIdx++) {
-              const pMesh = new Mesh(gl, { geometry: partGeo, program: pProg });
-              scene.addChild(pMesh);
-              particleMeshes.push({
-                routeIndex: index,
-                mesh: pMesh,
-                offset: pIdx * 0.33,
-                colorVec: colorToVec3(route.color),
-                program: pProg
-              });
-            }
-          });
-
-          // Prebuild warning lines for Act II
-          const warnProg = new Program(gl, {
-            vertex: vertexShader,
-            fragment: fragmentShader,
-            uniforms: {
-              color: { value: new Vec3(0.93, 0.27, 0.27) },
-              opacity: { value: 0.0 }
-            },
-            transparent: true
-          });
-
-          for (let i = 0; i < 20; i++) {
-            const n1 = CUSTOMER_NODES[Math.floor(lerp(0, CUSTOMER_NODES.length - 1, (i * 0.17) % 1))];
-            const n2 = CUSTOMER_NODES[Math.floor(lerp(0, CUSTOMER_NODES.length - 1, (i * 0.37) % 1))];
-
-            const p1 = new Vec3((n1.x - 400) / 100, 0, (n1.y - 300) / 100);
-            const p2 = new Vec3((n2.x - 400) / 100, 0, (n2.y - 300) / 100);
-
-            const pipe = createPipeBetweenPoints(scene, p1, p2, new Vec3(0.93, 0.27, 0.27), 0.005, gl, warnProg);
-            pipe.parent.position.y = -10;
-            warningLineMeshes.push({ pipe, p1, p2, warnProg });
-          }
-
-          updateCachedThemeVariables();
-          setupCustomerListPanel(); // Initialize list rows (Implementation Rule #4)
-
-          window.addEventListener('resize', resize);
+          ctx = canvas.getContext('2d');
+          
           resize();
 
+          if (!isInitialized) {
+            setupCustomerListPanel();
+            window.addEventListener('resize', resize);
+          }
+          
           document.addEventListener('mousemove', (e) => {
             const rect = canvas.getBoundingClientRect();
             const cx = rect.left + rect.width / 2;
@@ -1745,464 +985,514 @@
             dioramaState.targetMouseY = (e.clientY - cy) / (rect.height / 2);
           });
 
-          requestAnimationFrame(loop);
           isInitialized = true;
+          renderCanvas(1, 0.0);
+          
+          if (animationFrameId) cancelAnimationFrame(animationFrameId);
+          lastTime = null;
+          animationFrameId = requestAnimationFrame(loop);
         }
 
         function resize() {
-          if (!renderer) return;
-          const canvas = renderer.gl.canvas;
-          const width = canvas.clientWidth;
-          const height = canvas.clientHeight;
+          if (!canvas || !ctx) return;
 
-          dioramaState.width = width;
-          dioramaState.height = height;
+          // Use innerWidth/innerHeight as the authoritative source for canvas
+          // dimensions — getBoundingClientRect() returns 0×0 when the parent
+          // container has no explicit height (common during initial load before
+          // layout is complete). innerWidth/innerHeight are always correct.
+          const w = window.innerWidth;
+          const h = window.innerHeight;
+          const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
-          renderer.setSize(width, height);
-          const aspect = height > 0 ? width / height : 1.0;
-          camera.perspective({ aspect });
+          dioramaState.width = w;
+          dioramaState.height = h;
+
+          canvas.width = Math.floor(w * dpr);
+          canvas.height = Math.floor(h * dpr);
+
+          // CRITICAL: resetTransform before re-scaling to prevent cumulative
+          // scale stacking on repeated resize calls (each ctx.scale(dpr, dpr)
+          // without a reset would multiply the previous scale, shrinking the
+          // scene further each time the window is resized).
+          ctx.resetTransform();
+          ctx.scale(dpr, dpr);
         }
 
-        function updateScene(time) {
-          if (!isInitialized) return;
+        // Draw spinning octahedron diamond marker (Graphics Upgrade)
+        function drawDiamond(ctx, screenX, screenY, size, color, time, index) {
+          ctx.save();
+          ctx.beginPath();
+          
+          const spinScale = Math.sin(time * 0.0035 + index * 0.4);
+          const elevationFloat = Math.cos(time * 0.002 + index * 0.3) * 3.5;
+          const y = screenY + elevationFloat;
 
+          ctx.moveTo(screenX, y - size);
+          ctx.lineTo(screenX + size * 0.7 * spinScale, y);
+          ctx.lineTo(screenX, y + size);
+          ctx.lineTo(screenX - size * 0.7 * spinScale, y);
+          ctx.closePath();
+
+          // Outer glowing shadow
+          ctx.shadowColor = color;
+          ctx.shadowBlur = 12;
+          ctx.fillStyle = color;
+          ctx.globalAlpha = 0.85;
+          ctx.fill();
+
+          // Bright inner core
+          ctx.beginPath();
+          ctx.moveTo(screenX, y - size * 0.5);
+          ctx.lineTo(screenX + size * 0.35 * spinScale, y);
+          ctx.lineTo(screenX, y + size * 0.5);
+          ctx.lineTo(screenX - size * 0.35 * spinScale, y);
+          ctx.closePath();
+          ctx.fillStyle = '#ffffff';
+          ctx.globalAlpha = 0.95;
+          ctx.fill();
+
+          ctx.restore();
+        }
+
+        function drawDepot(ctx, screenX, screenY, time) {
+          ctx.save();
+          
+          const pulse = 1.0 + Math.sin(time * 0.003) * 0.1;
+          const size = 15 * pulse;
+
+          // Holographic rotating outer rings (Graphics Upgrade)
+          ctx.strokeStyle = 'rgba(245, 158, 11, 0.4)';
+          ctx.lineWidth = 1.5;
+          ctx.shadowColor = 'rgba(245, 158, 11, 0.5)';
+          ctx.shadowBlur = 10;
+          
+          ctx.beginPath();
+          ctx.ellipse(screenX, screenY, size * 2.2, size * 1.1, time * 0.001, 0, Math.PI * 2);
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.ellipse(screenX, screenY, size * 2.2, size * 1.1, -time * 0.0014, 0, Math.PI * 2);
+          ctx.stroke();
+
+          // Hexagonal center core
+          ctx.beginPath();
+          for (let i = 0; i < 6; i++) {
+            const angle = (i * Math.PI) / 3 + time * 0.0006;
+            const hx = screenX + size * Math.cos(angle);
+            const hy = screenY + size * Math.sin(angle) * 0.5;
+            if (i === 0) ctx.moveTo(hx, hy);
+            else ctx.lineTo(hx, hy);
+          }
+          ctx.closePath();
+          
+          ctx.fillStyle = '#f59e0b';
+          ctx.shadowColor = '#f59e0b';
+          ctx.shadowBlur = 18;
+          ctx.globalAlpha = 0.9;
+          ctx.fill();
+
+          // Inner glowing core
+          ctx.beginPath();
+          ctx.arc(screenX, screenY, size * 0.4, 0, Math.PI * 2);
+          ctx.fillStyle = '#ffffff';
+          ctx.fill();
+
+          ctx.restore();
+        }
+
+        function loop(timestamp) {
+          dioramaState.time = timestamp;
+          
+          if (lastTime === null) {
+            lastTime = timestamp;
+          }
+          const dt = Math.max(0, Math.min(0.1, (timestamp - lastTime) / 1000));
+          lastTime = timestamp;
+
+          // Smooth mouse movement using standard damp pattern (Three.js/R3F style)
+          dioramaState.mouseX = damp(dioramaState.mouseX, dioramaState.targetMouseX, 8.0, dt);
+          dioramaState.mouseY = damp(dioramaState.mouseY, dioramaState.targetMouseY, 8.0, dt);
+
+          drawScene();
+          animationFrameId = requestAnimationFrame(loop);
+        }
+
+        function drawScene() {
+          if (!ctx) return;
+          
+          const time = dioramaState.time;
           const act = dioramaState.act;
           const progress = dioramaState.progress;
+          const theme = dioramaState.theme;
 
-          // Gentle floating/breathing animation for the depot
-          if (depotMesh) {
-            const depotFloat = 0.025 + Math.sin(time * 0.002) * 0.008;
-            depotMesh.position.y = depotFloat;
-            
-            const depotGlow = billboardMeshes.find(b => b.type === 'depot');
-            if (depotGlow) {
-              depotGlow.mesh.position.y = depotFloat;
-              depotGlow.program.uniforms.opacity.value = 0.70;
-            }
+          // Sample camera timeline for dynamic movements and cuts
+          const frame = sampleCameraTimeline(act, progress);
+          dioramaState.camera = frame;
+
+          // Clear with background color transparency to allow CSS glows to show
+          ctx.clearRect(0, 0, dioramaState.width, dioramaState.height);
+
+          // 1. Draw telemetry isometric grid lines (Graphics Upgrade)
+          ctx.save();
+          ctx.strokeStyle = theme === 'dark' ? 'rgba(122, 115, 255, 0.04)' : 'rgba(99, 91, 255, 0.06)';
+          ctx.lineWidth = 1;
+          
+          // Draw grid diamond rows
+          for (let i = -3; i <= 3; i += 0.5) {
+            // Lines along X
+            ctx.beginPath();
+            let pStart = toScreen(projectIsometric(-3, 0, i));
+            let pEnd = toScreen(projectIsometric(3, 0, i));
+            ctx.moveTo(pStart.x, pStart.y);
+            ctx.lineTo(pEnd.x, pEnd.y);
+            ctx.stroke();
+
+            // Lines along Z
+            ctx.beginPath();
+            pStart = toScreen(projectIsometric(i, 0, -3));
+            pEnd = toScreen(projectIsometric(i, 0, 3));
+            ctx.moveTo(pStart.x, pStart.y);
+            ctx.lineTo(pEnd.x, pEnd.y);
+            ctx.stroke();
           }
 
-          // Target altitude heights
-          let nodeTargetHeight = 0;
-          if (act === 1) {
-            nodeTargetHeight = 0.02;
-          } else if (act === 2) {
-            nodeTargetHeight = 0.02 + progress * 0.33;
-          } else {
-            nodeTargetHeight = 0.35;
-          }
+          // Concentric scanning radar wave expanding from depot
+          const waveRadius = (time * 0.0006) % 3.0;
+          ctx.beginPath();
+          const depotCenter = toScreen(projectIsometric(0, 0, 0));
+          ctx.ellipse(depotCenter.x, depotCenter.y, waveRadius * 120, waveRadius * 60, 0, 0, Math.PI * 2);
+          ctx.strokeStyle = theme === 'dark' 
+            ? `rgba(122, 115, 255, ${0.25 * (1.0 - waveRadius / 3.0)})` 
+            : `rgba(99, 91, 255, ${0.25 * (1.0 - waveRadius / 3.0)})`;
+          ctx.stroke();
+          ctx.restore();
 
-          // 1. Nodes update
-          nodeMeshes.forEach((n, idx) => {
-            const stem = stemMeshes.find((s) => s.id === n.id).mesh;
-            const shadow = shadowMeshes.find((s) => s.id === n.id).mesh;
-            const glow = billboardMeshes.find((b) => b.type === 'node' && b.id === n.id);
+          // 2. Draw Depot
+          drawDepot(ctx, depotCenter.x, depotCenter.y, time);
 
-            // Subtle breathing heartbeat scale animation on nodes, or rapid pulse if hovered
-            let pulse = 1.0;
-            if (dioramaState.hoveredNodeId === n.id) {
-              pulse = 1.45 + Math.sin(time * 0.015) * 0.15; // Hover feedback (Implementation Rule #4)
-            } else if (act >= 3) {
-              pulse = 1.0 + Math.sin(time * 0.0035 + idx * 0.5) * 0.07;
-            } else if (act === 2) {
-              pulse = 1.0 + Math.sin(time * 0.005 + idx * 0.3) * 0.04;
-            }
-            n.mesh.scale.set(pulse, pulse, pulse);
-            if (glow) {
-              glow.mesh.scale.set(pulse * 1.5, pulse * 1.5, 1.0);
-            }
-
-            if (act === 1) {
-              const targetX = lerp((DEPOT.x - 400) / 100, 3.0, (n.id - 1) / CUSTOMER_NODES.length);
-              const targetZ = (DEPOT.y - 300) / 100;
-
-              n.mesh.position.set(targetX, 0.02, targetZ);
-              n.mesh.program.uniforms.color.value = dioramaState.cachedColors.nodeNeutral;
-              n.mesh.program.uniforms.opacity.value = lerp(0.1, 0.45, progress);
-
-              stem.position.set(targetX, 0.01, targetZ);
-              stem.scale.set(pulse, 0.0001, pulse);
-              stem.program.uniforms.opacity.value = 0.0;
-
-              shadow.position.set(targetX, 0.001, targetZ);
-              shadow.scale.set(pulse, 1.0, pulse);
-              shadow.program.uniforms.opacity.value = 0.0;
-
-              if (glow) {
-                glow.mesh.position.set(targetX, 0.02, targetZ);
-                glow.program.uniforms.opacity.value = 0.0;
-              }
-
-            } else if (act === 2) {
-              const startX = lerp((DEPOT.x - 400) / 100, 3.0, (n.id - 1) / CUSTOMER_NODES.length);
-              const startZ = (DEPOT.y - 300) / 100;
-
-              const currentX = lerp(startX, n.nx, progress);
-              const currentZ = lerp(startZ, n.nz, progress);
-
-              n.mesh.position.set(currentX, nodeTargetHeight, currentZ);
-              n.mesh.program.uniforms.color.value = new Vec3(0.93, 0.27, 0.27);
-              n.mesh.program.uniforms.opacity.value = 1.0;
-
-              stem.position.set(currentX, nodeTargetHeight / 2, currentZ);
-              stem.scale.set(pulse, nodeTargetHeight, pulse);
-              stem.program.uniforms.color.value = new Vec3(0.93, 0.27, 0.27);
-              stem.program.uniforms.opacity.value = progress * 0.45;
-
-              shadow.position.set(currentX, 0.001, currentZ);
-              shadow.scale.set(pulse, 1.0, pulse);
-              shadow.program.uniforms.color.value = new Vec3(0.93, 0.27, 0.27);
-              shadow.program.uniforms.opacity.value = progress > 0.5 ? 0.35 : 0.0;
-
-              if (glow) {
-                glow.mesh.position.set(currentX, nodeTargetHeight, currentZ);
-                glow.program.uniforms.color.value.set(0.93, 0.27, 0.27);
-                glow.program.uniforms.opacity.value = progress * 0.25;
-              }
-
-            } else if (act === 3) {
-              n.mesh.position.set(n.nx, 0.35, n.nz);
-              const lerped = lerpVec3(new Vec3(0.93, 0.27, 0.27), n.targetColor, Math.min(1.0, progress * 2.0));
-              n.mesh.program.uniforms.color.value = lerped;
-              n.mesh.program.uniforms.opacity.value = 1.0;
-
-              stem.position.set(n.nx, 0.35 / 2, n.nz);
-              stem.scale.set(pulse, 0.35, pulse);
-              stem.program.uniforms.color.value = dioramaState.cachedColors.street;
-              stem.program.uniforms.opacity.value = 0.35;
-
-              shadow.position.set(n.nx, 0.001, n.nz);
-              shadow.scale.set(pulse, 1.0, pulse);
-              shadow.program.uniforms.color.value = dioramaState.cachedColors.street;
-              shadow.program.uniforms.opacity.value = lerp(0.35, 0.18, progress);
-
-              if (glow) {
-                glow.mesh.position.set(n.nx, 0.35, n.nz);
-                glow.program.uniforms.color.value.copy(lerped);
-                // Hover priority glow multiplier
-                const baseOpacity = dioramaState.hoveredNodeId === n.id ? 0.85 : 0.35;
-                glow.program.uniforms.opacity.value = baseOpacity;
-              }
-
-            } else if (act === 4) {
-              n.mesh.position.set(n.nx, 0.35, n.nz);
-              n.mesh.program.uniforms.color.value = n.targetColor;
-              n.mesh.program.uniforms.opacity.value = 1.0;
-
-              stem.position.set(n.nx, 0.35 / 2, n.nz);
-              stem.scale.set(pulse, 0.35, pulse);
-              stem.program.uniforms.color.value = dioramaState.cachedColors.street;
-              stem.program.uniforms.opacity.value = 0.35;
-
-              shadow.position.set(n.nx, 0.001, n.nz);
-              shadow.scale.set(pulse, 1.0, pulse);
-              shadow.program.uniforms.color.value = dioramaState.cachedColors.street;
-              shadow.program.uniforms.opacity.value = 0.18;
-
-              if (glow) {
-                glow.mesh.position.set(n.nx, 0.35, n.nz);
-                glow.program.uniforms.color.value.copy(n.targetColor);
-                const baseOpacity = dioramaState.hoveredNodeId === n.id ? 0.85 : 0.40;
-                glow.program.uniforms.opacity.value = baseOpacity;
-              }
-            }
-          });
-
-          // 2. Buildings update — premium glass and wireframe glow
-          buildings.forEach((b, idx) => {
-            const isDark = dioramaState.theme === 'dark';
-            const bCol = isDark
-              ? new Vec3(0.08, 0.09, 0.14)
-              : new Vec3(0.76, 0.80, 0.85);
-            const wCol = isDark
-              ? new Vec3(0.55, 0.42, 0.15)
-              : new Vec3(0.6, 0.6, 0.65);
-
-            b.mesh.program.uniforms.color.value = bCol;
-            b.mesh.program.uniforms.opacity.value = isDark ? 0.10 : 0.03;
-
-            b.wireProg.uniforms.color.value = wCol;
-            b.wireProg.uniforms.opacity.value = isDark ? 0.10 : 0.05;
-
-            // Subtle breathing animation on building heights
-            const breathe = 1.0 + Math.sin(time * 0.0008 + idx * 1.7) * 0.012;
-            const h = b.b.h * breathe;
-            b.mesh.scale.set(b.b.w, h, b.b.d);
-            b.mesh.position.y = h / 2;
-            b.wireMesh.scale.set(b.b.w * 1.01, h * 1.01, b.b.d * 1.01);
-            b.wireMesh.position.y = h / 2;
-          });
-
-          // 3. Act II warning chaotic lines
+          // Calculate elevated target height Y
+          let elevatedY = 0;
           if (act === 2) {
-            const cOp = progress > 0.3 ? lerp(0, 0.32, progress) : 0;
-            warningLineMeshes.forEach((w) => {
-              w.pipe.parent.position.y = 0;
-              w.warnProg.uniforms.opacity.value = cOp;
-            });
-          } else {
-            warningLineMeshes.forEach((w) => {
-              w.pipe.parent.position.y = -10;
-              w.warnProg.uniforms.opacity.value = 0.0;
-            });
+            elevatedY = progress * 0.6;
+          } else if (act >= 3) {
+            elevatedY = 0.6;
           }
 
-          // 4. Routes drawing progression
-          routeMeshes.forEach((r) => {
-            r.segments.forEach((seg) => {
-              if (act === 1 || act === 2) {
-                seg.program.uniforms.opacity.value = 0.0;
-                seg.meshCylinder.scale.y = 0.0001;
-              } else if (act === 3) {
-                seg.program.uniforms.opacity.value = Math.min(1.0, progress * 1.5);
-                // Lerp route color from red to target color to match node transitions (Diagnosis #5)
-                const routeLerpCol = lerpVec3(new Vec3(0.93, 0.27, 0.27), r.colorVec, Math.min(1.0, progress * 2.0));
-                seg.program.uniforms.color.value.copy(routeLerpCol);
-                if (progress >= seg.endProg) {
-                  seg.meshCylinder.scale.set(1.0, 1.0, 1.0);
-                  seg.meshCylinder.position.z = -seg.originalLen / 2;
-                } else if (progress <= seg.startProg) {
-                  seg.meshCylinder.scale.set(1.0, 0.0001, 1.0);
-                } else {
-                  const segP = (progress - seg.startProg) / (seg.endProg - seg.startProg);
-                  const curLen = seg.originalLen * segP;
-                  seg.meshCylinder.scale.set(1.0, segP, 1.0);
-                  seg.meshCylinder.position.z = -curLen / 2;
-                }
-              } else if (act === 4) {
-                seg.program.uniforms.opacity.value = 0.85;
-                seg.program.uniforms.color.value.copy(r.colorVec);
-                seg.meshCylinder.scale.set(1.0, 1.0, 1.0);
-                seg.meshCylinder.position.z = -seg.originalLen / 2;
-              }
-            });
-          });
-
-          // 5. Vehicles movement
-          vehicleMeshes.forEach((v) => {
-            const r = routeMeshes[v.index];
-            const headlightGlow = billboardMeshes.find(b => b.type === 'headlight' && b.routeIndex === v.index);
+          // 3. Draw Customer Nodes
+          CUSTOMER_NODES.forEach((node, idx) => {
+            let nx = node.x;
+            let nz = node.z;
+            let ny = 0; // floor height
 
             if (act === 1) {
-              if (v.index === 0) {
-                v.chassisProg.uniforms.opacity.value = 1.0;
-                v.cabinProg.uniforms.opacity.value = 1.0;
-                v.chassisProg.uniforms.color.value = v.colorVec;
-
-                const start3 = new Vec3((DEPOT.x - 400) / 100, 0.02, (DEPOT.y - 300) / 100);
-                const end3 = new Vec3((700 - 400) / 100, 0.02, (DEPOT.y - 300) / 100);
-
-                // Spline path is just a straight line for Act I vehicle
-                const pos = lerpVec3(start3, end3, progress);
-                v.group.position.set(pos.x, pos.y, pos.z);
-                
-                const d = Math.sqrt((end3.x - pos.x)**2 + (end3.z - pos.z)**2);
-                if (d > 0.001) {
-                  v.group.lookAt([end3.x, end3.y, end3.z]);
-                }
-
-                if (headlightGlow) {
-                  // Position headlight slightly in front of vehicle orientation
-                  const forward = new Vec3(0, 0, -1).applyQuaternion(v.group.quaternion).scale(0.06);
-                  headlightGlow.mesh.position.copy(v.group.position).add(forward);
-                  headlightGlow.mesh.position.y = 0.03;
-                  headlightGlow.program.uniforms.opacity.value = 0.55;
-                }
-              } else {
-                v.chassisProg.uniforms.opacity.value = 0.0;
-                v.cabinProg.uniforms.opacity.value = 0.0;
-                if (headlightGlow) headlightGlow.program.uniforms.opacity.value = 0.0;
-              }
+              // Act I: Nodes aligned in a straight line starting from the depot
+              nx = (-2.5) + (5.5) * (node.id - 1) / CUSTOMER_NODES.length;
+              nz = 0;
             } else if (act === 2) {
-              if (v.index === 0) {
-                v.chassisProg.uniforms.opacity.value = 1.0;
-                v.cabinProg.uniforms.opacity.value = 1.0;
-                v.chassisProg.uniforms.color.value = new Vec3(0.93, 0.27, 0.27); // Warning red
-
-                const shakeX = (DEPOT.x - 400) / 100 + Math.sin(time * 0.06) * 0.035;
-                const shakeZ = (DEPOT.y - 300) / 100 + Math.cos(time * 0.06) * 0.035;
-                v.group.position.set(shakeX, 0.02, shakeZ);
-                v.group.rotation.set(0, Math.sin(time * 0.08) * 0.2, 0);
-
-                if (headlightGlow) {
-                  const forward = new Vec3(0, 0, -1).applyQuaternion(v.group.quaternion).scale(0.06);
-                  headlightGlow.mesh.position.copy(v.group.position).add(forward);
-                  headlightGlow.mesh.position.y = 0.03;
-                  headlightGlow.program.uniforms.color.value.set(0.93, 0.27, 0.27);
-                  headlightGlow.program.uniforms.opacity.value = 0.55 + Math.sin(time * 0.15) * 0.15;
-                }
-              } else {
-                v.chassisProg.uniforms.opacity.value = 0.0;
-                v.cabinProg.uniforms.opacity.value = 0.0;
-                if (headlightGlow) headlightGlow.program.uniforms.opacity.value = 0.0;
-              }
-            } else if (act === 3) {
-              const op = progress > 0.45 ? 1.0 : 0.0;
-              v.chassisProg.uniforms.opacity.value = op;
-              v.cabinProg.uniforms.opacity.value = op;
-              v.chassisProg.uniforms.color.value = v.colorVec;
-
-              // Catmull-Rom spline calculations (Implementation Rule #1)
-              const pos = getSplinePointAtProgress(r.points3D, progress);
-              
-              // Direction estimation
-              let nextProg = progress + 0.015;
-              let nextP;
-              if (nextProg > 1.0) {
-                // Extrapolate direction slightly past 1.0 instead of wrapping for lookAt stability
-                const prevP = getSplinePointAtProgress(r.points3D, 0.98);
-                const endP = r.points3D[r.points3D.length - 1];
-                nextP = new Vec3().copy(endP).add(new Vec3().copy(endP).sub(prevP).scale(0.5));
-              } else {
-                nextP = getSplinePointAtProgress(r.points3D, nextProg);
-              }
-
-              v.group.position.set(pos.x, pos.y + 0.02, pos.z);
-              
-              const d = Math.sqrt((nextP.x - pos.x)**2 + (nextP.z - pos.z)**2);
-              if (d > 0.001) {
-                v.group.lookAt([nextP.x, nextP.y + 0.02, nextP.z]);
-              }
-
-              if (headlightGlow) {
-                const forward = new Vec3(0, 0, -1).applyQuaternion(v.group.quaternion).scale(0.06);
-                headlightGlow.mesh.position.copy(v.group.position).add(forward);
-                headlightGlow.mesh.position.y = v.group.position.y + 0.0125;
-                headlightGlow.program.uniforms.color.value.set(1.0, 0.95, 0.8);
-                headlightGlow.program.uniforms.opacity.value = op * 0.60;
-              }
-
-            } else if (act === 4) {
-              v.chassisProg.uniforms.opacity.value = 1.0;
-              v.cabinProg.uniforms.opacity.value = 1.0;
-              v.chassisProg.uniforms.color.value = v.colorVec;
-
-              const lTime = time * 0.00018;
-              const lProg = (lTime * (1.2 + v.index * 0.22)) % 1.0;
-
-              // Catmull-Rom spline calculations (Implementation Rule #1)
-              const pos = getSplinePointAtProgress(r.points3D, lProg);
-              
-              let nextProg = lProg + 0.015;
-              let nextP;
-              if (nextProg > 1.0) {
-                // Extrapolate direction slightly past 1.0 instead of wrapping for lookAt stability
-                const prevP = getSplinePointAtProgress(r.points3D, 0.98);
-                const endP = r.points3D[r.points3D.length - 1];
-                nextP = new Vec3().copy(endP).add(new Vec3().copy(endP).sub(prevP).scale(0.5));
-              } else {
-                nextP = getSplinePointAtProgress(r.points3D, nextProg);
-              }
-
-              v.group.position.set(pos.x, pos.y + 0.02, pos.z);
-              
-              const d = Math.sqrt((nextP.x - pos.x)**2 + (nextP.z - pos.z)**2);
-              if (d > 0.001) {
-                v.group.lookAt([nextP.x, nextP.y + 0.02, nextP.z]);
-              }
-
-              if (headlightGlow) {
-                const forward = new Vec3(0, 0, -1).applyQuaternion(v.group.quaternion).scale(0.06);
-                headlightGlow.mesh.position.copy(v.group.position).add(forward);
-                headlightGlow.mesh.position.y = v.group.position.y + 0.0125;
-                headlightGlow.program.uniforms.color.value.set(1.0, 0.95, 0.8);
-                headlightGlow.program.uniforms.opacity.value = 0.60;
-              }
-            }
-          });
-
-          // 6. Particles update
-          particleMeshes.forEach((p) => {
-            const r = routeMeshes[p.routeIndex];
-            if (act === 4) {
-              p.program.uniforms.opacity.value = 0.8;
-              const pTime = time * 0.0003;
-              const pProg = (pTime + p.offset) % 1.0;
-              // Catmull-Rom spline calculations (Implementation Rule #1)
-              const pos = getSplinePointAtProgress(r.points3D, pProg);
-              p.mesh.position.set(pos.x, 0.35 + 0.01, pos.z);
+              // Act II: Transitioning to scatter positions
+              const startX = (-2.5) + (5.5) * (node.id - 1) / CUSTOMER_NODES.length;
+              const startZ = 0;
+              nx = startX + (node.x - startX) * progress;
+              nz = startZ + (node.z - startZ) * progress;
+              ny = elevatedY;
             } else {
-              p.program.uniforms.opacity.value = 0.0;
+              ny = elevatedY;
             }
-          });
-        }
 
-        function loop(time) {
-          requestAnimationFrame(loop);
+            const pFloor = toScreen(projectIsometric(nx, 0, nz));
+            const pElevated = toScreen(projectIsometric(nx, ny, nz));
 
-          if (!renderer) return;
+            // Shadow on floor
+            ctx.save();
+            ctx.beginPath();
+            const shadowRadius = 6 * (1.0 - ny * 0.5);
+            ctx.ellipse(pFloor.x, pFloor.y, shadowRadius * 1.5, shadowRadius * 0.75, 0, 0, Math.PI * 2);
+            ctx.fillStyle = theme === 'dark' ? 'rgba(0, 0, 0, 0.45)' : 'rgba(99, 91, 255, 0.1)';
+            ctx.fill();
+            ctx.restore();
 
-          // Responsive resize check on every frame
-          const canvas = renderer.gl.canvas;
-          const dpr = Math.min(window.devicePixelRatio, 2.0);
-          const targetW = Math.floor(canvas.clientWidth * dpr);
-          const targetH = Math.floor(canvas.clientHeight * dpr);
-          if (canvas.width !== targetW || canvas.height !== targetH) {
-            resize();
-          }
+            // Vertical Elevation Dashed Line (Graphics Upgrade)
+            if (ny > 0.05) {
+              ctx.save();
+              ctx.beginPath();
+              ctx.moveTo(pFloor.x, pFloor.y);
+              ctx.lineTo(pElevated.x, pElevated.y);
+              ctx.strokeStyle = act === 2 ? 'rgba(239, 68, 68, 0.35)' : 'rgba(107, 124, 147, 0.35)';
+              ctx.lineWidth = 1;
+              ctx.setLineDash([3, 3]);
+              ctx.stroke();
+              ctx.restore();
+            }
 
-          // Camera Transition Interpolation Waypoints (Implementation Rule #2)
-          const isWide = window.innerWidth >= 1024;
-          const waypoints = getCameraWaypoints(isWide);
+            // Node marker color
+            let color = theme === 'dark' ? '#3c4257' : '#a3acb9';
+            if (dioramaState.hoveredNodeId === node.id) {
+              color = '#ffffff'; // Hover pop highlight
+            } else if (act === 2) {
+              color = '#ef4444'; // Red complexity theme in Act II
+            } else if (act >= 3) {
+              // Act III/IV: Transition to final cluster colors
+              color = node.targetColor;
+            }
 
-          const currentAct = dioramaState.act;
-          const progress = dioramaState.progress;
-
-          let camPos, camLook;
-
-          if (currentAct < 4) {
-            const currentWaypoint = waypoints[currentAct];
-            const nextWaypoint = waypoints[currentAct + 1];
-            camPos = lerpVec3(currentWaypoint.position, nextWaypoint.position, progress);
-            camLook = lerpVec3(currentWaypoint.lookAt, nextWaypoint.lookAt, progress);
-          } else {
-            camPos = new Vec3().copy(waypoints[4].position);
-            camLook = new Vec3().copy(waypoints[4].lookAt);
-          }
-
-          // Parallax sway based on target mouse coords (Added additive on top of waypoint transition)
-          dioramaState.mouseX = lerp(dioramaState.mouseX, dioramaState.targetMouseX, 0.05);
-          dioramaState.mouseY = lerp(dioramaState.mouseY, dioramaState.targetMouseY, 0.05);
-
-          let orbitX = 0;
-          let orbitZ = 0;
-          if (currentAct === 4) {
-            const angle = time * 0.00012;
-            orbitX = Math.sin(angle) * 0.6;
-            orbitZ = Math.cos(angle) * 0.6;
-          }
-
-          camera.position.set(
-            camPos.x + dioramaState.mouseX * 0.75 + orbitX,
-            camPos.y,
-            camPos.z + dioramaState.mouseY * 0.75 + orbitZ
-          );
-
-          const lookTargetX = camLook.x - dioramaState.mouseX * 0.35;
-          const lookTargetZ = camLook.z - dioramaState.mouseY * 0.35;
-          camera.lookAt([lookTargetX, camLook.y, lookTargetZ]);
-
-          // Animate grid pulse
-          if (gridMesh) {
-            gridMesh.program.uniforms.uTime.value = time * 0.001;
-          }
-
-          // Animate depot halo ring
-          if (depotHaloMesh) {
-            depotHaloMesh.program.uniforms.uTime.value = time * 0.001;
-          }
-
-          updateScene(time);
-
-          // Billboard glow orientations pointing to camera (Implementation Rule #3)
-          billboardMeshes.forEach((b) => {
-            b.mesh.quaternion.copy(camera.quaternion);
-            b.program.uniforms.uTime.value = time * 0.001;
+            const size = diframeScale(8, node.id);
+            drawDiamond(ctx, pElevated.x, pElevated.y, size, color, time, idx);
           });
 
-          renderer.render({ scene, camera });
+          // Helper to scale hovered nodes (Diagnosis #4)
+          function diframeScale(baseSize, nodeId) {
+            if (dioramaState.hoveredNodeId === nodeId) {
+              return baseSize * 1.6 + Math.sin(time * 0.015) * 1.5;
+            }
+            return baseSize;
+          }
+
+          // 4. Draw Act II Chaos lines
+          if (act === 2) {
+            ctx.save();
+            ctx.lineWidth = 1.5;
+            ctx.strokeStyle = 'rgba(239, 68, 68, 0.45)';
+            ctx.shadowColor = 'rgba(239, 68, 68, 0.45)';
+            ctx.shadowBlur = 6;
+            ctx.beginPath();
+            
+            // Draw crazy interconnected lattice connections that blink
+            const blink = Math.floor(time / 200) % 2 === 0;
+            if (blink && progress > 0.25) {
+              for (let i = 0; i < 22; i++) {
+                const n1 = CUSTOMER_NODES[Math.floor((i * 7.7) % CUSTOMER_NODES.length)];
+                const n2 = CUSTOMER_NODES[Math.floor((i * 12.3) % CUSTOMER_NODES.length)];
+                
+                // Lerp endpoints with progress
+                const startX = (-2.5) + (5.5) * (n1.id - 1) / CUSTOMER_NODES.length;
+                const endX = (-2.5) + (5.5) * (n2.id - 1) / CUSTOMER_NODES.length;
+                
+                const curN1 = toScreen(projectIsometric(
+                  startX + (n1.x - startX) * progress,
+                  elevatedY,
+                  n1.z * progress
+                ));
+                const curN2 = toScreen(projectIsometric(
+                  endX + (n2.x - endX) * progress,
+                  elevatedY,
+                  n2.z * progress
+                ));
+                ctx.moveTo(curN1.x, curN1.y);
+                ctx.lineTo(curN2.x, curN2.y);
+              }
+              ctx.stroke();
+            }
+            ctx.restore();
+          }
+
+          // 5. Draw Routes and Vehicles
+          if (act === 1) {
+            const pStart = toScreen(projectIsometric(0, 0, 0));
+            const pEnd = toScreen(projectIsometric(2.5, 0, 0));
+
+            // Draw simple route line
+            ctx.save();
+            ctx.strokeStyle = '#fb7185';
+            ctx.lineWidth = 2.5;
+            ctx.lineCap = 'round';
+            ctx.shadowColor = '#fb7185';
+            ctx.shadowBlur = 12;
+            
+            ctx.beginPath();
+            ctx.moveTo(pStart.x, pStart.y);
+            const currentX = pStart.x + (pEnd.x - pStart.x) * progress;
+            const currentY = pStart.y + (pEnd.y - pStart.y) * progress;
+            ctx.lineTo(currentX, currentY);
+            ctx.stroke();
+            ctx.restore();
+
+            // Draw single vehicle sliding along it
+            ctx.save();
+            ctx.translate(currentX, currentY);
+            const angle = Math.atan2(pEnd.y - pStart.y, pEnd.x - pStart.x);
+            ctx.rotate(angle);
+
+            ctx.shadowColor = '#fb7185';
+            ctx.shadowBlur = 15;
+            ctx.fillStyle = '#fb7185';
+            
+            ctx.beginPath();
+            ctx.moveTo(12, 0);       // Nose pointing forward
+            ctx.lineTo(-10, -7);     // Wing left
+            ctx.lineTo(-6, 0);       // Back center inner
+            ctx.lineTo(-10, 7);      // Wing right
+            ctx.closePath();
+            ctx.fill();
+
+            // Energy Core sphere in center
+            ctx.beginPath();
+            ctx.arc(-2, 0, 3.5, 0, Math.PI * 2);
+            ctx.fillStyle = '#ffffff';
+            ctx.shadowColor = '#ffffff';
+            ctx.shadowBlur = 8;
+            ctx.fill();
+
+            ctx.restore();
+
+            // Glowing energy dashes running behind vehicle
+            ctx.save();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 3.5;
+            ctx.shadowColor = '#fb7185';
+            ctx.shadowBlur = 10;
+            ctx.beginPath();
+
+            for (let k = 1; k <= 3; k++) {
+              const trailProgress = Math.max(0.0, progress - k * 0.035);
+              const tx = pStart.x + (pEnd.x - pStart.x) * trailProgress;
+              const ty = pStart.y + (pEnd.y - pStart.y) * trailProgress;
+              if (k === 1) ctx.moveTo(tx, ty);
+              else ctx.lineTo(tx, ty);
+            }
+            ctx.stroke();
+            ctx.restore();
+          } else if (act >= 3) {
+            ROUTES.forEach((route, rIdx) => {
+              // Construct screen points list along the route path
+              const pathPoints = route.nodes.map(n => {
+                const isDepot = (n.x === 0 && n.z === 0);
+                const ny = isDepot ? 0 : elevatedY;
+                return toScreen(projectIsometric(n.x, ny, n.z));
+              });
+
+              // Draw route pipeline using smooth curves
+              ctx.save();
+              ctx.strokeStyle = route.color;
+              ctx.lineWidth = 2.5;
+              ctx.lineCap = 'round';
+              ctx.lineJoin = 'round';
+
+              // Neon glow (Graphics Upgrade)
+              ctx.shadowColor = route.color;
+              ctx.shadowBlur = 12;
+
+              // Lerp segment opacity from Red/Maroon to final color in Act III (Diagnosis #5)
+              if (act === 3) {
+                ctx.globalAlpha = Math.min(1.0, progress * 1.5);
+                const r = parseInt(route.color.substring(1,3), 16);
+                const g = parseInt(route.color.substring(3,5), 16);
+                const b = parseInt(route.color.substring(5,7), 16);
+                
+                // Interpolate colors: Red (239, 68, 68) -> target color
+                const curR = Math.round(239 + (r - 239) * Math.min(1.0, progress * 2.0));
+                const curG = Math.round(68 + (g - 68) * Math.min(1.0, progress * 2.0));
+                const curB = Math.round(68 + (b - 68) * Math.min(1.0, progress * 2.0));
+                ctx.strokeStyle = `rgb(${curR}, ${curG}, ${curB})`;
+                ctx.shadowColor = ctx.strokeStyle;
+              }
+
+              ctx.beginPath();
+              ctx.moveTo(pathPoints[0].x, pathPoints[0].y);
+              
+              // Draw curved Bezier route paths (Diagnosis #2 / Graphics Upgrade)
+              for (let i = 0; i < pathPoints.length - 1; i++) {
+                const p0 = pathPoints[i];
+                const p2 = pathPoints[i + 1];
+                const p1 = {
+                  x: (p0.x + p2.x) / 2 + (p2.y - p0.y) * 0.15,
+                  y: (p0.y + p2.y) / 2 - (p2.x - p0.x) * 0.15
+                };
+                
+                // Draw progress line in Act III
+                if (act === 3) {
+                  const segStart = i / (pathPoints.length - 1);
+                  const segEnd = (i + 1) / (pathPoints.length - 1);
+                  if (progress >= segEnd) {
+                    ctx.quadraticCurveTo(p1.x, p1.y, p2.x, p2.y);
+                  } else if (progress > segStart) {
+                    const segP = (progress - segStart) / (segEnd - segStart);
+                    const subPoints = [];
+                    for (let t = 0; t <= 10; t++) {
+                      subPoints.push(getBezierPoint(p0, p1, p2, (t / 10) * segP));
+                    }
+                    subPoints.forEach((pt, ptIdx) => {
+                      if (ptIdx > 0) ctx.lineTo(pt.x, pt.y);
+                    });
+                  }
+                } else {
+                  ctx.quadraticCurveTo(p1.x, p1.y, p2.x, p2.y);
+                }
+              }
+              ctx.stroke();
+              ctx.restore();
+
+              // Draw vehicles sliding along routes
+              let vProgress = 0;
+              let isVisible = false;
+
+              if (act === 3) {
+                // Fade-in vehicle after route compiles
+                vProgress = progress;
+                isVisible = progress > 0.4;
+              } else {
+                const speed = 0.00015 * (1.2 + rIdx * 0.22);
+                vProgress = (time * speed) % 1.0;
+                isVisible = true;
+              }
+
+              if (isVisible) {
+                const vPos = getBezierRoutePoint(pathPoints, vProgress);
+                
+                // Direction calculation
+                const vPosNext = getBezierRoutePoint(pathPoints, Math.min(1.0, vProgress + 0.012));
+                const angle = Math.atan2(vPosNext.y - vPos.y, vPosNext.x - vPos.x);
+
+                // Draw delta arrowhead vehicle (Graphics Upgrade)
+                ctx.save();
+                ctx.translate(vPos.x, vPos.y);
+                ctx.rotate(angle);
+
+                ctx.shadowColor = route.color;
+                ctx.shadowBlur = 15;
+                ctx.fillStyle = route.color;
+                
+                ctx.beginPath();
+                ctx.moveTo(12, 0);       // Nose pointing forward
+                ctx.lineTo(-10, -7);     // Wing left
+                ctx.lineTo(-6, 0);       // Back center inner
+                ctx.lineTo(-10, 7);      // Wing right
+                ctx.closePath();
+                ctx.fill();
+
+                // Energy Core sphere in center
+                ctx.beginPath();
+                ctx.arc(-2, 0, 3.5, 0, Math.PI * 2);
+                ctx.fillStyle = '#ffffff';
+                ctx.shadowColor = '#ffffff';
+                ctx.shadowBlur = 8;
+                ctx.fill();
+
+                ctx.restore();
+
+                // Glowing energy dashes running behind vehicle (Graphics Upgrade)
+                ctx.save();
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 3.5;
+                ctx.shadowColor = route.color;
+                ctx.shadowBlur = 10;
+                ctx.beginPath();
+
+                for (let k = 1; k <= 3; k++) {
+                  const trailP = (vProgress - k * 0.035 + 1.0) % 1.0;
+                  const trailPos = getBezierRoutePoint(pathPoints, trailP);
+                  if (k === 1) ctx.moveTo(trailPos.x, trailPos.y);
+                  else ctx.lineTo(trailPos.x, trailPos.y);
+                }
+                ctx.stroke();
+                ctx.restore();
+              }
+            });
+          }
         }
 
+        // ===================================================================
         // Dynamic simulated solver logs
+        // ===================================================================
         const CONSOLE_LOGS = {
           1: [
             "&gt; Initializing network nodes...",
@@ -2276,7 +1566,6 @@
         // ===================================================================
         // GSAP ScrollTrigger Integration
         // ===================================================================
-
         let showcaseST = null;
 
         function setupScrollAnimations() {
@@ -2288,39 +1577,29 @@
 
           gsap.registerPlugin(ScrollTrigger);
 
-          // Kill existing ScrollTrigger if we are resizing or re-initializing
           if (showcaseST) {
             showcaseST.kill();
             showcaseST = null;
           }
 
-          // Only run scroll timeline on desktop
           if (window.innerWidth < 1024) {
             setupFallbackAnimation();
             return;
           }
 
           initCanvas();
-          renderCanvas(1, 0.0); // Call initial render immediately on load
+          renderCanvas(1, 0.0);
 
-          // Create ScrollTrigger instance for pinning and scrubbing
           showcaseST = ScrollTrigger.create({
             trigger: '.showcase-section',
             start: 'top top',
             end: '+=1500',
             pin: true,
-            scrub: 1.5,
+            scrub: 1,
             id: 'showcase-scroll',
-            snap: {
-              snapTo: 1 / 3,
-              delay: 0.1,
-              duration: { min: 0.3, max: 0.8 },
-              ease: 'power2.inOut',
-            },
             onUpdate: (self) => {
               const progress = self.progress;
 
-              // Divide timeline into 4 Acts
               let act = 1;
               let actProgress = 0;
 
@@ -2338,16 +1617,12 @@
                 actProgress = (progress - 0.75) / 0.25;
               }
 
-              // Trigger Act Card active toggle
               toggleActiveCardAndTab(act);
-
-              // Render canvas updates
               renderCanvas(act, actProgress);
             },
           });
         }
 
-        // Toggle active CSS class for text cards and tab buttons
         function toggleActiveCardAndTab(activeAct) {
           for (let act = 1; act <= 4; act++) {
             const card = document.getElementById(`card-act${act}`);
@@ -2363,21 +1638,19 @@
           }
         }
 
-        // Fallback animation: continuous loop for mobile/tablets or if GSAP fails
         function setupFallbackAnimation() {
           if (showcaseST) {
             showcaseST.kill();
             showcaseST = null;
           }
           initCanvas();
-          toggleActiveCardAndTab(1); // Default to Act I on mobile until clicked
+          toggleActiveCardAndTab(1);
           renderCanvas(1, 1.0);
         }
 
         // ===================================================================
         // Localization Settings
         // ===================================================================
-
         function getStoredLang() {
           const v = localStorage.getItem(STORAGE_LANG);
           if (v === 'en' || v === 'vn') return v;
@@ -2405,7 +1678,6 @@
         // ===================================================================
         // Theme Switching Settings
         // ===================================================================
-
         function getStoredTheme() {
           const v = localStorage.getItem(STORAGE_THEME);
           if (v === 'light' || v === 'dark') return v;
@@ -2419,7 +1691,6 @@
           const meta = document.querySelector('meta[name="theme-color"]');
           if (meta) meta.setAttribute('content', theme === 'dark' ? '#0d0d10' : '#f8f8f6');
 
-          // Update icons visibility
           const sunIcon = document.querySelector('.sun-icon');
           const moonIcon = document.querySelector('.moon-icon');
           if (sunIcon && moonIcon) {
@@ -2432,11 +1703,9 @@
             }
           }
 
-          // Update cached theme variables for animation loop
-          updateCachedThemeVariables();
+          dioramaState.theme = theme;
         }
 
-        // Setup control listeners
         function setupControls() {
           const langBtn = document.getElementById('lang-toggle');
           const themeBtn = document.getElementById('theme-toggle');
@@ -2455,7 +1724,6 @@
           themeBtn?.addEventListener('click', (e) => {
             const nextTheme = currentTheme === 'light' ? 'dark' : 'light';
 
-            // Circular wipe theme transitions using browser View Transitions API (Implementation Rule #5)
             if (document.startViewTransition) {
               const x = e.clientX;
               const y = e.clientY;
@@ -2473,7 +1741,6 @@
           });
         }
 
-        // Setup Mobile hamburger menu
         function setupMobileMenu() {
           const btn = document.getElementById('mobile-menu-btn');
           const menu = document.getElementById('mobile-menu');
@@ -2496,7 +1763,6 @@
           });
         }
 
-        // Highlight navigation links on scroll (Scrollspy)
         function setupScrollSpy() {
           const navLinks = Array.from(document.querySelectorAll('.nav-links a'));
           const sections = navLinks
@@ -2526,7 +1792,6 @@
           sections.forEach(({ target }) => observer.observe(target));
         }
 
-        // Sticky Navbar shadow on scroll
         function setupNavbarScroll() {
           const nav = document.querySelector('.site-nav');
           if (!nav) return;
@@ -2539,7 +1804,6 @@
           );
         }
 
-        // Setup interactive tabs for the WebGL diorama acts
         function setupShowcaseTabs() {
           const tabs = document.querySelectorAll('.showcase-tab-btn');
           tabs.forEach((tab) => {
@@ -2547,7 +1811,6 @@
               const act = parseInt(tab.getAttribute('data-act'), 10);
               
               if (showcaseST) {
-                // ScrollTrigger progress maps from 0.0 to 1.0
                 const progress = (act - 1) / 3;
                 const scrollPos = showcaseST.start + progress * (showcaseST.end - showcaseST.start);
                 
@@ -2556,7 +1819,6 @@
                   behavior: 'smooth'
                 });
               } else {
-                // Fallback / Mobile
                 toggleActiveCardAndTab(act);
                 renderCanvas(act, 1.0);
               }
@@ -2564,7 +1826,6 @@
           });
         }
 
-        // Setup developer CLI tab switcher and clipboard copying
         function setupCLITabs() {
           const tabs = document.querySelectorAll('.cli-tab-btn');
           const panes = document.querySelectorAll('.cli-pane');
@@ -2584,7 +1845,6 @@
             });
           });
 
-          // Helper for copy tooltip trigger
           function showTooltip(btn) {
             const tooltip = btn.querySelector('.copy-success-tooltip');
             const btnText = btn.querySelector('.btn-copy-text');
@@ -2598,7 +1858,6 @@
             }
           }
 
-          // Fallback legacy copying
           function fallbackCopyText(text, btn) {
             const textArea = document.createElement("textarea");
             textArea.value = text;
@@ -2617,7 +1876,6 @@
             document.body.removeChild(textArea);
           }
 
-          // Setup copy code buttons
           const copyButtons = document.querySelectorAll('.btn-copy-code');
           copyButtons.forEach((btn) => {
             btn.addEventListener('click', () => {
@@ -2643,8 +1901,6 @@
           });
         }
 
-        // Setup interactive cursor glow spotlight for Bento cards
-        // Setup hover-linking customer list panel (Implementation Rule #4)
         function setupCustomerListPanel() {
           const panel = document.getElementById('customer-list-panel');
           const body = document.getElementById('customer-list-body');
@@ -2654,7 +1910,7 @@
           CUSTOMER_NODES.forEach((node) => {
             html += `
               <div class="customer-row" data-id="${node.id}">
-                <span class="customer-row-dot" style="color: ${node.targetColor};"></span>
+                <span class="customer-row-dot" style="background-color: ${node.targetColor}; color: ${node.targetColor};"></span>
                 <span class="customer-row-label">Address #${100 + node.id} (Cluster ${node.cluster})</span>
               </div>
             `;
@@ -2694,14 +1950,12 @@
           setupShowcaseTabs();
           setupCLITabs();
           setupBentoGlow();
-          setupScrollAnimations();
         });
 
         window.addEventListener('load', () => {
-          updateCachedThemeVariables();
+          setupScrollAnimations();
         });
 
-        // Handle resizing (re-initialize animations on desktop <-> mobile shifts)
         let resizeTimeout = null;
         window.addEventListener('resize', () => {
           if (resizeTimeout) clearTimeout(resizeTimeout);

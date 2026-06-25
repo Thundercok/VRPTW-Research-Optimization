@@ -9,6 +9,7 @@ from numba import njit
 from .config import MODES, Config
 from .core import Inst, Plan, _invalidate, _route_duration_no_return
 from .heuristics import _best_insert_position, _insert_customer
+from .penalty import PenaltyManager
 
 
 def op_random(plan: Plan, size: int) -> tuple[Plan, list[int]]:
@@ -804,6 +805,14 @@ def accept_with_nv_ceiling(
     if not cand.feasible or cand.nv > allowed_nv:
         return False
     return accept(cur, cand, temp, allow_nv_increase=allow_nv_increase)
+
+
+def accept_penalized(cur: Plan, cand: Plan, temp: float, penalty_manager: PenaltyManager) -> bool:
+    cur_p = penalty_manager.penalized_cost(cur)
+    cand_p = penalty_manager.penalized_cost(cand)
+    if cand_p < cur_p:
+        return True
+    return random.random() < math.exp(-(cand_p - cur_p) / max(temp, 1e-6))
 
 
 def destroy_size(it: int, n_iters: int, cfg: Config, n_customers: int, scale: float = 1.0) -> int:

@@ -165,28 +165,19 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Fullscreen background WebGL diorama container */
 .diorama-bg-container {
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
-  min-height: 520px;
-  z-index: 1;
-  pointer-events: none; /* Let clicks pass through to content */
+  width: 100vw;
+  height: 100vh;
+  z-index: 0;
+  pointer-events: none;
   background-color: var(--canvas-bg);
   background-image: 
     radial-gradient(circle at 15% 25%, var(--glow-left), transparent 45%),
     radial-gradient(circle at 85% 75%, var(--glow-right), transparent 45%);
   transition: background-color var(--transition-medium);
   overflow: hidden;
-}
-
-@media (min-width: 1024px) {
-  .diorama-bg-container {
-    position: fixed;
-    width: 100vw;
-    height: 100vh;
-  }
 }
 
 #animation-canvas {
@@ -196,16 +187,6 @@ h1, h2, h3, h4, h5, h6 {
   width: 100%;
   height: 100%;
   outline: none;
-}
-
-.canvas-grid-bg {
-  position: absolute;
-  inset: 0;
-  background-size: 28px 28px;
-  background-image: radial-gradient(circle, var(--canvas-grid) 1px, transparent 1px);
-  opacity: 1;
-  pointer-events: none;
-  z-index: 2;
 }
 
 /* ===================================================================
@@ -465,7 +446,6 @@ h1, h2, h3, h4, h5, h6 {
    =================================================================== */
 #main {
   position: relative;
-  width: 100%;
 }
 
 /* ===================================================================
@@ -545,9 +525,6 @@ h1, h2, h3, h4, h5, h6 {
   margin-bottom: 48px;
 }
 
-/* ===================================================================
-   Split-Screen Diorama Showcase Section
-   =================================================================== */
 /* ===================================================================
    Fullscreen Diorama Showcase Section
    =================================================================== */
@@ -808,9 +785,7 @@ h1, h2, h3, h4, h5, h6 {
   bottom: 40px;
   right: 40px;
   width: 320px;
-  background-color: rgba(10, 11, 18, 0.85); /* Solid fallback */
   background-color: var(--console-bg);
-  border: 1px solid rgba(255, 255, 255, 0.08); /* Solid fallback */
   border: 1px solid var(--console-border);
   border-radius: var(--radius-md);
   padding: 16px;
@@ -820,7 +795,6 @@ h1, h2, h3, h4, h5, h6 {
   z-index: 150;
   font-family: var(--font-mono);
   font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.85); /* Solid fallback */
   color: var(--console-text);
   display: flex;
   flex-direction: column;
@@ -871,9 +845,7 @@ h1, h2, h3, h4, h5, h6 {
   left: 40px;
   width: 220px;
   max-height: 320px;
-  background-color: rgba(10, 11, 18, 0.85); /* Solid fallback */
   background-color: var(--console-bg);
-  border: 1px solid rgba(255, 255, 255, 0.08); /* Solid fallback */
   border: 1px solid var(--console-border);
   border-radius: var(--radius-md);
   padding: 16px;
@@ -1598,4 +1570,27 @@ html {
   ::view-transition-new(theme-wipe) {
     animation: none;
   }
+}
+
+/* ===================================================================
+   Stacking Context Helper Rules
+   Ensures UI elements are drawn on top of the diorama background
+   =================================================================== */
+.showcase-tabs-floating,
+.showcase-tab-bar,
+.showcase-tabs,
+.showcase-overlay-cards,
+.story-card-wrapper,
+.hud-stats-panel,
+.hud-console-panel,
+.customer-list-panel {
+  z-index: 200 !important;
+}
+
+.diorama-bg-container {
+  z-index: 0 !important;
+}
+
+.pin-spacer {
+  z-index: 2 !important;
 }

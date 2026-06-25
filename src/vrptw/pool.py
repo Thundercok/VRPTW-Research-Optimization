@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 from dataclasses import dataclass
 
 import numpy as np
@@ -46,7 +47,12 @@ def _is_exact_cover(plan: Plan) -> bool:
 class RoutePool:
     def __init__(self, inst: Inst, cfg: Config):
         self.inst = inst
-        self.cfg = cfg
+        # Scale pool limits with instance size
+        n = inst.n
+        self.cfg = copy.copy(cfg)
+        self.cfg.route_pool_limit = min(2000, 600 + 4 * n)
+        self.cfg.route_pool_max_per_customer = min(60, 28 + n // 10)
+        self.cfg.sp_time_limit = min(30.0, 4.0 + 0.05 * n)
         self._routes: dict[tuple[int, ...], RouteRecord] = {}
         self._cover_to_key: dict[tuple[int, ...], tuple[int, ...]] = {}
 
