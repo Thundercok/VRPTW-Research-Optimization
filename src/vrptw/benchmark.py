@@ -5,7 +5,7 @@ import os
 import random
 import time
 from collections.abc import Iterable
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, as_completed
 
 import numpy as np
 import pandas as pd
@@ -397,7 +397,14 @@ def run_benchmark(
         print(f"Parallelizing benchmark at the INSTANCE level across {workers_count} worker(s)...")
         ctx = mp.get_context("spawn")
         with ProcessPoolExecutor(max_workers=workers_count, mp_context=ctx) as ex:
-            for inst_rows in ex.map(_benchmark_instance_worker, worker_args):
+            futures = {ex.submit(_benchmark_instance_worker, arg): arg[0] for arg in worker_args}
+            for future in as_completed(futures):
+                try:
+                    inst_rows = future.result()
+                except Exception as exc:
+                    inst_name = futures[future].name
+                    print(f"    [!!! CRITICAL ERROR !!!] Instance {inst_name} failed with: {exc}", flush=True)
+                    raise exc
                 for row in inst_rows:
                     rows.append(row)
                     completed.add((row["Instance"], row["Algorithm"]))
@@ -406,6 +413,8 @@ def run_benchmark(
                 elapsed_h = (time.time() - wall_start) / 3600
                 if elapsed_h >= cfg.max_wall_hours:
                     print(f"\n⚠️  Wall-clock limit {cfg.max_wall_hours:.1f}h reached — stopping early.")
+                    for f in futures:
+                        f.cancel()
                     pd.DataFrame(rows).to_csv(ckpt_path, index=False)
                     return normalize_algorithm_frame(pd.DataFrame(rows))
 

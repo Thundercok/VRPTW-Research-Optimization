@@ -88,3 +88,54 @@ def eliminate_route_infeasible(plan, penalty_manager: PenaltyManager):
             new_plan = best_plan
             
     return new_plan
+
+
+def eliminate_two_routes_infeasible(plan, penalty_manager: PenaltyManager):
+    """
+    Eliminates the two smallest routes simultaneously and redistributes
+    all their customers into remaining routes via penalized insertion.
+    More powerful than single-route eliminate when NV is near BKS.
+    """
+    from .core import Plan
+    inst = plan.inst
+    routes = [r[:] for r in plan.routes]
+    if len(routes) <= 2:
+        return plan.copy()
+    
+    # Find two smallest routes by customer count
+    sorted_idx = sorted(range(len(routes)), key=lambda i: len(routes[i]))
+    idx1, idx2 = sorted_idx[0], sorted_idx[1]
+    
+    # Remove both (higher index first to avoid index shift)
+    removed_customers = routes[max(idx1, idx2)] + routes[min(idx1, idx2)]
+    for i in sorted([idx1, idx2], reverse=True):
+        routes.pop(i)
+        
+    if not routes:
+        return plan.copy()
+        
+    # Create a plan with the remaining routes
+    new_plan = Plan(routes, inst, plan.algo)
+    
+    # Redistribute all removed customers via penalized insertion
+    for cust in removed_customers:
+        best_plan = None
+        best_cost = float("inf")
+        
+        # Try inserting cust at every position of every route
+        for r_idx in range(len(new_plan.routes)):
+            for pos in range(len(new_plan.routes[r_idx]) + 1):
+                temp_routes = [r[:] for r in new_plan.routes]
+                temp_routes[r_idx].insert(pos, cust)
+                temp_plan = Plan(temp_routes, inst, plan.algo)
+                
+                cost = penalty_manager.penalized_cost(temp_plan)
+                if cost < best_cost:
+                    best_cost = cost
+                    best_plan = temp_plan
+                    
+        if best_plan is not None:
+            new_plan = best_plan
+            
+    return new_plan
+

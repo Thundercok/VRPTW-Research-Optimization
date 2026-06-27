@@ -54,7 +54,7 @@ from .operators import (
     op_neural_shaw,
     op_neural_worst,
 )
-from .penalty import PenaltyManager, eliminate_route_infeasible
+from .penalty import PenaltyManager, eliminate_route_infeasible, eliminate_two_routes_infeasible
 from .pool import RoutePool, recombine_with_route_pool
 from .rl import (
     DEVICE,
@@ -920,6 +920,8 @@ class HybridDDQNSolver:
         if cfg.penalty_search_enabled:
             penalty_manager = PenaltyManager(inst)
             cur = eliminate_route_infeasible(start, penalty_manager)
+            if cur.nv > target_nv and cur.nv >= 3:
+                cur = eliminate_two_routes_infeasible(cur, penalty_manager)
         else:
             penalty_manager = None
             cur = start.copy()
@@ -954,6 +956,8 @@ class HybridDDQNSolver:
 
                 if cfg.penalty_search_enabled:
                     cur = eliminate_route_infeasible(base_plan, penalty_manager)
+                    if cur.nv > target_nv and cur.nv >= 3:
+                        cur = eliminate_two_routes_infeasible(cur, penalty_manager)
                 else:
                     cur = base_plan.copy()
                 bandit = ThompsonBandit(N_D, N_R)  # fresh bandit for new topology

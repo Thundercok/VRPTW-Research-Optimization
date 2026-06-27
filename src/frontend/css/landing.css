@@ -12,11 +12,23 @@
   --text-muted: #8792a2;
   
   /* Accents */
-  --gold: #635bff;                 /* Stripe Indigo */
-  --gold-glow: rgba(99, 91, 255, 0.15);
-  --orange: #00d4ff;               /* Stripe Cyan */
-  --rose: #ff5e00;                 /* Stripe Orange */
+  --indigo: #635bff;                 /* Stripe Indigo */
+  --indigo-glow: rgba(99, 91, 255, 0.15);
+  --cyan: #00d4ff;               /* Stripe Cyan */
+  --orange: #ff5e00;                 /* Stripe Orange */
   --success: #00c58d;              /* Stripe Teal */
+  
+  /* Alias pointers for backward compatibility */
+  --gold: var(--indigo);
+  --gold-glow: var(--indigo-glow);
+  --rose: var(--orange);
+  
+  /* CLI Console Themes */
+  --cli-bg: #f8fafc;
+  --cli-header-bg: #f1f5f9;
+  --cli-border: rgba(15, 23, 42, 0.08);
+  --cli-text: #0284c7;
+  --cli-cmd-text: #0f172a;
   
   /* Canvas Light Mode Colors */
   --canvas-bg: #f6f9fc;
@@ -64,11 +76,22 @@
   --text-secondary: #adbdcc;
   --text-muted: #6b7c93;
   
-  --gold: #7a73ff;                 /* Brighter Indigo for dark mode visibility */
-  --gold-glow: rgba(122, 115, 255, 0.2);
-  --orange: #00d4ff;
-  --rose: #ff6b00;
+  --indigo: #7a73ff;                 /* Brighter Indigo for dark mode visibility */
+  --indigo-glow: rgba(122, 115, 255, 0.2);
+  --cyan: #00d4ff;
+  --orange: #ff6b00;
   --success: #00e6a0;
+  
+  --gold: var(--indigo);
+  --gold-glow: var(--indigo-glow);
+  --rose: var(--orange);
+  
+  /* CLI Console Themes */
+  --cli-bg: #0c0d12;
+  --cli-header-bg: #14161f;
+  --cli-border: rgba(255, 255, 255, 0.08);
+  --cli-text: #38bdf8;
+  --cli-cmd-text: #ededeb;
   
   /* Canvas Dark Mode Colors */
   --canvas-bg: #070913;
@@ -538,6 +561,14 @@ h1, h2, h3, h4, h5, h6 {
   align-items: center;
 }
 
+/* Give the inner container a positioning context for all absolute
+   child panels (HUD, console, customer list, overlay cards) */
+.showcase-container {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+}
+
 /* Horizontal pill tabs floating at the top of the viewport */
 .showcase-tabs-floating {
   position: absolute;
@@ -605,10 +636,11 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Left-floating storytelling card overlays */
 .showcase-overlay-cards {
-  position: relative;
+  position: absolute;
+  bottom: 60px;
+  left: 40px;
   z-index: 100;
-  width: 440px;
-  margin-top: 60px;
+  width: 380px;
   pointer-events: auto;
 }
 
@@ -1182,21 +1214,23 @@ h1, h2, h3, h4, h5, h6 {
 .cli-display-wrapper {
   max-width: 800px;
   margin: 0 auto;
-  background-color: #0c0d12;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background-color: var(--cli-bg);
+  border: 1px solid var(--cli-border);
   border-radius: var(--radius-md);
   overflow: hidden;
   box-shadow: var(--shadow-lg);
+  transition: background-color var(--transition-medium), border-color var(--transition-medium);
 }
 
 .cli-header-bar {
-  background-color: #14161f;
+  background-color: var(--cli-header-bg);
   height: 48px;
   padding: 0 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--cli-border);
+  transition: background-color var(--transition-medium), border-color var(--transition-medium);
 }
 
 .cli-dots {
@@ -1262,7 +1296,7 @@ h1, h2, h3, h4, h5, h6 {
 .cli-code-block {
   font-family: var(--font-mono);
   font-size: 0.82rem;
-  color: #38bdf8;
+  color: var(--cli-text);
   line-height: 1.5;
 }
 
@@ -1271,7 +1305,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .cli-command {
-  color: #ededeb;
+  color: var(--cli-cmd-text);
 }
 
 .btn-copy-code {
@@ -1466,6 +1500,38 @@ h1, h2, h3, h4, h5, h6 {
     display: none;
   }
   
+  /* Stack panels vertically on tablet/mobile screens */
+  .showcase-overlay-cards {
+    position: relative;
+    bottom: auto;
+    left: auto;
+    width: 100%;
+    margin-top: 20px;
+  }
+  
+  .hud-stats-panel {
+    position: relative;
+    top: auto;
+    right: auto;
+    width: 100%;
+    margin-top: 16px;
+  }
+
+  .hud-console-panel {
+    position: relative;
+    bottom: auto;
+    right: auto;
+    width: 100%;
+    margin-top: 16px;
+  }
+
+  .showcase-container {
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    padding: 0 16px;
+  }
+  
   .bento-grid {
     grid-template-columns: repeat(2, 1fr);
     grid-template-rows: auto;
@@ -1484,6 +1550,25 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 @media (max-width: 768px) {
+  .showcase-tabs-floating {
+    width: 100%;
+    padding: 0 16px;
+    top: 80px;
+  }
+  .showcase-tabs {
+    overflow-x: auto;
+    width: 100%;
+    white-space: nowrap;
+    justify-content: flex-start;
+    border-radius: var(--radius-md);
+    scrollbar-width: none;
+  }
+  .showcase-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .showcase-tab-btn {
+    flex: 0 0 auto;
+  }
   .site-nav {
     width: calc(100% - 32px);
     border-radius: var(--radius-pill);
@@ -1583,6 +1668,25 @@ html {
 .hud-console-panel,
 .customer-list-panel {
   z-index: 200 !important;
+}
+
+/* Prevent vertical overlap on short screens */
+@media (max-height: 800px) and (min-width: 1024px) {
+  .customer-list-panel {
+    max-height: 200px;
+  }
+  .customer-list-body {
+    max-height: 130px;
+  }
+  .showcase-overlay-cards {
+    bottom: 20px;
+  }
+  .story-card-wrapper {
+    min-height: 180px;
+  }
+  .hud-console-panel {
+    bottom: 20px;
+  }
 }
 
 .diorama-bg-container {

@@ -187,6 +187,9 @@ def _milp_recombine(
 ) -> Plan | None:
     if not MILP_OK or not route_records:
         return None
+    _MILP_MAX_COLS = 400  # cap columns to prevent SciPy O(N²) extraction hang
+    if len(route_records) > _MILP_MAX_COLS:
+        route_records = route_records[:_MILP_MAX_COLS]
     n_routes = len(route_records)
     from scipy.sparse import csc_matrix
 
