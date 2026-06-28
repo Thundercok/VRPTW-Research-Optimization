@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#f8f8f6" />
+    <meta name="theme-color" content="#070913" />
     <meta
       name="description"
       content="NAMI combines reinforcement learning and local search to solve Vehicle Routing Problems with Time Windows in milliseconds."
@@ -50,7 +50,7 @@
         </a>
 
         <div class="nav-links" aria-label="Page sections">
-          <a href="#showcase" data-i18n="nav.demo">Interactive Demo</a>
+          <a href="#showcase" data-i18n="nav.demo">Showcase</a>
           <a href="#features" data-i18n="nav.features">Features</a>
           <a href="#benchmarks" data-i18n="nav.results">Benchmarks</a>
           <a href="#local-run" data-i18n="nav.getstarted">Setup</a>
@@ -112,7 +112,7 @@
 
       <div class="mobile-menu" id="mobile-menu" hidden>
         <div class="mobile-menu-container">
-          <a href="#showcase" data-i18n="nav.demo">Interactive Demo</a>
+          <a href="#showcase" data-i18n="nav.demo">Showcase</a>
           <a href="#features" data-i18n="nav.features">Features</a>
           <a href="#benchmarks" data-i18n="nav.results">Benchmarks</a>
           <a href="#local-run" data-i18n="nav.getstarted">Setup</a>
@@ -122,163 +122,141 @@
     </nav>
 
     <main id="main">
-      <!-- Fullscreen fixed background 3D WebGL diorama container -->
-      <div class="diorama-bg-container">
-        <canvas id="animation-canvas"></canvas>
-      </div>
-
-      <!-- Hero Header Section -->
+      <!-- ========== HERO ========== -->
       <section class="hero-section">
-        <div class="container hero-container">
-          <div class="hero-badge">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right: 4px;">
-              <circle cx="12" cy="12" r="10" />
-              <path d="M12 6v6l4 2" />
-            </svg>
-            <span data-i18n="hero.badge">Solomon Benchmark Optimizer</span>
-          </div>
-          <h1 class="hero-title">
-            <span data-i18n="hero.title.nami">NAMI:</span>
-            <span data-i18n="hero.title.desc">Plateau-Aware Deep RL Routing Engine</span>
-          </h1>
-          <p class="hero-subtitle" data-i18n="hero.subtitle">
-            Combining Deep Reinforcement Learning with Adaptive Large Neighborhood Search to solve Vehicle Routing Problems with Time Windows in milliseconds.
-          </p>
-          <div class="hero-actions">
-            <a class="btn btn-primary" href="app.html" data-i18n="hero.cta.start">Launch Solver</a>
-            <a class="btn btn-secondary" href="#showcase" data-i18n="hero.cta.demo">Explore Demo</a>
-          </div>
+        <div class="hero-bg">
+          <div class="hero-orb hero-orb--1"></div>
+          <div class="hero-orb hero-orb--2"></div>
+          <div class="hero-orb hero-orb--3"></div>
         </div>
-      </section>
-
-      <!-- Diorama Interactive Showcase -->
-      <section class="showcase-section" id="showcase">
-        <div class="container showcase-container">
-          <!-- Floating horizontal pill showcase navigation bar -->
-          <div class="showcase-tabs-floating">
-            <div class="showcase-tabs" role="tablist" aria-label="Interactive demo acts">
-              <button class="showcase-tab-btn active" role="tab" aria-selected="true" aria-controls="card-act1" data-act="1">
-                <span class="tab-badge-num">01</span>
-                <span class="tab-label-text" data-i18n="tab1.label">The Objective</span>
-              </button>
-              <button class="showcase-tab-btn" role="tab" aria-selected="false" aria-controls="card-act2" data-act="2">
-                <span class="tab-badge-num">02</span>
-                <span class="tab-label-text" data-i18n="tab2.label">The Chaos</span>
-              </button>
-              <button class="showcase-tab-btn" role="tab" aria-selected="false" aria-controls="card-act3" data-act="3">
-                <span class="tab-badge-num">03</span>
-                <span class="tab-label-text" data-i18n="tab3.label">Neural Operator</span>
-              </button>
-              <button class="showcase-tab-btn" role="tab" aria-selected="false" aria-controls="card-act4" data-act="4">
-                <span class="tab-badge-num">04</span>
-                <span class="tab-label-text" data-i18n="tab4.label">Optimal Dispatch</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- Left Column: Story card overlays -->
-          <div class="showcase-overlay-cards">
-            <!-- Description Cards Wrapper -->
-            <div class="story-card-wrapper">
-              <!-- Act I -->
-              <div class="story-card-item active" id="card-act1" role="tabpanel">
-                <div class="act-badge" data-i18n="act1.badge">Act I: The Objective</div>
-                <div class="story-title" data-i18n="act1.title">What's the fastest way to deliver to 100 addresses?</div>
-                <div class="story-desc" data-i18n="act1.desc">
-                  A single vehicle on a simple route is easy. But scaling delivery operations exposes exponential complexity.
-                </div>
-              </div>
-
-              <!-- Act II -->
-              <div class="story-card-item" id="card-act2" role="tabpanel">
-                <div class="act-badge error" data-i18n="act2.badge">Act II: The Chaos</div>
-                <div class="story-title" data-i18n="act2.title">A single route quickly shatters.</div>
-                <div class="story-desc" data-i18n="act2.desc">
-                  Every address introduces narrow time windows, load capacity limits, service times, and vehicle constraints. Classical heuristics easily stagnate in sub-optimal local basins.
-                </div>
-              </div>
-
-              <!-- Act III -->
-              <div class="story-card-item" id="card-act3" role="tabpanel">
-                <div class="act-badge success" data-i18n="act3.badge">Act III: Neural Optimization</div>
-                <div class="story-title" data-i18n="act3.title">NAMI's neural controller takes over.</div>
-                <div class="story-desc" data-i18n="act3.desc">
-                  A Double Deep Q-Network (DDQN) agent analyzes the search trajectory in real-time, intelligently selecting destroy-and-repair ALNS operators to break stagnation patterns.
-                </div>
-              </div>
-
-              <!-- Act IV -->
-              <div class="story-card-item" id="card-act4" role="tabpanel">
-                <div class="act-badge info" data-i18n="act4.badge">Act IV: The Outcome</div>
-                <div class="story-title" data-i18n="act4.title">Optimal dispatch. Delivered.</div>
-                <div class="story-desc" data-i18n="act4.desc">
-                  Feasible, balanced paths are generated in milliseconds. Dispatchers receive clean, conflict-free delivery plans verified against all Solomon criteria.
-                </div>
-                <div class="story-cta-group">
-                  <a class="btn btn-primary" href="app.html" data-i18n="cta.demo">Open Planner App</a>
-                  <a class="btn btn-secondary" href="#benchmarks" data-i18n="cta.benchmarks">See Benchmarks</a>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Floating Widgets: Live Stats HUD -->
-          <div class="hud-stats-panel" id="hud-panel">
-            <div class="hud-header">
-              <span class="hud-dot"></span>
-              <span class="hud-title">NAMI Solver HUD (Solomon RC101)</span>
-            </div>
-            <div class="hud-body">
-              <div class="hud-stat-item">
-                <span class="hud-label" data-i18n="hud.saved">Distance Saved</span>
-                <span class="hud-value positive">-18.4%</span>
-              </div>
-              <div class="hud-stat-item">
-                <span class="hud-label" data-i18n="hud.ontime">On-Time Rate</span>
-                <span class="hud-value">100.0%</span>
-              </div>
-              <div class="hud-stat-item">
-                <span class="hud-label" data-i18n="hud.compute">Compute Time</span>
-                <span class="hud-value accent">12.6ms</span>
-              </div>
-              <div class="hud-stat-item">
-                <span class="hud-label" data-i18n="hud.fleet">Active Fleets</span>
-                <span class="hud-value">4 / 6</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Floating Widgets: Dynamic solver log console overlay -->
-          <div class="hud-console-panel" id="hud-console">
-            <!-- Simulated logs updated by JS -->
-          </div>
-
-          <!-- Floating Widget: Customer address list — hover a row to pulse its node in the diorama -->
-          <div class="customer-list-panel" id="customer-list-panel">
-            <div class="hud-header">
-              <span class="hud-dot"></span>
-              <span class="hud-title" data-i18n="customer.list.title">Active Addresses (30)</span>
-            </div>
-            <div class="customer-list-body" id="customer-list-body">
-              <!-- Rows injected by JS from CUSTOMER_NODES -->
-            </div>
-          </div>
+        <!-- Live Animated Routing Diorama Background -->
+        <div class="hero-visual-bg">
+          <canvas id="nc"></canvas>
+          <div class="visual-overlay-vignette"></div>
+          <div class="visual-overlay-bottom"></div>
         </div>
-      </section>
 
-      <!-- Bento Features Section -->
-      <section class="features-section" id="features">
-        <div class="stripe-skewed-bg"></div>
-        <div class="stripe-skewed-gradient"></div>
+        <div class="hero-grid"></div>
+
         <div class="container">
-          <div class="section-header">
+          <div class="hero-content">
+            <div class="hero-badge">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right: 4px;">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 6v6l4 2" />
+              </svg>
+              <span data-i18n="hero.badge">Solomon Benchmark Optimizer</span>
+            </div>
+            <h1 class="hero-title">
+              <span class="nami-highlight" data-i18n="hero.title.nami">NAMI</span>
+              <br />
+              <span data-i18n="hero.title.desc">Plateau-Aware Deep RL Routing Engine</span>
+            </h1>
+            <p class="hero-subtitle" data-i18n="hero.subtitle">
+              Combining Deep Reinforcement Learning with Adaptive Large Neighborhood Search to solve Vehicle Routing Problems with Time Windows in milliseconds.
+            </p>
+            <div class="hero-actions">
+              <a class="btn btn-primary" href="app.html" data-i18n="hero.cta.start">Launch Solver</a>
+              <a class="btn btn-secondary" href="#showcase" data-i18n="hero.cta.demo">Explore Demo</a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== SHOWCASE (4 Acts) ========== -->
+      <section class="showcase-section" id="showcase">
+        <div class="container">
+          <div class="section-header reveal">
+            <span class="section-eyebrow" data-i18n="showcase.eyebrow">How It Works</span>
+            <h2 class="section-title" data-i18n="showcase.title">From chaos to optimal dispatch in 4 acts</h2>
+          </div>
+
+          <div class="showcase-grid reveal-stagger">
+            <!-- Act 1 -->
+            <div class="showcase-card reveal">
+              <div class="showcase-card__badge" data-i18n="act1.badge">01</div>
+              <div class="showcase-card__title" data-i18n="act1.title">What's the fastest way to deliver to 100 addresses?</div>
+              <div class="showcase-card__desc" data-i18n="act1.desc">
+                A single vehicle on a simple route is easy. But scaling delivery operations exposes exponential complexity.
+              </div>
+            </div>
+
+            <!-- Act 2 -->
+            <div class="showcase-card showcase-card--chaos reveal">
+              <div class="showcase-card__badge" data-i18n="act2.badge">02</div>
+              <div class="showcase-card__title" data-i18n="act2.title">A single route quickly shatters.</div>
+              <div class="showcase-card__desc" data-i18n="act2.desc">
+                Every address introduces narrow time windows, load capacity limits, service times, and vehicle constraints. Classical heuristics easily stagnate in sub-optimal local basins.
+              </div>
+            </div>
+
+            <!-- Act 3 -->
+            <div class="showcase-card showcase-card--neural reveal">
+              <div class="showcase-card__badge" data-i18n="act3.badge">03</div>
+              <div class="showcase-card__title" data-i18n="act3.title">NAMI's neural controller takes over.</div>
+              <div class="showcase-card__desc" data-i18n="act3.desc">
+                A Double Deep Q-Network (DDQN) agent analyzes the search trajectory in real-time, intelligently selecting destroy-and-repair ALNS operators to break stagnation patterns.
+              </div>
+            </div>
+
+            <!-- Act 4 -->
+            <div class="showcase-card showcase-card--outcome reveal">
+              <div class="showcase-card__badge" data-i18n="act4.badge">04</div>
+              <div class="showcase-card__title" data-i18n="act4.title">Optimal dispatch. Delivered.</div>
+              <div class="showcase-card__desc" data-i18n="act4.desc">
+                Feasible, balanced paths are generated in milliseconds. Dispatchers receive clean, conflict-free delivery plans verified against all Solomon criteria.
+              </div>
+              <div class="showcase-card__cta">
+                <a class="btn btn-primary" href="app.html" data-i18n="cta.demo">Open Planner</a>
+                <a class="btn btn-secondary" href="#benchmarks">Benchmarks →</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="section-divider"></div>
+
+      <!-- ========== STATS BANNER ========== -->
+      <section class="stats-section" id="stats">
+        <div class="container">
+          <div class="section-header reveal">
+            <span class="section-eyebrow" data-i18n="stats.eyebrow">Performance Snapshot</span>
+          </div>
+          <div class="stats-grid reveal-stagger">
+            <div class="stat-card reveal">
+              <div class="stat-value positive" data-count-to="18.4" data-count-prefix="-" data-count-suffix="%" data-count-decimals="1">-0.0%</div>
+              <div class="stat-label" data-i18n="stats.saved">Distance Saved</div>
+            </div>
+            <div class="stat-card reveal">
+              <div class="stat-value" data-count-to="100.0" data-count-suffix="%" data-count-decimals="1">0.0%</div>
+              <div class="stat-label" data-i18n="stats.ontime">On-Time Rate</div>
+            </div>
+            <div class="stat-card reveal">
+              <div class="stat-value accent" data-count-to="12.6" data-count-suffix="ms" data-count-decimals="1">0.0ms</div>
+              <div class="stat-label" data-i18n="stats.compute">Compute Time</div>
+            </div>
+            <div class="stat-card reveal">
+              <div class="stat-value" data-count-to="4" data-count-suffix=" / 6" data-count-decimals="0">0 / 6</div>
+              <div class="stat-label" data-i18n="stats.fleet">Active Fleets</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="section-divider"></div>
+
+      <!-- ========== FEATURES BENTO GRID ========== -->
+      <section class="features-section" id="features">
+        <div class="container">
+          <div class="section-header reveal">
             <span class="section-eyebrow" data-i18n="features.eyebrow">Engine Architecture</span>
             <h2 class="section-title" data-i18n="features.title">Engineered for Hard Constraints</h2>
           </div>
 
-          <div class="bento-grid">
-            <!-- Card 1: DDQN (col-2, row-2) -->
-            <div class="bento-card col-2 row-2">
+          <div class="bento-grid reveal-stagger">
+            <!-- Card 1: DDQN -->
+            <div class="bento-card col-2 row-2 reveal">
               <div class="bento-icon-wrapper">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
@@ -290,8 +268,8 @@
               </div>
             </div>
 
-            <!-- Card 2: Time-Window (col-2) -->
-            <div class="bento-card col-2">
+            <!-- Card 2: Time-Window -->
+            <div class="bento-card col-2 reveal">
               <div class="bento-icon-wrapper">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <circle cx="12" cy="12" r="10" />
@@ -304,8 +282,8 @@
               </div>
             </div>
 
-            <!-- Card 3: Solomon Benchmarks -->
-            <div class="bento-card">
+            <!-- Card 3: Solomon -->
+            <div class="bento-card reveal">
               <div class="bento-icon-wrapper">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
@@ -317,8 +295,8 @@
               </div>
             </div>
 
-            <!-- Card 4: Zero-Shot Transfer -->
-            <div class="bento-card">
+            <!-- Card 4: Zero-Shot -->
+            <div class="bento-card reveal">
               <div class="bento-icon-wrapper">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polygon points="12 2 2 22 22 22" />
@@ -333,75 +311,76 @@
         </div>
       </section>
 
-      <!-- Benchmarks Section -->
+      <div class="section-divider"></div>
+
+      <!-- ========== BENCHMARKS ========== -->
       <section class="benchmarks-section" id="benchmarks">
-        <div class="stripe-skewed-bg"></div>
-        <div class="stripe-skewed-gradient"></div>
         <div class="container">
-          <div class="section-header">
+          <div class="section-header reveal">
             <span class="section-eyebrow" data-i18n="results.eyebrow">Scientific Validation</span>
             <h2 class="section-title" data-i18n="results.title">Solomon Benchmark Results</h2>
           </div>
 
-          <div class="table-wrapper">
-            <table class="benchmarks-table">
-              <thead>
-                <tr>
-                  <th data-i18n="table.th.family">Instance Family</th>
-                  <th data-i18n="table.th.bks">Best Known Cost (BKS)</th>
-                  <th data-i18n="table.th.nami">NAMI Hybrid Cost</th>
-                  <th data-i18n="table.th.alns">ALNS Baseline Cost</th>
-                  <th data-i18n="table.th.namigap">NAMI Gap vs BKS (%)</th>
-                  <th data-i18n="table.th.alnsgap">ALNS Gap vs BKS (%)</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td class="td-instance">C1 Family (Clustered)</td>
-                  <td>828.3</td>
-                  <td>832.4</td>
-                  <td>854.1</td>
-                  <td><span class="badge-comparison best">-0.49%</span></td>
-                  <td><span class="badge-comparison near">+3.11%</span></td>
-                </tr>
-                <tr>
-                  <td class="td-instance">R1 Family (Random)</td>
-                  <td>1213.6</td>
-                  <td>1242.8</td>
-                  <td>1298.5</td>
-                  <td><span class="badge-comparison best">-2.41%</span></td>
-                  <td><span class="badge-comparison near">+6.99%</span></td>
-                </tr>
-                <tr>
-                  <td class="td-instance">RC1 Family (Mixed)</td>
-                  <td>1384.2</td>
-                  <td>1415.0</td>
-                  <td>1468.2</td>
-                  <td><span class="badge-comparison best">-2.22%</span></td>
-                  <td><span class="badge-comparison near">+6.07%</span></td>
-                </tr>
-                <tr>
-                  <td class="td-instance">RC2 Family (Zero-Shot)</td>
-                  <td>1119.2</td>
-                  <td>1154.6</td>
-                  <td>1231.8</td>
-                  <td><span class="badge-comparison best">-3.16%*</span></td>
-                  <td><span class="badge-comparison near">+10.06%</span></td>
-                </tr>
-              </tbody>
-            </table>
+          <div class="reveal">
+            <div class="table-wrapper">
+              <table class="benchmarks-table">
+                <thead>
+                  <tr>
+                    <th data-i18n="table.th.family">Instance Family</th>
+                    <th data-i18n="table.th.bks">Best Known Cost (BKS)</th>
+                    <th data-i18n="table.th.nami">NAMI Hybrid Cost</th>
+                    <th data-i18n="table.th.alns">ALNS Baseline Cost</th>
+                    <th data-i18n="table.th.namigap">NAMI Gap vs BKS (%)</th>
+                    <th data-i18n="table.th.alnsgap">ALNS Gap vs BKS (%)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="td-instance">C1 Family (Clustered)</td>
+                    <td>828.3</td>
+                    <td>832.4</td>
+                    <td>854.1</td>
+                    <td><span class="badge-comparison best">-0.49%</span></td>
+                    <td><span class="badge-comparison near">+3.11%</span></td>
+                  </tr>
+                  <tr>
+                    <td class="td-instance">R1 Family (Random)</td>
+                    <td>1213.6</td>
+                    <td>1242.8</td>
+                    <td>1298.5</td>
+                    <td><span class="badge-comparison best">-2.41%</span></td>
+                    <td><span class="badge-comparison near">+6.99%</span></td>
+                  </tr>
+                  <tr>
+                    <td class="td-instance">RC1 Family (Mixed)</td>
+                    <td>1384.2</td>
+                    <td>1415.0</td>
+                    <td>1468.2</td>
+                    <td><span class="badge-comparison best">-2.22%</span></td>
+                    <td><span class="badge-comparison near">+6.07%</span></td>
+                  </tr>
+                  <tr>
+                    <td class="td-instance">RC2 Family (Zero-Shot)</td>
+                    <td>1119.2</td>
+                    <td>1154.6</td>
+                    <td>1231.8</td>
+                    <td><span class="badge-comparison best">-3.16%*</span></td>
+                    <td><span class="badge-comparison near">+10.06%</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
 
           <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 16px;" data-i18n="results.footnote">
             * Zero-shot generalization transfer: The model was trained exclusively on RC1 instances and evaluated directly on RC2.
           </div>
 
-          <!-- Citation Box styled with bento card styles -->
-          <div class="bento-card" style="margin-top: 40px; justify-content: flex-start; flex-direction: row; gap: 24px; align-items: flex-start;">
-            <div style="font-size: 2rem; line-height: 1; padding-top: 4px;">📖</div>
+          <div class="citation-card reveal">
+            <div class="citation-icon">📖</div>
             <div>
-              <h4 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 6px; color: var(--text-primary);" data-i18n="results.citation.title">Plateau-Aware Deep RL for Combinatorial Search</h4>
-              <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5;" data-i18n="results.citation.body">
+              <div class="citation-title" data-i18n="results.citation.title">Plateau-Aware Deep RL for Combinatorial Search</div>
+              <p class="citation-body" data-i18n="results.citation.body">
                 Our thesis work analyzes DQN-guided escape operators under severe local stagnation states, outperforming traditional static ALNS variants in 7 of 8 benchmark scenarios.
               </p>
             </div>
@@ -409,17 +388,17 @@
         </div>
       </section>
 
-      <!-- Developer Quickstart Section -->
+      <div class="section-divider"></div>
+
+      <!-- ========== QUICKSTART ========== -->
       <section class="local-run-section" id="local-run">
-        <div class="stripe-skewed-bg"></div>
-        <div class="stripe-skewed-gradient"></div>
         <div class="container">
-          <div class="section-header">
+          <div class="section-header reveal">
             <span class="section-eyebrow" data-i18n="getstarted.eyebrow">Developer Quickstart</span>
             <h2 class="section-title" data-i18n="getstarted.title">Run the engine locally in 60s</h2>
           </div>
 
-          <div class="cli-display-wrapper">
+          <div class="cli-display-wrapper reveal">
             <div class="cli-header-bar">
               <div class="cli-dots">
                 <span class="cli-dot red"></span>
@@ -505,7 +484,7 @@
             <h4 class="footer-col-title" data-i18n="footer.col.system">System</h4>
             <ul class="footer-links">
               <li><a href="app.html" data-i18n="footer.link.solver">Open Solver</a></li>
-              <li><a href="#showcase" data-i18n="footer.link.demo">Interactive Demo</a></li>
+              <li><a href="#showcase" data-i18n="footer.link.demo">Showcase</a></li>
               <li><a href="#benchmarks" data-i18n="footer.link.benchmarks">Benchmarks</a></li>
             </ul>
           </div>
@@ -514,7 +493,7 @@
             <ul class="footer-links">
               <li><a href="https://github.com/Thundercok/VRPTW-Research-Optimization" target="_blank" rel="noopener" data-i18n="footer.link.codebase">Codebase</a></li>
               <li><a href="feedback.html" data-i18n="footer.link.feedback">Feedback Form</a></li>
-              <li><a href="auth.html" data-i18n="footer.link.dispatcher">Dispatcher Login</a></li>
+              <li><a href="app.html" data-i18n="footer.link.dispatcher">Dispatcher Login</a></li>
             </ul>
           </div>
         </div>
@@ -534,1513 +513,7 @@
     <!-- Observability -->
     <script type="module" src="js/observability.js?v=20260522"></script>
 
-    <!-- Main Inline Landing Page Interactions Script -->
-    <script type="module">
-      (function () {
-        'use strict';
-
-        const STORAGE_THEME = 'vrptw_landing_theme_v2';
-        const STORAGE_LANG = 'vrptw_landing_lang';
-
-        // Localization Dictionary
-        const i18n = {
-          en: {
-            'brand.sub': 'Research Optimization',
-            'nav.demo': 'Interactive Demo',
-            'nav.features': 'Features',
-            'nav.results': 'Benchmarks',
-            'nav.getstarted': 'Setup',
-            'cta.demo': 'Open Planner',
-
-            'hero.badge': 'Solomon Benchmark Optimizer',
-            'hero.title.nami': 'NAMI:',
-            'hero.title.desc': 'Plateau-Aware Deep RL Routing Engine',
-            'hero.subtitle': 'Combining Deep Reinforcement Learning with Adaptive Large Neighborhood Search to solve Vehicle Routing Problems with Time Windows in milliseconds.',
-            'hero.cta.start': 'Launch Solver',
-            'hero.cta.demo': 'Explore Demo',
-
-            'tab1.label': 'The Objective',
-            'tab2.label': 'The Chaos',
-            'tab3.label': 'Neural Operator',
-            'tab4.label': 'Optimal Dispatch',
-
-            'act1.badge': 'Act I: The Objective',
-            'act1.title': "What's the fastest way to deliver to 100 addresses?",
-            'act1.desc': 'A single vehicle on a simple route is easy. But scaling delivery operations exposes exponential complexity.',
-
-            'act2.badge': 'Act II: The Chaos',
-            'act2.title': 'A single route quickly shatters.',
-            'act2.desc': 'Every address introduces narrow time windows, load capacity limits, service times, and vehicle constraints. Classical heuristics easily stagnate in sub-optimal local basins.',
-
-            'act3.badge': 'Act III: Neural Optimization',
-            'act3.title': "NAMI's neural controller takes over.",
-            'act3.desc': 'A Double Deep Q-Network (DDQN) agent analyzes the search trajectory in real-time, intelligently selecting destroy-and-repair ALNS operators to break stagnation patterns.',
-
-            'act4.badge': 'Act IV: The Outcome',
-            'act4.title': 'Optimal dispatch. Delivered.',
-            'act4.desc': 'Feasible, balanced paths are generated in milliseconds. Dispatchers receive clean, conflict-free delivery plans verified against all Solomon criteria.',
-            'cta.benchmarks': 'See Benchmarks',
-
-            'hud.saved': 'Distance Saved',
-            'hud.ontime': 'On-Time Rate',
-            'hud.compute': 'Compute Time',
-            'hud.fleet': 'Active Fleets',
-
-            'table.th.family': 'Instance Family',
-            'table.th.bks': 'Best Known Cost (BKS)',
-            'table.th.nami': 'NAMI Hybrid Cost',
-            'table.th.alns': 'ALNS Baseline Cost',
-            'table.th.namigap': 'NAMI Gap vs BKS (%)',
-            'table.th.alnsgap': 'ALNS Gap vs BKS (%)',
-            'results.footnote': '* Zero-shot generalization transfer: The model was trained exclusively on RC1 instances and evaluated directly on RC2.',
-
-            'results.citation.title': 'Plateau-Aware Deep RL for Combinatorial Search',
-            'results.citation.body': 'Our thesis work analyzes DQN-guided escape operators under severe local stagnation states, outperforming traditional static ALNS variants in 7 of 8 benchmark scenarios.',
-
-            'features.eyebrow': 'Engine Architecture',
-            'features.title': 'Engineered for Hard Constraints',
-            'features.f1.title': 'DDQN Operator Selection',
-            'features.f1.body': 'A Double DQN agent observes the search trajectory and learns which destroy operators (Random, Worst, Cluster) to fire when search basins stagnate.',
-            'features.f2.title': 'Time-Window Feasibility',
-            'features.f2.body': 'Supports strict time windows (ready time, due date, service duration) with dynamic early-arrival waiting and late-arrival filtering.',
-            'features.f3.title': 'Solomon Benchmarks',
-            'features.f3.body': 'Built-in, one-click loading of Solomon benchmark instances (C, R, RC families) for rapid performance verification.',
-            'features.f5.title': 'Zero-Shot Transfer',
-            'features.f5.body': 'The trained plateau-aware RL policy transfers directly across different Solomon families (e.g. trained on RC1, evaluated on RC2) without retraining.',
-
-            'results.eyebrow': 'Scientific Validation',
-            'results.title': 'Solomon Benchmark Results',
-            'getstarted.eyebrow': 'Developer Quickstart',
-            'getstarted.title': 'Run the engine locally in 60s',
-
-            'footer.blurb': 'Deep reinforcement learning and search heuristics paired together for robust combinatorial optimization.',
-            'footer.col.system': 'System',
-            'footer.col.academic': 'Academic',
-            'footer.link.solver': 'Open Solver',
-            'footer.link.demo': 'Interactive Demo',
-            'footer.link.benchmarks': 'Benchmarks',
-            'footer.link.codebase': 'Codebase',
-            'footer.link.feedback': 'Feedback Form',
-            'footer.link.dispatcher': 'Dispatcher Login',
-            'footer.footnote': 'Designed for computational speed and absolute operational clarity.',
-            'customer.list.title': 'Active Addresses (30)'
-          },
-          vn: {
-            'brand.sub': 'Tối ưu hóa Nghiên cứu',
-            'nav.demo': 'Demo Trực quan',
-            'nav.features': 'Tính năng',
-            'nav.results': 'Benchmarks',
-            'nav.getstarted': 'Cài đặt',
-            'cta.demo': 'Mở Planner',
-
-            'hero.badge': 'Trình Tối Ưu Hóa Solomon Benchmark',
-            'hero.title.nami': 'NAMI:',
-            'hero.title.desc': 'Engine Định Tuyến Học Tăng Cường Sâu Plateau-Aware',
-            'hero.subtitle': 'Kết hợp Học tăng cường sâu với Thuật toán tìm kiếm lân cận lớn thích ứng để giải quyết bài toán định tuyến xe có khung thời gian trong mili giây.',
-            'hero.cta.start': 'Mở Trình Giải',
-            'hero.cta.demo': 'Khám Phá Demo',
-
-            'tab1.label': 'Mục Tiêu',
-            'tab2.label': 'Sự Hỗn Loạn',
-            'tab3.label': 'Toán Tư Nơ-ron',
-            'tab4.label': 'Điều Phối Tối Ưu',
-
-            'act1.badge': 'Act I: Mục Tiêu',
-            'act1.title': 'Đâu là cách nhanh nhất để giao tới 100 địa chỉ?',
-            'act1.desc': 'Một phương tiện trên một lộ trình đơn giản thì dễ dàng. Nhưng việc mở rộng hoạt động giao hàng sẽ tạo ra độ phức tạp theo cấp số nhân.',
-
-            'act2.badge': 'Act II: Sự Hỗn Loạn',
-            'act2.title': 'Lộ trình nhanh chóng bị phá vỡ.',
-            'act2.desc': 'Mỗi địa chỉ đi kèm với các khung giờ nghiêm ngặt, giới hạn tải trọng, thời gian phục vụ và các ràng buộc xe. Các heuristic cổ điển rất dễ mắc kẹt ở cực trị địa phương kém tối ưu.',
-
-            'act3.badge': 'Act III: Tối Ưu Hóa Nơ-ron',
-            'act3.title': 'Bộ điều khiển nơ-ron NAMI tiếp quản.',
-            'act3.desc': 'Agent Double Deep Q-Network (DDQN) phân tích quỹ đạo tìm kiếm theo thời gian thực, lựa chọn thông minh các toán tử destroy-and-repair ALNS để phá vỡ các điểm nghẽn chững lại.',
-
-            'act4.badge': 'Act IV: Kết Quả',
-            'act4.title': 'Điều phối tối ưu. Đã hoàn thành.',
-            'act4.desc': 'Các lộ trình khả thi, cân bằng được tạo ra trong vài mili giây. Người điều phối nhận được kế hoạch giao hàng rõ ràng, không có xung đột, được xác thực theo tất cả các tiêu chí Solomon.',
-            'cta.benchmarks': 'Xem Kết Quả',
-
-            'hud.saved': 'Quãng Đường Tiết Kiệm',
-            'hud.ontime': 'Tỷ Lệ Đúng Giờ',
-            'hud.compute': 'Thời Gian Tính Toán',
-            'hud.fleet': 'Đội Xe Hoạt Động',
-
-            'table.th.family': 'Họ Solomon Instance',
-            'table.th.bks': 'Chi Phí Tốt Nhất (BKS)',
-            'table.th.nami': 'Chi Phí NAMI Hybrid',
-            'table.th.alns': 'Chi Phí ALNS Baseline',
-            'table.th.namigap': 'NAMI Gap so với BKS (%)',
-            'table.th.alnsgap': 'ALNS Gap so với BKS (%)',
-            'results.footnote': '* Chuyển giao tổng quát hóa Zero-shot: Mô hình được huấn luyện duy nhất trên các instance họ RC1 và được đánh giá trực tiếp trên họ RC2.',
-
-            'results.citation.title': 'Học Tăng Cường Sâu Plateau-Aware cho Bài Toán Tìm Kiếm Tổ Hợp',
-            'results.citation.body': 'Nghiên cứu luận văn của chúng tôi phân tích các toán tử thoát khỏi cực trị cục bộ do DQN hướng dẫn dưới các trạng thái chững lại nghiêm trọng, vượt trội hơn các biến thể ALNS tĩnh truyền thống trong 7 trên 8 kịch bản thử nghiệm.',
-
-            'features.eyebrow': 'Kiến trúc Engine',
-            'features.title': 'Thiết kế cho Ràng buộc Khó',
-            'features.f1.title': 'Chọn toán tử bằng DDQN',
-            'features.f1.body': 'Agent Double DQN quan sát quỹ đạo tìm kiếm và học cách kích hoạt các toán tử destroy phù hợp (Random, Worst, Cluster) khi không gian tìm kiếm bị chững lại.',
-            'features.f2.title': 'Độ khả thi Khung giờ',
-            'features.f2.body': 'Hỗ trợ khung giờ nghiêm ngặt (ready time, due date, service duration) kèm tự động chờ nếu đến sớm và lọc nếu đến muộn.',
-            'features.f3.title': 'Benchmark Solomon',
-            'features.f3.body': 'Tích hợp sẵn các bộ benchmark Solomon (họ C, R, RC) để tải nhanh chỉ với một click giúp kiểm chứng thuật toán.',
-            'features.f5.title': 'Zero-Shot Transfer',
-            'features.f5.body': 'Policy RL nhận diện plateau sau khi huấn luyện có thể chuyển giao trực tiếp sang các họ Solomon khác (ví dụ: huấn luyện trên RC1, chạy thử trên RC2) mà không cần train lại.',
-
-            'results.eyebrow': 'Xác thực Khoa học',
-            'results.title': 'Kết quả Benchmark Solomon',
-            'getstarted.eyebrow': 'Khởi động nhanh cho Dev',
-            'getstarted.title': 'Chạy cục bộ engine trong 60 giây',
-
-            'footer.blurb': 'Sự kết hợp giữa học tăng cường sâu và thuật toán tìm kiếm cục bộ giúp giải quyết các bài toán tối ưu tổ hợp phức tạp một cách mạnh mẽ.',
-            'footer.col.system': 'Hệ Thống',
-            'footer.col.academic': 'Học Thuật',
-            'footer.link.solver': 'Mở Trình Giải',
-            'footer.link.demo': 'Demo Trực Quan',
-            'footer.link.benchmarks': 'Điểm Chuẩn (Benchmarks)',
-            'footer.link.codebase': 'Kho Mã Nguồn',
-            'footer.link.feedback': 'Biểu Mẫu Góp Ý',
-            'footer.link.dispatcher': 'Đăng Nhập Điều Phối',
-            'footer.footnote': 'Thiết kế cho tốc độ tính toán cao và độ trực quan vận hành tuyệt đối.',
-            'customer.list.title': 'Địa chỉ hoạt động (30)'
-          }
-        };
-
-        // 3D Isometric Coordinates System
-        const DEPOT = { x: 0, z: 0 };
-        const CUSTOMER_NODES = [
-          // Cluster 1 (North-East - Red/Rose Theme)
-          { id: 1, x: 1.2, z: -1.2, targetColor: '#fb7185', cluster: 1 }, 
-          { id: 2, x: 1.8, z: -1.0, targetColor: '#fb7185', cluster: 1 },
-          { id: 3, x: 1.0, z: -1.6, targetColor: '#fb7185', cluster: 1 },
-          { id: 4, x: 2.2, z: -1.5, targetColor: '#fb7185', cluster: 1 },
-          { id: 5, x: 1.5, z: -2.0, targetColor: '#fb7185', cluster: 1 },
-          { id: 6, x: 0.8, z: -1.1, targetColor: '#fb7185', cluster: 1 },
-          { id: 7, x: 2.0, z: -0.7, targetColor: '#fb7185', cluster: 1 },
-
-          // Cluster 2 (South-East - Copper/Orange Theme)
-          { id: 8, x: 1.6, z: 1.4, targetColor: '#f97316', cluster: 2 }, 
-          { id: 9, x: 2.1, z: 1.0, targetColor: '#f97316', cluster: 2 },
-          { id: 10, x: 1.2, z: 1.8, targetColor: '#f97316', cluster: 2 },
-          { id: 11, x: 2.4, z: 1.7, targetColor: '#f97316', cluster: 2 },
-          { id: 12, x: 0.9, z: 1.3, targetColor: '#f97316', cluster: 2 },
-          { id: 13, x: 1.8, z: 0.7, targetColor: '#f97316', cluster: 2 },
-          { id: 14, x: 2.3, z: 2.1, targetColor: '#f97316', cluster: 2 },
-
-          // Cluster 3 (North-West - Amber/Yellow Theme)
-          { id: 15, x: -1.1, z: -1.0, targetColor: '#fbbf24', cluster: 3 }, 
-          { id: 16, x: -1.7, z: -1.2, targetColor: '#fbbf24', cluster: 3 },
-          { id: 17, x: -0.8, z: -1.6, targetColor: '#fbbf24', cluster: 3 },
-          { id: 18, x: -2.0, z: -0.7, targetColor: '#fbbf24', cluster: 3 },
-          { id: 19, x: -1.4, z: -1.9, targetColor: '#fbbf24', cluster: 3 },
-          { id: 20, x: -0.6, z: -1.1, targetColor: '#fbbf24', cluster: 3 },
-
-          // Scattered Group (South-West - Warm Gold Theme)
-          { id: 21, x: -1.2, z: 1.2, targetColor: '#f59e0b', cluster: 4 }, 
-          { id: 22, x: -1.8, z: 0.9, targetColor: '#f59e0b', cluster: 4 },
-          { id: 23, x: -0.9, z: 1.6, targetColor: '#f59e0b', cluster: 4 },
-          { id: 24, x: -2.2, z: 1.4, targetColor: '#f59e0b', cluster: 4 },
-          { id: 25, x: -1.5, z: 2.0, targetColor: '#f59e0b', cluster: 4 },
-          { id: 26, x: -0.7, z: 1.0, targetColor: '#f59e0b', cluster: 4 },
-          { id: 27, x: -2.0, z: 2.3, targetColor: '#f59e0b', cluster: 4 },
-          { id: 28, x: -1.1, z: 2.1, targetColor: '#f59e0b', cluster: 4 },
-          { id: 29, x: -0.5, z: 1.8, targetColor: '#f59e0b', cluster: 4 },
-          { id: 30, x: -1.7, z: 1.6, targetColor: '#f59e0b', cluster: 4 },
-        ];
-
-        const ROUTES = [
-          { color: '#fb7185', nodes: [DEPOT, ...CUSTOMER_NODES.filter(n => n.cluster === 1), DEPOT] },
-          { color: '#f97316', nodes: [DEPOT, ...CUSTOMER_NODES.filter(n => n.cluster === 2), DEPOT] },
-          { color: '#fbbf24', nodes: [DEPOT, ...CUSTOMER_NODES.filter(n => n.cluster === 3), DEPOT] },
-          { color: '#f59e0b', nodes: [DEPOT, ...CUSTOMER_NODES.filter(n => n.cluster === 4), DEPOT] }
-        ];
-
-        // 2D Canvas context variables
-        let canvas, ctx;
-        let isInitialized = false;
-        let animationFrameId = null;
-        let lastTime = null;
-
-        const dioramaState = {
-          act: 1,
-          progress: 0.0,
-          overallProgress: 0.0,
-          theme: 'dark',
-          width: 800,
-          height: 600,
-          mouseX: 0,
-          mouseY: 0,
-          targetMouseX: 0,
-          targetMouseY: 0,
-          hoveredNodeId: null,
-          time: 0,
-          camera: null
-        };
-
-        function projectIsometric(x, y, z) {
-          const rotation = dioramaState.camera ? (dioramaState.camera.rotation || 0) : 0;
-          let rx = x;
-          let rz = z;
-          if (rotation !== 0) {
-            const cosR = Math.cos(rotation);
-            const sinR = Math.sin(rotation);
-            rx = x * cosR - z * sinR;
-            rz = x * sinR + z * cosR;
-          }
-          const angle = Math.PI / 6; // 30 degrees
-          const isoX = (rx - rz) * Math.cos(angle);
-          const isoY = (rx + rz) * Math.sin(angle) - y;
-          return { x: isoX, y: isoY };
-        }
-
-        // Standard damping pattern helper (Three.js/R3F style)
-        function damp(current, target, lambda, dt) {
-          return current + (target - current) * (1 - Math.exp(-lambda * dt));
-        }
-
-        // ===================================================================
-        // Cinematic Camera Timeline
-        // Each act has its own array of keyframes. Each keyframe has:
-        //   t: 0.0–1.0, position within the act (matches dioramaState.progress range)
-        //   originXFrac, originYFrac: where on screen the scene origin sits (0–1 of canvas width/height)
-        //   scale: px-per-scene-unit zoom level (lower = more zoomed out)
-        //   rotation: radians, rotation of the whole iso scene around the vertical axis
-        //   cut: optional boolean. If true, the transition INTO this keyframe from the
-        //        previous one is an instant snap (no interpolation) once local
-        //        progress between the two keyframes passes 0.5. This simulates a
-        //        hard camera cut, the way ALNS destroy/repair iterations jump
-        //        between candidate solutions rather than smoothly morphing.
-        // Keyframes within an act MUST be sorted by ascending t. The first keyframe
-        // of an act MUST have t: 0.0. The last MUST have t: 1.0.
-        // ===================================================================
-        const CAMERA_TIMELINE = {
-          // ACT I — The Objective: open on the depot alone (macro/close), then pull
-          // back slowly to reveal the empty network waiting to be solved. This is
-          // the "establishing shot" — slow, deliberate, no rotation.
-          1: [
-            { t: 0.0, originXFrac: 0.58, originYFrac: 0.48, scale: 230, rotation: 0.0 },
-            { t: 0.35, originXFrac: 0.60, originYFrac: 0.48, scale: 150, rotation: 0.0 },
-            { t: 1.0, originXFrac: 0.66, originYFrac: 0.50, scale: 78,  rotation: 0.0 }
-          ],
-
-          // ACT II — The Chaos: customer nodes scatter out from the depot. Camera
-          // orbits around the densest/most chaotic cluster, rotation accelerating
-          // as chaos increases, conveying loss of control.
-          2: [
-            { t: 0.0,  originXFrac: 0.66, originYFrac: 0.47, scale: 90,  rotation: 0.0 },
-            { t: 0.3,  originXFrac: 0.61, originYFrac: 0.43, scale: 108, rotation: 0.25 },
-            { t: 0.65, originXFrac: 0.58, originYFrac: 0.43, scale: 118, rotation: 0.55 },
-            { t: 1.0,  originXFrac: 0.60, originYFrac: 0.44, scale: 108, rotation: 0.85 }
-          ],
-
-          // ACT III — Neural Operator (ALNS): THIS IS THE MOST IMPORTANT ACT.
-          // Camera HARD-CUTS between keyframes (cut: true on every keyframe except
-          // the first) to simulate the solver jumping between candidate solutions
-          // during destroy/repair iterations. Do NOT smooth these transitions.
-          // Each cut should land on a noticeably different framing (different
-          // originXFrac/scale/rotation) so the cut is visually obvious, not subtle.
-          3: [
-            { t: 0.0,  originXFrac: 0.62, originYFrac: 0.53, scale: 104, rotation: 0.0 },
-            { t: 0.15, originXFrac: 0.54, originYFrac: 0.56, scale: 136, rotation: 0.15, cut: true },
-            { t: 0.30, originXFrac: 0.73, originYFrac: 0.48, scale: 128, rotation: -0.20, cut: true },
-            { t: 0.45, originXFrac: 0.60, originYFrac: 0.58, scale: 140, rotation: 0.30, cut: true },
-            { t: 0.60, originXFrac: 0.66, originYFrac: 0.47, scale: 124, rotation: -0.10, cut: true },
-            { t: 0.75, originXFrac: 0.57, originYFrac: 0.54, scale: 138, rotation: 0.20, cut: true },
-            { t: 0.90, originXFrac: 0.62, originYFrac: 0.52, scale: 104, rotation: 0.05, cut: true },
-            { t: 1.0,  originXFrac: 0.61, originYFrac: 0.53, scale: 94,  rotation: 0.0 }
-          ],
-
-          // ACT IV — Optimal Dispatch: rise to birds-eye, continuous slow 360°
-          // orbit showing the whole resolved network operating in harmony.
-          4: [
-            { t: 0.0, originXFrac: 0.61, originYFrac: 0.50, scale: 88, rotation: 0.0 },
-            { t: 1.0, originXFrac: 0.61, originYFrac: 0.48, scale: 66, rotation: Math.PI * 2 }
-          ]
-        };
-
-        function ler(start, end, amt) {
-          return (1 - amt) * start + amt * end;
-        }
-
-        // Cubic ease-in-out, used for ALL non-cut keyframe interpolation
-        function cameraEase(t) {
-          return t * t * t * (t * (t * 6 - 15) + 10);
-        }
-
-        function lerpCameraKeyframe(a, b, t) {
-          return {
-            originXFrac: ler(a.originXFrac, b.originXFrac, t),
-            originYFrac: ler(a.originYFrac, b.originYFrac, t),
-            scale: ler(a.scale, b.scale, t),
-            rotation: ler(a.rotation, b.rotation, t)
-          };
-        }
-
-        // Samples the camera timeline for the current act at the current
-        // within-act progress (0.0–1.0). Finds the two surrounding keyframes,
-        // computes local progress between them, and either:
-        //   - snaps instantly to keyframe B once local progress crosses 0.5, if
-        //     keyframe B has cut: true
-        //   - smoothly eases between A and B otherwise
-        function sampleCameraTimeline(act, actProgress) {
-          const keyframes = CAMERA_TIMELINE[act];
-          const clampedProgress = Math.min(1.0, Math.max(0.0, actProgress));
-
-          let i = 0;
-          while (i < keyframes.length - 2 && keyframes[i + 1].t <= clampedProgress) {
-            i++;
-          }
-          const a = keyframes[i];
-          const b = keyframes[Math.min(i + 1, keyframes.length - 1)];
-
-          const span = b.t - a.t;
-          const localT = span > 0.0001 ? (clampedProgress - a.t) / span : 1.0;
-          const clampedLocalT = Math.min(1.0, Math.max(0.0, localT));
-
-          if (b.cut) {
-            // Hard cut: stay on keyframe A while local progress is strictly before
-            // the midpoint, snap to B at the midpoint and beyond.
-            // (localT === 0.5 exactly lands on B, not A — verified behavior.)
-            return clampedLocalT < 0.5 ? a : b;
-          }
-
-          return lerpCameraKeyframe(a, b, cameraEase(clampedLocalT));
-        }
-
-        function toScreen(isoPoint) {
-          const isDesktop = window.innerWidth >= 1024;
-          const defaultXFrac = isDesktop ? 0.35 : 0.50;
-          const defaultYFrac = isDesktop ? 0.48 : 0.50;
-          const defaultScale = isDesktop ? 135 : 75;
-
-          const baseCamera = dioramaState.camera || {
-            originXFrac: defaultXFrac,
-            originYFrac: defaultYFrac,
-            scale: defaultScale
-          };
-          
-          const camera = {
-            originXFrac: isDesktop ? baseCamera.originXFrac : 0.50,
-            originYFrac: isDesktop ? baseCamera.originYFrac : 0.40,
-            scale: isDesktop ? baseCamera.scale : baseCamera.scale * 0.65,
-            rotation: baseCamera.rotation || 0
-          };
-
-          const scaleX = camera.scale;
-          const scaleY = camera.scale;
-
-          const mouseParallaxX = Math.max(-25, Math.min(25, dioramaState.mouseX * 25));
-          const mouseParallaxY = Math.max(-25, Math.min(25, dioramaState.mouseY * 25));
-
-          const centerX = dioramaState.width * camera.originXFrac + mouseParallaxX;
-          const centerY = dioramaState.height * camera.originYFrac + mouseParallaxY;
-
-          return {
-            x: centerX + isoPoint.x * scaleX,
-            y: centerY + isoPoint.y * scaleY
-          };
-        }
-
-        // Get coordinates along a Bezier path
-        function getBezierPoint(p0, p1, p2, t) {
-          const u = 1 - t;
-          const tt = t * t;
-          const uu = u * u;
-          return {
-            x: uu * p0.x + 2 * u * t * p1.x + tt * p2.x,
-            y: uu * p0.y + 2 * u * t * p1.y + tt * p2.y
-          };
-        }
-
-        function getBezierRoutePoint(points, progress) {
-          if (points.length < 2) return points[0] || { x: 0, y: 0 };
-          const totalSegments = points.length - 1;
-          const rawSegment = progress * totalSegments;
-          const index = Math.floor(rawSegment);
-          const t = rawSegment - index;
-
-          const p0 = points[index];
-          const p2 = points[index + 1];
-          // Mid-point curve control point to create elegant curved arcs (Diagnosis #5)
-          const p1 = {
-            x: (p0.x + p2.x) / 2 + (p2.y - p0.y) * 0.15,
-            y: (p0.y + p2.y) / 2 - (p2.x - p0.x) * 0.15
-          };
-          return getBezierPoint(p0, p1, p2, t);
-        }
-
-        function initCanvas() {
-          canvas = document.getElementById('animation-canvas');
-          if (!canvas) return;
-
-          ctx = canvas.getContext('2d');
-          
-          resize();
-
-          if (!isInitialized) {
-            setupCustomerListPanel();
-            window.addEventListener('resize', resize);
-            document.addEventListener('mousemove', (e) => {
-              const rect = canvas.getBoundingClientRect();
-              const cx = rect.left + rect.width / 2;
-              const cy = rect.top + rect.height / 2;
-              dioramaState.targetMouseX = (e.clientX - cx) / (rect.width / 2);
-              dioramaState.targetMouseY = (e.clientY - cy) / (rect.height / 2);
-
-              // Direct canvas node hit-testing
-              if (dioramaState.act >= 3) {
-                const mouseXScreen = e.clientX - rect.left;
-                const mouseYScreen = e.clientY - rect.top;
-                let foundNodeId = null;
-
-                for (let i = 0; i < CUSTOMER_NODES.length; i++) {
-                  const node = CUSTOMER_NODES[i];
-                  const elevatedY = 0.35;
-                  const pElevated = toScreen(projectIsometric(node.x, elevatedY, node.z));
-                  
-                  const dx = mouseXScreen - pElevated.x;
-                  const dy = mouseYScreen - pElevated.y;
-                  const distance = Math.sqrt(dx * dx + dy * dy);
-                  
-                  if (distance < 18) {
-                    foundNodeId = node.id;
-                    break;
-                  }
-                }
-                
-                if (foundNodeId !== dioramaState.hoveredNodeId) {
-                  dioramaState.hoveredNodeId = foundNodeId;
-                  syncCustomerListHighlight(foundNodeId);
-                }
-              }
-            });
-          }
-
-          isInitialized = true;
-          renderCanvas(1, 0.0);
-          
-          if (animationFrameId) cancelAnimationFrame(animationFrameId);
-          lastTime = null;
-          animationFrameId = requestAnimationFrame(loop);
-        }
-
-        let lastResizeWidth = 0;
-        function resize() {
-          if (!canvas || !ctx) return;
-
-          const w = window.innerWidth;
-          const h = window.innerHeight;
-          
-          if (w === lastResizeWidth && window.innerWidth < 1024) return;
-          lastResizeWidth = w;
-
-          const dpr = Math.min(window.devicePixelRatio || 1, 2);
-
-          dioramaState.width = w;
-          dioramaState.height = h;
-
-          canvas.width = Math.floor(w * dpr);
-          canvas.height = Math.floor(h * dpr);
-
-          ctx.resetTransform();
-          ctx.scale(dpr, dpr);
-        }
-
-        // Draw spinning octahedron diamond marker (Graphics Upgrade)
-        function drawDiamond(ctx, screenX, screenY, size, color, time, index) {
-          ctx.save();
-          ctx.beginPath();
-          
-          const spinScale = Math.sin(time * 0.0035 + index * 0.4);
-          const elevationFloat = Math.cos(time * 0.002 + index * 0.3) * 3.5;
-          const y = screenY + elevationFloat;
-
-          ctx.moveTo(screenX, y - size);
-          ctx.lineTo(screenX + size * 0.7 * spinScale, y);
-          ctx.lineTo(screenX, y + size);
-          ctx.lineTo(screenX - size * 0.7 * spinScale, y);
-          ctx.closePath();
-
-          // Outer glowing shadow
-          ctx.shadowColor = color;
-          ctx.shadowBlur = 12;
-          ctx.fillStyle = color;
-          ctx.globalAlpha = 0.85;
-          ctx.fill();
-
-          // Bright inner core
-          ctx.beginPath();
-          ctx.moveTo(screenX, y - size * 0.5);
-          ctx.lineTo(screenX + size * 0.35 * spinScale, y);
-          ctx.lineTo(screenX, y + size * 0.5);
-          ctx.lineTo(screenX - size * 0.35 * spinScale, y);
-          ctx.closePath();
-          ctx.fillStyle = '#ffffff';
-          ctx.globalAlpha = 0.95;
-          ctx.fill();
-
-          ctx.restore();
-        }
-
-        function drawDepot(ctx, screenX, screenY, time) {
-          ctx.save();
-          
-          const pulse = 1.0 + Math.sin(time * 0.003) * 0.1;
-          const size = 15 * pulse;
-
-          // Holographic rotating outer rings (Graphics Upgrade)
-          ctx.strokeStyle = 'rgba(245, 158, 11, 0.4)';
-          ctx.lineWidth = 1.5;
-          ctx.shadowColor = 'rgba(245, 158, 11, 0.5)';
-          ctx.shadowBlur = 10;
-          
-          ctx.beginPath();
-          ctx.ellipse(screenX, screenY, size * 2.2, size * 1.1, time * 0.001, 0, Math.PI * 2);
-          ctx.stroke();
-
-          ctx.beginPath();
-          ctx.ellipse(screenX, screenY, size * 2.2, size * 1.1, -time * 0.0014, 0, Math.PI * 2);
-          ctx.stroke();
-
-          // Hexagonal center core
-          ctx.beginPath();
-          for (let i = 0; i < 6; i++) {
-            const angle = (i * Math.PI) / 3 + time * 0.0006;
-            const hx = screenX + size * Math.cos(angle);
-            const hy = screenY + size * Math.sin(angle) * 0.5;
-            if (i === 0) ctx.moveTo(hx, hy);
-            else ctx.lineTo(hx, hy);
-          }
-          ctx.closePath();
-          
-          ctx.fillStyle = '#f59e0b';
-          ctx.shadowColor = '#f59e0b';
-          ctx.shadowBlur = 18;
-          ctx.globalAlpha = 0.9;
-          ctx.fill();
-
-          // Inner glowing core
-          ctx.beginPath();
-          ctx.arc(screenX, screenY, size * 0.4, 0, Math.PI * 2);
-          ctx.fillStyle = '#ffffff';
-          ctx.fill();
-
-          ctx.restore();
-        }
-
-        function loop(timestamp) {
-          dioramaState.time = timestamp;
-          
-          if (lastTime === null) {
-            lastTime = timestamp;
-          }
-          const dt = Math.max(0, Math.min(0.1, (timestamp - lastTime) / 1000));
-          lastTime = timestamp;
-
-          // Smooth mouse movement using standard damp pattern (Three.js/R3F style)
-          dioramaState.mouseX = damp(dioramaState.mouseX, dioramaState.targetMouseX, 8.0, dt);
-          dioramaState.mouseY = damp(dioramaState.mouseY, dioramaState.targetMouseY, 8.0, dt);
-
-          drawScene();
-          animationFrameId = requestAnimationFrame(loop);
-        }
-
-        function drawScene() {
-          if (!ctx) return;
-          
-          const time = dioramaState.time;
-          const act = dioramaState.act;
-          const progress = dioramaState.progress;
-          const theme = dioramaState.theme;
-
-          // Sample camera timeline for dynamic movements and cuts
-          const frame = sampleCameraTimeline(act, progress);
-          dioramaState.camera = frame;
-
-          // Clear with background color transparency to allow CSS glows to show
-          ctx.clearRect(0, 0, dioramaState.width, dioramaState.height);
-
-          // 1. Draw telemetry isometric grid lines (Graphics Upgrade)
-          ctx.save();
-          ctx.strokeStyle = theme === 'dark' ? 'rgba(122, 115, 255, 0.04)' : 'rgba(99, 91, 255, 0.06)';
-          ctx.lineWidth = 1;
-          
-          // Draw grid diamond rows
-          for (let i = -3; i <= 3; i += 0.5) {
-            // Lines along X
-            ctx.beginPath();
-            let pStart = toScreen(projectIsometric(-3, 0, i));
-            let pEnd = toScreen(projectIsometric(3, 0, i));
-            ctx.moveTo(pStart.x, pStart.y);
-            ctx.lineTo(pEnd.x, pEnd.y);
-            ctx.stroke();
-
-            // Lines along Z
-            ctx.beginPath();
-            pStart = toScreen(projectIsometric(i, 0, -3));
-            pEnd = toScreen(projectIsometric(i, 0, 3));
-            ctx.moveTo(pStart.x, pStart.y);
-            ctx.lineTo(pEnd.x, pEnd.y);
-            ctx.stroke();
-          }
-
-          // Concentric scanning radar wave expanding from depot
-          const waveRadius = (time * 0.0006) % 3.0;
-          ctx.beginPath();
-          const depotCenter = toScreen(projectIsometric(0, 0, 0));
-          ctx.ellipse(depotCenter.x, depotCenter.y, waveRadius * 120, waveRadius * 60, 0, 0, Math.PI * 2);
-          ctx.strokeStyle = theme === 'dark' 
-            ? `rgba(122, 115, 255, ${0.25 * (1.0 - waveRadius / 3.0)})` 
-            : `rgba(99, 91, 255, ${0.25 * (1.0 - waveRadius / 3.0)})`;
-          ctx.stroke();
-          ctx.restore();
-
-          // 2. Draw Depot
-          drawDepot(ctx, depotCenter.x, depotCenter.y, time);
-
-          // Calculate elevated target height Y.
-          // 0.35 scene-units at typical scale ~104 = ~36px stem height,
-          // clearly visible and grounded (not floating off-screen).
-          let elevatedY = 0;
-          if (act === 2) {
-            elevatedY = progress * 0.35;
-          } else if (act >= 3) {
-            elevatedY = 0.35;
-          }
-
-          // 3. Draw Customer Nodes
-          CUSTOMER_NODES.forEach((node, idx) => {
-            let nx = node.x;
-            let nz = node.z;
-            let ny = 0; // floor height
-
-            if (act === 1) {
-              // Act I: Nodes aligned in a straight line starting from the depot
-              nx = (-2.5) + (5.5) * (node.id - 1) / CUSTOMER_NODES.length;
-              nz = 0;
-            } else if (act === 2) {
-              // Act II: Transitioning to scatter positions
-              const startX = (-2.5) + (5.5) * (node.id - 1) / CUSTOMER_NODES.length;
-              const startZ = 0;
-              nx = startX + (node.x - startX) * progress;
-              nz = startZ + (node.z - startZ) * progress;
-              ny = elevatedY;
-            } else {
-              ny = elevatedY;
-            }
-
-            const pFloor = toScreen(projectIsometric(nx, 0, nz));
-            const pElevated = toScreen(projectIsometric(nx, ny, nz));
-
-            // Shadow on floor
-            ctx.save();
-            ctx.beginPath();
-            const shadowRadius = 6 * (1.0 - ny * 0.5);
-            ctx.ellipse(pFloor.x, pFloor.y, shadowRadius * 1.5, shadowRadius * 0.75, 0, 0, Math.PI * 2);
-            ctx.fillStyle = theme === 'dark' ? 'rgba(0, 0, 0, 0.45)' : 'rgba(99, 91, 255, 0.1)';
-            ctx.fill();
-            ctx.restore();
-
-            // Vertical Elevation Dashed Line (Graphics Upgrade)
-            if (ny > 0.05) {
-              ctx.save();
-              ctx.beginPath();
-              ctx.moveTo(pFloor.x, pFloor.y);
-              ctx.lineTo(pElevated.x, pElevated.y);
-              ctx.strokeStyle = act === 2 ? 'rgba(239, 68, 68, 0.35)' : 'rgba(107, 124, 147, 0.35)';
-              ctx.lineWidth = 1;
-              ctx.setLineDash([3, 3]);
-              ctx.stroke();
-              ctx.restore();
-            }
-
-            // Node marker color
-            let color = theme === 'dark' ? '#3c4257' : '#a3acb9';
-            if (dioramaState.hoveredNodeId === node.id) {
-              color = theme === 'dark' ? '#ffffff' : '#0a2540';
-            } else if (act === 2) {
-              color = '#ef4444'; // Red complexity theme in Act II
-            } else if (act >= 3) {
-              // Act III/IV: Transition to final cluster colors
-              color = node.targetColor;
-            }
-
-            // Base size 15px: readable at zoom-out (scale 66) and not
-            // overwhelming at zoom-in (scale 230 only sees depot area in Act I).
-            const size = diframeScale(15, node.id);
-            drawDiamond(ctx, pElevated.x, pElevated.y, size, color, time, idx);
-          });
-
-          // Helper to scale hovered nodes (Diagnosis #4)
-          function diframeScale(baseSize, nodeId) {
-            if (dioramaState.hoveredNodeId === nodeId) {
-              return baseSize * 1.6 + Math.sin(time * 0.015) * 1.5;
-            }
-            return baseSize;
-          }
-
-          // 4. Draw Act II Chaos lines
-          if (act === 2) {
-            ctx.save();
-            ctx.lineWidth = 1.5;
-            ctx.strokeStyle = 'rgba(239, 68, 68, 0.45)';
-            ctx.shadowColor = 'rgba(239, 68, 68, 0.45)';
-            ctx.shadowBlur = 6;
-            ctx.beginPath();
-            
-            // Draw crazy interconnected lattice connections that blink
-            const blink = Math.floor(time / 200) % 2 === 0;
-            if (blink && progress > 0.25) {
-              for (let i = 0; i < 22; i++) {
-                const n1 = CUSTOMER_NODES[Math.floor((i * 7.7) % CUSTOMER_NODES.length)];
-                const n2 = CUSTOMER_NODES[Math.floor((i * 12.3) % CUSTOMER_NODES.length)];
-                
-                // Lerp endpoints with progress
-                const startX = (-2.5) + (5.5) * (n1.id - 1) / CUSTOMER_NODES.length;
-                const endX = (-2.5) + (5.5) * (n2.id - 1) / CUSTOMER_NODES.length;
-                
-                const curN1 = toScreen(projectIsometric(
-                  startX + (n1.x - startX) * progress,
-                  elevatedY,
-                  n1.z * progress
-                ));
-                const curN2 = toScreen(projectIsometric(
-                  endX + (n2.x - endX) * progress,
-                  elevatedY,
-                  n2.z * progress
-                ));
-                ctx.moveTo(curN1.x, curN1.y);
-                ctx.lineTo(curN2.x, curN2.y);
-              }
-              ctx.stroke();
-            }
-            ctx.restore();
-          }
-
-          // 5. Draw Routes and Vehicles
-          if (act === 1) {
-            const pStart = toScreen(projectIsometric(0, 0, 0));
-            const pEnd = toScreen(projectIsometric(2.5, 0, 0));
-
-            // Draw simple route line
-            ctx.save();
-            ctx.strokeStyle = '#fb7185';
-            ctx.lineWidth = 2.5;
-            ctx.lineCap = 'round';
-            ctx.shadowColor = '#fb7185';
-            ctx.shadowBlur = 12;
-            
-            ctx.beginPath();
-            ctx.moveTo(pStart.x, pStart.y);
-            const currentX = pStart.x + (pEnd.x - pStart.x) * progress;
-            const currentY = pStart.y + (pEnd.y - pStart.y) * progress;
-            ctx.lineTo(currentX, currentY);
-            ctx.stroke();
-            ctx.restore();
-
-            // Draw single vehicle sliding along it
-            ctx.save();
-            ctx.translate(currentX, currentY);
-            const angle = Math.atan2(pEnd.y - pStart.y, pEnd.x - pStart.x);
-            ctx.rotate(angle);
-
-            ctx.shadowColor = '#fb7185';
-            ctx.shadowBlur = 15;
-            ctx.fillStyle = '#fb7185';
-            
-            ctx.beginPath();
-            ctx.moveTo(12, 0);       // Nose pointing forward
-            ctx.lineTo(-10, -7);     // Wing left
-            ctx.lineTo(-6, 0);       // Back center inner
-            ctx.lineTo(-10, 7);      // Wing right
-            ctx.closePath();
-            ctx.fill();
-
-            // Energy Core sphere in center
-            ctx.beginPath();
-            ctx.arc(-2, 0, 3.5, 0, Math.PI * 2);
-            ctx.fillStyle = '#ffffff';
-            ctx.shadowColor = '#ffffff';
-            ctx.shadowBlur = 8;
-            ctx.fill();
-
-            ctx.restore();
-
-            // Glowing energy dashes running behind vehicle
-            ctx.save();
-            ctx.strokeStyle = '#ffffff';
-            ctx.lineWidth = 3.5;
-            ctx.shadowColor = '#fb7185';
-            ctx.shadowBlur = 10;
-            ctx.beginPath();
-
-            for (let k = 1; k <= 3; k++) {
-              const trailProgress = Math.max(0.0, progress - k * 0.035);
-              const tx = pStart.x + (pEnd.x - pStart.x) * trailProgress;
-              const ty = pStart.y + (pEnd.y - pStart.y) * trailProgress;
-              if (k === 1) ctx.moveTo(tx, ty);
-              else ctx.lineTo(tx, ty);
-            }
-            ctx.stroke();
-            ctx.restore();
-          } else if (act >= 3) {
-            ROUTES.forEach((route, rIdx) => {
-              // Construct screen points list along the route path
-              const pathPoints = route.nodes.map(n => {
-                const isDepot = (n.x === 0 && n.z === 0);
-                const ny = isDepot ? 0 : elevatedY;
-                return toScreen(projectIsometric(n.x, ny, n.z));
-              });
-
-              // Draw route pipeline using smooth curves
-              ctx.save();
-              ctx.strokeStyle = route.color;
-              ctx.lineWidth = 2.5;
-              ctx.lineCap = 'round';
-              ctx.lineJoin = 'round';
-
-              // Neon glow (Graphics Upgrade)
-              ctx.shadowColor = route.color;
-              ctx.shadowBlur = 12;
-
-              // Lerp segment opacity from Red/Maroon to final color in Act III (Diagnosis #5)
-              if (act === 3) {
-                ctx.globalAlpha = Math.min(1.0, progress * 1.5);
-                let cleanHex = route.color.replace('#', '');
-                if (cleanHex.length === 3) {
-                  cleanHex = cleanHex.split('').map(char => char + char).join('');
-                }
-                const r = parseInt(cleanHex.substring(0, 2), 16);
-                const g = parseInt(cleanHex.substring(2, 4), 16);
-                const b = parseInt(cleanHex.substring(4, 6), 16);
-                
-                // Interpolate colors: Red (239, 68, 68) -> target color
-                const curR = Math.round(239 + (r - 239) * Math.min(1.0, progress * 2.0));
-                const curG = Math.round(68 + (g - 68) * Math.min(1.0, progress * 2.0));
-                const curB = Math.round(68 + (b - 68) * Math.min(1.0, progress * 2.0));
-                ctx.strokeStyle = `rgb(${curR}, ${curG}, ${curB})`;
-                ctx.shadowColor = ctx.strokeStyle;
-              }
-
-              ctx.beginPath();
-              ctx.moveTo(pathPoints[0].x, pathPoints[0].y);
-              
-              // Draw curved Bezier route paths (Diagnosis #2 / Graphics Upgrade)
-              for (let i = 0; i < pathPoints.length - 1; i++) {
-                const p0 = pathPoints[i];
-                const p2 = pathPoints[i + 1];
-                const p1 = {
-                  x: (p0.x + p2.x) / 2 + (p2.y - p0.y) * 0.15,
-                  y: (p0.y + p2.y) / 2 - (p2.x - p0.x) * 0.15
-                };
-                
-                // Draw progress line in Act III
-                if (act === 3) {
-                  const segStart = i / (pathPoints.length - 1);
-                  const segEnd = (i + 1) / (pathPoints.length - 1);
-                  if (progress >= segEnd) {
-                    ctx.quadraticCurveTo(p1.x, p1.y, p2.x, p2.y);
-                  } else if (progress > segStart) {
-                    const segP = (progress - segStart) / (segEnd - segStart);
-                    const subPoints = [];
-                    for (let t = 0; t <= 10; t++) {
-                      subPoints.push(getBezierPoint(p0, p1, p2, (t / 10) * segP));
-                    }
-                    subPoints.forEach((pt, ptIdx) => {
-                      if (ptIdx > 0) ctx.lineTo(pt.x, pt.y);
-                    });
-                  }
-                } else {
-                  ctx.quadraticCurveTo(p1.x, p1.y, p2.x, p2.y);
-                }
-              }
-              ctx.stroke();
-              ctx.restore();
-
-              // Draw vehicles sliding along routes
-              let vProgress = 0;
-              let isVisible = false;
-              let vAlpha = 1.0;
-
-              if (act === 3) {
-                const speed = 0.00015 * (1.2 + rIdx * 0.22);
-                vProgress = (time * speed) % 1.0;
-                const segmentLimit = 0.4;
-                isVisible = progress > segmentLimit;
-                vAlpha = Math.min(1.0, (progress - segmentLimit) * 5.0);
-              } else {
-                const speed = 0.00015 * (1.2 + rIdx * 0.22);
-                vProgress = (time * speed) % 1.0;
-                isVisible = true;
-              }
-
-              if (isVisible) {
-                ctx.save();
-                ctx.globalAlpha = vAlpha;
-                
-                const vPos = getBezierRoutePoint(pathPoints, vProgress);
-                
-                // Direction calculation
-                const vPosNext = getBezierRoutePoint(pathPoints, Math.min(1.0, vProgress + 0.012));
-                const angle = Math.atan2(vPosNext.y - vPos.y, vPosNext.x - vPos.x);
-
-                // Draw delta arrowhead vehicle (Graphics Upgrade)
-                ctx.save();
-                ctx.translate(vPos.x, vPos.y);
-                ctx.rotate(angle);
-
-                ctx.shadowColor = route.color;
-                ctx.shadowBlur = 15;
-                ctx.fillStyle = route.color;
-                
-                ctx.beginPath();
-                ctx.moveTo(12, 0);       // Nose pointing forward
-                ctx.lineTo(-10, -7);     // Wing left
-                ctx.lineTo(-6, 0);       // Back center inner
-                ctx.lineTo(-10, 7);      // Wing right
-                ctx.closePath();
-                ctx.fill();
-
-                // Energy Core sphere in center
-                ctx.beginPath();
-                ctx.arc(-2, 0, 3.5, 0, Math.PI * 2);
-                ctx.fillStyle = '#ffffff';
-                ctx.shadowColor = '#ffffff';
-                ctx.shadowBlur = 8;
-                ctx.fill();
-
-                ctx.restore();
-
-                // Glowing energy dashes running behind vehicle (Graphics Upgrade)
-                ctx.save();
-                ctx.strokeStyle = '#ffffff';
-                ctx.lineWidth = 3.5;
-                ctx.shadowColor = route.color;
-                ctx.shadowBlur = 10;
-                ctx.beginPath();
-
-                for (let k = 1; k <= 3; k++) {
-                  const trailP = (vProgress - k * 0.035 + 1.0) % 1.0;
-                  const trailPos = getBezierRoutePoint(pathPoints, trailP);
-                  if (k === 1) ctx.moveTo(trailPos.x, trailPos.y);
-                  else ctx.lineTo(trailPos.x, trailPos.y);
-                }
-                ctx.stroke();
-                ctx.restore();
-                
-                ctx.restore();
-              }
-            });
-          }
-        }
-
-        // ===================================================================
-        // Dynamic simulated solver logs
-        // ===================================================================
-        const CONSOLE_LOGS = {
-          1: [
-            "&gt; Initializing network nodes...",
-            "&gt; Depot coordinates set at [150, 300]",
-            "&gt; Customers: 30 locations loaded",
-            "&gt; Fleet: 4 vehicles active (capacity 100)"
-          ],
-          2: [
-            "&gt; ERROR: Capacity limit hit on Route 2 (124/100)",
-            "&gt; WARNING: Time-window mismatch at Customer 14",
-            "&gt; Trajectory stagnated in sub-optimal local minimum",
-            "&gt; Stagnation warning: cost stuck at 1684.2"
-          ],
-          3: [
-            "&gt; Activating DDQN operator selection...",
-            "&gt; DDQN selected DESTROY: 'Cluster' (cost: 1684.2)",
-            "&gt; DDQN selected REPAIR: 'Greedy' (feasibility: OK)",
-            "&gt; DDQN escape triggered! Cost: 1684.2 -&gt; 1215.0"
-          ],
-          4: [
-            "&gt; Solomon RC101 optimization complete!",
-            "&gt; Final Cost: 1048.9 (Gap: -2.22% vs BKS)",
-            "&gt; All constraints checked: 100% FEASIBLE",
-            "&gt; Fleet dispatch finalized. On-time delivery locked."
-          ]
-        };
-
-        function updateConsoleLog(act) {
-          const consolePanel = document.getElementById('hud-console');
-          if (!consolePanel) return;
-
-          // Console log only appears from Act II onward — Act I is the
-          // "establishing shot" and should be clean (no UI clutter).
-          if (act < 2) {
-            consolePanel.classList.remove('active');
-            consolePanel.innerHTML = '';
-            return;
-          }
-          
-          const lines = CONSOLE_LOGS[act] || [];
-          let html = '';
-          lines.forEach((line, index) => {
-            if (index === lines.length - 1) {
-              html += `<div class="console-line">${line}<span class="console-cursor">_</span></div>`;
-            } else {
-              html += `<div class="console-line">${line}</div>`;
-            }
-          });
-          consolePanel.innerHTML = html;
-          consolePanel.classList.add('active');
-        }
-
-        function renderCanvas(act, progress) {
-          dioramaState.act = act;
-          dioramaState.progress = progress;
-          dioramaState.overallProgress = (act - 1) * 0.25 + progress * 0.25;
-
-          const hud = document.getElementById('hud-panel');
-          if (hud) {
-            if (act === 4) {
-              hud.classList.add('active');
-            } else {
-              hud.classList.remove('active');
-            }
-          }
-
-          const customerList = document.getElementById('customer-list-panel');
-          if (customerList) {
-            if (act >= 3) {
-              customerList.classList.add('active');
-            } else {
-              customerList.classList.remove('active');
-            }
-          }
-
-          updateConsoleLog(act);
-        }
-
-        // ===================================================================
-        // GSAP ScrollTrigger Integration
-        // ===================================================================
-        let showcaseST = null;
-
-        function setupScrollAnimations() {
-          if (typeof gsap === 'undefined' || typeof ScrollTrigger === 'undefined') {
-            console.warn('GSAP or ScrollTrigger not loaded. Using fallback animation.');
-            setupFallbackAnimation();
-            return;
-          }
-
-          gsap.registerPlugin(ScrollTrigger);
-
-          if (showcaseST) {
-            showcaseST.kill();
-            showcaseST = null;
-          }
-
-          if (window.innerWidth < 1024) {
-            setupFallbackAnimation();
-            return;
-          }
-
-          initCanvas();
-          renderCanvas(1, 0.0);
-
-          showcaseST = ScrollTrigger.create({
-            trigger: '.showcase-section',
-            start: 'top top',
-            end: '+=1500',
-            pin: true,
-            scrub: 1,
-            id: 'showcase-scroll',
-            snap: {
-              snapTo: [0.0, 0.25, 0.50, 0.75, 1.0],
-              delay: 0.1,
-              duration: { min: 0.2, max: 0.5 },
-              ease: 'power2.out'
-            },
-            onUpdate: (self) => {
-              const progress = self.progress;
-
-              let act = 1;
-              let actProgress = 0;
-
-              if (progress < 0.25) {
-                act = 1;
-                actProgress = progress / 0.25;
-              } else if (progress < 0.5) {
-                act = 2;
-                actProgress = (progress - 0.25) / 0.25;
-              } else if (progress < 0.75) {
-                act = 3;
-                actProgress = (progress - 0.5) / 0.25;
-              } else {
-                act = 4;
-                actProgress = (progress - 0.75) / 0.25;
-              }
-
-              toggleActiveCardAndTab(act);
-              renderCanvas(act, actProgress);
-            },
-          });
-        }
-
-        function toggleActiveCardAndTab(activeAct) {
-          for (let act = 1; act <= 4; act++) {
-            const card = document.getElementById(`card-act${act}`);
-            if (card) {
-              card.classList.toggle('active', act === activeAct);
-            }
-            
-            const tabBtn = document.querySelector(`.showcase-tab-btn[data-act="${act}"]`);
-            if (tabBtn) {
-              tabBtn.classList.toggle('active', act === activeAct);
-              tabBtn.setAttribute('aria-selected', act === activeAct ? 'true' : 'false');
-            }
-          }
-        }
-
-        function setupFallbackAnimation() {
-          if (showcaseST) {
-            showcaseST.kill();
-            showcaseST = null;
-          }
-          initCanvas();
-          toggleActiveCardAndTab(1);
-          renderCanvas(1, 1.0);
-        }
-
-        // ===================================================================
-        // Localization Settings
-        // ===================================================================
-        function getStoredLang() {
-          const v = localStorage.getItem(STORAGE_LANG);
-          if (v === 'en' || v === 'vn') return v;
-          const navLang = (navigator.language || '').toLowerCase();
-          if (navLang.startsWith('vi')) return 'vn';
-          return 'en';
-        }
-
-        function applyLang(lang) {
-          const dict = i18n[lang] || i18n.en;
-          document.documentElement.lang = lang === 'vn' ? 'vi' : 'en';
-
-          document.querySelectorAll('[data-i18n]').forEach((node) => {
-            const key = node.getAttribute('data-i18n');
-            if (dict[key]) {
-              node.textContent = dict[key];
-            }
-          });
-
-          const label = document.getElementById('lang-label');
-          if (label) label.textContent = lang === 'vn' ? 'VN' : 'EN';
-          localStorage.setItem(STORAGE_LANG, lang);
-        }
-
-        // ===================================================================
-        // Theme Switching Settings
-        // ===================================================================
-        function getStoredTheme() {
-          const v = localStorage.getItem(STORAGE_THEME);
-          if (v === 'light' || v === 'dark') return v;
-          return 'dark'; // default to dark
-        }
-
-        function applyTheme(theme) {
-          document.documentElement.setAttribute('data-theme', theme);
-          localStorage.setItem(STORAGE_THEME, theme);
-
-          const meta = document.querySelector('meta[name="theme-color"]');
-          if (meta) meta.setAttribute('content', theme === 'dark' ? '#0d0d10' : '#f8f8f6');
-
-          const sunIcon = document.querySelector('.sun-icon');
-          const moonIcon = document.querySelector('.moon-icon');
-          if (sunIcon && moonIcon) {
-            if (theme === 'dark') {
-              sunIcon.style.display = 'none';
-              moonIcon.style.display = 'block';
-            } else {
-              sunIcon.style.display = 'block';
-              moonIcon.style.display = 'none';
-            }
-          }
-
-          dioramaState.theme = theme;
-        }
-
-        function setupControls() {
-          const langBtn = document.getElementById('lang-toggle');
-          const themeBtn = document.getElementById('theme-toggle');
-
-          let currentLang = getStoredLang();
-          let currentTheme = getStoredTheme();
-
-          applyLang(currentLang);
-          applyTheme(currentTheme);
-
-          langBtn?.addEventListener('click', () => {
-            currentLang = currentLang === 'en' ? 'vn' : 'en';
-            applyLang(currentLang);
-          });
-
-          themeBtn?.addEventListener('click', (e) => {
-            const nextTheme = currentTheme === 'light' ? 'dark' : 'light';
-
-            if (document.startViewTransition) {
-              const x = e.clientX;
-              const y = e.clientY;
-              document.documentElement.style.setProperty('--vt-x', `${x}px`);
-              document.documentElement.style.setProperty('--vt-y', `${y}px`);
-
-              document.startViewTransition(() => {
-                currentTheme = nextTheme;
-                applyTheme(currentTheme);
-              });
-            } else {
-              currentTheme = nextTheme;
-              applyTheme(currentTheme);
-            }
-          });
-        }
-
-        function setupMobileMenu() {
-          const btn = document.getElementById('mobile-menu-btn');
-          const menu = document.getElementById('mobile-menu');
-          if (!btn || !menu) return;
-
-          btn.addEventListener('click', () => {
-            const isOpen = menu.classList.toggle('open');
-            menu.hidden = !isOpen;
-            btn.setAttribute('aria-expanded', String(isOpen));
-            btn.classList.toggle('active');
-          });
-
-          menu.querySelectorAll('a').forEach((a) => {
-            a.addEventListener('click', () => {
-              menu.classList.remove('open');
-              menu.hidden = true;
-              btn.setAttribute('aria-expanded', 'false');
-              btn.classList.remove('active');
-            });
-          });
-        }
-
-        function setupScrollSpy() {
-          const navLinks = Array.from(document.querySelectorAll('.nav-links a'));
-          const sections = navLinks
-            .map((link) => {
-              const id = link.getAttribute('href') || '';
-              if (!id.startsWith('#')) return null;
-              const target = document.querySelector(id);
-              return target ? { link, target } : null;
-            })
-            .filter(Boolean);
-
-          if (!sections.length || !('IntersectionObserver' in window)) return;
-
-          const observer = new IntersectionObserver(
-            (entries) => {
-              entries.forEach((entry) => {
-                if (!entry.isIntersecting) return;
-                const match = sections.find((s) => s.target === entry.target);
-                if (!match) return;
-                navLinks.forEach((l) => l.classList.remove('active'));
-                match.link.classList.add('active');
-              });
-            },
-            { rootMargin: '-40% 0px -50% 0px', threshold: 0 }
-          );
-
-          sections.forEach(({ target }) => observer.observe(target));
-        }
-
-        function setupNavbarScroll() {
-          const nav = document.querySelector('.site-nav');
-          if (!nav) return;
-          window.addEventListener(
-            'scroll',
-            () => {
-              nav.classList.toggle('is-scrolled', window.scrollY > 20);
-            },
-            { passive: true }
-          );
-        }
-
-        function setupShowcaseTabs() {
-          const tabs = document.querySelectorAll('.showcase-tab-btn');
-          tabs.forEach((tab) => {
-            tab.addEventListener('click', () => {
-              const act = parseInt(tab.getAttribute('data-act'), 10);
-              
-              if (showcaseST) {
-                const progress = (act - 1) / 3;
-                const scrollPos = showcaseST.start + progress * (showcaseST.end - showcaseST.start);
-                
-                window.scrollTo({
-                  top: scrollPos + 2,
-                  behavior: 'smooth'
-                });
-              } else {
-                toggleActiveCardAndTab(act);
-                renderCanvas(act, 1.0);
-              }
-            });
-          });
-        }
-
-        function setupCLITabs() {
-          const tabs = document.querySelectorAll('.cli-tab-btn');
-          const panes = document.querySelectorAll('.cli-pane');
-
-          tabs.forEach((tab) => {
-            tab.addEventListener('click', () => {
-              const targetId = tab.getAttribute('data-target');
-              
-              tabs.forEach((t) => t.classList.remove('active'));
-              panes.forEach((p) => p.classList.remove('active'));
-
-              tab.classList.add('active');
-              const targetPane = document.getElementById(targetId);
-              if (targetPane) {
-                targetPane.classList.add('active');
-              }
-            });
-          });
-
-          function showTooltip(btn) {
-            const tooltip = btn.querySelector('.copy-success-tooltip');
-            const btnText = btn.querySelector('.btn-copy-text');
-            if (tooltip) {
-              tooltip.classList.add('show');
-              if (btnText) btnText.textContent = 'Copied!';
-              setTimeout(() => {
-                tooltip.classList.remove('show');
-                if (btnText) btnText.textContent = 'Copy';
-              }, 1500);
-            }
-          }
-
-          function fallbackCopyText(text, btn) {
-            const textArea = document.createElement("textarea");
-            textArea.value = text;
-            textArea.style.top = "0";
-            textArea.style.left = "0";
-            textArea.style.position = "fixed";
-            document.body.appendChild(textArea);
-            textArea.focus();
-            textArea.select();
-            try {
-              document.execCommand('copy');
-              showTooltip(btn);
-            } catch (err) {
-              console.error('Fallback copy failed', err);
-            }
-            document.body.removeChild(textArea);
-          }
-
-          const copyButtons = document.querySelectorAll('.btn-copy-code');
-          copyButtons.forEach((btn) => {
-            btn.addEventListener('click', () => {
-              const pane = btn.closest('.cli-pane');
-              const codeBlock = pane.querySelector('.cli-code-block');
-              if (!codeBlock) return;
-
-              const commands = Array.from(codeBlock.querySelectorAll('.cli-command'))
-                .map(el => el.textContent.trim())
-                .join('\n');
-
-              if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(commands).then(() => {
-                  showTooltip(btn);
-                }).catch(err => {
-                  console.error('Failed to copy text: ', err);
-                  fallbackCopyText(commands, btn);
-                });
-              } else {
-                fallbackCopyText(commands, btn);
-              }
-            });
-          });
-        }
-
-        function setupCustomerListPanel() {
-          const panel = document.getElementById('customer-list-panel');
-          const body = document.getElementById('customer-list-body');
-          if (!panel || !body) return;
-
-          let html = '';
-          CUSTOMER_NODES.forEach((node) => {
-            html += `
-              <div class="customer-row" data-id="${node.id}">
-                <span class="customer-row-dot" style="background-color: ${node.targetColor}; color: ${node.targetColor};"></span>
-                <span class="customer-row-label">#${100 + node.id} · C${node.cluster}</span>
-              </div>
-            `;
-          });
-          body.innerHTML = html;
-
-          body.querySelectorAll('.customer-row').forEach((row) => {
-            row.addEventListener('mouseenter', () => {
-              const id = parseInt(row.getAttribute('data-id'), 10);
-              dioramaState.hoveredNodeId = id;
-              row.classList.add('row-active');
-            });
-            row.addEventListener('mouseleave', () => {
-              row.classList.remove('row-active');
-              dioramaState.hoveredNodeId = null;
-            });
-          });
-        }
-
-        function syncCustomerListHighlight(nodeId) {
-          const container = document.getElementById('customer-list-body');
-          if (!container) return;
-
-          container.querySelectorAll('.customer-row').forEach(row => {
-            const id = parseInt(row.getAttribute('data-id'), 10);
-            if (id === nodeId) {
-              row.classList.add('row-active');
-              row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            } else {
-              row.classList.remove('row-active');
-            }
-          });
-        }
-
-        function setupBentoGlow() {
-          const cards = document.querySelectorAll('.bento-card');
-          cards.forEach((card) => {
-            card.addEventListener('mousemove', (e) => {
-              const rect = card.getBoundingClientRect();
-              const x = e.clientX - rect.left;
-              const y = e.clientY - rect.top;
-              card.style.setProperty('--mouse-x', `${x}px`);
-              card.style.setProperty('--mouse-y', `${y}px`);
-            });
-          });
-        }
-
-        // Initial Boot
-        document.addEventListener('DOMContentLoaded', () => {
-          setupControls();
-          setupMobileMenu();
-          setupScrollSpy();
-          setupNavbarScroll();
-          setupShowcaseTabs();
-          setupCLITabs();
-          setupBentoGlow();
-        });
-
-        window.addEventListener('load', () => {
-          setupScrollAnimations();
-        });
-
-        let resizeTimeout = null;
-        window.addEventListener('resize', () => {
-          if (resizeTimeout) clearTimeout(resizeTimeout);
-          resizeTimeout = setTimeout(() => {
-            setupScrollAnimations();
-          }, 250);
-        });
-      })();
-    </script>
+    <!-- Landing Page Module -->
+    <script type="module" src="js/landing.js"></script>
   </body>
 </html>

@@ -8,18 +8,12 @@ import ModelAnalyticsView from './components/ModelAnalyticsView.jsx';
 import SettingsView from './components/SettingsView.jsx';
 import LoadingOverlay from './components/LoadingOverlay.jsx';
 import ToastContainer from './components/ToastContainer.jsx';
+import AuthView from './components/AuthView.jsx';
 
 function AppContent() {
   const { state, isLoadingUser } = useAppContext();
 
-  useEffect(() => {
-    if (!isLoadingUser && !state.unlocked) {
-      // Redirect to login if user is not authenticated or not guest
-      window.location.replace('auth.html');
-    }
-  }, [isLoadingUser, state.unlocked]);
-
-  if (isLoadingUser || !state.unlocked) {
+  if (isLoadingUser) {
     return (
       <div style={{
         display: 'flex',
@@ -60,6 +54,32 @@ function AppContent() {
       {state.activeTab === 'settings' && <SettingsView />}
       <LoadingOverlay />
       <ToastContainer />
+
+      {/* Auth Modal Popup Overlay */}
+      {state.showLoginModal && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          background: 'rgba(15, 23, 42, 0.65)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          animation: 'fadeIn 0.3s ease-out',
+          overflow: 'auto',
+          padding: '20px'
+        }}>
+          <style>{`
+            @keyframes fadeIn {
+              from { opacity: 0; }
+              to { opacity: 1; }
+            }
+          `}</style>
+          <AuthView onClose={() => updateState({ showLoginModal: false })} />
+        </div>
+      )}
     </AppLayout>
   );
 }

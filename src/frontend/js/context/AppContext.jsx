@@ -95,6 +95,7 @@ export function AppContextProvider({ children }) {
             email: fbUser.email,
             role: fbUser.email.includes('admin') ? 'admin' : 'operator',
             unlocked: true,
+            showLoginModal: false,
           });
           try {
             await firebaseService.init(fbUser.email);
@@ -124,6 +125,7 @@ export function AppContextProvider({ children }) {
       email: 'guest@nami.local',
       role: 'guest',
       unlocked: true,
+      showLoginModal: false,
     });
     toast('Demo Mode', 'Continuing as guest operator.', 'ok');
   };
@@ -138,6 +140,7 @@ export function AppContextProvider({ children }) {
       email: '',
       role: 'operator',
       unlocked: false,
+      showLoginModal: true,
     });
     toast('Logged Out', 'You have been signed out successfully.', 'ok');
   };

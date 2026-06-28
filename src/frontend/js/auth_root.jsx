@@ -5,12 +5,11 @@ import AuthView from './components/AuthView.jsx';
 import ToastContainer from './components/ToastContainer.jsx';
 
 function AuthContent() {
-  return (
-    <>
-      <AuthView />
-      <ToastContainer />
-    </>
-  );
+  React.useEffect(() => {
+    window.location.replace('app.html');
+  }, []);
+
+  return null;
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(

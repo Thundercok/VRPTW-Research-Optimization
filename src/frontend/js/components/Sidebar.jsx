@@ -58,12 +58,43 @@ export default function Sidebar() {
         >
           &larr; Back to Home
         </a>
-        <div className="user-badge" id="user-email">
-          {state.email || 'guest@nami.local'}
-        </div>
-        <button id="btn-logout" className="btn-text" onClick={logout}>
-          {t('logoutButton')}
-        </button>
+        {state.unlocked && state.role !== 'guest' ? (
+          <>
+            <div className="user-badge" id="user-email">
+              {state.email}
+            </div>
+            <button id="btn-logout" className="btn-text" onClick={logout}>
+              {t('logoutButton')}
+            </button>
+          </>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
+            {state.role === 'guest' && (
+              <div className="user-badge" id="user-email" style={{ opacity: 0.7, fontSize: '11px' }}>
+                Guest Demo Mode
+              </div>
+            )}
+            <button
+              id="btn-sidebar-login"
+              className="btn"
+              style={{
+                width: '100%',
+                background: 'var(--primary)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '8px 12px',
+                fontSize: '13px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'background 0.2s'
+              }}
+              onClick={() => updateState({ showLoginModal: true })}
+            >
+              Sign In
+            </button>
+          </div>
+        )}
       </div>
     </aside>
   );

@@ -1,5 +1,6 @@
 export function createInitialState() {
   const savedEmail = localStorage.getItem('vrptw_email') || '';
+  const unlocked = Boolean(localStorage.getItem('vrptw_token'));
   return {
     lang: localStorage.getItem('vrptw_demo_lang') === 'vn' ? 'vn' : 'en',
     token: localStorage.getItem('vrptw_token') || '',
@@ -26,6 +27,7 @@ export function createInitialState() {
     adminFeedback: [],
     lastResult: null,
     activeTab: 'dispatch',
-    unlocked: Boolean(localStorage.getItem('vrptw_token')),
+    unlocked,
+    showLoginModal: !unlocked,
   };
 }
