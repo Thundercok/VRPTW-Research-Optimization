@@ -350,17 +350,59 @@ export function AppContextProvider({ children }) {
       const incoming = Array.isArray(data?.customers) ? data.customers : [];
       if (incoming.length < 2) throw new Error('Solomon dataset is empty or invalid.');
 
-      const customers = incoming.map((c, idx) => ({
-        ...c,
-        id: idx,
-        demand: Number(c.demand) || 0,
-        ready: Number.isFinite(Number(c.ready)) ? Number(c.ready) : 0,
-        due: Number.isFinite(Number(c.due)) ? Number(c.due) : 1000,
-        service: Number.isFinite(Number(c.service)) ? Number(c.service) : 10,
-        isDepot: Boolean(c.isDepot),
-        priority: c.priority || (idx === 0 ? 'Normal' : ['Normal', 'High', 'Low'][idx % 3]),
-        skill: c.skill || (idx === 0 ? 'None' : idx % 5 === 1 ? 'Refrigerated' : idx % 5 === 2 ? 'Hazmat' : 'None'),
-      }));
+      const getRealisticHCMName = (idx, isDepot) => {
+        if (isDepot) return "NAMI Logistics Hub (Quận 7, TP.HCM)";
+        const hcmNames = [
+          "Bách Hóa Xanh - Lâm Văn Bền",
+          "Bưu cục Giao Hàng Tiết Kiệm - Trần Xuân Soạn",
+          "WinMart+ - Phú Mỹ Hưng",
+          "Co.op Food - Huỳnh Tấn Phát",
+          "Cửa hàng GS25 - Nguyễn Lương Bằng",
+          "Pharmacity - Nguyễn Hữu Thọ",
+          "Giao Hàng Nhanh (GHN) - Quận 7 Hub",
+          "Siêu thị Lotte Mart - Nguyễn Thị Thập",
+          "Circle K - Tôn Dật Tiên",
+          "7-Eleven - Tân Trào",
+          "Điện Máy Xanh - Huỳnh Tấn Phát",
+          "FPT Shop - Nguyễn Thị Thập",
+          "Bách Hóa Xanh - Lê Văn Lương",
+          "WinMart - Him Lam",
+          "Co.op Smile - Trần Trọng Cung",
+          "Pharmacity - Huỳnh Tấn Phát",
+          "Bưu điện Quận 7 - Hoàng Quốc Việt",
+          "Cửa hàng Ministop - Nguyễn Thị Thập",
+          "Circle K - Nguyễn Hữu Thọ",
+          "Bách Hóa Xanh - Mai Văn Vĩnh",
+          "Viettel Post - Huỳnh Tấn Phát",
+          "An Khang Pharmacy - Lâm Văn Bền",
+          "Co.opmart - Huỳnh Tấn Phát",
+          "WinMart+ - Trần Xuân Soạn",
+          "J&T Express - Nguyễn Hữu Thọ",
+          "Cửa hàng 7-Eleven - Hoàng Anh Gia Lai",
+          "Circle K - Lê Văn Lương",
+          "Pharmacity - Lâm Văn Bền",
+          "Bách Hóa Xanh - Bùi Văn Ba",
+          "WinMart+ - Đường số 15"
+        ];
+        return hcmNames[(idx - 1) % hcmNames.length];
+      };
+
+      const customers = incoming.map((c, idx) => {
+        const isDepot = idx === 0 || Boolean(c.isDepot);
+        return {
+          ...c,
+          id: idx,
+          name: isDepot ? "NAMI Logistics Hub (Quận 7, TP.HCM)" : getRealisticHCMName(idx, false),
+          address: isDepot ? "12 Hoàng Quốc Việt, Phú Mỹ, Quận 7, Hồ Chí Minh" : `Số ${idx * 4 + 12} Đường Tương Ứng, Quận 7, TP.HCM`,
+          demand: Number(c.demand) || 0,
+          ready: Number.isFinite(Number(c.ready)) ? Number(c.ready) : 0,
+          due: Number.isFinite(Number(c.due)) ? Number(c.due) : 1000,
+          service: Number.isFinite(Number(c.service)) ? Number(c.service) : 10,
+          isDepot,
+          priority: c.priority || (isDepot ? 'Normal' : ['Normal', 'High', 'Low'][idx % 3]),
+          skill: c.skill || (isDepot ? 'None' : idx % 5 === 1 ? 'Refrigerated' : idx % 5 === 2 ? 'Hazmat' : 'None'),
+        };
+      });
 
       const fleetVehicles = Math.max(1, Number(data?.fleet?.vehicles) || state.vehicles);
       const fleetCapacity = Math.max(1, Number(data?.fleet?.capacity) || state.capacity);

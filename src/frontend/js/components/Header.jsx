@@ -31,18 +31,31 @@ export default function Header() {
       const fleet = [...(prev.fleet || [])];
       const currentCapacity = prev.capacity || 120;
       if (fleet.length < val) {
+        const seedDrivers = [
+          { name: 'Nguyễn Minh Tuấn', speed: 1.05, shiftStart: '06:00', shiftEnd: '15:00', breakStart: '10:30', breakDuration: 30, skills: 'None', status: 'Active' },
+          { name: 'Phạm Hoàng Nam', speed: 0.98, shiftStart: '08:00', shiftEnd: '17:00', breakStart: '12:00', breakDuration: 45, skills: 'Refrigerated', status: 'Active' },
+          { name: 'Lê Văn Hùng', speed: 0.90, shiftStart: '07:30', shiftEnd: '16:30', breakStart: '11:30', breakDuration: 40, skills: 'Hazmat', status: 'In Transit' },
+          { name: 'Trần Quốc Bảo', speed: 1.02, shiftStart: '08:00', shiftEnd: '17:00', breakStart: '12:00', breakDuration: 30, skills: 'Express', status: 'Active' },
+          { name: 'Vũ Đức Duy', speed: 0.95, shiftStart: '06:30', shiftEnd: '15:30', breakStart: '11:00', breakDuration: 30, skills: 'Refrigerated', status: 'On Break' },
+          { name: 'Đặng Minh Triết', speed: 1.10, shiftStart: '08:30', shiftEnd: '17:30', breakStart: '12:30', breakDuration: 30, skills: 'Express', status: 'Active' },
+          { name: 'Hoàng Văn Phong', speed: 0.88, shiftStart: '09:00', shiftEnd: '18:00', breakStart: '13:00', breakDuration: 60, skills: 'Hazmat', status: 'Active' },
+          { name: 'Đỗ Tiến Đạt', speed: 1.00, shiftStart: '08:00', shiftEnd: '17:00', breakStart: '12:00', breakDuration: 30, skills: 'None', status: 'Active' },
+          { name: 'Bùi Anh Tuấn', speed: 0.97, shiftStart: '07:00', shiftEnd: '16:00', breakStart: '11:30', breakDuration: 30, skills: 'Refrigerated', status: 'Maintenance' },
+          { name: 'Phan Văn Khánh', speed: 1.00, shiftStart: '08:00', shiftEnd: '17:00', breakStart: '12:00', breakDuration: 30, skills: 'None', status: 'Active' }
+        ];
         for (let i = fleet.length; i < val; i++) {
+          const d = seedDrivers[i % seedDrivers.length];
           fleet.push({
             id: i,
-            driver: `Driver #${i + 1}`,
+            driver: d.name,
             capacity: currentCapacity,
-            speed: 1.0,
-            shiftStart: '08:00',
-            shiftEnd: '17:00',
-            breakStart: '12:00',
-            breakDuration: 30,
-            skills: 'None',
-            status: 'Active',
+            speed: d.speed,
+            shiftStart: d.shiftStart,
+            shiftEnd: d.shiftEnd,
+            breakStart: d.breakStart,
+            breakDuration: d.breakDuration,
+            skills: d.skills,
+            status: d.status,
           });
         }
       } else if (fleet.length > val) {

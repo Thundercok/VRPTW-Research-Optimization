@@ -187,6 +187,10 @@ class ALNSSolver:
             self.bandit.update(di, ri, score, cfg.sigma1)
             if (it + 1) % cfg.segment_size == 0:
                 self.bandit.decay(cfg.bandit_decay)
+
+            # Adaptive bandit reset khi stuck quá lâu
+            if no_imp > 0 and no_imp == cfg.early_stop_patience // 2:
+                self.bandit.reset()  # reset về uniform khi halfway to early-stop
             temp *= cfg.temp_decay
             history.append(best.cost)
             if no_imp >= cfg.early_stop_patience:
@@ -1311,6 +1315,21 @@ class HybridDDQNSolver:
 
             for mb in self.mode_bandits:
                 mb.decay(cfg.bandit_decay)
+
+            # Population restart: khi stuck, restart từ diverse archive plan
+            if (no_imp > 0 
+                and no_imp % (cfg.plateau_start * 3) == 0
+                and self.archive._plans.get(self.inst.name)):
+                alt = self.archive.sample_diverse(
+                    self.inst.name, exclude_cost=cur.cost)
+                if alt is not None and alt.nv <= best.nv:
+                    cur = alt
+                    temp = cfg.temp_control * cur.cost / math.log(2) * 1.5
+
+            # Adaptive mode_bandit reset khi plateau segment
+            if no_imp > 0 and no_imp % (cfg.plateau_start * 2) == 0:
+                for mb in self.mode_bandits:
+                    mb.reset()
             for d in range(N_D):
                 for r in range(N_R):
                     if seg_counts[d, r] > 0:

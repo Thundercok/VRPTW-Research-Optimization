@@ -146,6 +146,10 @@ class ThompsonBandit:
         np.multiply(self.beta - 1.0, rate, out=self.beta)
         np.add(self.beta, 1.0, out=self.beta)
 
+    def reset(self) -> None:
+        self.alpha.fill(1.0)
+        self.beta.fill(1.0)
+
     def clone(self) -> ThompsonBandit:
         b = ThompsonBandit(self.alpha.shape[0], self.alpha.shape[1])
         b.alpha = self.alpha.copy()
@@ -169,6 +173,14 @@ class EliteArchive:
         bucket.append(plan.copy())
         bucket.sort(key=lambda p: (p.nv, p.cost))
         self._plans[key] = bucket[: self.k]
+
+    def sample_diverse(self, inst_name: str, exclude_cost: float | None = None) -> "Plan | None":
+        """Return a random plan from archive excluding current solution cost."""
+        import random
+        bucket = self._plans.get(inst_name, [])
+        candidates = [p for p in bucket 
+                      if exclude_cost is None or abs(p.cost - exclude_cost) > 1e-6]
+        return random.choice(candidates).copy() if candidates else None
 
     def load_plans(self, folder: str, insts_dict: dict[str, Inst]) -> None:
         if not os.path.exists(folder):
