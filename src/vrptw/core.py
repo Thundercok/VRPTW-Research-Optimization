@@ -86,9 +86,13 @@ def _route_violations(route, demands, capacity, ready, due, service, dist):
 @njit(cache=True)
 def _route_ok(route, demands, capacity, ready, due, service, dist) -> bool:
     load = 0.0
-    t, prev = 0.0, 0
     for node in route:
         load += demands[node]
+    if load > capacity:
+        return False
+
+    t, prev = 0.0, 0
+    for node in route:
         t += dist[prev, node]
         if t < ready[node]:
             t = ready[node]
@@ -96,8 +100,6 @@ def _route_ok(route, demands, capacity, ready, due, service, dist) -> bool:
             return False
         t += service[node]
         prev = node
-    if load > capacity:
-        return False
     return t + dist[prev, 0] <= due[0]
 
 

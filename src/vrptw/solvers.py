@@ -224,6 +224,27 @@ class HybridDDQNSolver:
         self.current_it = None
         self.solver_history = []
 
+    def _adapt_params_to_instance(self, cfg, inst):
+        """Tune search parameters based on instance characteristics."""
+        import copy
+        cfg = copy.copy(cfg)
+        customers = inst.n
+        tw_range = max(inst.due_times[1:] - inst.ready_times[1:])  
+        avg_tw = float((inst.due_times[1:] - inst.ready_times[1:]).mean())
+        tightness = 1.0 - (avg_tw / max(tw_range, 1.0))
+        
+        if tightness > 0.7:  # Tight TW (R1/RC1 family)
+            cfg.temp_control = cfg.temp_control * 0.8
+            cfg.bandit_decay = max(0.90, cfg.bandit_decay * 0.98)
+        elif tightness < 0.3:  # Wide TW (R2/RC2/C family)
+            cfg.temp_control = cfg.temp_control * 1.2
+            cfg.segment_size = int(cfg.segment_size * 1.3)
+        
+        if customers >= 200:  # Scale plateau trigger
+            cfg.plateau_start = int(cfg.plateau_start * 1.5)
+        
+        return cfg
+
     def load_gnn_model(self, model_path: str) -> None:
         import os
 
@@ -257,7 +278,16 @@ class HybridDDQNSolver:
                 t_start = getattr(self.cfg, "gnn_pruning_threshold_start", 0.05)
                 t_end = getattr(self.cfg, "gnn_pruning_threshold_end", 0.003)
                 frac = min(1.0, max(0.0, it / max(1, max_it)))
-                kwargs["pruning_threshold"] = t_start + (t_end - t_start) * frac
+                
+                recent_improving = getattr(plan, '_recent_improving', False)
+                if not hasattr(plan, '_recent_improving') and hasattr(self, 'no_imp'):
+                    recent_improving = (self.no_imp == 0)
+                
+                if recent_improving:
+                    pruning_threshold = t_start * (1.0 - frac * 0.5)
+                else:
+                    pruning_threshold = t_end + (t_start - t_end) * (1.0 - frac) * 0.3
+                kwargs["pruning_threshold"] = pruning_threshold
             else:
                 kwargs["pruning_threshold"] = getattr(self.cfg, "gnn_pruning_threshold_end", 0.003)
         return local_search(plan, **kwargs)
@@ -1075,6 +1105,8 @@ class HybridDDQNSolver:
             np.random.seed(seed)
             torch.manual_seed(seed)
         cfg = self.cfg
+        cfg = self._adapt_params_to_instance(cfg, self.inst)
+        self.cfg = cfg
         self.ctrl.reset()
         self.op_ctrl.reset()
         self.ls_budget.initialize(cfg)
@@ -1121,6 +1153,7 @@ class HybridDDQNSolver:
         history: list[float] = [best.cost]
         recent_improvements: deque[int] = deque(maxlen=cfg.segment_size)
         no_imp = 0
+        self.no_imp = 0
         self.q_scale = 1.0
 
         n_segments = math.ceil(cfg.hybrid_iterations / cfg.segment_size)
@@ -1257,6 +1290,7 @@ class HybridDDQNSolver:
                     cur = cand
                 else:
                     no_imp += 1
+                self.no_imp = no_imp
 
                 recent_improvements.append(1 if improved else 0)
                 seg_scores[di, ri] += score
@@ -1322,6 +1356,8 @@ class HybridDDQNSolver:
                 and self.archive._plans.get(self.inst.name)):
                 alt = self.archive.sample_diverse(
                     self.inst.name, exclude_cost=cur.cost)
+                if alt is None and len(self.archive._plans.get(self.inst.name, [])) >= 2:
+                    alt = self.archive.crossover(self.inst.name)
                 if alt is not None and alt.nv <= best.nv:
                     cur = alt
                     temp = cfg.temp_control * cur.cost / math.log(2) * 1.5

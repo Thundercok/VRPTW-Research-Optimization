@@ -122,6 +122,8 @@ def _best_insert_position_pruned_numba(
 
 
 def _best_insert_position(node: int, route: list[int], inst: Inst) -> tuple[float, int | None]:
+    if sum(inst.demands[c] for c in route) + inst.demands[node] > inst.capacity:
+        return float("inf"), None
     route_arr = np.array(route, dtype=np.int64)
     best_cost, best_pos = _best_insert_position_numba(
         node,

@@ -182,6 +182,30 @@ class EliteArchive:
                       if exclude_cost is None or abs(p.cost - exclude_cost) > 1e-6]
         return random.choice(candidates).copy() if candidates else None
 
+    def crossover(self, inst_name: str) -> "Plan | None":
+        """Route-level crossover between top-2 elite plans."""
+        import random
+        bucket = self._plans.get(inst_name, [])
+        if len(bucket) < 2:
+            return None
+        p1, p2 = bucket[0], bucket[1]
+        # Take best routes from p1, fill remaining customers from p2
+        routes = [r[:] for r in p1.routes[:len(p1.routes)//2]]
+        used = {c for r in routes for c in r}
+        for r in p2.routes:
+            extras = [c for c in r if c not in used]
+            if extras:
+                routes.append(extras)
+                used.update(extras)
+        missing = set(range(1, p1.inst.n + 1)) - used
+        if missing:
+            routes.append(list(missing))
+        try:
+            from .core import Plan
+            return Plan(routes, p1.inst, p1.algo)
+        except Exception:
+            return None
+
     def load_plans(self, folder: str, insts_dict: dict[str, Inst]) -> None:
         if not os.path.exists(folder):
             return
