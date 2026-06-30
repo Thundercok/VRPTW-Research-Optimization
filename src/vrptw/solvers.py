@@ -560,7 +560,17 @@ class HybridDDQNSolver:
         ):
             self._segment_recombine_used = True
             nv_cap = min(best.nv, refined.nv)
-            recombined = recombine_with_route_pool(refined, pool, self.cfg, nv_ceiling=nv_cap, heatmap=self.heatmap)
+            _bks_entry = BKS.get(self.inst.name)
+            _bks_nv = int(_bks_entry["nv"]) if _bks_entry else 0
+            is_at_bks_floor = (nv_cap <= _bks_nv)
+            recombined = recombine_with_route_pool(
+                refined,
+                pool,
+                self.cfg,
+                nv_ceiling=nv_cap,
+                td_only=is_at_bks_floor,
+                heatmap=self.heatmap,
+            )
             if recombined.dominates(refined):
                 refined = self._local_search(
                     recombined, max_passes=1, nv_ceiling=recombined.nv, max_ls_moves=self.cfg.max_ls_moves
@@ -982,7 +992,16 @@ class HybridDDQNSolver:
                 temp = cfg.temp_control * start.cost / math.log(2) * temp_mult
 
                 # Try to build a different starting topology via pool recombination
-                restart_plan = recombine_with_route_pool(start, pool, cfg, nv_ceiling=start.nv, heatmap=self.heatmap)
+                _bks_entry = BKS.get(self.inst.name)
+                _bks_nv = int(_bks_entry["nv"]) if _bks_entry else 0
+                restart_plan = recombine_with_route_pool(
+                    start,
+                    pool,
+                    cfg,
+                    nv_ceiling=start.nv,
+                    td_only=(start.nv <= _bks_nv),
+                    heatmap=self.heatmap,
+                )
                 if restart_plan.feasible and restart_plan.nv <= start.nv:
                     base_plan = restart_plan
                 else:
@@ -1396,8 +1415,18 @@ class HybridDDQNSolver:
             if no_imp >= cfg.early_stop_patience:
                 break
 
+        _bks_entry = BKS.get(self.inst.name)
+        _bks_nv = int(_bks_entry["nv"]) if _bks_entry else 0
+
         if cfg.recombine_after_main_search:
-            recombined = recombine_with_route_pool(best, pool, cfg, nv_ceiling=best.nv, heatmap=self.heatmap)
+            recombined = recombine_with_route_pool(
+                best,
+                pool,
+                cfg,
+                nv_ceiling=best.nv,
+                td_only=(best.nv <= _bks_nv),
+                heatmap=self.heatmap,
+            )
             if recombined.dominates(best):
                 best = recombined
                 pool.add_plan(best)
@@ -1407,7 +1436,14 @@ class HybridDDQNSolver:
         history.append(best.cost)
 
         if cfg.recombine_after_polish:
-            recombined = recombine_with_route_pool(best, pool, cfg, nv_ceiling=best.nv, heatmap=self.heatmap)
+            recombined = recombine_with_route_pool(
+                best,
+                pool,
+                cfg,
+                nv_ceiling=best.nv,
+                td_only=(best.nv <= _bks_nv),
+                heatmap=self.heatmap,
+            )
             if recombined.dominates(best):
                 best = self._local_search(
                     recombined, max_passes=cfg.polish_ls_passes, nv_ceiling=recombined.nv, max_ls_moves=cfg.max_ls_moves
