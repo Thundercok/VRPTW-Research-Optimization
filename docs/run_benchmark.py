@@ -21,6 +21,7 @@ from vrptw import (
     run_benchmark,
     print_summary_table,
     ALGO_ALNS_BASE,
+    ALGO_ALNS_BASE_PLUS,
     ALGO_HYBRID_FIXED,
     ALGO_HYBRID_RULE,
     ALGO_HYBRID_DDQN,
@@ -54,7 +55,7 @@ if __name__ == "__main__":
         "--algorithms",
         nargs="+",
         choices=[
-            ALGO_ALNS_BASE, ALGO_HYBRID_FIXED, ALGO_HYBRID_RULE, ALGO_HYBRID_DDQN, ALGO_ORTOOLS, ALGO_DQN,
+            ALGO_ALNS_BASE, ALGO_ALNS_BASE_PLUS, ALGO_HYBRID_FIXED, ALGO_HYBRID_RULE, ALGO_HYBRID_DDQN, ALGO_ORTOOLS, ALGO_DQN,
             "GNN-ALNS-Base", "GNN-Hybrid-Fixed", "GNN-Hybrid-Rule", "GNN-Hybrid-DDQN"
         ],
         default=[ALGO_ALNS_BASE, ALGO_HYBRID_FIXED, ALGO_HYBRID_RULE, ALGO_HYBRID_DDQN],
