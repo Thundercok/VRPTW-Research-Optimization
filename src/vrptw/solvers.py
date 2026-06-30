@@ -220,9 +220,10 @@ class HybridDDQNSolver:
         self.archive = EliteArchive(k=cfg.elite_archive_k)
         self.gnn_model = None
         self.heatmap = None
-        self.gamma = 0.0
         self.current_it = None
         self.solver_history = []
+        self.split_ctrl = None
+        self._split_weights_to_load = {}
 
     def _adapt_params_to_instance(self, cfg, inst):
         """Tune search parameters based on instance characteristics."""
@@ -297,6 +298,14 @@ class HybridDDQNSolver:
         for prefix, sd in (("plateau", self.ctrl.q.state_dict()), ("operator", self.op_ctrl.q.state_dict())):
             for k, v in sd.items():
                 weights[f"{prefix}.{k}"] = v.clone().cpu()
+        
+        if self.split_ctrl is not None:
+            for k, v in self.split_ctrl.q.state_dict().items():
+                weights[f"split.{k}"] = v.clone().cpu()
+        elif hasattr(self, "_split_weights_to_load") and self._split_weights_to_load:
+            for k, v in self._split_weights_to_load.items():
+                weights[f"split.{k}"] = v.clone().cpu()
+
         weights.update(self.lac.state_dict())
         weights["ucb.mu"] = torch.tensor(self.ucb_aug._mu, dtype=torch.float32)
         weights["ucb.cnt"] = torch.tensor(self.ucb_aug._cnt, dtype=torch.float32)
@@ -423,6 +432,13 @@ class HybridDDQNSolver:
         norm_d = {k.split(".", 1)[1]: float(weights[k]) for k in weights if k.startswith("reward_norm.")}
         if norm_d:
             self.reward_norm.load_state_dict(norm_d)
+
+        split_weights = {k.split(".", 1)[1]: v for k, v in weights.items() if k.startswith("split.")}
+        if split_weights:
+            self._split_weights_to_load = split_weights
+            if self.split_ctrl is not None:
+                self.split_ctrl.q.load_state_dict(split_weights)
+                self.split_ctrl.q_target.load_state_dict(split_weights)
 
     def _fleet_pressure(self, plan: Plan, best_nv: float) -> float:
         nv_excess = (plan.nv - best_nv) / max(self._init_nv, 1.0)
@@ -1152,6 +1168,12 @@ class HybridDDQNSolver:
                 self.heatmap = probs
                 self.gamma = getattr(cfg, "gnn_guidance_strength", 0.45)
 
+        from .split_controller import SplitController
+        self.split_ctrl = SplitController(cfg, self.inst, heatmap=self.heatmap)
+        if hasattr(self, "_split_weights_to_load") and self._split_weights_to_load:
+            self.split_ctrl.q.load_state_dict(self._split_weights_to_load)
+            self.split_ctrl.q_target.load_state_dict(self._split_weights_to_load)
+
         pool = RoutePool(self.inst, cfg)
         if cfg.penalty_search_enabled:
             self.penalty_manager = PenaltyManager(self.inst)
@@ -1370,6 +1392,24 @@ class HybridDDQNSolver:
                 else:
                     no_imp += 1
                 self.no_imp = no_imp
+
+                # Trigger RL-guided split controller at dynamic intervals
+                trigger_interval = max(cfg.split_trigger_interval, self.inst.n // 2)
+                if not frozen and it >= cfg.split_trigger_after and it % trigger_interval == 0:
+                    split_res = self.split_ctrl.try_split(best, best.nv)
+                    if split_res is not None:
+                        split_res = self._local_search(
+                            split_res,
+                            max_passes=self.modes[action].ls_passes + 1,
+                            nv_ceiling=split_res.nv,
+                            max_ls_moves=cfg.max_ls_moves,
+                        )
+                        if split_res.dominates(best):
+                            best = split_res
+                            pool.add_plan(best)
+                            cur = best.copy()
+                            no_imp = 0
+                            self.no_imp = 0
 
                 recent_improvements.append(1 if improved else 0)
                 seg_scores[di, ri] += score
@@ -1637,6 +1677,21 @@ class HybridDDQNSolver:
                 )
                 if td_rec.feasible and td_rec.cost + 1e-6 < best.cost:
                     best = td_rec
+                    pool.add_plan(best)
+                    history.append(best.cost)
+
+        # Final split controller attempt at the end of search
+        if not frozen and self.split_ctrl is not None:
+            split_res = self.split_ctrl.try_split(best, best.nv)
+            if split_res is not None:
+                split_res = self._local_search(
+                    split_res,
+                    max_passes=cfg.polish_ls_passes,
+                    nv_ceiling=split_res.nv,
+                    max_ls_moves=cfg.max_ls_moves,
+                )
+                if split_res.dominates(best):
+                    best = split_res
                     pool.add_plan(best)
                     history.append(best.cost)
 

@@ -280,6 +280,21 @@ class Config:
     dqn_train_freq: int = 5
     dqn_vehicle_penalty: float = 5.0
 
+    # ── RL-guided split controller ────────────────────────────────────────
+    split_state_dim: int = 18
+    split_hidden: int = 64
+    split_lr: float = 3e-4
+    split_gamma: float = 0.95
+    split_buffer: int = 10_000
+    split_batch: int = 32
+    split_eps_start: float = 0.30
+    split_eps_end: float = 0.02
+    split_tau: float = 0.005       # soft target update rate for SplitController
+    split_trigger_interval: int = 50   # try split every N iterations
+    split_trigger_after: int = 200     # don't try before iteration 200
+    split_nv_penalty: float = 5.0      # episode reward scale for NV reduction
+    split_infeasible_penalty: float = 10.0
+
 
     # ── OR-Tools ──────────────────────────────────────────────────────────
     ortools_time_limit: float = 15.0
@@ -338,6 +353,10 @@ class Config:
             raise ValueError(f"ctrl_tau must be > 0 and < 1, got {self.ctrl_tau}")
         if self.op_tau <= 0.0 or self.op_tau >= 1.0:
             raise ValueError(f"op_tau must be > 0 and < 1, got {self.op_tau}")
+        if self.split_tau <= 0.0 or self.split_tau >= 1.0:
+            raise ValueError(f"split_tau must be > 0 and < 1, got {self.split_tau}")
+        if self.split_trigger_interval <= 0:
+            raise ValueError(f"split_trigger_interval must be > 0, got {self.split_trigger_interval}")
         if self.per_beta_steps <= 0:
             raise ValueError(f"per_beta_steps must be > 0, got {self.per_beta_steps}")
         if self.lac_batch < 16:
