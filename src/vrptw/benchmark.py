@@ -13,6 +13,7 @@ import torch
 
 from .config import (
     ALGO_ALNS_BASE,
+    ALGO_ALNS_BASE_PLUS,
     ALGO_HYBRID_DDQN,
     ALGO_HYBRID_DDQN_TRANSFER,
     ALGO_HYBRID_DDQN_TRANSFER_DR,
@@ -93,7 +94,7 @@ def run_instance(
                 "hist": [],
             }, None
         history = [plan.cost]
-    elif target_algo == ALGO_ALNS_BASE:
+    elif target_algo in (ALGO_ALNS_BASE, ALGO_ALNS_BASE_PLUS):
         solver = ALNSSolver(inst, cfg)
         if use_gnn and getattr(cfg, "gnn_model_path", None) is not None:
             solver.load_gnn_model(cfg.gnn_model_path)
@@ -173,8 +174,7 @@ def _benchmark_instance_worker(packed: tuple) -> list[dict]:
     print(f"    [PROCESSING] {inst.name}...", flush=True)
     t0 = time.time()
     try:
-        archive = EliteArchive(k=cfg.elite_archive_k)
-        archive.load_plans(plans_folder, {inst.name: inst})
+    # Archive is isolated per-algorithm inside the loop below
 
         dataset = (
             "RC1"
@@ -191,6 +191,14 @@ def _benchmark_instance_worker(packed: tuple) -> list[dict]:
             algo_label = canonical_algo_label(algo)
             if (inst.name, algo_label) in completed:
                 continue
+
+            # Isolate plans folder for this algorithm under output_dir/algo_name/elite_plans/
+            algo_plans_folder = os.path.join(os.path.dirname(plans_folder), algo_label, "elite_plans")
+            os.makedirs(algo_plans_folder, exist_ok=True)
+
+            archive = EliteArchive(k=cfg.elite_archive_k)
+            if algo_label != ALGO_ALNS_BASE:
+                archive.load_plans(algo_plans_folder, {inst.name: inst})
 
             nv_v, cost_v, time_v, gap_v, nvd_v, ot_v = [], [], [], [], [], []
             n_runs_eff = 1 if algo_label == ALGO_ORTOOLS else cfg.n_runs
@@ -222,7 +230,7 @@ def _benchmark_instance_worker(packed: tuple) -> list[dict]:
 
             for res, plan in run_results:
                 if plan is not None:
-                    archive.update_and_save(plan, plans_folder)
+                    archive.update_and_save(plan, algo_plans_folder)
                 time_v.append(res["time"])
                 if res["nv"] is not None:
                     nv_v.append(res["nv"])
