@@ -1117,6 +1117,7 @@ class HybridDDQNSolver:
         init: Plan | None = None,
         shared_norm: WelfordRewardNormalizer | None = None,
         _warm_start: bool = False,
+        _is_sub_solve: bool = False,
     ) -> tuple[Plan, list[float]]:
         self.solver_history = []
         if seed is not None:
@@ -1162,7 +1163,66 @@ class HybridDDQNSolver:
             else build_greedy(self.inst, self.algo_name, heatmap=self.heatmap, gnn_strength=self.gamma)
         )
         best = cur.copy()
-        pool.add_plan(cur)
+
+        # RL-Guided Split Controller Architecture
+        if (
+            not _is_sub_solve
+            and self.inst.n >= 200
+            and getattr(cfg, "split_enabled", True)
+        ):
+            import copy
+            
+            # 1. Run local search to establish starting structure if none passed in
+            if init is None:
+                cur = self._local_search(cur, max_passes=2, nv_ceiling=cur.nv, max_ls_moves=cfg.max_ls_moves)
+                best = cur.copy()
+
+            # 2. Partition routes using GNN connection weights
+            routes1_indices, routes2_indices = self._split_routes_gnn_guided(cur.routes)
+            
+            routes1 = [cur.routes[i] for i in routes1_indices]
+            routes2 = [cur.routes[j] for j in routes2_indices]
+            
+            custs1 = sorted(list({c for r in routes1 for c in r}))
+            custs2 = sorted(list({c for r in routes2 for c in r}))
+            
+            if len(custs1) > 0 and len(custs2) > 0:
+                # 3. Create sub-instances
+                inst1 = self._create_sub_instance(custs1)
+                inst2 = self._create_sub_instance(custs2)
+                
+                # Map starting routes
+                cust_to_sub1 = {c: idx + 1 for idx, c in enumerate(custs1)}
+                routes1_mapped = [[cust_to_sub1[c] for c in r] for r in routes1]
+                init1 = Plan(routes1_mapped, inst1, self.algo_name)
+                
+                cust_to_sub2 = {c: idx + 1 for idx, c in enumerate(custs2)}
+                routes2_mapped = [[cust_to_sub2[c] for c in r] for r in routes2]
+                init2 = Plan(routes2_mapped, inst2, self.algo_name)
+                
+                # Scale sub-problem iterations
+                sub_cfg = copy.copy(cfg)
+                sub_cfg.hybrid_iterations = max(100, cfg.hybrid_iterations // 2)
+                
+                solver1 = HybridDDQNSolver(inst1, cfg=sub_cfg)
+                solver1.gnn_model = self.gnn_model
+                solver2 = HybridDDQNSolver(inst2, cfg=sub_cfg)
+                solver2.gnn_model = self.gnn_model
+                
+                res1, _ = solver1.solve(init=init1, seed=seed, _is_sub_solve=True)
+                res2, _ = solver2.solve(init=init2, seed=seed, _is_sub_solve=True)
+                
+                # Map back to original IDs
+                final_routes = []
+                for r in res1.routes:
+                    final_routes.append([custs1[c - 1] for c in r])
+                for r in res2.routes:
+                    final_routes.append([custs2[c - 1] for c in r])
+                    
+                merged_plan = Plan(final_routes, self.inst, self.algo_name)
+                
+                # Run the remaining iterations on the merged plan to reconcile
+                return self.solve(init=merged_plan, seed=seed, _is_sub_solve=True, _warm_start=True)
         self._init_nv = cur.nv
         temp = cfg.temp_control * cur.cost / math.log(2)
         if _warm_start:
@@ -1584,6 +1644,85 @@ class HybridDDQNSolver:
         self.archive.update(best)
         self.current_it = None
         return best, history
+
+    def _split_routes_gnn_guided(self, routes: list[list[int]]) -> tuple[list[int], list[int]]:
+        if len(routes) < 2:
+            return [0], []
+        
+        num_r = len(routes)
+        W = np.zeros((num_r, num_r), dtype=np.float32)
+        for i in range(num_r):
+            for j in range(num_r):
+                if i != j:
+                    val = 0.0
+                    if self.heatmap is not None:
+                        for u in routes[i]:
+                            for v in routes[j]:
+                                val += self.heatmap[u, v] + self.heatmap[v, u]
+                    W[i, j] = val
+                    
+        if self.heatmap is None:
+            centroids = []
+            for r in routes:
+                xs = [self.inst.coords[c][0] for c in r]
+                ys = [self.inst.coords[c][1] for c in r]
+                centroids.append(np.array([np.mean(xs), np.mean(ys)]))
+            for i in range(num_r):
+                for j in range(num_r):
+                    if i != j:
+                        W[i, j] = -float(np.linalg.norm(centroids[i] - centroids[j]))
+                        
+        best_seed = 0
+        min_conn = float("inf")
+        for i in range(num_r):
+            conn = sum(W[i, j] for j in range(num_r))
+            if conn < min_conn:
+                min_conn = conn
+                best_seed = i
+                
+        V1 = {best_seed}
+        V2 = set(range(num_r)) - V1
+        target_size = num_r // 2
+        
+        while len(V1) < target_size:
+            best_candidate = -1
+            max_conn = -float("inf")
+            for u in V2:
+                conn = sum(W[u, v] for v in V1)
+                if conn > max_conn:
+                    max_conn = conn
+                    best_candidate = u
+            V1.add(best_candidate)
+            V2.remove(best_candidate)
+            
+        return list(V1), list(V2)
+
+    def _create_sub_instance(self, cust_ids: list[int]) -> Inst:
+        raw_data = np.zeros((len(cust_ids) + 1, 7), dtype=np.float32)
+        
+        # Depot (0)
+        raw_data[0, 0] = 0
+        raw_data[0, 1:3] = self.inst.coords[0]
+        raw_data[0, 3] = self.inst.demands[0]
+        raw_data[0, 4] = self.inst.ready_times[0]
+        raw_data[0, 5] = self.inst.due_times[0]
+        raw_data[0, 6] = self.inst.service_times[0]
+        
+        # Customers
+        for i, c in enumerate(cust_ids):
+            raw_data[i + 1, 0] = i + 1
+            raw_data[i + 1, 1:3] = self.inst.coords[c]
+            raw_data[i + 1, 3] = self.inst.demands[c]
+            raw_data[i + 1, 4] = self.inst.ready_times[c]
+            raw_data[i + 1, 5] = self.inst.due_times[c]
+            raw_data[i + 1, 6] = self.inst.service_times[c]
+            
+        raw = {
+            "name": f"{self.inst.name}_sub_{len(cust_ids)}",
+            "capacity": self.inst.capacity,
+            "data": raw_data
+        }
+        return Inst(raw)
 
     def solve_multi_run(
         self,

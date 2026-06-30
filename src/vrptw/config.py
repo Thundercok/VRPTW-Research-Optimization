@@ -307,6 +307,9 @@ class Config:
     # ── Penalty-Based Infeasible Search ───────────────────────────────────
     penalty_search_enabled: bool = False
 
+    # ── Split Controller ──────────────────────────────────────────────────
+    split_enabled: bool = True
+
     def __post_init__(self) -> None:
         if self.per_beta_auto_scale:
             self.per_beta_steps = self.hybrid_iterations * 10

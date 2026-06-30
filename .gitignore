@@ -80,3 +80,10 @@ benchmark_clean.csv
 src/benchmark_clean.csv
 src/dr_training.log
 *.log
+
+# ---------------------------------------------------------------
+# E2E Test Outputs & Verify Artifacts
+# ---------------------------------------------------------------
+tests/e2e/videos/
+tests/e2e/screenshots/
+output_opt_verify/
