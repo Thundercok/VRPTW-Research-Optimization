@@ -171,6 +171,7 @@ def _benchmark_instance_worker(packed: tuple) -> list[dict]:
         pass
 
     inst, algorithms, cfg, transfer_weights, plans_folder, completed, wall_start = packed
+    torch.set_num_threads(1)
     print(f"    [PROCESSING] {inst.name}...", flush=True)
     t0 = time.time()
     try:
@@ -217,6 +218,16 @@ def _benchmark_instance_worker(packed: tuple) -> list[dict]:
                 init = best_overall.copy() if best_overall is not None else _diversified_init(i, inst, archive, cfg)
 
                 res, plan = run_instance(inst, algo_label, cfg, seed, weights, init)
+                elapsed_h = (time.time() - wall_start) / 3600
+                if res["nv"] is not None:
+                    print(
+                        f"    [RUN] {inst.name} | {algo_label} | run {i + 1}/{n_runs_eff}: "
+                        f"nv={res['nv']} cost={res['cost']:.1f} ({res['time']:.1f}s) | wall {elapsed_h:.2f}h",
+                        flush=True
+                    )
+                else:
+                    print(f"    [RUN] {inst.name} | {algo_label} | run {i + 1}/{n_runs_eff}: FAILED ({res['time']:.1f}s)", flush=True)
+
                 if (
                     algo_label
                     in (ALGO_HYBRID_DDQN_TRANSFER, ALGO_HYBRID_DDQN_TRANSFER_RC2, ALGO_HYBRID_DDQN_TRANSFER_DR)
@@ -406,31 +417,41 @@ def run_benchmark(
         ctx = mp.get_context("spawn")
         with ProcessPoolExecutor(max_workers=workers_count, mp_context=ctx) as ex:
             futures = {ex.submit(_benchmark_instance_worker, arg): arg[0] for arg in worker_args}
-            for future in as_completed(futures):
-                try:
-                    inst_rows = future.result()
-                except Exception as exc:
-                    inst_name = futures[future].name
-                    print(f"    [!!! CRITICAL ERROR !!!] Instance {inst_name} failed with: {exc}", flush=True)
-                    raise exc
-                for row in inst_rows:
-                    rows.append(row)
-                    completed.add((row["Instance"], row["Algorithm"]))
-
-                # Check for wall time limit
-                elapsed_h = (time.time() - wall_start) / 3600
-                if elapsed_h >= cfg.max_wall_hours:
-                    print(f"\n⚠️  Wall-clock limit {cfg.max_wall_hours:.1f}h reached — stopping early.")
-                    for f in futures:
-                        f.cancel()
+            try:
+                for future in as_completed(futures):
+                    try:
+                        inst_rows = future.result()
+                    except Exception as exc:
+                        inst_name = futures[future].name
+                        print(f"    [!!! CRITICAL ERROR !!!] Instance {inst_name} failed with: {exc}", flush=True)
+                        raise exc
+                    for row in inst_rows:
+                        rows.append(row)
+                        completed.add((row["Instance"], row["Algorithm"]))
+    
+                    # Check for wall time limit
+                    elapsed_h = (time.time() - wall_start) / 3600
+                    if elapsed_h >= cfg.max_wall_hours:
+                        print(f"\n⚠️  Wall-clock limit {cfg.max_wall_hours:.1f}h reached — stopping early.")
+                        for f in futures:
+                            f.cancel()
+                        pd.DataFrame(rows).to_csv(ckpt_path, index=False)
+                        pd.DataFrame(rows).to_csv(result_path, index=False)
+                        ex.shutdown(wait=False, cancel_futures=True)
+                        return normalize_algorithm_frame(pd.DataFrame(rows))
+    
+                    # Save checkpoint and print progress
                     pd.DataFrame(rows).to_csv(ckpt_path, index=False)
-                    return normalize_algorithm_frame(pd.DataFrame(rows))
-
-                # Save checkpoint and print progress
+                    print(
+                        f"  ✓ Checkpoint saved ({len(completed)}/{total} combos complete, {elapsed_h:.2f}h) → {ckpt_path}"
+                    )
+            except (KeyboardInterrupt, SystemExit) as interrupt:
+                print("\n[!] Interruption/Cancellation signal received. Cleaning up workers immediately...", flush=True)
+                for f in futures:
+                    f.cancel()
                 pd.DataFrame(rows).to_csv(ckpt_path, index=False)
-                print(
-                    f"  ✓ Checkpoint saved ({len(completed)}/{total} combos complete, {elapsed_h:.2f}h) → {ckpt_path}"
-                )
+                ex.shutdown(wait=False, cancel_futures=True)
+                raise interrupt
 
     df = normalize_algorithm_frame(pd.DataFrame(rows))
     df.to_csv(result_path, index=False)
