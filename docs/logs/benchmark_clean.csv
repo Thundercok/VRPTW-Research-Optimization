@@ -1,5 +1,2 @@
 Dataset,Instance,Algorithm,NV_mean,NV_std,NV_diff,TD_mean,TD_std,Gap%,OnTime,Time_s,NV_cv,TD_cv,NV_inflated,raw_costs,raw_nv
-R1,R101,ALNS-Base,19.0,0.0,0.0,1694.32,0.0,2.64,100.0,6.9,0.0,0.0,False,1694.3226,19
-R1,R101,Hybrid-DDQN,19.0,0.0,0.0,1650.8,0.0,-0.0,100.0,16.4,0.0,0.0,False,1650.7992,19
-RC1,RC101,ALNS-Base,15.0,0.0,1.0,1702.59,0.0,0.33,100.0,6.7,0.0,0.0,False,1702.5937,15
-RC1,RC101,Hybrid-DDQN,15.0,0.0,1.0,1642.86,0.0,-3.19,100.0,23.5,0.0,0.0,True,1642.8640,15
+RC1,RC101,Hybrid-DDQN,16.0,0.0,2.0,1673.49,0.0,-1.38,100.0,6.8,0.0,0.0,True,1673.4852,16
