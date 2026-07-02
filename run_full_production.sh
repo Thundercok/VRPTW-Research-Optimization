@@ -87,6 +87,7 @@ PYTHONPATH=src .venv/bin/python docs/run_benchmark.py "${workers_arg[@]}" \
   --early-stop 200 \
   --polish-iters 60 \
   --ortools-time-limit 120 \
+  --max-hours 48.0 \
   --algorithms ALNS-Base ALNS-Base+ Hybrid-Fixed Hybrid-Rule Hybrid-DDQN OR-Tools \
   --instances \
     C1_2_1  C1_2_2  C1_2_3  C1_2_4  C1_2_5  C1_2_6  C1_2_7  C1_2_8  C1_2_9  C1_2_10 \
@@ -112,6 +113,7 @@ PYTHONPATH=src .venv/bin/python docs/run_benchmark.py "${workers_arg[@]}" \
   --early-stop 150 \
   --polish-iters 50 \
   --ortools-time-limit 120 \
+  --max-hours 48.0 \
   --algorithms ALNS-Base ALNS-Base+ Hybrid-Fixed Hybrid-Rule Hybrid-DDQN OR-Tools \
   --instances \
     C1_4_1  C1_4_2  C1_4_3  C1_4_4 \
@@ -137,6 +139,7 @@ PYTHONPATH=src .venv/bin/python docs/run_benchmark.py "${workers_arg[@]}" \
   --early-stop 100 \
   --polish-iters 35 \
   --ortools-time-limit 120 \
+  --max-hours 48.0 \
   --algorithms ALNS-Base ALNS-Base+ Hybrid-Fixed Hybrid-Rule Hybrid-DDQN OR-Tools \
   --instances \
     C1_6_1  C1_6_2 \
@@ -162,6 +165,7 @@ PYTHONPATH=src .venv/bin/python docs/run_benchmark.py "${workers_arg[@]}" \
   --early-stop 75 \
   --polish-iters 25 \
   --ortools-time-limit 120 \
+  --max-hours 48.0 \
   --algorithms ALNS-Base ALNS-Base+ Hybrid-Fixed Hybrid-Rule Hybrid-DDQN OR-Tools \
   --instances C1_8_1 C2_8_1 R1_8_1 R2_8_1 RC1_8_1 RC2_8_1
 
@@ -182,6 +186,7 @@ PYTHONPATH=src .venv/bin/python docs/run_benchmark.py "${workers_arg[@]}" \
   --early-stop 50 \
   --polish-iters 20 \
   --ortools-time-limit 120 \
+  --max-hours 48.0 \
   --algorithms ALNS-Base ALNS-Base+ Hybrid-Fixed Hybrid-Rule Hybrid-DDQN OR-Tools \
   --instances C1_10_1 C2_10_1 R1_10_1 R2_10_1 RC1_10_1 RC2_10_1
 
