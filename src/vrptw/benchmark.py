@@ -171,6 +171,7 @@ def _benchmark_instance_worker(packed: tuple) -> list[dict]:
         pass
 
     inst, algorithms, cfg, transfer_weights, plans_folder, completed, wall_start = packed
+    torch.set_num_threads(1)
     print(f"    [PROCESSING] {inst.name}...", flush=True)
     t0 = time.time()
     try:
@@ -217,6 +218,16 @@ def _benchmark_instance_worker(packed: tuple) -> list[dict]:
                 init = best_overall.copy() if best_overall is not None else _diversified_init(i, inst, archive, cfg)
 
                 res, plan = run_instance(inst, algo_label, cfg, seed, weights, init)
+                elapsed_h = (time.time() - wall_start) / 3600
+                if res["nv"] is not None:
+                    print(
+                        f"    [RUN] {inst.name} | {algo_label} | run {i + 1}/{n_runs_eff}: "
+                        f"nv={res['nv']} cost={res['cost']:.1f} ({res['time']:.1f}s) | wall {elapsed_h:.2f}h",
+                        flush=True
+                    )
+                else:
+                    print(f"    [RUN] {inst.name} | {algo_label} | run {i + 1}/{n_runs_eff}: FAILED ({res['time']:.1f}s)", flush=True)
+
                 if (
                     algo_label
                     in (ALGO_HYBRID_DDQN_TRANSFER, ALGO_HYBRID_DDQN_TRANSFER_RC2, ALGO_HYBRID_DDQN_TRANSFER_DR)
@@ -424,6 +435,7 @@ def run_benchmark(
                     for f in futures:
                         f.cancel()
                     pd.DataFrame(rows).to_csv(ckpt_path, index=False)
+                    pd.DataFrame(rows).to_csv(result_path, index=False)
                     return normalize_algorithm_frame(pd.DataFrame(rows))
 
                 # Save checkpoint and print progress

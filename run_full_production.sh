@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 set -eo pipefail
 
+export OMP_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+export VECLIB_MAXIMUM_THREADS=1
+export NUMEXPR_NUM_THREADS=1
+export PYTHONUNBUFFERED=1
+
 OUTPUT_BASE="results/clean_v2"
 mkdir -p "$OUTPUT_BASE"
 
