@@ -3,7 +3,7 @@ import { useAppContext } from '../context/AppContext.jsx';
 import { SAMPLE_SOLOMON_RC } from '../constants.js';
 
 export default function Header() {
-  const { state, updateState, status, statusTone, submitJob, loadSolomonDataset } = useAppContext();
+  const { state, updateState, status, statusTone, submitJob, loadSolomonDataset, t } = useAppContext();
 
   const handleDatasetChange = (e) => {
     const value = e.target.value;
@@ -81,15 +81,15 @@ export default function Header() {
   const getPageTitle = () => {
     switch (state.activeTab) {
       case 'dispatch':
-        return 'Route Optimization';
+        return t('routeOptimization') || 'Route Optimization';
       case 'fleet':
-        return 'Fleet Management';
+        return t('fleetManagement') || 'Fleet Management';
       case 'analytics':
-        return 'Diagnostics';
+        return t('diagnostics') || 'Diagnostics';
       case 'settings':
-        return 'Preferences';
+        return t('preferences') || 'Preferences';
       default:
-        return 'Route Optimization';
+        return t('routeOptimization') || 'Route Optimization';
     }
   };
 
@@ -119,11 +119,19 @@ export default function Header() {
             ) : (
               <option value="demo">Solomon RC101 (Demo)</option>
             )}
-            <option value="custom">Custom Import...</option>
+            <option value="custom">{state.lang === 'vn' ? 'Nhập tùy chọn...' : 'Custom Import...'}</option>
           </select>
+          <button 
+            id="custom-import-btn"
+            className="btn-secondary"
+            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+            onClick={() => updateState({ naturalImportOpen: true })}
+          >
+            📝 {state.lang === 'vn' ? 'Nhập Tự Nhiên' : 'Custom Import'}
+          </button>
           <div className="fleet-toggles">
             <label>
-              Vehicles:{' '}
+              {t('vehiclesLabel') || 'Vehicles: '}
               <input 
                 type="number" 
                 id="vehicles-slider" 
@@ -135,7 +143,7 @@ export default function Header() {
               />
             </label>
             <label>
-              Capacity:{' '}
+              {t('capacityLabel') || 'Capacity: '}
               <input 
                 type="number" 
                 id="capacity-slider" 
@@ -148,7 +156,7 @@ export default function Header() {
             </label>
           </div>
           <button id="run-model" className="btn-primary" onClick={submitJob}>
-            Execute Solver
+            {t('executeSolver') || 'Execute Solver'}
           </button>
         </div>
       )}

@@ -17,36 +17,36 @@ export default function Sidebar() {
       </div>
 
       <nav className="saas-nav">
-        <p className="nav-label">Planning</p>
+        <p className="nav-label">{t('planningLabel')}</p>
         <a 
           href="#" 
           className={`nav-item ${state.activeTab === 'dispatch' ? 'active' : ''}`}
           onClick={(e) => handleTabClick(e, 'dispatch')}
         >
-          Live Dispatch
+          {t('liveDispatch')}
         </a>
         <a 
           href="#" 
           className={`nav-item ${state.activeTab === 'fleet' ? 'active' : ''}`}
           onClick={(e) => handleTabClick(e, 'fleet')}
         >
-          Fleet Config
+          {t('fleetConfig')}
         </a>
 
-        <p className="nav-label" style={{ marginTop: '24px' }}>Intelligence</p>
+        <p className="nav-label" style={{ marginTop: '24px' }}>{t('intelligenceLabel')}</p>
         <a 
           href="#" 
           className={`nav-item ${state.activeTab === 'analytics' ? 'active' : ''}`}
           onClick={(e) => handleTabClick(e, 'analytics')}
         >
-          Model Analytics
+          {t('modelAnalytics')}
         </a>
         <a 
           href="#" 
           className={`nav-item ${state.activeTab === 'settings' ? 'active' : ''}`}
           onClick={(e) => handleTabClick(e, 'settings')}
         >
-          Settings
+          {t('settingsLabel')}
         </a>
       </nav>
 
@@ -56,8 +56,9 @@ export default function Sidebar() {
           className="nav-item" 
           style={{ color: 'var(--text-muted)', marginBottom: '12px', fontSize: '12px' }}
         >
-          &larr; Back to Home
+          {t('backToHome')}
         </a>
+
         {state.unlocked && state.role !== 'guest' ? (
           <>
             <div className="user-badge" id="user-email">
@@ -71,7 +72,7 @@ export default function Sidebar() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
             {state.role === 'guest' && (
               <div className="user-badge" id="user-email" style={{ opacity: 0.7, fontSize: '11px' }}>
-                Guest Demo Mode
+                {state.lang === 'vn' ? 'Chế độ Demo Khách' : 'Guest Demo Mode'}
               </div>
             )}
             <button
@@ -91,7 +92,7 @@ export default function Sidebar() {
               }}
               onClick={() => updateState({ showLoginModal: true })}
             >
-              Sign In
+              {t('loginButton')}
             </button>
           </div>
         )}

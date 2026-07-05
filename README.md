@@ -35,13 +35,15 @@ If you prefer to run the development server locally on Windows without Docker, f
 Open PowerShell in the root directory:
 ```powershell
 # Create a virtual environment
-python -m venv .venv
+uv venv --python 3.12
 
 # Activate the virtual environment
 .venv\Scripts\Activate.ps1
+uv init .
 
 # Install requirements (specify Torch CPU index to avoid large CUDA downloads)
-pip install --extra-index-url https://download.pytorch.org/whl/cpu -r requirements.txt
+uv pip install --extra-index-url https://download.pytorch.org/whl/cpu -r requirements.txt
+uv lock
 ```
 
 ### Step 2: Install and Build Frontend Assets

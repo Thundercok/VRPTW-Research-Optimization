@@ -3,6 +3,10 @@ import { useAppContext } from '../context/AppContext.jsx';
 import { MapController } from '../MapController.js';
 import { SimulationController } from '../SimulationController.js';
 import { GanttController } from '../GanttController.js';
+import { parseNaturalText } from '../services/naturalTextParser.js';
+import { validateParsedImport } from '../services/importValidator.js';
+import { geocodeBatch } from '../services/geocodingService.js';
+import { buildInternalGeoModel, buildSolverModel } from '../services/modelMapper.js';
 
 export default function LiveDispatchView() {
   const { state, updateState, toast, setStatus, request, t } = useAppContext();
@@ -13,6 +17,20 @@ export default function LiveDispatchView() {
   const [editingCell, setEditingCell] = useState(null); // { id, field }
   const [editValue, setEditValue] = useState('');
   const [pasteData, setPasteData] = useState('');
+
+  // Guided Import Modal States
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [importText, setImportText] = useState('');
+  const [importPreview, setImportPreview] = useState([]);
+  const [importType, setImportType] = useState('append'); // 'append' or 'replace'
+  const [importStatusMsg, setImportStatusMsg] = useState('');
+  const modalFileRef = useRef(null);
+
+  // Natural Import Modal States
+  const [naturalText, setNaturalText] = useState('');
+  const [naturalErrors, setNaturalErrors] = useState([]);
+  const [naturalStatus, setNaturalStatus] = useState('');
+  const [isNaturalProcessing, setIsNaturalProcessing] = useState(false);
 
   // AI Playground states
   const [playgroundOpen, setPlaygroundOpen] = useState(false);
@@ -654,6 +672,116 @@ export default function LiveDispatchView() {
     }
   };
 
+  // Guided Import Modal Helpers
+  const parseRawText = (text) => {
+    if (!text.trim()) {
+      setImportPreview([]);
+      setImportStatusMsg('');
+      return;
+    }
+    try {
+      const lines = text.trim().split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      if (lines.length === 0) return;
+      const isTab = lines.some(l => l.includes('\t'));
+      const delimiter = isTab ? /\t/ : /,/;
+      const rows = lines.map(l => l.split(delimiter).map(c => c.trim()));
+
+      const headers = rows[0].map(h => h.toLowerCase());
+      const mapIdx = {
+        name: headers.indexOf('name'),
+        address: headers.indexOf('address'),
+        lat: headers.indexOf('lat'),
+        lng: headers.indexOf('lng'),
+        demand: headers.indexOf('demand'),
+        ready: headers.indexOf('ready'),
+        due: headers.indexOf('due'),
+        service: headers.indexOf('service'),
+        priority: headers.indexOf('priority'),
+        skill: headers.indexOf('skill'),
+      };
+
+      const hasHeaders = Object.values(mapIdx).some(idx => idx !== -1);
+      const dataRows = hasHeaders ? rows.slice(1) : rows;
+
+      const parsed = dataRows.map((row, idx) => {
+        let name = row[mapIdx.name !== -1 ? mapIdx.name : 0] || `Stop-${idx + 1}`;
+        let addr = row[mapIdx.address !== -1 ? mapIdx.address : 1] || 'Address';
+        let lat = Number(row[mapIdx.lat !== -1 ? mapIdx.lat : 2]) || 10.73;
+        let lng = Number(row[mapIdx.lng !== -1 ? mapIdx.lng : 3]) || 106.70;
+        let demand = Number(row[mapIdx.demand !== -1 ? mapIdx.demand : 4]) || 0;
+        let ready = Number(row[mapIdx.ready !== -1 ? mapIdx.ready : 5]) || 0;
+        let due = Number(row[mapIdx.due !== -1 ? mapIdx.due : 6]) || 240;
+        let service = Number(row[mapIdx.service !== -1 ? mapIdx.service : 7]) || 10;
+        let priority = row[mapIdx.priority] || 'Normal';
+        let skill = row[mapIdx.skill] || 'None';
+
+        return { name, address: addr, lat, lng, demand, ready, due, service, priority, skill };
+      });
+
+      setImportPreview(parsed);
+      setImportStatusMsg(state.lang === 'vn' 
+        ? `Đã phân tích thành công ${parsed.length} dòng.` 
+        : `Successfully parsed ${parsed.length} rows.`);
+    } catch (e) {
+      setImportPreview([]);
+      setImportStatusMsg(state.lang === 'vn' ? `Lỗi phân tích: ${e.message}` : `Parse error: ${e.message}`);
+    }
+  };
+
+  const handleModalFileUpload = async (e) => {
+    const [file] = e.target.files || [];
+    if (!file) return;
+    try {
+      const nameLower = file.name.toLowerCase();
+      if (nameLower.endsWith('.csv')) {
+        const text = await file.text();
+        setImportText(text);
+        parseRawText(text);
+      } else {
+        if (typeof window.XLSX === 'undefined') throw new Error('SheetJS XLSX library is not loaded');
+        const buffer = await file.arrayBuffer();
+        const workbook = window.XLSX.read(buffer, { type: 'array' });
+        const firstSheet = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[firstSheet];
+        const rows = window.XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+        const text = rows.map((cols) => cols.map((cell) => String(cell ?? '')).join('\t')).join('\n');
+        setImportText(text);
+        parseRawText(text);
+      }
+    } catch (err) {
+      toast('File Upload Error', err.message, 'error');
+    }
+  };
+
+  const commitImport = () => {
+    if (importPreview.length === 0) return;
+    
+    updateState((prev) => {
+      const list = importType === 'replace' ? [] : [...prev.customers];
+      importPreview.forEach((c) => {
+        const isFirst = list.length === 0;
+        list.push({
+          id: isFirst ? 0 : Math.max(...list.map(item => item.id)) + 1,
+          name: c.name,
+          address: c.address,
+          lat: c.lat,
+          lng: c.lng,
+          demand: isFirst ? 0 : c.demand,
+          ready: c.ready,
+          due: c.due,
+          service: isFirst ? 0 : c.service,
+          isDepot: isFirst,
+          priority: c.priority || 'Normal',
+          skill: c.skill || 'None'
+        });
+      });
+      return { customers: list };
+    });
+
+    setImportModalOpen(false);
+    toast('Import Confirmed', `Successfully imported ${importPreview.length} customer stops.`, 'ok');
+  };
+
   // Excel / CSV File Uploader
   const triggerExcelUpload = (e) => {
     e.preventDefault();
@@ -740,8 +868,13 @@ export default function LiveDispatchView() {
   const dRes = state.lastResult?.ddqn || {};
   const aRes = state.lastResult?.alns || {};
 
-  const gapPct = (dRes.distance_km && aRes.distance_km) 
-    ? (((dRes.distance_km - aRes.distance_km) / aRes.distance_km) * 100).toFixed(2)
+  const dDist = dRes.total_distance_km ?? dRes.distance_km ?? 0;
+  const aDist = aRes.total_distance_km ?? aRes.distance_km ?? 0;
+  const dTime = dRes.runtime_sec ?? dRes.runtime_s ?? 0;
+  const aTime = aRes.runtime_sec ?? aRes.runtime_s ?? 0;
+
+  const gapPct = (dDist && aDist) 
+    ? (((dDist - aDist) / aDist) * 100).toFixed(2)
     : '-0.00';
 
   return (
@@ -749,27 +882,27 @@ export default function LiveDispatchView() {
       {/* Solver KPI Metrics cards */}
       <section className="kpi-row">
         <div className="kpi-card">
-          <div className="kpi-title">Algorithm Gap (DDQN vs ALNS)</div>
+          <div className="kpi-title">{state.lang === 'vn' ? 'Chênh lệch Thuật toán (DDQN vs ALNS)' : 'Algorithm Gap (DDQN vs ALNS)'}</div>
           <div className={`kpi-value ${Number(gapPct) <= 0 ? 'highlight-emerald' : 'text-danger'}`}>
             {gapPct}%
           </div>
-          <div className="kpi-sub">Closer to BKS is better</div>
+          <div className="kpi-sub">{state.lang === 'vn' ? 'Tiệm cận BKS tốt hơn' : 'Closer to BKS is better'}</div>
         </div>
         <div className="kpi-card">
-          <div className="kpi-title">Total Distance (km)</div>
+          <div className="kpi-title">{state.lang === 'vn' ? 'Tổng Quãng Đường (km)' : 'Total Distance (km)'}</div>
           <div className="kpi-split">
             <div>
               <span className="kpi-label">DDQN</span>
-              <strong id="kpi-dist-ddqn">{Number(dRes.distance_km || 0).toFixed(2)}</strong>
+              <strong id="kpi-dist-ddqn">{Number(dDist).toFixed(2)}</strong>
             </div>
             <div>
               <span className="kpi-label">ALNS</span>
-              <strong id="kpi-dist-alns">{Number(aRes.distance_km || 0).toFixed(2)}</strong>
+              <strong id="kpi-dist-alns">{Number(aDist).toFixed(2)}</strong>
             </div>
           </div>
         </div>
         <div className="kpi-card">
-          <div className="kpi-title">Vehicles Dispatched</div>
+          <div className="kpi-title">{state.lang === 'vn' ? 'Số Xe Điều Phối' : 'Vehicles Dispatched'}</div>
           <div className="kpi-split">
             <div>
               <span className="kpi-label">DDQN</span>
@@ -782,15 +915,15 @@ export default function LiveDispatchView() {
           </div>
         </div>
         <div className="kpi-card">
-          <div className="kpi-title">Compute Time</div>
+          <div className="kpi-title">{state.lang === 'vn' ? 'Thời Gian Tính Toán' : 'Compute Time'}</div>
           <div className="kpi-split">
             <div>
               <span className="kpi-label">DDQN</span>
-              <strong id="kpi-time-ddqn">{Number(dRes.runtime_s || 0).toFixed(1)}s</strong>
+              <strong id="kpi-time-ddqn">{Number(dTime).toFixed(1)}s</strong>
             </div>
             <div>
               <span className="kpi-label">ALNS</span>
-              <strong id="kpi-time-alns">{Number(aRes.runtime_s || 0).toFixed(1)}s</strong>
+              <strong id="kpi-time-alns">{Number(aTime).toFixed(1)}s</strong>
             </div>
           </div>
         </div>
@@ -1152,26 +1285,19 @@ export default function LiveDispatchView() {
 
           {/* Import Paste / File Section */}
           {state.mode === 'real' && (
-            <div className="manifest-import-box" style={{ padding: '12px', background: '#f8fafc', borderTop: '1px solid var(--border)' }}>
-              <h4 style={{ margin: '0 0 8px', fontSize: '11px' }}>Paste TSV / CSV Data or Import Excel</h4>
-              <textarea 
-                className="saas-textarea" 
-                placeholder="Pasted rows: Name, Address, Demand, Ready, Due, Service"
-                style={{ width: '100%', height: '40px', fontSize: '10px', marginBottom: '8px' }}
-                value={pasteData}
-                onChange={(e) => setPasteData(e.target.value)}
-              />
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button className="btn-secondary btn-sm" onClick={handlePasteData}>Parse Clipboard</button>
-                <button className="btn-secondary btn-sm" onClick={triggerExcelUpload}>Upload Excel/CSV</button>
-                <input 
-                  type="file" 
-                  ref={fileInputRef} 
-                  style={{ display: 'none' }} 
-                  accept=".csv,.xlsx,.xls"
-                  onChange={handleFileUploadChange}
-                />
-              </div>
+            <div className="manifest-import-box" style={{ padding: '12px', background: 'var(--bg-highlight)', borderTop: '1px solid var(--border)', display: 'flex', gap: '8px' }}>
+              <button 
+                className="btn-primary btn-sm" 
+                style={{ flex: 1, padding: '8px', fontSize: '11px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                onClick={() => {
+                  setImportModalOpen(true);
+                  setImportText('');
+                  setImportPreview([]);
+                  setImportStatusMsg('');
+                }}
+              >
+                📥 {state.lang === 'vn' ? 'Nhập Điểm Tùy Chọn (CSV/Excel)' : 'Import Custom Stops (CSV/Excel)'}
+              </button>
             </div>
           )}
         </div>
@@ -1571,6 +1697,210 @@ export default function LiveDispatchView() {
           </div>
         </div>
       </section>
+
+      {/* Guided Custom Import Modal */}
+      {importModalOpen && (
+        <div className="modal-backdrop" style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(15, 23, 42, 0.75)',
+          backdropFilter: 'blur(12px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '20px'
+        }}>
+          <div className="saas-card" style={{
+            width: '100%',
+            maxWidth: '680px',
+            background: 'var(--card-bg)',
+            border: '1px solid var(--border)',
+            borderRadius: '16px',
+            display: 'flex',
+            flexDirection: 'column',
+            maxHeight: '85vh',
+            boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.5), 0 8px 10px -6px rgb(0 0 0 / 0.5)',
+            animation: 'modalSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+          }}>
+            <style>{`
+              @keyframes modalSlideIn {
+                from { transform: translateY(20px); opacity: 0; }
+                to { transform: translateY(0); opacity: 1; }
+              }
+              .import-preview-table th, .import-preview-table td {
+                padding: 6px 8px;
+                font-size: 11px;
+                text-align: left;
+                border-bottom: 1px solid var(--border);
+              }
+              .import-preview-table th {
+                background: var(--bg-soft);
+                font-weight: 600;
+              }
+            `}</style>
+
+            <div style={{ padding: '20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>
+                {state.lang === 'vn' ? '📥 Nhập Điểm Khách Hàng Tùy Chọn' : '📥 Import Custom Customer Stops'}
+              </h3>
+              <button 
+                onClick={() => setImportModalOpen(false)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '20px', cursor: 'pointer' }}
+              >
+                &times;
+              </button>
+            </div>
+
+            <div style={{ padding: '20px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Guidance block */}
+              <div style={{ padding: '12px', background: 'var(--bg-soft)', borderRadius: '8px', border: '1px dashed var(--border)', fontSize: '11px', lineHeight: 1.5 }}>
+                <strong>{state.lang === 'vn' ? 'Định dạng dữ liệu yêu cầu:' : 'Expected Tabular Format:'}</strong>
+                <p style={{ margin: '4px 0 8px' }}>
+                  {state.lang === 'vn'
+                    ? 'Bạn có thể copy bảng từ Excel hoặc dán văn bản phân tách bằng dấu phẩy (CSV) hoặc tab (TSV) với các cột sau:'
+                    : 'You can copy directly from Excel or paste comma (CSV) / tab (TSV) delimited values with these columns:'}
+                </p>
+                <div style={{ fontFamily: 'monospace', background: 'var(--card-bg)', padding: '6px', borderRadius: '4px', border: '1px solid var(--border)', overflowX: 'auto' }}>
+                  Name | Address | Lat | Lng | Demand | Ready | Due | Service | [Priority] | [Skill]
+                </div>
+                <p style={{ margin: '8px 0 0', color: 'var(--text-muted)' }}>
+                  {state.lang === 'vn'
+                    ? '* Cột Lat/Lng nếu để trống hoặc không hợp lệ sẽ tự động được lấy tọa độ bằng API địa chỉ.'
+                    : '* Lat/Lng columns if left empty will automatically use geocoding API based on the Address.'}
+                </p>
+              </div>
+
+              {/* Upload & Paste Inputs */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <label style={{ fontSize: '12px', fontWeight: 600 }}>{state.lang === 'vn' ? 'Dán dữ liệu hoặc Chọn File:' : 'Paste Data or Select File:'}</label>
+                  <button 
+                    className="btn-secondary btn-sm"
+                    onClick={() => modalFileRef.current?.click()}
+                  >
+                    📂 {state.lang === 'vn' ? 'Chọn File CSV/Excel' : 'Choose CSV/Excel File'}
+                  </button>
+                  <input 
+                    type="file"
+                    ref={modalFileRef}
+                    style={{ display: 'none' }}
+                    accept=".csv,.xlsx,.xls"
+                    onChange={handleModalFileUpload}
+                  />
+                </div>
+                <textarea 
+                  className="saas-textarea"
+                  style={{ width: '100%', height: '120px', fontFamily: 'monospace', fontSize: '11px', resize: 'vertical' }}
+                  placeholder={state.lang === 'vn' ? "Dán dữ liệu Excel/CSV tại đây..." : "Paste Excel/CSV rows here..."}
+                  value={importText}
+                  onChange={(e) => {
+                    setImportText(e.target.value);
+                    parseRawText(e.target.value);
+                  }}
+                />
+              </div>
+
+              {/* Status message */}
+              {importStatusMsg && (
+                <div style={{ 
+                  fontSize: '11px', 
+                  fontWeight: 600, 
+                  color: importPreview.length > 0 ? 'var(--primary)' : 'var(--text-danger)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}>
+                  <span>ℹ️</span> {importStatusMsg}
+                </div>
+              )}
+
+              {/* Preview Table */}
+              {importPreview.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: 600 }}>
+                    {state.lang === 'vn' 
+                      ? `Bản xem trước dữ liệu (${Math.min(5, importPreview.length)} trên tổng số ${importPreview.length} điểm):` 
+                      : `Data Preview (showing ${Math.min(5, importPreview.length)} of ${importPreview.length} stops):`}
+                  </label>
+                  <div style={{ border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden' }}>
+                    <table className="import-preview-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr>
+                          <th>Name</th>
+                          <th>Address</th>
+                          <th>Lat, Lng</th>
+                          <th>Demand</th>
+                          <th>TW (Ready-Due)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {importPreview.slice(0, 5).map((row, idx) => (
+                          <tr key={idx}>
+                            <td><strong>{row.name}</strong></td>
+                            <td style={{ maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.address}</td>
+                            <td className="font-mono">{row.lat.toFixed(4)}, {row.lng.toFixed(4)}</td>
+                            <td>{row.demand}</td>
+                            <td>{row.ready} - {row.due} (svc: {row.service})</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Import Options (Append or Replace) */}
+              {importPreview.length > 0 && (
+                <div style={{ padding: '12px', background: 'var(--bg-soft)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
+                  <span style={{ fontSize: '11.5px', fontWeight: 600 }}>{state.lang === 'vn' ? 'Chế độ nhập liệu:' : 'Import Strategy:'}</span>
+                  <div style={{ display: 'flex', gap: '16px' }}>
+                    <label style={{ fontSize: '11.5px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                      <input 
+                        type="radio" 
+                        name="import_mode" 
+                        value="append" 
+                        checked={importType === 'append'} 
+                        onChange={() => setImportType('append')} 
+                      />
+                      <span>{state.lang === 'vn' ? 'Thêm tiếp vào sau' : 'Append to current'}</span>
+                    </label>
+                    <label style={{ fontSize: '11.5px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                      <input 
+                        type="radio" 
+                        name="import_mode" 
+                        value="replace" 
+                        checked={importType === 'replace'} 
+                        onChange={() => setImportType('replace')} 
+                      />
+                      <span>{state.lang === 'vn' ? 'Ghi đè tất cả' : 'Overwrite / Replace'}</span>
+                    </label>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div style={{ padding: '20px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button 
+                className="btn-secondary" 
+                onClick={() => setImportModalOpen(false)}
+              >
+                {state.lang === 'vn' ? 'Hủy' : 'Cancel'}
+              </button>
+              <button 
+                className="btn-primary" 
+                disabled={importPreview.length === 0}
+                onClick={commitImport}
+              >
+                {state.lang === 'vn' 
+                  ? `Xác Nhận Nhập ${importPreview.length} Điểm` 
+                  : `Confirm Import of ${importPreview.length} Stops`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

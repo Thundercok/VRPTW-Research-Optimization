@@ -170,6 +170,13 @@ export class MapController {
   renderMarkers() {
     this.markerLayer.clearLayers();
     const bounds = [];
+    const formatMinutesToTime = (minutes) => {
+      if (minutes === undefined || minutes === null || isNaN(minutes)) return "00:00";
+      const h = Math.floor(minutes / 60).toString().padStart(2, '0');
+      const m = (minutes % 60).toString().padStart(2, '0');
+      return `${h}:${m}`;
+    };
+
     this.app.state.customers.forEach((c) => {
       const p = [c.lat, c.lng];
       bounds.push(p);
@@ -177,9 +184,14 @@ export class MapController {
         icon: c.isDepot ? this.buildDepotIcon() : this.buildCustomerIcon(c.ready, c.due),
       };
 
+      const timeWindowStr = (c.address && typeof c.ready === 'number') 
+        ? `${formatMinutesToTime(c.ready)} - ${formatMinutesToTime(c.due)}`
+        : `${c.ready} - ${c.due}`;
+
       let popupContent = `
-        <div style="font-family: Inter, sans-serif; min-width: 140px;">
+        <div style="font-family: Inter, sans-serif; min-width: 150px; max-width: 240px; line-height: 1.4;">
           <strong style="font-size: 13px; color: #0f172a; display: block; margin-bottom: 2px;">${c.name}</strong>
+          ${c.address ? `<div style="color: #475569; font-size: 10px; margin-bottom: 4px; font-weight: 500; word-break: break-word;">📍 ${c.address}</div>` : ''}
           <div style="color: #64748b; font-size: 11px; margin-bottom: 2px;">Demand: ${c.demand} units</div>
       `;
 
@@ -201,7 +213,7 @@ export class MapController {
         `;
       } else {
         popupContent += `
-          <div style="color: #64748b; font-size: 11px;">Time Window: ${c.ready} - ${c.due}</div>
+          <div style="color: #64748b; font-size: 11px;">Time Window: ${timeWindowStr}</div>
         `;
       }
       popupContent += `</div>`;

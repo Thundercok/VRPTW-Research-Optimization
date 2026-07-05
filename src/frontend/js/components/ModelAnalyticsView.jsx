@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext.jsx';
-import { demoAnalysisData } from '../demoAnalysisData.js';
 
 // --- Sub-Component: Convergence Plot ---
 function ConvergenceChart({ alnsHistory, ddqnHistory, selectedInstance, historyInstance }) {
@@ -260,12 +259,13 @@ export default function ModelAnalyticsView() {
         const items = Array.isArray(res?.items) ? res.items : [];
         setVersions(items);
         
-        const defaultVer = res?.default || items[0]?.version || 'v17';
+        const defaultVer = res?.default || items[0]?.version || '';
         setSelectedVersion(defaultVer);
       } catch (err) {
-        console.warn('Backend unavailable, falling back to mock training analysis:', err);
-        setVersions([{ version: 'v17', updated_at: new Date().toISOString() }]);
-        setSelectedVersion('v17');
+        console.warn('Backend unavailable or no versions found:', err);
+        setVersions([]);
+        setSelectedVersion('');
+        setStatus('No diagnostics logs found on the backend. Please run a benchmark first.');
       }
     }
     fetchVersions();
@@ -278,17 +278,11 @@ export default function ModelAnalyticsView() {
     async function fetchAnalysis() {
       try {
         setStatus(`Loading analysis for ${selectedVersion.toUpperCase()}...`);
-        let data;
-        if (selectedVersion === 'v17') {
-          // Use hardcoded demo fallback if training solver is down
-          data = demoAnalysisData;
-        } else {
-          data = await request(`/analysis/nexus?version=${encodeURIComponent(selectedVersion)}`, { method: 'GET' });
-        }
+        const data = await request(`/analysis/nexus?version=${encodeURIComponent(selectedVersion)}`, { method: 'GET' });
         setAnalysisData(data);
 
         const versionStamp = versions.find((v) => v.version === selectedVersion)?.updated_at;
-        const stampStr = versionStamp ? new Date(versionStamp).toLocaleString() : 'Demo Session';
+        const stampStr = versionStamp ? new Date(versionStamp).toLocaleString() : 'N/A';
         setLastUpdated(`Version ${selectedVersion.toUpperCase()} • updated ${stampStr}`);
         setStatus('Analysis ready. Open Diagnostics Report for full details.');
       } catch (err) {
@@ -302,10 +296,7 @@ export default function ModelAnalyticsView() {
         const act = await request('/analysis/activity?hours=24', { method: 'GET' });
         setActivityData(act);
       } catch (err) {
-        // Fallback to demo activity
-        if (demoAnalysisData.activity) {
-          setActivityData(demoAnalysisData.activity);
-        }
+        setActivityData(null);
       }
     }
 
@@ -422,9 +413,9 @@ export default function ModelAnalyticsView() {
           </p>
           <div id="analysis-policy-grid" className="analysis-heatmap-box">
             <PolicyHeatmap 
-              matrix={analysisData?.rl_alns?.matrix}
-              destroyOps={analysisData?.rl_alns?.destroy_ops}
-              repairOps={analysisData?.rl_alns?.repair_ops}
+              matrix={analysisData?.rl_alns?.matrix ?? analysisData?.op_matrix}
+              destroyOps={analysisData?.rl_alns?.destroy_ops ?? analysisData?.destroy_ops}
+              repairOps={analysisData?.rl_alns?.repair_ops ?? analysisData?.repair_ops}
             />
           </div>
         </div>
