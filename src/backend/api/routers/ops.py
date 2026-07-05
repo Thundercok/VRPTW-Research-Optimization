@@ -16,8 +16,8 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, Upl
 from pydantic import BaseModel
 
 # Ensure src is in sys.path for importing the vrptw package.
-_ROOT_PATH = Path(__file__).resolve().parents[4]
-_SRC_PATH = _ROOT_PATH / "src"
+_SRC_PATH = Path(__file__).resolve().parents[3]
+_ROOT_PATH = _SRC_PATH.parent
 if str(_SRC_PATH) not in sys.path:
     sys.path.insert(0, str(_SRC_PATH))
 
@@ -37,7 +37,7 @@ from services.solver_service import device_summary, transfer_weights_summary
 
 router = APIRouter(tags=["ops"])
 
-_LOGS_PATH = _ROOT_PATH / "docs" / "logs"
+_LOGS_PATH = _ROOT_PATH / "logs"
 
 
 def _parse_result_version(folder_name: str) -> str | None:

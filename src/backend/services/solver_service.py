@@ -211,11 +211,7 @@ def _log_device_once() -> None:
         )
 
 
-_DEFAULT_TRANSFER_PATH = _ROOT / "model" / "rl_alns_transfer.safetensors"
 _DR_TRANSFER_PATH = _ROOT / "rl_alns_dr_v15.safetensors"
-_DOCS_DR_TRANSFER_PATH = _ROOT / "docs" / "rl_alns_dr_v15.safetensors"
-_DOCS_TRANSFER_PATH = _ROOT / "docs" / "model" / "rl_alns_transfer.safetensors"
-_LEGACY_TRANSFER_PATH = _ROOT / "logs" / "results-v9.5" / "rl_alns_transfer.safetensors"
 
 _WEIGHTS_LOADED_ONCE = False
 _WEIGHTS_PATH_USED: str | None = None
@@ -227,20 +223,13 @@ def _resolve_transfer_path() -> Path | None:
     if path_env:
         candidate = Path(path_env)
         return candidate if candidate.exists() else None
-    for candidate in (
-        _DEFAULT_TRANSFER_PATH,
-        _DR_TRANSFER_PATH,
-        _DOCS_DR_TRANSFER_PATH,
-        _DOCS_TRANSFER_PATH,
-        _LEGACY_TRANSFER_PATH,
-    ):
-        if candidate.exists():
-            return candidate
+    if _DR_TRANSFER_PATH.exists():
+        return _DR_TRANSFER_PATH
     return None
 
 
-_DEFAULT_GNN_PATH = _ROOT / "docs" / "model" / "gnn_edge_predictor.pt"
-_ALTERNATIVE_GNN_PATH = _ROOT / "model" / "gnn_edge_predictor.pt"
+_DEFAULT_GNN_PATH = _ROOT / "logs" / "gnn_edge_predictor.pt"
+_ALTERNATIVE_GNN_PATH = _ROOT / "gnn_edge_predictor.pt"
 
 _GNN_LOADED_ONCE = False
 _GNN_PATH_USED: str | None = None
@@ -339,15 +328,10 @@ def _load_transfer_weights(solver: Any) -> bool:
         if not _WEIGHTS_LOADED_ONCE:
             _WEIGHTS_LOADED_ONCE = True
             logger.warning(
-                "DDQN transfer weights NOT FOUND. Searched %s, %s, %s, %s, and %s. The DDQN "
+                "DDQN transfer weights NOT FOUND at %s. The DDQN "
                 "policy will run on randomly-initialised weights (epsilon = "
-                "%.3f). Set VRPTW_TRANSFER_WEIGHTS or restore "
-                "model/rl_alns_transfer.safetensors.",
-                _DEFAULT_TRANSFER_PATH,
+                "%.3f). Set VRPTW_TRANSFER_WEIGHTS or restore the weights file.",
                 _DR_TRANSFER_PATH,
-                _DOCS_DR_TRANSFER_PATH,
-                _DOCS_TRANSFER_PATH,
-                _LEGACY_TRANSFER_PATH,
                 float(config.ctrl_eps_end),
             )
         return False
@@ -452,24 +436,10 @@ def _load_weights_for_solver(solver: Any, algo: str) -> None:
 
     from safetensors.torch import load_file
 
-    label = "rc1" if "rc1" in algo else "dr"
-    candidates = []
-    output_dir = _ROOT / "logs"
-
-    if label == "dr":
-        candidates = [
-            _DR_TRANSFER_PATH,
-            _DOCS_DR_TRANSFER_PATH,
-            output_dir / "rl_alns_dr_v15.safetensors",
-            output_dir / "rl_alns_dr_v15.pt",
-            _ROOT / "rl_alns_dr_v15.safetensors",
-        ]
-    else:
-        candidates = [
-            _DEFAULT_TRANSFER_PATH,
-            _DOCS_TRANSFER_PATH,
-            _LEGACY_TRANSFER_PATH,
-        ]
+    candidates = [
+        _DR_TRANSFER_PATH,
+        _ROOT / "logs" / "rl_alns_dr_v15.safetensors",
+    ]
 
     for cand in candidates:
         path_str = str(cand)
