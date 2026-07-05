@@ -1,0 +1,30 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Run FastAPI Backend (Dev Mode)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/main.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src;${workspaceFolder}/src/backend",
+                "DEMO_AUTH_BYPASS": "true"
+            },
+            "justMyCode": false
+        },
+        {
+            "name": "Run Solver CLI Smoke Test (25-cust)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "vrptw",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src"
+            },
+            "justMyCode": true
+        }
+    ]
+}

@@ -10,8 +10,10 @@ Thumbs.db
 secret
 .env
 .env.*
+!.env.example
 **/.env
 **/.env.*
+!**/.env.example
 *firebase-adminsdk*.json
 *.db
 *.db-journal
@@ -44,7 +46,8 @@ env/
 # IDE / Editor
 # ---------------------------------------------------------------
 .idea/
-.vscode/
+.vscode/*
+!.vscode/launch.json
 *.iml
 *.swp
 *.swo
