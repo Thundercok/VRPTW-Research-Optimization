@@ -48,7 +48,6 @@ def verify_password(raw: str, stored_hash: str) -> bool:
     except Exception:
         return False
 
-
 def needs_upgrade(stored_hash: str) -> bool:
     """Return True if ``stored_hash`` should be re-hashed (legacy or weak parameters)."""
     if not stored_hash:

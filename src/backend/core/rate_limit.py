@@ -13,14 +13,11 @@ Override defaults at runtime with environment variables, e.g.::
 If ``RATE_LIMIT_ENABLED=false`` the limiter is created but no requests are
 counted (useful for load tests on a private staging box).
 """
-
 from __future__ import annotations
 
 import os
-
 from slowapi import Limiter
 from slowapi.util import get_remote_address
-
 
 def _flag(name: str, default: bool) -> bool:
     raw = os.getenv(name, "").strip().lower()
@@ -31,10 +28,8 @@ def _flag(name: str, default: bool) -> bool:
 
 RATE_LIMIT_ENABLED = _flag("RATE_LIMIT_ENABLED", default=True)
 
-
 def _env(name: str, default: str) -> str:
     return os.getenv(name, default).strip() or default
-
 
 AUTH_TOKEN_LIMIT = _env("RATE_LIMIT_AUTH_TOKEN", "10/minute")
 AUTH_OTP_LIMIT = _env("RATE_LIMIT_AUTH_OTP", "5/minute")
@@ -42,7 +37,6 @@ AUTH_REGISTER_LIMIT = _env("RATE_LIMIT_AUTH_REGISTER", "5/minute")
 AUTH_FORGOT_LIMIT = _env("RATE_LIMIT_AUTH_FORGOT", "5/minute")
 JOBS_LIMIT = _env("RATE_LIMIT_JOBS", "30/minute")
 GEOCODE_LIMIT = _env("RATE_LIMIT_GEOCODE", "60/minute")
-
 
 limiter = Limiter(
     key_func=get_remote_address,

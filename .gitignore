@@ -57,8 +57,11 @@ env/
 # ---------------------------------------------------------------
 # Temporary build artifacts
 tmp/
-# Solomon benchmark data (fetch via scripts/fetch_solomon.py)
-data/
+# Solomon benchmark data (only allow rc*.txt instances)
+data/*
+!data/Solomon/
+data/Solomon/*
+!data/Solomon/rc*.txt
 # Local run outputs from vrptw_clean.py
 logs/local/
 # Temporary notebook exports
