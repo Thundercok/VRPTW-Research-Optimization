@@ -33,6 +33,9 @@ RUN pip install --no-cache-dir --extra-index-url https://download.pytorch.org/wh
 # Copy source directories (vrptw, backend, frontend)
 COPY src/ /app/src/
 
+# Precompile python source to bytecode for faster startup
+RUN python -m compileall /app/src
+
 # Copy built frontend assets from Stage 1 builder
 COPY --from=frontend-builder /app/dist /app/dist
 

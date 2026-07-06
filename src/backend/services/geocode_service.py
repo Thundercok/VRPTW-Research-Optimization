@@ -29,13 +29,12 @@ def _extract_short_address(data: dict[str, Any]) -> str:
 async def geocode_address(q: str, limit: int) -> dict[str, Any]:
     headers = {"User-Agent": "vrptw-dashboard/1.0"}
 
-    async with httpx.AsyncClient(timeout=8.0) as client:
-        data = []
+    async def fetch_nominatim(client: httpx.AsyncClient, query_str: str) -> list[dict[str, Any]]:
         try:
-            nominatim_resp = await client.get(
+            resp = await client.get(
                 "https://nominatim.openstreetmap.org/search",
                 params={
-                    "q": q,
+                    "q": query_str,
                     "format": "json",
                     "limit": str(limit),
                     "accept-language": "vi,en",
@@ -43,19 +42,57 @@ async def geocode_address(q: str, limit: int) -> dict[str, Any]:
                 },
                 headers=headers,
             )
-            nominatim_resp.raise_for_status()
-            data = nominatim_resp.json()
-        except httpx.HTTPError:
-            try:
-                mapsco_resp = await client.get(
-                    "https://geocode.maps.co/search",
-                    params={"q": f"{q}, Vietnam"},
-                    headers=headers,
-                )
-                mapsco_resp.raise_for_status()
-                data = (mapsco_resp.json() or [])[: max(1, int(limit))]
-            except httpx.HTTPError:
-                data = []
+            if resp.status_code == 200:
+                return resp.json() or []
+        except Exception:
+            pass
+        return []
+
+    async def fetch_mapsco(client: httpx.AsyncClient, query_str: str) -> list[dict[str, Any]]:
+        try:
+            resp = await client.get(
+                "https://geocode.maps.co/search",
+                params={"q": f"{query_str}, Vietnam"},
+                headers=headers,
+            )
+            if resp.status_code == 200:
+                return resp.json() or []
+        except Exception:
+            pass
+        return []
+
+    async with httpx.AsyncClient(timeout=8.0) as client:
+        import re
+        import logging
+        logger = logging.getLogger("vrptw.geocoder")
+
+        # Generate progressive search candidate variations
+        candidates = [q]
+
+        # Candidate 2: Strip house number prefix (e.g. "12 Nguyễn Huệ, Quận 1" -> "Nguyễn Huệ, Quận 1")
+        cleaned_no_house = re.sub(r'^(?:số\s+)?\d+(?:\s*[\/\-]\s*\d+)?\s+', '', q, flags=re.IGNORECASE).strip()
+        if cleaned_no_house and cleaned_no_house not in candidates:
+            candidates.append(cleaned_no_house)
+
+        # Candidate 3: Strip district sub-clauses (e.g. "12 Nguyễn Huệ, Quận 1" -> "12 Nguyễn Huệ")
+        cleaned_no_district = re.sub(r'[,]?\s*(?:quận|q\.)\s*\d+\b', '', q, flags=re.IGNORECASE).strip()
+        if cleaned_no_district and cleaned_no_district not in candidates:
+            candidates.append(cleaned_no_district)
+
+        # Candidate 4: Strip both house number and district (e.g. "12 Nguyễn Huệ, Quận 1" -> "Nguyễn Huệ")
+        cleaned_both = re.sub(r'[,]?\s*(?:quận|q\.)\s*\d+\b', '', cleaned_no_house, flags=re.IGNORECASE).strip()
+        if cleaned_both and cleaned_both not in candidates:
+            candidates.append(cleaned_both)
+
+        # Evaluate candidates sequentially
+        data = []
+        for cand in candidates:
+            data = await fetch_nominatim(client, cand)
+            if not data:
+                data = await fetch_mapsco(client, cand)
+            if data:
+                logger.info("Geocoding success for [%s] using rewrite [%s]", q, cand)
+                break
 
     items = [
         {

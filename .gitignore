@@ -46,8 +46,8 @@ env/
 # IDE / Editor
 # ---------------------------------------------------------------
 .idea/
-.vscode/*
-!.vscode/launch.json
+.vscode/
+.agents/
 *.iml
 *.swp
 *.swo

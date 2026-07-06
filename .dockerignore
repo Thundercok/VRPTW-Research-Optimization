@@ -1,0 +1,24 @@
+# Version Control
+.git
+.github
+.gitignore
+
+# Package manager folders
+node_modules
+
+# Build and IDE configurations
+dist
+.vscode
+.agents
+.env
+.env.example
+
+# Logs and scratch files
+logs
+*.log
+scratch/
+test_*.py
+
+# Docker assets
+Dockerfile
+docker-compose.yml

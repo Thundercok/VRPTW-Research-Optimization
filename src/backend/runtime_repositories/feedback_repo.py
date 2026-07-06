@@ -19,6 +19,20 @@ class FeedbackRepository:
         except Exception:
             self.persistence_enabled = False
 
+    def get(self, entry_id: str) -> FeedbackEntry | None:
+        if entry_id in self.items:
+            return self.items[entry_id]
+        if self.persistence_enabled and is_firebase_enabled():
+            try:
+                snap = self._feedback_collection().document(entry_id).get(timeout=5)
+                if snap.exists:
+                    entry = FeedbackEntry.model_validate(snap.to_dict() or {})
+                    self.items[entry.id] = entry
+                    return entry
+            except Exception:
+                self.persistence_enabled = False
+        return None
+
     def list(self, limit: int = 100) -> list[FeedbackEntry]:
         if self.persistence_enabled and is_firebase_enabled():
             try:

@@ -809,7 +809,35 @@ export default function LiveDispatchView() {
 
       // 3. Batch Geocoding
       setNaturalStatus(state.lang === 'vn' ? 'Đang định vị địa chỉ...' : 'Geocoding addresses...');
-      const addresses = [parsed.depot.address, ...parsed.customers.map(c => c.address)];
+      
+      // Heuristic: Extract city suffix from depot address to help geocode customers locally
+      let citySuffix = '';
+      const depotAddrLower = parsed.depot.address.toLowerCase();
+      if (depotAddrLower.includes('tp.hcm') || depotAddrLower.includes('hồ chí minh') || depotAddrLower.includes('hcm')) {
+        citySuffix = ', Hồ Chí Minh';
+      } else if (depotAddrLower.includes('hà nội') || depotAddrLower.includes('ha noi')) {
+        citySuffix = ', Hà Nội';
+      } else if (depotAddrLower.includes('đà nẵng') || depotAddrLower.includes('da nang')) {
+        citySuffix = ', Đà Nẵng';
+      } else if (depotAddrLower.includes('bình dương') || depotAddrLower.includes('binh duong')) {
+        citySuffix = ', Bình Dương';
+      } else if (depotAddrLower.includes('cần thơ') || depotAddrLower.includes('can tho')) {
+        citySuffix = ', Cần Thơ';
+      } else if (depotAddrLower.includes('hải phòng') || depotAddrLower.includes('hai phong')) {
+        citySuffix = ', Hải Phòng';
+      }
+
+      const addresses = [
+        parsed.depot.address,
+        ...parsed.customers.map(c => {
+          const addr = c.address;
+          const addrLower = addr.toLowerCase();
+          if (citySuffix && !addrLower.includes('hồ chí minh') && !addrLower.includes('tp.hcm') && !addrLower.includes('hà nội') && !addrLower.includes('đà nẵng') && !addrLower.includes('cần thơ') && !addrLower.includes('hải phòng')) {
+            return `${addr}${citySuffix}`;
+          }
+          return addr;
+        })
+      ];
       
       const geocoded = await geocodeBatch(addresses, (index, total, currentAddr) => {
         setNaturalStatus(
@@ -2071,7 +2099,7 @@ export default function LiveDispatchView() {
                       borderRadius: '4px',
                       fontWeight: 600
                     }}
-                    onClick={() => setNaturalText(`Kho:\n227 Nguyễn Văn Cừ, Quận 5, TP.HCM\n\nKhách hàng\n\n1.\nĐịa chỉ:\n12 Nguyễn Huệ, Quận 1\nKhối lượng:\n20 kg\nThời gian:\n08:00 - 10:00\n\n2.\nĐịa chỉ:\n15 Điện Biên Phủ, Bình Thạnh\nKhối lượng:\n15 kg\nThời gian:\n09:00 - 11:30\n\n3.\nĐịa chỉ:\nVincom Thủ Đức\nKhối lượng:\n8 kg\nThời gian:\n13:00 - 15:00`)}
+                    onClick={() => setNaturalText(`Kho:\n227 Nguyễn Văn Cừ, Quận 5, TP.HCM\n\nKhách hàng\n\n1.\nĐịa chỉ:\n12 Nguyễn Huệ, Quận 1\nKhối lượng:\n20 kg\nThời gian:\n08:00 - 10:00\n\n2.\nĐịa chỉ:\n15 Điện Biên Phủ, Bình Thạnh\nKhối lượng:\n15 kg\nThời gian:\n09:00 - 11:30\n\n3.\nĐịa chỉ:\nVincom Thủ Đức\nKhối lượng:\n8 kg\nThời gian:\n13:00 - 15:00\n\n4.\nĐịa chỉ:\n45 Lê Lợi, Quận 1\nKhối lượng:\n12 kg\nThời gian:\n08:30 - 10:30\n\n5.\nĐịa chỉ:\n300 Nguyễn Thị Thập, Quận 7\nKhối lượng:\n18 kg\nThời gian:\n10:00 - 12:00\n\n6.\nĐịa chỉ:\n120 Cộng Hòa, Tân Bình\nKhối lượng:\n25 kg\nThời gian:\n11:00 - 14:00\n\n7.\nĐịa chỉ:\n50 Hùng Vương, Quận 5\nKhối lượng:\n10 kg\nThời gian:\n14:00 - 16:00\n\n8.\nĐịa chỉ:\n80 Phan Xích Long, Phú Nhuận\nKhối lượng:\n7 kg\nThời gian:\n15:00 - 17:00\n\n9.\nĐịa chỉ:\n180 Cao Lỗ, Quận 8\nKhối lượng:\n14 kg\nThời gian:\n09:30 - 12:30\n\n10.\nĐịa chỉ:\n500 Quang Trung, Gò Vấp\nKhối lượng:\n22 kg\nThời gian:\n13:30 - 16:30`)}
                     disabled={isNaturalProcessing}
                   >
                     💡 {state.lang === 'vn' ? 'Sử dụng dữ liệu mẫu' : 'Load template example'}

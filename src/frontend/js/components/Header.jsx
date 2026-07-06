@@ -95,8 +95,25 @@ export default function Header() {
 
   return (
     <header className="saas-header">
-      <div className="header-left">
-        <h1 className="page-title">{getPageTitle()}</h1>
+      <div className="header-left" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <button 
+          className="mobile-sidebar-toggle"
+          onClick={() => updateState({ mobileSidebarOpen: !state.mobileSidebarOpen })}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: 'var(--text-main)',
+            fontSize: '22px',
+            cursor: 'pointer',
+            padding: '4px 8px',
+            lineHeight: 1,
+            borderRadius: '6px'
+          }}
+          aria-label="Toggle menu"
+        >
+          ☰
+        </button>
+        <h1 className="page-title" style={{ margin: 0 }}>{getPageTitle()}</h1>
         <span className={`status-pill status-ready ${statusTone}`} id="status">
           {status}
         </span>

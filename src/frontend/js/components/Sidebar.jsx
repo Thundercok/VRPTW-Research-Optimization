@@ -6,12 +6,26 @@ export default function Sidebar() {
 
   const handleTabClick = (e, tab) => {
     e.preventDefault();
-    updateState({ activeTab: tab });
+    updateState({ activeTab: tab, mobileSidebarOpen: false });
   };
 
   return (
-    <aside className="saas-sidebar">
-      <div className="brand">
+    <>
+      {state.mobileSidebarOpen && (
+        <div 
+          className="sidebar-backdrop" 
+          onClick={() => updateState({ mobileSidebarOpen: false })}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.5)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 999
+          }}
+        />
+      )}
+      <aside className={`saas-sidebar ${state.mobileSidebarOpen ? 'mobile-open' : ''}`}>
+        <div className="brand">
         <div className="brand-logo">N</div>
         <span className="brand-text">NAMI OPS</span>
       </div>
@@ -47,6 +61,14 @@ export default function Sidebar() {
           onClick={(e) => handleTabClick(e, 'settings')}
         >
           {t('settingsLabel')}
+        </a>
+        <hr style={{ border: 'none', borderTop: '1px solid var(--border)', margin: '16px 0 8px 0', opacity: 0.3 }} />
+        <a 
+          href="#" 
+          className={`nav-item ${state.activeTab === 'feedback' ? 'active' : ''}`}
+          onClick={(e) => handleTabClick(e, 'feedback')}
+        >
+          💬 {state.lang === 'vn' ? 'Phản hồi & Góp ý' : 'Feedback & Suggestions'}
         </a>
       </nav>
 
@@ -98,5 +120,6 @@ export default function Sidebar() {
         )}
       </div>
     </aside>
+    </>
   );
 }

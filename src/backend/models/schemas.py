@@ -104,6 +104,7 @@ class FeedbackEntry(BaseModel):
     source: str = "anonymous"
     user_agent: str = ""
     status: str = "new"
+    developer_note: str = ""
 
 
 @dataclass

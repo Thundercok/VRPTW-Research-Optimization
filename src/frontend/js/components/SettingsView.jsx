@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAppContext } from '../context/AppContext.jsx';
 
 export default function SettingsView() {
-  const { state, setLang, toast, t } = useAppContext();
+  const { state, setLang, toast } = useAppContext();
   const [apiUrl, setApiUrl] = useState(() => localStorage.getItem('vrptw_api_base') || '');
   const [mapTheme, setMapTheme] = useState(() => localStorage.getItem('vrptw_map_theme') || 'carto-light');
   const [appTheme, setAppTheme] = useState(() => localStorage.getItem('vrptw_theme') || localStorage.getItem('vrptw_landing_theme_v2') || 'dark');
@@ -90,6 +90,8 @@ export default function SettingsView() {
             </div>
           </div>
 
+
+
           <div className="settings-form-group" style={{ marginTop: '16px' }}>
             <label htmlFor="settings-app-theme">{state.lang === 'vn' ? 'Chế Độ Giao Diện Dashboard' : 'Application Theme Mode'}</label>
             <select 
@@ -137,7 +139,7 @@ export default function SettingsView() {
             </div>
             <div className="settings-info-row">
               <span>{state.lang === 'vn' ? 'Chế Độ Dữ Liệu:' : 'System Mode:'}</span>
-              <span className="status-pill status-ready" style={{ textTransform: 'uppercase', fontSize: '10px', padding: '2px 6px' }}>
+              <span className="status-pill status-ready" style={{ textTransform: 'uppercase', fontWeight: 'bold', fontSize: '10px', padding: '2px 6px' }}>
                 {state.mode} DATA
               </span>
             </div>

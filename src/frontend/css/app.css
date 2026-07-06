@@ -1172,6 +1172,86 @@ body.demo-active .demo-badge {
   transition: transform 0.35s linear !important;
 }
 
+.violation-tag {
+  background: rgba(239, 68, 68, 0.08);
+  color: var(--danger);
+  border: 1px solid rgba(239, 68, 68, 0.15);
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ── MOBILE RESPONSIVENESS AND DRAWERS ──────────────── */
+.mobile-sidebar-toggle {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-sidebar-toggle {
+    display: block !important;
+  }
+
+  .saas-layout {
+    grid-template-columns: 1fr !important;
+  }
+
+  .saas-sidebar {
+    position: fixed !important;
+    top: 0;
+    left: -240px;
+    width: 240px;
+    height: 100vh;
+    z-index: 10000;
+    transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.5);
+  }
+
+  .saas-sidebar.mobile-open {
+    left: 0 !important;
+  }
+
+  /* Grid layout collapses */
+  .settings-grid, .dashboard-grid, .analytics-grid, .feedback-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+
+  /* Header adjustments */
+  .saas-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    height: auto;
+    padding: 12px 16px;
+  }
+
+  .header-right {
+    flex-wrap: wrap;
+    width: 100%;
+    gap: 8px;
+  }
+
+  /* Map and charts container layout */
+  .dispatch-main-layout {
+    flex-direction: column !important;
+  }
+
+  .map-wrapper {
+    height: 350px !important;
+  }
+
+  .dispatch-sidebar {
+    width: 100% !important;
+    height: auto !important;
+    border-left: none !important;
+    border-top: 1px solid var(--border) !important;
+  }
+}
+
 .map-icon-3d {
   display: flex;
   align-items: center;

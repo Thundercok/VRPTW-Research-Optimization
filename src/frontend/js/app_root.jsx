@@ -6,12 +6,15 @@ import LiveDispatchView from './components/LiveDispatchView.jsx';
 import FleetConfigView from './components/FleetConfigView.jsx';
 import ModelAnalyticsView from './components/ModelAnalyticsView.jsx';
 import SettingsView from './components/SettingsView.jsx';
+import DashboardFeedbackView from './components/DashboardFeedbackView.jsx';
 import LoadingOverlay from './components/LoadingOverlay.jsx';
 import ToastContainer from './components/ToastContainer.jsx';
 import AuthView from './components/AuthView.jsx';
 
 function AppContent() {
   const { state, isLoadingUser } = useAppContext();
+
+
 
   if (isLoadingUser) {
     return (
@@ -52,6 +55,7 @@ function AppContent() {
       {state.activeTab === 'fleet' && <FleetConfigView />}
       {state.activeTab === 'analytics' && <ModelAnalyticsView />}
       {state.activeTab === 'settings' && <SettingsView />}
+      {state.activeTab === 'feedback' && <DashboardFeedbackView />}
       <LoadingOverlay />
       <ToastContainer />
 
