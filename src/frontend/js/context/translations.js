@@ -102,6 +102,7 @@ export const APP_COPY = {
     loadingBackend: 'Backend',
     loadingCompute: 'Compute',
     loadingLauncher: 'Routes',
+    loadingRotateHint: '📱 Rotate to landscape for best experience',
   },
   vn: {
     planningLabel: 'Lập Kế Hoạch',
@@ -206,5 +207,6 @@ export const APP_COPY = {
     loadingBackend: 'Backend',
     loadingCompute: 'Tính toán',
     loadingLauncher: 'Tuyến',
+    loadingRotateHint: '📱 Xoay ngang màn hình để xem tốt nhất',
   },
 };

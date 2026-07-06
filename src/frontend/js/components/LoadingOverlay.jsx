@@ -5,8 +5,25 @@ export default function LoadingOverlay() {
   const { loadingState, cancelJob, t } = useAppContext();
   const [isMinimized, setIsMinimized] = useState(false);
   const [elapsed, setElapsed] = useState(0);
+  const [isPortraitMobile, setIsPortraitMobile] = useState(false);
   const timerRef = useRef(null);
   const consoleEndRef = useRef(null);
+
+  // Detect portrait mobile to show landscape hint
+  useEffect(() => {
+    const checkOrientation = () => {
+      const isMobile = window.innerWidth <= 768;
+      const isPortrait = window.innerHeight > window.innerWidth;
+      setIsPortraitMobile(isMobile && isPortrait);
+    };
+    checkOrientation();
+    window.addEventListener('resize', checkOrientation);
+    window.addEventListener('orientationchange', checkOrientation);
+    return () => {
+      window.removeEventListener('resize', checkOrientation);
+      window.removeEventListener('orientationchange', checkOrientation);
+    };
+  }, []);
 
   // Keep track of active elapsed time counter
   useEffect(() => {
@@ -75,6 +92,14 @@ export default function LoadingOverlay() {
         </div>
         <p id="loading-subtitle" className="loading-subtitle">{t('loadingSubtitle')}</p>
         <p id="loading-phase" className="loading-phase">{loadingState.backend}</p>
+        
+        {/* Landscape rotation hint — only on portrait mobile */}
+        {isPortraitMobile && (
+          <div className="loading-rotate-hint">
+            <span className="rotate-icon">🔄</span>
+            <span>{t('loadingRotateHint')}</span>
+          </div>
+        )}
         
         <div className="loading-track">
           <div className="loading-road-lines"></div>

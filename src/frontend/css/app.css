@@ -1191,65 +1191,276 @@ body.demo-active .demo-badge {
 }
 
 @media (max-width: 768px) {
+  /* ── iOS momentum scrolling ── */
+  .view-panel, .settings-view-container, .fleet-view-container,
+  .analytics-view-container, .table-container, .modal-body,
+  .manifest-drawer, .playground-drawer, .loading-console {
+    -webkit-overflow-scrolling: touch !important;
+  }
+
   .mobile-sidebar-toggle {
     display: block !important;
   }
 
+  /* ─────────────────────────────────────────────────────────
+     CORE LAYOUT — keep 100dvh box, scroll INSIDE view-panel
+     ───────────────────────────────────────────────────────── */
   .saas-layout {
     grid-template-columns: 1fr !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    overflow: hidden !important;
   }
 
+  .saas-main {
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    min-height: 0 !important;
+  }
+
+  /* The view panel becomes the single scroll root */
+  .view-panel {
+    flex: 1 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    min-height: 0 !important;
+  }
+
+  /* ── Sidebar: off-canvas drawer ── */
   .saas-sidebar {
     position: fixed !important;
     top: 0;
     left: -240px;
     width: 240px;
     height: 100vh;
+    height: 100dvh;
     z-index: 10000;
     transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: 4px 0 20px rgba(0, 0, 0, 0.5);
+    padding-top: max(20px, env(safe-area-inset-top)) !important;
+    padding-bottom: max(20px, env(safe-area-inset-bottom)) !important;
+    padding-left: max(16px, env(safe-area-inset-left)) !important;
+    padding-right: 16px !important;
   }
-
   .saas-sidebar.mobile-open {
     left: 0 !important;
   }
 
-  /* Grid layout collapses */
+  /* ── Grid layouts → single column ── */
   .settings-grid, .dashboard-grid, .analytics-grid, .feedback-grid {
     grid-template-columns: 1fr !important;
     gap: 16px !important;
   }
-
-  /* Header adjustments */
-  .saas-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-    height: auto;
-    padding: 12px 16px;
+  .analytics-grid > * {
+    grid-column: span 12 !important;
   }
 
+  /* ── KPI row → 2x2 grid ── */
+  .kpi-row {
+    grid-template-columns: repeat(2, 1fr) !important;
+    flex-shrink: 0 !important;
+  }
+  .kpi-card {
+    border-right: 1px solid var(--border) !important;
+    border-bottom: 1px solid var(--border) !important;
+    padding: 10px 12px !important;
+  }
+  .kpi-card:nth-child(2n) { border-right: none !important; }
+  .kpi-card:nth-child(n+3) { border-bottom: none !important; }
+
+  /* ── Header: safe-area aware ── */
+  .saas-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+    height: auto !important;
+    flex-shrink: 0 !important;
+    padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) 10px max(12px, env(safe-area-inset-left)) !important;
+  }
   .header-right {
     flex-wrap: wrap;
     width: 100%;
-    gap: 8px;
+    gap: 6px;
   }
 
-  /* Map and charts container layout */
-  .dispatch-main-layout {
+  /* ── Workspace + Map pane ── */
+  .workspace-full {
     flex-direction: column !important;
+    flex: none !important;
+    padding: 0 8px 12px !important;
+    overflow: visible !important;
   }
 
-  .map-wrapper {
-    height: 350px !important;
+  .pane-map-full {
+    height: 50vh !important;
+    min-height: 280px !important;
+    flex: none !important;
+    margin-bottom: 12px !important;
   }
 
-  .dispatch-sidebar {
+  .pane-header {
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    padding: 8px 10px !important;
+  }
+
+  /* ── Slide-over sheets (Manifest, AI Playground) ── */
+  .manifest-drawer, .playground-drawer {
+    position: fixed !important;
+    top: 0 !important;  bottom: 0 !important;
+    left: 0 !important; right: 0 !important;
     width: 100% !important;
-    height: auto !important;
-    border-left: none !important;
-    border-top: 1px solid var(--border) !important;
+    max-width: 100% !important;
+    height: 100% !important;
+    transform: translateY(100%) !important;
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    border-radius: 0 !important;
+    z-index: 11000 !important;
   }
+  .manifest-drawer.open, .playground-drawer.open {
+    transform: translateY(0) !important;
+  }
+
+  /* ── Driver App Companion → full-screen sheet ── */
+  .driver-app-mockup {
+    position: fixed !important;
+    top: 0 !important; left: 0 !important;
+    right: 0 !important; bottom: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    border-radius: 0 !important;
+    border: none !important;
+    padding: 0 !important;
+    z-index: 11000 !important;
+    background: #f4f4f5 !important;
+    box-shadow: none !important;
+  }
+  .driver-app-mockup .driver-app-screen {
+    border-radius: 0 !important;
+    border: none !important;
+  }
+  #btn-toggle-driver-app {
+    bottom: max(90px, calc(80px + env(safe-area-inset-bottom))) !important;
+    right: max(12px, env(safe-area-inset-right)) !important;
+    padding: 8px 14px !important;
+    font-size: 10px !important;
+  }
+
+  /* ── Loading overlay → centered modal ── */
+  .loading-overlay {
+    position: fixed !important;
+    inset: 0 !important;
+    background: rgba(15, 23, 42, 0.85) !important;
+    backdrop-filter: blur(10px) !important;
+    -webkit-backdrop-filter: blur(10px) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    pointer-events: auto !important;
+  }
+  .loading-card {
+    max-width: 92vw !important;
+    width: 360px !important;
+    padding: 16px !important;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5) !important;
+  }
+  .loading-launcher {
+    bottom: max(16px, env(safe-area-inset-bottom)) !important;
+    right: max(16px, env(safe-area-inset-right)) !important;
+  }
+
+  /* ── Sub-view containers ── */
+  .settings-view-container, .fleet-view-container, .analytics-view-container {
+    padding: 16px !important;
+    overflow-y: auto !important;
+  }
+
+  /* Fleet config table → horizontal scroll */
+  .fleet-config-table {
+    display: block !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* ── Bottom safe-area padding ── */
+  .view-panel::after {
+    content: '';
+    display: block;
+    height: env(safe-area-inset-bottom, 0px);
+    flex-shrink: 0;
+  }
+}
+
+/* ── Landscape mobile optimizations ── */
+@media (max-width: 926px) and (orientation: landscape) {
+  .saas-header {
+    flex-direction: row !important;
+    gap: 8px !important;
+    height: 44px !important;
+    padding: 0 max(12px, env(safe-area-inset-left)) !important;
+    align-items: center !important;
+  }
+
+  .pane-map-full {
+    height: calc(100vh - 50px) !important;
+    min-height: unset !important;
+  }
+
+  .workspace-full {
+    padding: 0 4px 4px !important;
+  }
+
+  /* Auto-hide sidebar toggle label in landscape to save space */
+  .mobile-sidebar-toggle span {
+    display: none;
+  }
+
+  /* Loading overlay goes compact in landscape */
+  .loading-card {
+    max-width: 60vw !important;
+    max-height: 90vh !important;
+    overflow-y: auto !important;
+  }
+
+  .loading-rotate-hint {
+    display: none !important;
+  }
+}
+
+/* ── Loading Rotate Hint Styling ── */
+.loading-rotate-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 14px;
+  margin: 4px 0 8px;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: var(--r, 8px);
+  font-size: 12px;
+  font-weight: 600;
+  color: #d97706;
+  animation: hint-pulse 2.5s ease-in-out infinite;
+}
+
+.loading-rotate-hint .rotate-icon {
+  display: inline-block;
+  animation: rotate-wobble 2s ease-in-out infinite;
+  font-size: 16px;
+}
+
+@keyframes hint-pulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+@keyframes rotate-wobble {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(90deg); }
+  50% { transform: rotate(90deg); }
+  75% { transform: rotate(0deg); }
 }
 
 .map-icon-3d {
