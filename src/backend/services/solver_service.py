@@ -120,7 +120,14 @@ def get_process_pool() -> ProcessPoolExecutor:
         import multiprocessing as mp
 
         ctx = mp.get_context("spawn")
-        max_workers = min(7, max(1, os.cpu_count() or 4))
+        env_workers = os.getenv("MAX_WORKERS")
+        if env_workers:
+            try:
+                max_workers = max(1, int(env_workers))
+            except ValueError:
+                max_workers = 1
+        else:
+            max_workers = min(7, max(1, os.cpu_count() or 4))
         logger.info("Initializing ProcessPoolExecutor with %d workers", max_workers)
         _PROCESS_POOL = ProcessPoolExecutor(max_workers=max_workers, mp_context=ctx)
     return _PROCESS_POOL

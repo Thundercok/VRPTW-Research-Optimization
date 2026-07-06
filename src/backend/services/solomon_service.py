@@ -241,10 +241,9 @@ def list_solomon_datasets() -> list[dict[str, Any]]:
     items: list[dict[str, Any]] = []
 
     # Always include the built-in demo
-    items.append({"name": "demo", "label": "Demo RC (12 customers, HCMC)", "builtin": True})
     items.append({"name": "c1_demo", "label": "Demo C1 (12 customers, HCMC)", "builtin": True})
     items.append({"name": "r1_demo", "label": "Demo R1 (12 customers, HCMC)", "builtin": True})
-    seen.update(["demo", "c1_demo", "r1_demo"])
+    seen.update(["c1_demo", "r1_demo"])
 
     pattern = re.compile(r"^([a-z]+\d{3})\.txt$")
     for d in _data_dirs():

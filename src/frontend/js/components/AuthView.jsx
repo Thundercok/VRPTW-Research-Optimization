@@ -86,9 +86,9 @@ export default function AuthView({ onClose }) {
   useEffect(() => {
     async function probe() {
       try {
-        const response = await fetch(`${window.location.origin}/health`, { method: 'GET' });
+        const response = await fetch(`${window.location.origin}/api/health`, { method: 'GET' });
         if (!response.ok) {
-          const apiBaseRes = await fetch(`${state.apiBase || 'http://localhost:8000'}/health`, { method: 'GET' });
+          const apiBaseRes = await fetch(`${state.apiBase || 'http://localhost:8000'}/api/health`, { method: 'GET' });
           if (!apiBaseRes.ok) throw new Error();
           const data = await apiBaseRes.json();
           setBackendMode({

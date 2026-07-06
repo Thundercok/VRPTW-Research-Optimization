@@ -119,7 +119,7 @@ export default function Header() {
             ) : (
               <option value="demo">Solomon RC101 (Demo)</option>
             )}
-            <option value="custom">{state.lang === 'vn' ? 'Nhập tùy chọn...' : 'Custom Import...'}</option>
+            
           </select>
           <button 
             id="custom-import-btn"

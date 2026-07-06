@@ -782,6 +782,103 @@ export default function LiveDispatchView() {
     toast('Import Confirmed', `Successfully imported ${importPreview.length} customer stops.`, 'ok');
   };
 
+  const handleNaturalImport = async () => {
+    setNaturalErrors([]);
+    setNaturalStatus('');
+    
+    if (!naturalText.trim()) {
+      setNaturalErrors([state.lang === 'vn' ? 'Vui lòng nhập nội dung văn bản cần import.' : 'Please enter the text content to import.']);
+      return;
+    }
+
+    setIsNaturalProcessing(true);
+    setNaturalStatus(state.lang === 'vn' ? 'Đang phân tích văn bản...' : 'Parsing text...');
+
+    try {
+      // 1. Parse text
+      const parsed = parseNaturalText(naturalText);
+
+      // 2. Validate parsed structures
+      const validation = validateParsedImport(parsed);
+      if (!validation.isValid) {
+        setNaturalErrors(validation.errors);
+        setIsNaturalProcessing(false);
+        setNaturalStatus('');
+        return;
+      }
+
+      // 3. Batch Geocoding
+      setNaturalStatus(state.lang === 'vn' ? 'Đang định vị địa chỉ...' : 'Geocoding addresses...');
+      const addresses = [parsed.depot.address, ...parsed.customers.map(c => c.address)];
+      
+      const geocoded = await geocodeBatch(addresses, (index, total, currentAddr) => {
+        setNaturalStatus(
+          state.lang === 'vn' 
+            ? `Đang định vị địa chỉ ${index + 1}/${total}: ${currentAddr}...` 
+            : `Geocoding address ${index + 1}/${total}: ${currentAddr}...`
+        );
+      });
+
+      // Check if any address failed to geocode
+      const failedIndex = geocoded.findIndex(r => r === null);
+      if (failedIndex !== -1) {
+        const failedAddress = addresses[failedIndex];
+        setNaturalErrors([
+          state.lang === 'vn'
+            ? `Không thể định vị địa chỉ:\n"${failedAddress}"\nVui lòng chỉnh sửa lại địa chỉ và thử lại.`
+            : `Cannot locate:\n"${failedAddress}"\nPlease edit the address and try again.`
+        ]);
+        setIsNaturalProcessing(false);
+        setNaturalStatus('');
+        return;
+      }
+
+      // 4. Map to Internal Geo Model
+      const depotGeocoded = geocoded[0];
+      const customersGeocoded = parsed.customers.map((c, idx) => ({
+        ...c,
+        lat: geocoded[idx + 1].lat,
+        lng: geocoded[idx + 1].lng,
+        address: geocoded[idx + 1].address
+      }));
+
+      const geoModelPoints = buildInternalGeoModel(depotGeocoded, customersGeocoded);
+
+      // 5. Convert to Solver Model
+      const solverModelPoints = buildSolverModel(geoModelPoints);
+
+      // 6. Update App State
+      updateState({
+        mode: 'real',
+        selectedDataset: 'custom',
+        customers: solverModelPoints,
+        naturalImportOpen: false
+      });
+
+      toast(
+        state.lang === 'vn' ? 'Thành công' : 'Success',
+        state.lang === 'vn' 
+          ? `Nhập thành công 1 kho và ${parsed.customers.length} điểm khách hàng.` 
+          : `Successfully imported 1 depot and ${parsed.customers.length} customer stops.`,
+        'ok'
+      );
+
+      // Clear input state on success
+      setNaturalText('');
+      setNaturalErrors([]);
+      setNaturalStatus('');
+    } catch (err) {
+      console.error(err);
+      setNaturalErrors([
+        state.lang === 'vn'
+          ? `Có lỗi xảy ra: ${err.message}`
+          : `An error occurred: ${err.message}`
+      ]);
+    } finally {
+      setIsNaturalProcessing(false);
+    }
+  };
+
   // Excel / CSV File Uploader
   const triggerExcelUpload = (e) => {
     e.preventDefault();
@@ -1895,6 +1992,220 @@ export default function LiveDispatchView() {
                 {state.lang === 'vn' 
                   ? `Xác Nhận Nhập ${importPreview.length} Điểm` 
                   : `Confirm Import of ${importPreview.length} Stops`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Natural Text Custom Import Modal */}
+      {state.naturalImportOpen && (
+        <div className="modal-backdrop" style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(15, 23, 42, 0.85)',
+          backdropFilter: 'blur(12px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '20px'
+        }}>
+          <div className="saas-card" style={{
+            width: '100%',
+            maxWidth: '850px',
+            background: 'var(--card-bg, #ffffff)',
+            border: '1px solid var(--border)',
+            borderRadius: '16px',
+            display: 'flex',
+            flexDirection: 'column',
+            maxHeight: '85vh',
+            boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.5), 0 8px 10px -6px rgb(0 0 0 / 0.5)',
+            animation: 'modalSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+          }}>
+            <style>{`
+              @keyframes modalSlideIn {
+                from { transform: translateY(20px); opacity: 0; }
+                to { transform: translateY(0); opacity: 1; }
+              }
+              .natural-import-grid {
+                display: flex;
+                flex-direction: row;
+                gap: 24px;
+              }
+              @media (max-width: 768px) {
+                .natural-import-grid {
+                  flex-direction: column !important;
+                }
+              }
+            `}</style>
+
+            <div style={{ padding: '20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-main)' }}>
+                📝 {state.lang === 'vn' ? 'Nhập Văn Bản Tự Nhiên' : 'Custom Import (Natural Text)'}
+              </h3>
+              <button 
+                onClick={() => updateState({ naturalImportOpen: false })}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '24px', cursor: 'pointer' }}
+                disabled={isNaturalProcessing}
+              >
+                &times;
+              </button>
+            </div>
+
+            <div style={{ padding: '20px', overflowY: 'auto', flex: 1 }} className="natural-import-grid">
+              {/* Left Column: Text Area */}
+              <div style={{ flex: 1.3, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <label style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-main)' }}>
+                    {state.lang === 'vn' ? 'Nội dung yêu cầu giao hàng:' : 'Enter delivery details:'}
+                  </label>
+                  <button
+                    style={{ 
+                      fontSize: '12px', 
+                      color: 'var(--primary)', 
+                      background: 'none', 
+                      border: 'none', 
+                      cursor: 'pointer', 
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      fontWeight: 600
+                    }}
+                    onClick={() => setNaturalText(`Kho:\n227 Nguyễn Văn Cừ, Quận 5, TP.HCM\n\nKhách hàng\n\n1.\nĐịa chỉ:\n12 Nguyễn Huệ, Quận 1\nKhối lượng:\n20 kg\nThời gian:\n08:00 - 10:00\n\n2.\nĐịa chỉ:\n15 Điện Biên Phủ, Bình Thạnh\nKhối lượng:\n15 kg\nThời gian:\n09:00 - 11:30\n\n3.\nĐịa chỉ:\nVincom Thủ Đức\nKhối lượng:\n8 kg\nThời gian:\n13:00 - 15:00`)}
+                    disabled={isNaturalProcessing}
+                  >
+                    💡 {state.lang === 'vn' ? 'Sử dụng dữ liệu mẫu' : 'Load template example'}
+                  </button>
+                </div>
+                <textarea 
+                  className="saas-textarea"
+                  style={{ 
+                    width: '100%', 
+                    height: '320px', 
+                    fontFamily: 'monospace', 
+                    fontSize: '13px', 
+                    lineHeight: '1.6',
+                    resize: 'none',
+                    padding: '12px',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border)',
+                    background: 'var(--bg-soft, #f8fafc)',
+                    color: 'var(--text-main, #0f172a)'
+                  }}
+                  placeholder={`Kho:\n227 Nguyễn Văn Cừ, Quận 5, TP.HCM\n\nKhách hàng\n\n1.\nĐịa chỉ:\n12 Nguyễn Huệ, Quận 1\nKhối lượng:\n20 kg\nThời gian:\n08:00 - 10:00`}
+                  value={naturalText}
+                  onChange={(e) => setNaturalText(e.target.value)}
+                  disabled={isNaturalProcessing}
+                />
+              </div>
+
+              {/* Right Column: Information & Status */}
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '16px', minWidth: '240px' }}>
+                {/* Notes Block */}
+                <div style={{ 
+                  padding: '16px', 
+                  background: 'var(--bg-soft, #f8fafc)', 
+                  borderRadius: '12px', 
+                  border: '1px solid var(--border)',
+                  fontSize: '13px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px',
+                  color: 'var(--text-main, #0f172a)'
+                }}>
+                  <strong style={{ fontSize: '14px', borderBottom: '1px solid var(--border)', paddingBottom: '6px', marginBottom: '4px', color: 'var(--text-main)' }}>
+                    💡 {state.lang === 'vn' ? 'Quy tắc nhập liệu' : 'Input Guidelines'}
+                  </strong>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px', lineHeight: '1.5' }}>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                      <span style={{ fontSize: '16px' }}>⏰</span>
+                      <span><strong>{state.lang === 'vn' ? 'Thời gian:' : 'Time Format:'}</strong> HH:mm (e.g. 08:00 - 10:00 or 8h - 10h)</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                      <span style={{ fontSize: '16px' }}>⚖️</span>
+                      <span><strong>{state.lang === 'vn' ? 'Khối lượng:' : 'Weight:'}</strong> {state.lang === 'vn' ? 'Số nguyên (ví dụ: 20 kg hoặc 15)' : 'Integer (e.g. 20 kg or 15)'}</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                      <span style={{ fontSize: '16px' }}>🏢</span>
+                      <span><strong>{state.lang === 'vn' ? 'Điểm kho:' : 'Depot:'}</strong> {state.lang === 'vn' ? 'Chỉ duy nhất một điểm kho' : 'One depot only'}</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                      <span style={{ fontSize: '16px' }}>👥</span>
+                      <span><strong>{state.lang === 'vn' ? 'Khách hàng:' : 'Customers:'}</strong> {state.lang === 'vn' ? 'Danh sách đánh số thứ tự (1., 2.)' : 'Multiple customers supported'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Status Indicator */}
+                {naturalStatus && (
+                  <div style={{ 
+                    padding: '12px',
+                    background: 'var(--bg-highlight)',
+                    border: '1px solid var(--primary-border)',
+                    borderRadius: '8px',
+                    fontSize: '13px', 
+                    fontWeight: 600, 
+                    color: 'var(--primary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px'
+                  }}>
+                    <div className="spinner-sm" style={{
+                      border: '2px solid rgba(0,0,0,0.1)',
+                      borderTop: '2px solid var(--primary)',
+                      borderRadius: '50%',
+                      width: '14px',
+                      height: '14px',
+                      animation: 'spin 1s linear infinite'
+                    }}></div>
+                    <span>{naturalStatus}</span>
+                  </div>
+                )}
+
+                {/* Validation Errors */}
+                {naturalErrors.length > 0 && (
+                  <div style={{ 
+                    padding: '14px', 
+                    background: 'rgba(239, 68, 68, 0.08)', 
+                    border: '1px solid rgba(239, 68, 68, 0.25)', 
+                    borderRadius: '10px',
+                    color: '#dc2626',
+                    fontSize: '13px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
+                    maxHeight: '200px',
+                    overflowY: 'auto'
+                  }}>
+                    <strong style={{ fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px', color: '#b91c1c' }}>
+                      ⚠️ {state.lang === 'vn' ? 'Phát hiện lỗi dữ liệu:' : 'Data Validation Errors:'}
+                    </strong>
+                    <ul style={{ margin: 0, paddingLeft: '16px', display: 'flex', flexDirection: 'column', gap: '4px', lineHeight: '1.4' }}>
+                      {naturalErrors.map((err, idx) => (
+                        <li key={idx} style={{ whiteSpace: 'pre-line' }}>{err}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div style={{ padding: '20px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button 
+                className="btn-secondary" 
+                onClick={() => updateState({ naturalImportOpen: false })}
+                disabled={isNaturalProcessing}
+                style={{ fontSize: '13px' }}
+              >
+                {state.lang === 'vn' ? 'Hủy' : 'Cancel'}
+              </button>
+              <button 
+                className="btn-primary" 
+                onClick={handleNaturalImport}
+                disabled={isNaturalProcessing}
+                style={{ fontSize: '13px' }}
+              >
+                {isNaturalProcessing ? (state.lang === 'vn' ? 'Đang xử lý...' : 'Processing...') : (state.lang === 'vn' ? 'Nhập dữ liệu' : 'Import')}
               </button>
             </div>
           </div>
