@@ -152,6 +152,7 @@ export default function LiveDispatchView() {
     if (state.lastResult) {
       mapCtrl.clearRoutes();
       mapCtrl.paintResult();
+      mapCtrl.fetchRoadGeometries(state.lastResult);
       
       let maxTime = 240;
       Object.values(state.lastResult).forEach((algo) => {
@@ -193,6 +194,7 @@ export default function LiveDispatchView() {
     if (state.lastResult && mapControllerRef.current && simulationControllerRef.current && ganttControllerRef.current) {
       mapControllerRef.current.clearRoutes();
       mapControllerRef.current.paintResult();
+      mapControllerRef.current.fetchRoadGeometries(state.lastResult);
       
       let maxTime = 240;
       Object.values(state.lastResult).forEach((algo) => {

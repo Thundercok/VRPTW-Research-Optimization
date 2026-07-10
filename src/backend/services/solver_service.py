@@ -610,4 +610,28 @@ async def solve_model(payload: JobRequest, matrix: list[list[float]] | None = No
         except Exception as e:
             logger.error("Failed running algorithm pipeline %s: %s", algo, e)
 
+    # Concurrently fetch actual road paths from OSRM for all computed routes
+    from services.matrix_service import fetch_road_path
+    routes_to_fetch = []
+    for algo, res in results.items():
+        if isinstance(res, dict) and "routes" in res:
+            for route in res["routes"]:
+                # Only fetch geometries for active routes with customer stops
+                if isinstance(route, dict) and route.get("path") and len(route["path"]) > 2:
+                    routes_to_fetch.append(route)
+
+    if routes_to_fetch:
+        try:
+            # Limit concurrency to 1 to politely rate-limit ourselves against the public OSRM server
+            sem = asyncio.Semaphore(1)
+            road_paths = await asyncio.gather(
+                *(fetch_road_path(r["path"], sem) for r in routes_to_fetch),
+                return_exceptions=True
+            )
+            for r, path_res in zip(routes_to_fetch, road_paths):
+                if isinstance(path_res, list) and len(path_res) >= 2:
+                    r["road_geometry"] = path_res
+        except Exception as err:
+            logger.error("Failed gathering OSRM road paths on backend: %s", err)
+
     return results

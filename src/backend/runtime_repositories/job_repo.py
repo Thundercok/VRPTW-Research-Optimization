@@ -99,6 +99,20 @@ class JobRepository:
                                 safe_path.append(point)
                         safe_route["path"] = safe_path
 
+                    road_geo = safe_route.get("road_geometry")
+                    if isinstance(road_geo, list):
+                        safe_geo = []
+                        for point in road_geo:
+                            if (
+                                isinstance(point, list)
+                                and len(point) == 2
+                                and all(isinstance(v, (int, float)) for v in point)
+                            ):
+                                safe_geo.append({"lat": float(point[0]), "lng": float(point[1])})
+                            else:
+                                safe_geo.append(point)
+                        safe_route["road_geometry"] = safe_geo
+
                     safe_routes.append(safe_route)
                 algo_doc["routes"] = safe_routes
 
@@ -135,6 +149,16 @@ class JobRepository:
                             else:
                                 restored_path.append(point)
                         restored_route["path"] = restored_path
+
+                    road_geo = restored_route.get("road_geometry")
+                    if isinstance(road_geo, list):
+                        restored_geo = []
+                        for point in road_geo:
+                            if isinstance(point, dict) and "lat" in point and "lng" in point:
+                                restored_geo.append([point.get("lat"), point.get("lng")])
+                            else:
+                                restored_geo.append(point)
+                        restored_route["road_geometry"] = restored_geo
 
                     restored_routes.append(restored_route)
                 algo_doc["routes"] = restored_routes

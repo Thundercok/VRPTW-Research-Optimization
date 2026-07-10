@@ -164,7 +164,8 @@ export class MapController {
     this.ddqnVehicles.clear();
     this.alnsVehicles.clear();
 
-    this.roadRoutes.clear();
+    // NOTE: roadRoutes is intentionally NOT cleared here so that
+    // road geometry fetched by OSRM persists across view-switches.
   }
 
   renderMarkers() {
@@ -230,12 +231,18 @@ export class MapController {
   renderAlgoRoutes(algo, algoNameOrIsDdqn, color, capacity) {
     const algoName = typeof algoNameOrIsDdqn === 'boolean' ? (algoNameOrIsDdqn ? 'ddqn' : 'alns') : algoNameOrIsDdqn;
     const layerGroup = this.getRouteLayer(algoName);
+    const prefix = algoName;
     (algo.routes || []).forEach((route, routeIndex) => {
       if (!route.path || route.path.length < 2) return;
       const popupContent = this._buildRoutePopup(route, capacity, routeIndex);
       const routeColor = this.colorForRoute(routeIndex, route, color);
+      
+      const key = `${prefix}_${route.vehicle_id}`;
+      const road = this.roadRoutes.get(key);
+      const coords = road ? road.geometry : route.path.map((p) => [p[0], p[1]]);
+      
       L.polyline(
-        route.path.map((p) => [p[0], p[1]]),
+        coords,
         {
           renderer: this.canvasRenderer,
           color: routeColor,
@@ -271,21 +278,51 @@ export class MapController {
   // ── OSRM road geometry fetching ──────────────────────────────────────
 
   async fetchRoadGeometries(result) {
+    if (!result) return;
+
     this.roadRoutes.clear();
     this.osrmWarned = false;
-    const jobs = [];
+
+    // Collect jobs: prefer backend road_geometry, fallback to client OSRM fetch
+    const clientFetchJobs = [];
     for (const prefix in result) {
       const algo = result[prefix];
       if (!algo || !algo.routes) continue;
       for (const route of algo.routes) {
         if (!route.path || route.path.length < 2) continue;
-        jobs.push({ route, prefix });
+        if (route.road_geometry && route.road_geometry.length >= 2) {
+          // Backend already resolved the road shape — load straight into cache
+          const geo = route.road_geometry;
+          const waypoints = route.path;
+          const cumDist = [0];
+          for (let i = 1; i < geo.length; i++)
+            cumDist.push(cumDist[i - 1] + this._approxDist(geo[i - 1], geo[i]));
+          const legBounds = [0];
+          for (let wi = 1; wi < waypoints.length; wi++) {
+            let bestIdx = legBounds[legBounds.length - 1];
+            let bestD = Infinity;
+            for (let gi = bestIdx; gi < geo.length; gi++) {
+              const d = this._approxDist(geo[gi], waypoints[wi]);
+              if (d < bestD) { bestD = d; bestIdx = gi; }
+              if (d > bestD * 4 && gi > bestIdx + 10) break;
+            }
+            legBounds.push(bestIdx);
+          }
+          this.roadRoutes.set(`${prefix}_${route.vehicle_id}`, { geometry: geo, cumDist, legBounds });
+        } else if (route.path.length > 2) {
+          // Need client-side OSRM fetch
+          clientFetchJobs.push({ route, prefix });
+        }
       }
     }
-    // Fetch sequentially with small delays to be polite to OSRM
-    for (const job of jobs) {
+
+    // Immediately repaint with backend geometries already in cache
+    this._rerenderWithRoads(result);
+
+    // Then fetch remaining routes from OSRM client-side (sequentially, rate-limited)
+    for (const job of clientFetchJobs) {
       await this._fetchSingleRoute(job.route, job.prefix);
-      await new Promise((r) => setTimeout(r, 80));
+      await new Promise((r) => setTimeout(r, 120));
     }
     // Re-render polylines with road geometry
     this._rerenderWithRoads(result);
@@ -907,11 +944,53 @@ export class MapController {
     }
   }
 
+  loadBackendRoadGeometries(result) {
+    if (!result) return;
+    for (const prefix in result) {
+      const algo = result[prefix];
+      if (!algo || !algo.routes) continue;
+      algo.routes.forEach((route) => {
+        if (route.road_geometry && route.road_geometry.length >= 2) {
+          const geo = route.road_geometry;
+          const waypoints = route.path || [];
+          if (waypoints.length < 2) return;
+
+          // Compute cumulative distances along the geometry
+          const cumDist = [0];
+          for (let i = 1; i < geo.length; i++) {
+            cumDist.push(cumDist[i - 1] + this._approxDist(geo[i - 1], geo[i]));
+          }
+
+          // Map each waypoint stop index to its index in OSRM coordinates
+          const legBounds = [0];
+          for (let wi = 1; wi < waypoints.length; wi++) {
+            let bestIdx = legBounds[legBounds.length - 1];
+            let bestD = Infinity;
+            for (let gi = bestIdx; gi < geo.length; gi++) {
+              const d = this._approxDist(geo[gi], waypoints[wi]);
+              if (d < bestD) {
+                bestD = d;
+                bestIdx = gi;
+              }
+              if (d > bestD * 4 && gi > bestIdx + 10) break;
+            }
+            legBounds.push(bestIdx);
+          }
+
+          const key = `${prefix}_${route.vehicle_id}`;
+          this.roadRoutes.set(key, { geometry: geo, cumDist, legBounds });
+        }
+      });
+    }
+  }
+
   paintResult() {
     const result = this.app.state.lastResult;
     if (!result) return;
 
     this.clearRoutes();
+    this.roadRoutes.clear();          // Reset road cache before loading fresh geometries
+    this.loadBackendRoadGeometries(result);
     const routeCapacity = Number(this.app.state.lastRunFleet?.capacity ?? this.app.state.capacity);
 
     const colors = {
