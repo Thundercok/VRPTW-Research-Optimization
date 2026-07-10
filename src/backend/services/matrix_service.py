@@ -45,10 +45,10 @@ async def calculate_matrix(points: list[MatrixPoint]) -> dict[str, Any]:
     return {"matrix": fallback, "provider": "haversine"}
 
 
-async def fetch_road_path(path: list[list[float]], semaphore: asyncio.Semaphore | None = None) -> list[list[float]]:
+async def fetch_road_path(path: list[list[float]], semaphore: asyncio.Semaphore | None = None) -> list[list[float]] | None:
     """Query OSRM for the exact driving coordinates along the given path sequence."""
     if len(path) <= 2:  # Depot-to-depot or empty route, skip OSRM query
-        return path
+        return None
 
     if semaphore:
         async with semaphore:
@@ -57,7 +57,7 @@ async def fetch_road_path(path: list[list[float]], semaphore: asyncio.Semaphore 
     return await _fetch_road_path_raw(path)
 
 
-async def _fetch_road_path_raw(path: list[list[float]]) -> list[list[float]]:
+async def _fetch_road_path_raw(path: list[list[float]]) -> list[list[float]] | None:
     coords = ";".join(f"{p[1]},{p[0]}" for p in path)  # OSRM expects lng,lat
     
     for host in OSRM_HOSTS:
@@ -74,4 +74,4 @@ async def _fetch_road_path_raw(path: list[list[float]]) -> list[list[float]]:
         except Exception as e:
             logger.warning("OSRM host %s route geometry query failed: %s", host, e)
             
-    return path
+    return None
