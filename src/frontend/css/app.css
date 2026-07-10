@@ -2398,7 +2398,8 @@ body.demo-active .demo-badge {
   overflow: hidden;
   position: relative;
 }
-.view-panel.hidden {
+.view-panel.hidden,
+.hidden {
   display: none !important;
 }
 
@@ -3108,4 +3109,7 @@ body.demo-active .demo-badge {
   }
 }
 
+
+ 
+.map-view-parent.overlays-hidden #driver-app-emulator { display: none !important; }
 
