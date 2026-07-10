@@ -49,5 +49,5 @@ ENV PYTHONPATH=/app/src:/app/src/backend
 
 EXPOSE 8080
 
-# Start FastAPI server on port 8080
-CMD ["uvicorn", "src.backend.main:app", "--host", "0.0.0.0", "--port", "8080"]
+# Start FastAPI server on dynamic port (default 8080)
+CMD ["sh", "-c", "uvicorn src.backend.main:app --host 0.0.0.0 --port ${PORT:-8080}"]

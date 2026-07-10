@@ -10,6 +10,10 @@
  * (no trailing slash on origin)
  */
 function resolveApiBase() {
+  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_ORIGIN) {
+    const o = String(import.meta.env.VITE_API_ORIGIN).replace(/\/$/, '');
+    if (o) return `${o}/api`;
+  }
   if (typeof window !== 'undefined' && window.__VRPTW_API_ORIGIN__) {
     const o = String(window.__VRPTW_API_ORIGIN__).replace(/\/$/, '');
     if (o) return `${o}/api`;
