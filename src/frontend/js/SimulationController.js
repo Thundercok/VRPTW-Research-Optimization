@@ -458,11 +458,13 @@ export class SimulationController {
     const color = colors[algoName] || '#3b82f6';
 
     let html = `
-      <div class="sim-panel-tabs" style="display: flex; gap: 4px; background: rgba(230, 235, 245, 0.9); padding: 4px; border-radius: var(--r); margin-bottom: 12px; border: 1px solid var(--border);">
+      <div class="sim-panel-tabs" style="display: flex; gap: 4px; background: rgba(230, 235, 245, 0.9); padding: 4px; border-radius: var(--r); margin-bottom: 12px; border: 1px solid var(--border); width: 100%; align-items: center;">
         <button class="btn-sim-tab" data-tab="vehicles" style="flex: 1; border: none; padding: 6px 10px; font-size: 11px; font-weight: 600; border-radius: 4px; cursor: pointer; transition: all 0.2s; background: ${this.activeSubTab === 'vehicles' ? '#ffffff' : 'transparent'}; color: ${this.activeSubTab === 'vehicles' ? 'var(--text-main)' : 'var(--text-muted)'}; box-shadow: ${this.activeSubTab === 'vehicles' ? 'var(--shadow-sm)' : 'none'};">Drivers</button>
         <button class="btn-sim-tab" data-tab="alerts" style="flex: 1; border: none; padding: 6px 10px; font-size: 11px; font-weight: 600; border-radius: 4px; cursor: pointer; transition: all 0.2s; background: ${this.activeSubTab === 'alerts' ? '#ffffff' : 'transparent'}; color: ${this.activeSubTab === 'alerts' ? 'var(--text-main)' : 'var(--text-muted)'}; box-shadow: ${this.activeSubTab === 'alerts' ? 'var(--shadow-sm)' : 'none'};">Alerts</button>
         <button class="btn-sim-tab" data-tab="pod" style="flex: 1; border: none; padding: 6px 10px; font-size: 11px; font-weight: 600; border-radius: 4px; cursor: pointer; transition: all 0.2s; background: ${this.activeSubTab === 'pod' ? '#ffffff' : 'transparent'}; color: ${this.activeSubTab === 'pod' ? 'var(--text-main)' : 'var(--text-muted)'}; box-shadow: ${this.activeSubTab === 'pod' ? 'var(--shadow-sm)' : 'none'};">POD Logs</button>
+        <button id="btn-toggle-sim-panel" style="background: none; border: none; font-size: 13px; font-weight: bold; cursor: pointer; color: var(--text-muted); padding: 0 6px 0 2px; line-height: 1;" title="Collapse Panel">✕</button>
       </div>
+      <div class="sim-panel-list-wrapper">
     `;
 
     if (this.activeSubTab === 'vehicles') {
@@ -685,6 +687,7 @@ export class SimulationController {
       }
     }
 
+    html += `</div>`; // Close sim-panel-list-wrapper
     this.vehicleList.innerHTML = html;
 
     // Bind focus click events to driver cards
@@ -703,10 +706,28 @@ export class SimulationController {
     const tabButtons = this.vehicleList.querySelectorAll('.btn-sim-tab');
     tabButtons.forEach((btn) => {
       btn.addEventListener('click', (e) => {
+        e.stopPropagation();
         this.activeSubTab = e.target.dataset.tab;
         this.updateFrame();
       });
     });
+
+    // Bind panel minimize toggle
+    const toggleBtn = this.vehicleList.querySelector('#btn-toggle-sim-panel');
+    toggleBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.vehicleList.classList.add('panel-collapsed');
+    });
+
+    // Restore panel when clicked in collapsed state
+    if (!this.vehicleList._clickBound) {
+      this.vehicleList._clickBound = true;
+      this.vehicleList.addEventListener('click', () => {
+        if (this.vehicleList.classList.contains('panel-collapsed')) {
+          this.vehicleList.classList.remove('panel-collapsed');
+        }
+      });
+    }
 
     // Bind incident triggers
     this.vehicleList.querySelectorAll('.btn-trigger-breakdown').forEach((btn) => {

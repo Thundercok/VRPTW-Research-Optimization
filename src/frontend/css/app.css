@@ -1242,6 +1242,7 @@ body.demo-active .demo-badge {
     padding-bottom: max(20px, env(safe-area-inset-bottom)) !important;
     padding-left: max(16px, env(safe-area-inset-left)) !important;
     padding-right: 16px !important;
+    overflow-y: auto !important; /* Enable scrolling in landscape mobile */
   }
   .saas-sidebar.mobile-open {
     left: 0 !important;
@@ -1383,6 +1384,184 @@ body.demo-active .demo-badge {
     -webkit-overflow-scrolling: touch !important;
   }
 
+  /* ── Solver Toolbar: Header right grid ── */
+  .header-right {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+    width: 100% !important;
+    flex-wrap: nowrap !important;
+  }
+  .header-right > .saas-select,
+  .header-right > #dataset-select {
+    grid-column: span 1 !important;
+    width: 100% !important;
+    margin: 0 !important;
+  }
+  .header-right > #custom-import-btn {
+    grid-column: span 1 !important;
+    width: 100% !important;
+    justify-content: center !important;
+    margin: 0 !important;
+  }
+  .header-right > .fleet-toggles {
+    grid-column: span 2 !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+    gap: 8px !important;
+    background: var(--bg-surface) !important;
+    border: 1px solid var(--border) !important;
+    padding: 8px 12px !important;
+    border-radius: var(--r-sm) !important;
+    margin: 0 !important;
+  }
+  .header-right > .fleet-toggles label {
+    flex: 1 !important;
+    justify-content: center !important;
+  }
+  .header-right > #run-model {
+    grid-column: span 2 !important;
+    width: 100% !important;
+    margin: 0 !important;
+  }
+
+  /* ── Map Overlays: Simulation Controller ── */
+  .sim-control-bar {
+    bottom: 8px !important;
+    left: 8px !important;
+    right: 8px !important;
+    padding: 8px 12px !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+  .sim-slider-container {
+    width: 100% !important;
+    flex: none !important;
+    order: -1 !important;
+  }
+  .sim-time-text {
+    font-size: 11px !important;
+    min-width: unset !important;
+  }
+  .btn-sim-play {
+    padding: 5px 12px !important;
+    font-size: 11px !important;
+  }
+  .sim-speed-select {
+    padding: 3px 6px !important;
+    font-size: 11px !important;
+  }
+
+  /* ── Map Overlays: Vehicle Status Panel (Horizontal Carousel) ── */
+  .sim-vehicle-panel {
+    top: auto !important;
+    bottom: 80px !important;
+    left: 8px !important;
+    right: 8px !important;
+    width: auto !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    max-height: 190px !important;
+    padding: 8px 10px !important;
+    background: color-mix(in srgb, var(--bg-surface) 85%, transparent) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--r-lg) !important;
+    pointer-events: auto !important;
+    box-shadow: var(--shadow-lg) !important;
+    gap: 0 !important;
+  }
+  .sim-panel-list-wrapper {
+    display: flex !important;
+    flex-direction: row !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    width: 100% !important;
+    gap: 8px !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding-bottom: 4px !important;
+  }
+  .sim-vehicle-card {
+    min-width: 210px !important;
+    max-width: 210px !important;
+    padding: 8px 10px !important;
+    flex-shrink: 0 !important;
+    margin: 0 !important;
+    background: var(--bg-surface) !important; /* solid card on top of overlay bg */
+  }
+
+  /* ── Map Overlays: GNN Legend Overlay ── */
+  .gnn-legend-overlay {
+    top: 52px !important;
+    bottom: auto !important;
+    left: 8px !important;
+    right: auto !important;
+    padding: 6px 10px !important;
+    font-size: 10px !important;
+    max-width: 180px !important;
+  }
+
+  /* ── Model Analytics View Headers ── */
+  .analytics-view-header {
+    flex-direction: column !important;
+    gap: 12px !important;
+    align-items: stretch !important;
+  }
+  .analytics-actions-row {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+  .analytics-actions-row select {
+    width: 100% !important;
+    margin: 0 !important;
+  }
+  .analytics-actions-row button {
+    grid-column: span 2 !important;
+    width: 100% !important;
+    margin: 0 !important;
+  }
+  .analysis-heatmap-box {
+    display: block !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    width: 100% !important;
+  }
+
+  /* ── Fleet Config Headers ── */
+  .fleet-view-header {
+    flex-direction: column !important;
+    gap: 12px !important;
+    align-items: stretch !important;
+  }
+  .fleet-actions-row {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+  .fleet-actions-row button {
+    width: 100% !important;
+    margin: 0 !important;
+  }
+
+  /* ── Modal Split Charts ── */
+  .modal-split-charts {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  /* ── Map Overlays Focus Mode ── */
+  .map-view-parent.overlays-hidden .sim-control-bar,
+  .map-view-parent.overlays-hidden .sim-vehicle-panel,
+  .map-view-parent.overlays-hidden .gnn-legend-overlay,
+  .map-view-parent.overlays-hidden #btn-toggle-driver-app {
+    display: none !important;
+  }
+
   /* ── Bottom safe-area padding ── */
   .view-panel::after {
     content: '';
@@ -1425,6 +1604,23 @@ body.demo-active .demo-badge {
 
   .loading-rotate-hint {
     display: none !important;
+  }
+
+  /* Hide overlays on landscape focus mode */
+  .map-view-parent.overlays-hidden .sim-control-bar,
+  .map-view-parent.overlays-hidden .sim-vehicle-panel,
+  .map-view-parent.overlays-hidden .gnn-legend-overlay,
+  .map-view-parent.overlays-hidden #btn-toggle-driver-app {
+    display: none !important;
+  }
+
+  /* Compact panels for landscape mode */
+  .sim-vehicle-panel {
+    max-height: 140px !important;
+    bottom: 54px !important;
+  }
+  .sim-vehicle-card {
+    padding: 4px 8px !important;
   }
 }
 
@@ -2853,4 +3049,63 @@ body.demo-active .demo-badge {
   align-items: center;
   gap: 6px;
 }
+
+/* ── COLLAPSED STATE FOR SIMULATION OVERLAY PANEL ── */
+#sim-vehicle-panel.panel-collapsed {
+  position: absolute !important;
+  width: 44px !important;
+  height: 44px !important;
+  top: 52px !important;
+  bottom: auto !important;
+  left: auto !important;
+  right: 8px !important;
+  border-radius: 50% !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  background: var(--primary) !important;
+  border: 2.5px solid #ffffff !important;
+  outline: 2.5px solid var(--primary-hover) !important;
+  cursor: pointer !important;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 1000 !important;
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+
+#sim-vehicle-panel.panel-collapsed:hover {
+  transform: scale(1.15) !important;
+  background: var(--primary-hover) !important;
+}
+
+#sim-vehicle-panel.panel-collapsed * {
+  display: none !important;
+}
+
+#sim-vehicle-panel.panel-collapsed::before {
+  content: '📊' !important;
+  font-size: 18px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  height: 100% !important;
+  line-height: 1 !important;
+}
+
+/* Mobile override for collapsed panel position */
+@media (max-width: 768px) {
+  #sim-vehicle-panel.panel-collapsed {
+    top: auto !important;
+    bottom: 145px !important;
+  }
+}
+@media (max-width: 926px) and (orientation: landscape) {
+  #sim-vehicle-panel.panel-collapsed {
+    top: auto !important;
+    bottom: 105px !important;
+  }
+}
+
 

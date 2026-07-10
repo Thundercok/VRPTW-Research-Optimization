@@ -120,6 +120,10 @@ class JobService:
         if len(body.customers) < 2:
             raise HTTPException(status_code=400, detail="Need depot and customer")
 
+        from services.solver_service import device_summary
+        dev_info = device_summary()
+        device_name = f"GPU ({dev_info.get('device_name')})" if dev_info.get("device") == "cuda" else "CPU"
+
         job_id = str(uuid4())
         now = self._now()
         state = JobState(
@@ -129,6 +133,7 @@ class JobService:
                 "phase": "queued",
                 "created_at": now,
                 "queued_at": now,
+                "device": device_name,
                 "queue_size_on_submit": job_repo.queue.qsize(),
                 "events": [{"ts": now, "stage": "queued", "message": "Job submitted"}],
             },

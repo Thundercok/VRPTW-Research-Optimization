@@ -1485,9 +1485,43 @@ export default function LiveDispatchView() {
               </button>
             </div>
           </div>
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', minHeight: 0 }}>
+          <div className="map-view-parent" style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', minHeight: 0 }}>
             {/* Direct Leaflet Canvas Container */}
             <div id="map-container" className="map-view" style={{ flex: 1 }}></div>
+
+            {/* Floating Toggle Overlays Button */}
+            <button
+              id="btn-toggle-map-overlays-fab"
+              className="map-overlay-toggle-fab"
+              title="Toggle panels to view map clearly"
+              onClick={(e) => {
+                e.currentTarget.parentElement.classList.toggle('overlays-hidden');
+                const isHidden = e.currentTarget.parentElement.classList.contains('overlays-hidden');
+                e.currentTarget.style.background = isHidden ? 'var(--primary)' : 'var(--bg-surface)';
+                e.currentTarget.style.color = isHidden ? 'white' : 'var(--text-main)';
+              }}
+              style={{
+                position: 'absolute',
+                top: '12px',
+                right: '12px',
+                zIndex: 1001,
+                background: 'var(--bg-surface, #ffffff)',
+                border: '1px solid var(--border)',
+                borderRadius: '8px',
+                width: '36px',
+                height: '36px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '16px',
+                boxShadow: 'var(--shadow)',
+                cursor: 'pointer',
+                color: 'var(--text-main)',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              👁️
+            </button>
 
             {/* GNN Heatmap Legend Overlay */}
             {showGnnLegend && (
@@ -1636,7 +1670,30 @@ export default function LiveDispatchView() {
                   boxShadow: 'var(--shadow-sm)',
                 }}
               >
-                <strong style={{ fontSize: '11px', letterSpacing: '-0.2px' }}>NAMI Driver View</strong>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <button
+                    id="btn-close-driver-app-inline"
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'white',
+                      fontSize: '16px',
+                      cursor: 'pointer',
+                      padding: '4px',
+                      margin: '-4px',
+                      lineHeight: 1,
+                    }}
+                    onClick={() => {
+                      const appEmulator = document.getElementById('driver-app-emulator');
+                      const btnToggleApp = document.getElementById('btn-toggle-driver-app');
+                      appEmulator?.classList.add('hidden');
+                      if (btnToggleApp) btnToggleApp.style.background = 'var(--primary)';
+                    }}
+                  >
+                    ←
+                  </button>
+                  <strong style={{ fontSize: '11px', letterSpacing: '-0.2px' }}>NAMI Driver View</strong>
+                </div>
                 <select
                   id="driver-app-select"
                   style={{
