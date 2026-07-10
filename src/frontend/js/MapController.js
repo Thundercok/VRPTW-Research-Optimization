@@ -345,46 +345,52 @@ export class MapController {
     const waypoints = route.path; // [[lat,lng], ...]
     if (waypoints.length < 2) return;
     const coords = waypoints.map((w) => `${w[1]},${w[0]}`).join(';');
-    const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`;
-    try {
-      const resp = await fetch(url);
-      if (!resp.ok) {
-        this.triggerOsrmWarning();
-        return;
-      }
-      const data = await resp.json();
-      if (data.code !== 'Ok' || !data.routes?.length) {
-        this.triggerOsrmWarning();
-        return;
-      }
 
-      const geo = data.routes[0].geometry.coordinates.map((c) => [c[1], c[0]]); // [lng,lat]→[lat,lng]
-      // Cumulative distances along the geometry
-      const cumDist = [0];
-      for (let i = 1; i < geo.length; i++) {
-        cumDist.push(cumDist[i - 1] + this._approxDist(geo[i - 1], geo[i]));
-      }
-      // Find geometry indices closest to each original waypoint
-      const legBounds = [0];
-      for (let wi = 1; wi < waypoints.length; wi++) {
-        let bestIdx = legBounds[legBounds.length - 1];
-        let bestD = Infinity;
-        for (let gi = bestIdx; gi < geo.length; gi++) {
-          const d = this._approxDist(geo[gi], waypoints[wi]);
-          if (d < bestD) {
-            bestD = d;
-            bestIdx = gi;
-          }
-          if (d > bestD * 4 && gi > bestIdx + 10) break;
+    // Try multiple OSRM hosts in order (matching backend fallback list)
+    const OSRM_HOSTS = [
+      'https://router.project-osrm.org',
+      'https://routing.openstreetmap.de/routed-car',
+    ];
+
+    for (const host of OSRM_HOSTS) {
+      const url = `${host}/route/v1/driving/${coords}?overview=full&geometries=geojson`;
+      try {
+        const resp = await fetch(url, { signal: AbortSignal.timeout(8000) });
+        if (!resp.ok) continue;
+        const data = await resp.json();
+        if (data.code !== 'Ok' || !data.routes?.length) continue;
+
+        const geo = data.routes[0].geometry.coordinates.map((c) => [c[1], c[0]]); // [lng,lat]→[lat,lng]
+        // Cumulative distances along the geometry
+        const cumDist = [0];
+        for (let i = 1; i < geo.length; i++) {
+          cumDist.push(cumDist[i - 1] + this._approxDist(geo[i - 1], geo[i]));
         }
-        legBounds.push(bestIdx);
+        // Find geometry indices closest to each original waypoint
+        const legBounds = [0];
+        for (let wi = 1; wi < waypoints.length; wi++) {
+          let bestIdx = legBounds[legBounds.length - 1];
+          let bestD = Infinity;
+          for (let gi = bestIdx; gi < geo.length; gi++) {
+            const d = this._approxDist(geo[gi], waypoints[wi]);
+            if (d < bestD) {
+              bestD = d;
+              bestIdx = gi;
+            }
+            if (d > bestD * 4 && gi > bestIdx + 10) break;
+          }
+          legBounds.push(bestIdx);
+        }
+        const key = `${prefix}_${route.vehicle_id}`;
+        this.roadRoutes.set(key, { geometry: geo, cumDist, legBounds });
+        return; // success, stop trying
+      } catch (e) {
+        console.warn(`OSRM ${host} failed for ${prefix} v${route.vehicle_id}:`, e);
       }
-      const key = `${prefix}_${route.vehicle_id}`;
-      this.roadRoutes.set(key, { geometry: geo, cumDist, legBounds });
-    } catch (e) {
-      console.warn(`OSRM failed for ${prefix} v${route.vehicle_id}:`, e);
-      this.triggerOsrmWarning();
     }
+
+    // All hosts failed
+    this.triggerOsrmWarning();
   }
 
   _rerenderWithRoads(result) {

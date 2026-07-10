@@ -76,6 +76,28 @@ async def health() -> dict[str, object]:
     }
 
 
+@router.get("/osrm-health")
+async def osrm_health() -> dict[str, object]:
+    """Check which OSRM routing hosts are reachable from this server (for debugging Render deployments)."""
+    import httpx
+    from services.matrix_service import OSRM_HOSTS
+
+    # Test a minimal route: HCMC center
+    test_coords = "106.6930,10.7769;106.7000,10.7800"
+    results = {}
+    for host in OSRM_HOSTS:
+        url = f"{host}/route/v1/driving/{test_coords}?overview=false"
+        try:
+            async with httpx.AsyncClient(timeout=8.0, headers={"User-Agent": "NAMI-VRPTW-Solver/1.0"}) as client:
+                resp = await client.get(url)
+                results[host] = {"status": resp.status_code, "ok": resp.status_code == 200}
+        except Exception as e:
+            results[host] = {"status": "error", "ok": False, "error": str(e)}
+
+    any_ok = any(v["ok"] for v in results.values())
+    return {"osrm_reachable": any_ok, "hosts": results}
+
+
 @router.get("/geocode")
 @limiter.limit(GEOCODE_LIMIT)
 async def geocode(
