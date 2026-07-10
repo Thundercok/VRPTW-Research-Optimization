@@ -9,7 +9,8 @@ logger = logging.getLogger(__name__)
 
 OSRM_HOSTS = [
     "https://router.project-osrm.org",
-    "https://routing.openstreetmap.de/routed-car"
+    "https://routing.openstreetmap.de/routed-car",
+    "https://osrm.routing.osm.org"
 ]
 
 
@@ -22,7 +23,7 @@ async def calculate_matrix(points: list[MatrixPoint]) -> dict[str, Any]:
     for host in OSRM_HOSTS:
         url = f"{host}/table/v1/driving/{coords}?annotations=distance"
         try:
-            async with httpx.AsyncClient(timeout=8.0) as client:
+            async with httpx.AsyncClient(timeout=10.0, headers={"User-Agent": "NAMI-VRPTW-Solver/1.0"}) as client:
                 response = await client.get(url)
                 if response.status_code == 200:
                     data = response.json()
@@ -62,7 +63,7 @@ async def _fetch_road_path_raw(path: list[list[float]]) -> list[list[float]]:
     for host in OSRM_HOSTS:
         url = f"{host}/route/v1/driving/{coords}?overview=full&geometries=geojson"
         try:
-            async with httpx.AsyncClient(timeout=6.0) as client:
+            async with httpx.AsyncClient(timeout=6.0, headers={"User-Agent": "NAMI-VRPTW-Solver/1.0"}) as client:
                 response = await client.get(url)
                 if response.status_code == 200:
                     data = response.json()
