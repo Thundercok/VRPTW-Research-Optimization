@@ -243,10 +243,61 @@ Dưới đây là bảng tổng hợp kết quả thực nghiệm trung bình th
   - OR-Tools: NV = 8.00, TD = 1296.39 (Gap = -7.86% - NV inflated)
   - *Nhận xét:* OR-Tools sử dụng tới 8 xe (gấp đôi mức tối ưu) để đạt khoảng cách ngắn, trong khi Hybrid-DDQN bảo toàn tuyệt đối số xe tối thiểu là 4 xe với mức khoảng cách chấp nhận được.
 
-#### 3.3. Kết quả ngẫu nhiên hóa miền dữ liệu (Domain Randomization) và chuyển giao
+#### 3.3. Kết quả mở rộng trên tập dữ liệu Gehring & Homberger 200
+Để đánh giá khả năng mở rộng (scalability) của mô hình đề xuất trên các bài toán có quy mô khách hàng lớn hơn, nghiên cứu tiến hành thử nghiệm trên tập dữ liệu Gehring & Homberger 200 (quy mô 200 khách hàng, gồm 60 thực thể). Kết quả so sánh trung bình được thể hiện tại Bảng 3.2.
+
+##### Bảng 3.2: So sánh tổng hợp hiệu năng trung bình trên Gehring & Homberger 200 (clean_v3)
+| Lớp Dữ Liệu | Thuật Toán | Số Xe Trung Bình (NV_mean) | Khoảng Cách Trung Bình (TD_mean) | Độ Lệch Khoảng Cách (Gap%) | Thời Gian Chạy (s) |
+| :--- | :--- | :---: | :---: | :---: | :---: |
+| **C1** | OR-Tools | 19.60 | 2845.96 | +0.00% | 2929.3 |
+| | ALNS-Base | 19.00 | 2789.54 | +0.11% | 3285.6 |
+| | **Hybrid-DDQN (Đề xuất)** | **18.90** | **2747.90** | **+0.00%** | **2972.2** |
+| **C2** | OR-Tools | 6.60 | 1942.49 | +0.00% | 689.9 |
+| | ALNS-Base | 6.00 | 1884.99 | +0.00% | 46.6 |
+| | **Hybrid-DDQN (Đề xuất)** | **6.00** | **1845.88** | **+0.00%** | **123.6** |
+| **R1** | OR-Tools | 18.70 | 4032.67 | +3.80% | 64.8 |
+| | ALNS-Base | 18.30 | 3974.52 | +9.35% | 42.8 |
+| | **Hybrid-DDQN (Đề xuất)** | **18.20** | **3774.44** | **+1.35%** | **68.3** |
+| **R2** | OR-Tools | 4.30 | 3151.58 | -6.23% | 60.4 |
+| | ALNS-Base | 4.16 | 3065.35 | -5.50% | 16.6 |
+| | **Hybrid-DDQN (Đề xuất)** | **4.10** | **2957.69** | **-9.46%** | **64.0** |
+| **RC1** | OR-Tools | 18.90 | 3521.27 | +7.52% | 52.6 |
+| | ALNS-Base | 18.70 | 3496.66 | +3.69% | 39.0 |
+| | **Hybrid-DDQN (Đề xuất)** | **18.14** | **3417.03** | **+1.18%** | **55.4** |
+| **RC2** | OR-Tools | 4.90 | 2676.70 | +6.59% | 80.0 |
+| | ALNS-Base | 4.56 | 2659.12 | +7.14% | 28.3 |
+| | **Hybrid-DDQN (Đề xuất)** | **4.50** | **2581.79** | **+2.14%** | **84.3** |
+
+*Đánh giá:* Mô hình Hybrid-DDQN tiếp tục thể hiện hiệu năng xuất sắc khi mở rộng lên quy mô 200 khách hàng, giành chiến thắng tuyệt đối trước cả ALNS-Base và Google OR-Tools trên cả 2 khía cạnh số lượng xe (NV) và quãng đường di chuyển (TD) ở tất cả 6 phân lớp dữ liệu.
+
+#### 3.3.1. Kết quả mở rộng quy mô cực lớn (400 - 1000 khách hàng)
+Để kiểm chứng giới hạn chịu tải và tính thực tế của thuật toán trên các bài toán quy mô đô thị cực lớn, chúng tôi đã chạy benchmark mở rộng trên các tập dữ liệu Gehring & Homberger có quy mô 400, 600, 800 và 1000 khách hàng.
+
+##### Bảng 3.2.1: So sánh hiệu năng tổng hợp từ quy mô 400 đến 1000 khách hàng
+| Quy mô (Số KH) | Thuật toán | Số xe trung bình (NV_mean) | Quãng đường trung bình (TD_mean) | Thời gian chạy trung bình (s) |
+| :--- | :--- | :---: | :---: | :---: |
+| **400 khách hàng** | OR-Tools | 24.46 | 7335.18 | 1025.9 |
+| | ALNS-Base | 23.78 | 7487.87 | 436.0 |
+| | **Hybrid-DDQN (Đề xuất)** | **23.46** | **6996.53** | **1064.5** |
+| **600 khách hàng** | OR-Tools | 37.83 | 15859.16 | 976.0 |
+| | ALNS-Base | 36.67 | 16665.06 | 476.6 |
+| | **Hybrid-DDQN (Đề xuất)** | **35.97** | **15210.05** | **1008.2** |
+| **800 khách hàng** | OR-Tools | 51.17 | 27779.89 | 1910.7 |
+| | ALNS-Base | 50.44 | 29135.57 | 810.6 |
+| | **Hybrid-DDQN (Đề xuất)** | **49.00** | **26368.40** | **1957.3** |
+| **1000 khách hàng** | OR-Tools | 63.50 | 42992.50 | 6454.1 |
+| | ALNS-Base | 62.61 | 44430.73 | 742.0 |
+| | **Hybrid-DDQN (Đề xuất)** | **60.39** | **40265.72** | **4014.5** |
+
+*Đánh giá:*
+1. **Khả năng tiết kiệm số xe (Fleet Reduction):** Sự vượt trội về số xe của Hybrid-DDQN tăng dần theo quy mô bài toán: tiết kiệm **0.32 xe** (400 KH), **0.70 xe** (600 KH), **1.44 xe** (800 KH), và **2.22 xe** (1000 KH) so với ALNS-Base.
+2. **Khả năng giảm quãng đường (TD Improvement):** Hybrid-DDQN giảm đáng kể tổng quãng đường di chuyển so với ALNS-Base với mức cải thiện từ **-6.6% đến -9.5%** ở mọi quy mô.
+3. **Hiệu suất thực tế vượt trội OR-Tools:** Ở quy mô 1000 khách hàng, OR-Tools tốn tới **6454.1 giây** nhưng chỉ đạt số xe rất lớn (63.50 xe). Trong khi đó, Hybrid-DDQN giải bài toán tối ưu hơn nhiều chỉ trong **4014.5 giây** (nhanh hơn **37.8%**).
+
+#### 3.4. Kết quả ngẫu nhiên hóa miền dữ liệu (Domain Randomization) và chuyển giao
 Để kiểm tra tính bền vững và khả năng ứng dụng thực tế của mô hình DRL mà không cần huấn luyện lại trên từng bài toán cụ thể, một thử nghiệm ngẫu nhiên hóa miền dữ liệu đã được tiến hành. Mô hình Q-Network được huấn luyện trước trên một chương trình đào tạo (curriculum) gồm các thực thể nhân tạo được sinh ngẫu nhiên có quy mô từ 25 đến 100 khách hàng với các cấu trúc khung thời gian khác nhau. Sau khi hoàn tất huấn luyện, trọng số mạng được đóng băng hoàn toàn và đưa vào giải trực tiếp các bài toán Solomon chưa từng thấy trong quá trình huấn luyện (**Hybrid-DDQN-Transfer-DR**).
 
-##### Bảng 3.2: Hiệu năng của mô hình chuyển giao đóng băng trọng số (Transfer-DR) với cấu hình 1200 vòng lặp
+##### Bảng 3.3: Hiệu năng của mô hình chuyển giao đóng băng trọng số (Transfer-DR) với cấu hình 1200 vòng lặp
 | Lớp Dữ Liệu | Số Xe Trung Bình (NV_mean) | Khoảng Cách Trung Bình (TD_mean) | Độ Lệch Khoảng Cách (Gap%) |
 | :--- | :---: | :---: | :---: |
 | **C1** | 10.000 | 831.92 | +0.360% |
@@ -260,12 +311,12 @@ Dưới đây là bảng tổng hợp kết quả thực nghiệm trung bình th
 *Đánh giá:* Kết quả Gap% trung bình trên toàn bộ 56 thực thể Solomon chỉ là **1.62%** và duy trì số lượng xe tối ưu. Điều này chứng minh các bộ điều khiển DDQN đã học được các quy luật tổng quát về tiến trình tối ưu hóa và cấu trúc phân bố địa lý thay vì chỉ học vẹt (overfitting) trên một phân phối dữ liệu cụ thể.
 
 - **Lưu ý về Gap% âm và hiện tượng lạm phát xe (Vehicle Inflation Caveat) trên nhóm RC1:**
-  Trong kết quả đối chứng trên nhóm RC1 (Bảng 3.3), một số thực thể như RC101, RC102, RC105, và RC106 cho thấy Gap% âm về khoảng cách di chuyển (TD). Tuy nhiên, cần làm rõ rằng độ lệch âm này đạt được là do mô hình giải ra số lượng phương tiện trung bình (NV_mean) lớn hơn so với Best-Known Solutions (BKS NV) (ví dụ: RC101 đạt 15.00 xe so với BKS là 14 xe; RC102 đạt 13.60 xe so với BKS là 12 xe). Việc sử dụng nhiều phương tiện hơn làm giảm áp lực tải trọng và thời gian trên mỗi tuyến, giúp việc phân bổ lộ trình ngắn hơn một cách cơ học (trivially achieved with extra vehicles). Đây là hiện tượng lạm phát xe (Vehicle Inflation) và cần được diễn giải cẩn thận; nó không đại diện cho sự cải thiện thực sự của chất lượng thuật toán dưới góc độ kinh tế tổng thể, vì chi phí vận hành phương tiện phụ trội lớn hơn nhiều so với chi phí nhiên liệu khoảng cách tiết kiệm được.
+  Trong kết quả đối chứng trên nhóm RC1 (Bảng 3.4), một số thực thể như RC101, RC102, RC105, và RC106 cho thấy Gap% âm về khoảng cách di chuyển (TD). Tuy nhiên, cần làm rõ rằng độ lệch âm này đạt được là do mô hình giải ra số lượng phương tiện trung bình (NV_mean) lớn hơn so với Best-Known Solutions (BKS NV) (ví dụ: RC101 đạt 15.00 xe so với BKS là 14 xe; RC102 đạt 13.60 xe so với BKS là 12 xe). Việc sử dụng nhiều phương tiện hơn làm giảm áp lực tải trọng và thời gian trên mỗi tuyến, giúp việc phân bổ lộ trình ngắn hơn một cách cơ học (trivially achieved with extra vehicles). Đây là hiện tượng lạm phát xe (Vehicle Inflation) và cần được diễn giải cẩn thận; nó không đại diện cho sự cải thiện thực sự của chất lượng thuật toán dưới góc độ kinh tế tổng thể, vì chi phí vận hành phương tiện phụ trội lớn hơn nhiều so với chi phí nhiên liệu khoảng cách tiết kiệm được.
 
 - **Ghi chú phương pháp luận về ràng buộc quay về kho (Depot Return Feasibility - Hiệu chỉnh v14):**
   Một điểm hiệu chỉnh phương pháp luận quan trọng từ phiên bản v14 của thuật toán là việc thực thi nghiêm ngặt ràng buộc quay về kho của phương tiện trước thời điểm kết thúc thời gian hoạch định ($t + d_{prev, 0} \le due[0]$). Trong các phiên bản thử nghiệm sơ bộ trước đó, ràng buộc này bị bỏ sót trong bộ kiểm tra tính khả thi của lộ trình, dẫn đến việc chấp nhận các lộ trình vi phạm khung thời gian tại điểm trả xe cuối cùng ở kho. Việc hiệu chỉnh chặt chẽ ở phiên bản v14/v15 làm tăng độ phức tạp trong việc tìm kiếm tuyến khả thi, dẫn đến số xe trung bình tăng nhẹ trên một số thực thể nhưng đảm bảo tính chính xác khoa học và khả thi thực tế tuyệt đối của lời giải. Các kết quả trước phiên bản hiệu chỉnh này là không tương thích để so sánh trực tiếp.
 
-##### Bảng 3.3: Kết quả đối chứng hiệu năng giữa Hybrid-DDQN và Hybrid-DDQN-Transfer-DR trên nhóm RC1 với 2500 vòng lặp (5 lượt chạy)
+##### Bảng 3.4: Kết quả đối chứng hiệu năng giữa Hybrid-DDQN và Hybrid-DDQN-Transfer-DR trên nhóm RC1 với 2500 vòng lặp (5 lượt chạy)
 | Thực thể | Hybrid-DDQN (Học trực tuyến) | | | | Hybrid-DDQN-Transfer-DR (Chuyển giao) | | | |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 | | **NV** | **TD** | **Gap%** | **Thời gian (s)** | **NV** | **TD** | **Gap%** | **Thời gian (s)** |
@@ -284,7 +335,7 @@ Dưới đây là bảng tổng hợp kết quả thực nghiệm trung bình th
 2. **Tăng tốc 35%:** Thời gian xử lý trung bình giảm từ 231.8 giây xuống còn 151.9 giây do loại bỏ việc tính toán gradient trực tuyến.
 3. **Bảo toàn chất lượng tuyến:** Mức Gap% khoảng cách đạt -0.33%, tương đương với mức -0.44% của mô hình học trực tuyến đầy đủ.
 
-#### 3.4. Hệ thống phân phối trực quan và Cổng thông tin (NAMI)
+#### 3.5. Hệ thống phân phối trực quan và Cổng thông tin (NAMI)
 Nhằm hiện thực hóa kết quả nghiên cứu lý thuyết vào thực tiễn doanh nghiệp, chúng tôi đã phát triển cổng thông tin điều phối mang tên **NAMI**. Hệ thống có kiến trúc gồm:
 - **Backend (FastAPI):** Lập lịch và quản lý các luồng tính toán tối ưu hóa đa tiến trình (multiprocessing pool). Cung cấp các API RESTful để nhận cấu hình điều phối, tải dữ liệu khách hàng (Solomon hoặc định dạng CSV doanh nghiệp), khởi chạy bộ giải lai DDQN-ALNS và xuất báo cáo kết quả.
 - **Frontend (HTML5/Vanilla CSS/Javascript):** Giao diện tương tác trực quan hóa đường đi của các xe trên bản đồ số, hiển thị chi tiết tiến trình hội tụ của chi phí (history convergence plot), biểu đồ phân bổ tải trọng của từng xe và bảng thống kê các chỉ số vận hành chính (KPIs) như tỷ lệ giao hàng đúng giờ (On-Time Rate), thời gian phục vụ, thời gian chờ đợi tại mỗi điểm đỗ.

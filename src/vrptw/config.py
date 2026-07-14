@@ -224,7 +224,7 @@ class Config:
     per_beta_auto_scale: bool = True
     per_beta_steps: int = 50_000  # steps over which beta anneals 0.4 → 1.0
     # ── operator controller ────────────────────────────────────────────────
-    op_state_dim: int = 15
+    op_state_dim: int = 20
     op_hidden: int = 128
     op_lr: float = 3e-4
     op_gamma: float = 0.97
@@ -251,6 +251,8 @@ class Config:
     route_pool_max_per_customer: int = 28
     sp_time_limit: float = 4.0
     sp_vehicle_penalty_scale: float = 200.0
+    recombine_interval: int = 100
+
 
     # ── polish ────────────────────────────────────────────────────────────
     polish_ls_passes: int = 2
@@ -318,9 +320,14 @@ class Config:
     gnn_pruning_threshold_start: float = 0.05
     gnn_pruning_threshold_end: float = 0.003
     gnn_model_path: str | None = None
-    
+
     # ── Penalty-Based Infeasible Search ───────────────────────────────────
     penalty_search_enabled: bool = False
+
+    # ── Adaptive Feasibility Management (NAMI) ────────────────────────────
+    adaptive_feasibility: bool = True
+    target_feasible_ratio: float = 0.5
+    phase1_ratio: float = 0.60
 
     # ── Split Controller ──────────────────────────────────────────────────
     split_enabled: bool = True

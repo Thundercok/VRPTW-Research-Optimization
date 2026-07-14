@@ -55,9 +55,8 @@ function AppContent() {
       <LoadingOverlay />
       <ToastContainer />
 
-      {/* Auth Modal Popup Overlay */}
       {state.showLoginModal && (
-        <div style={{
+        <div id="auth-screen" style={{
           position: 'fixed',
           inset: 0,
           display: 'flex',

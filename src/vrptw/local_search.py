@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 import numpy as np
 
 from .core import Inst, Plan, _check_route, _route_cost
@@ -11,8 +13,6 @@ from .heuristics import (
     _route_load,
 )
 from .numba_kernels import (
-    _best_segment_insert_numba,
-    _best_segment_insert_pruned_numba,
     _cross_exchange_pair_numba,
     _cross_exchange_pair_pruned_numba,
     _cross_tail_pair_numba,
@@ -25,6 +25,51 @@ from .numba_kernels import (
     _swap_evaluate_pruned_numba,
     _two_opt_best_numba,
 )
+
+
+@dataclass
+class _PlanCache:
+    inst: Inst
+    route_arrays: list[np.ndarray]
+    centroids: list[np.ndarray]
+    route_sets: list[set[int]]
+    route_neighbors: list[set[int]]
+    route_loads: list[float]
+    node_to_route: dict[int, int]
+    route_readys: list[float]
+    route_dues: list[float]
+
+    @classmethod
+    def from_plan(cls, plan: Plan) -> _PlanCache:
+        inst = plan.inst
+        route_arrays = plan.route_arrays
+        centroids = [inst.coords[arr].mean(axis=0) if len(arr) > 0 else inst.coords[0] for arr in route_arrays]
+        route_sets = [set(r) for r in plan.routes]
+        route_neighbors = []
+        for r in plan.routes:
+            nbrs = set()
+            for u in r:
+                if u < len(inst.neighbors_k):
+                    nbrs.update(inst.neighbors_k[u])
+            route_neighbors.append(nbrs)
+        route_loads = [sum(inst.demands[c] for c in r) for r in plan.routes]
+        node_to_route = {}
+        for ri, route in enumerate(plan.routes):
+            for node in route:
+                node_to_route[node] = ri
+        route_readys = [float(np.min(inst.ready_times[arr])) if len(arr) > 0 else 0.0 for arr in route_arrays]
+        route_dues = [float(np.max(inst.due_times[arr])) if len(arr) > 0 else 0.0 for arr in route_arrays]
+        return cls(
+            inst=inst,
+            route_arrays=route_arrays,
+            centroids=centroids,
+            route_sets=route_sets,
+            route_neighbors=route_neighbors,
+            route_loads=route_loads,
+            node_to_route=node_to_route,
+            route_readys=route_readys,
+            route_dues=route_dues,
+        )
 
 
 def _two_opt_best(route: list[int], inst: Inst) -> list[int]:
@@ -52,23 +97,19 @@ def _best_relocate(
     nv_ceiling: int | None = None,
     heatmap: np.ndarray | None = None,
     pruning_threshold: float = 0.0,
+    cache: _PlanCache | None = None,
 ):
     inst = plan.inst
     best_delta, best_move = -1e-9, None
     max_dist = max(inst.max_dist, 1.0)
-    # Use cached route arrays
-    route_arrays = plan.route_arrays
-    # Pre-calculate route centroids
-    centroids = [inst.coords[arr].mean(axis=0) if len(arr) > 0 else inst.coords[0] for arr in route_arrays]
-    
-    # Pre-calculate route loads for fast capacity precheck
-    route_loads = [sum(inst.demands[c] for c in r) for r in plan.routes]
 
-    # Build node-to-route index for kNN filtering
-    node_to_route = {}
-    for ri, route in enumerate(plan.routes):
-        for node in route:
-            node_to_route[node] = ri
+    if cache is None:
+        cache = _PlanCache.from_plan(plan)
+
+    route_arrays = cache.route_arrays
+    centroids = cache.centroids
+    route_loads = cache.route_loads
+    node_to_route = cache.node_to_route
 
     for si in range(len(plan.routes)):
         source_route = plan.routes[si]
@@ -157,15 +198,25 @@ def _best_swap(
     plan: Plan,
     heatmap: np.ndarray | None = None,
     pruning_threshold: float = 0.0,
+    cache: _PlanCache | None = None,
 ):
     inst = plan.inst
     best_delta, best_move = -1e-9, None
-    route_arrays = plan.route_arrays
     max_dist = max(inst.max_dist, 1.0)
-    centroids = [inst.coords[arr].mean(axis=0) if len(arr) > 0 else inst.coords[0] for arr in route_arrays]
+
+    if cache is None:
+        cache = _PlanCache.from_plan(plan)
+
+    route_arrays = cache.route_arrays
+    centroids = cache.centroids
+    route_sets = cache.route_sets
+    route_neighbors = cache.route_neighbors
 
     for si in range(len(plan.routes)):
         for di in range(si + 1, len(plan.routes)):
+            # Neighbor list pruning: skip route pairs with no neighboring customers
+            if route_sets[si].isdisjoint(route_neighbors[di]) and route_sets[di].isdisjoint(route_neighbors[si]):
+                continue
             # Spatial filter: skip route pairs whose centroids are too far apart
             if float(np.linalg.norm(centroids[si] - centroids[di])) > 0.65 * max_dist:
                 continue
@@ -213,6 +264,7 @@ def _cross_exchange(
     nv_ceiling: int | None = None,
     heatmap: np.ndarray | None = None,
     pruning_threshold: float = 0.0,
+    cache: _PlanCache | None = None,
 ) -> Plan | None:
     inst = plan.inst
     if nv_ceiling is not None and plan.nv > nv_ceiling:
@@ -221,19 +273,26 @@ def _cross_exchange(
     best_delta = -1e-9
     best_routes: list[list[int]] | None = None
 
-    # Use cached route arrays
-    route_arrays = plan.route_arrays
+    if cache is None:
+        cache = _PlanCache.from_plan(plan)
 
-    # Pre-calculate route metrics for filtering
-    route_coords_mean = [inst.coords[arr].mean(axis=0) if len(arr) > 0 else np.zeros(2) for arr in route_arrays]
-    route_readys = [float(np.min(inst.ready_times[arr])) if len(arr) > 0 else 0.0 for arr in route_arrays]
-    route_dues = [float(np.max(inst.due_times[arr])) if len(arr) > 0 else 0.0 for arr in route_arrays]
+    route_arrays = cache.route_arrays
+    route_coords_mean = cache.centroids
+    route_readys = cache.route_readys
+    route_dues = cache.route_dues
+    route_sets = cache.route_sets
+    route_neighbors = cache.route_neighbors
 
     for i in range(len(plan.routes)):
         for j in range(i + 1, len(plan.routes)):
             r1, r2 = plan.routes[i], plan.routes[j]
             if not r1 or not r2:
                 continue
+
+            # Neighbor list pruning: skip route pairs with no neighboring customers
+            if route_sets[i].isdisjoint(route_neighbors[j]) and route_sets[j].isdisjoint(route_neighbors[i]):
+                continue
+
             r1_arr, r2_arr = route_arrays[i], route_arrays[j]
             # Route-level spatial/temporal filter
             c1, c2 = route_coords_mean[i], route_coords_mean[j]
@@ -299,6 +358,7 @@ def _cross_tail(
     nv_ceiling: int | None = None,
     heatmap: np.ndarray | None = None,
     pruning_threshold: float = 0.0,
+    cache: _PlanCache | None = None,
 ) -> Plan | None:
     inst = plan.inst
     if nv_ceiling is not None and plan.nv > nv_ceiling:
@@ -308,13 +368,22 @@ def _cross_tail(
     best_routes: list[list[int]] | None = None
     best_cost_delta = 0.0
 
-    route_arrays = plan.route_arrays
-    centroids = [inst.coords[arr].mean(axis=0) if len(arr) > 0 else inst.coords[0] for arr in route_arrays]
+    if cache is None:
+        cache = _PlanCache.from_plan(plan)
+
+    route_arrays = cache.route_arrays
+    centroids = cache.centroids
+    route_sets = cache.route_sets
+    route_neighbors = cache.route_neighbors
 
     for i in range(len(plan.routes)):
         for j in range(i + 1, len(plan.routes)):
             r1, r2 = plan.routes[i], plan.routes[j]
             if not r1 or not r2:
+                continue
+
+            # Neighbor list pruning: skip route pairs with no neighboring customers
+            if route_sets[i].isdisjoint(route_neighbors[j]) and route_sets[j].isdisjoint(route_neighbors[i]):
                 continue
 
             # Spatial filter: skip route pairs whose centroids are too far apart
@@ -423,16 +492,26 @@ def _best_or_opt(
     nv_ceiling: int | None = None,
     heatmap: np.ndarray | None = None,
     pruning_threshold: float = 0.0,
+    cache: _PlanCache | None = None,
 ):
     inst = plan.inst
     best_delta, best_move = -1e-9, None
     best_cost_delta = 0.0
-    route_arrays = plan.route_arrays
     max_dist = max(inst.max_dist, 1.0)
-    centroids = [inst.coords[arr].mean(axis=0) if len(arr) > 0 else inst.coords[0] for arr in route_arrays]
+
+    if cache is None:
+        cache = _PlanCache.from_plan(plan)
+
+    route_arrays = cache.route_arrays
+    centroids = cache.centroids
+    route_sets = cache.route_sets
+    route_neighbors = cache.route_neighbors
 
     for si in range(len(plan.routes)):
         for di in range(si + 1, len(plan.routes)):
+            # Neighbor list pruning: skip route pairs with no neighboring customers
+            if route_sets[si].isdisjoint(route_neighbors[di]) and route_sets[di].isdisjoint(route_neighbors[si]):
+                continue
             # Spatial filter: skip route pairs whose centroids are too far apart
             if float(np.linalg.norm(centroids[si] - centroids[di])) > 0.65 * max_dist:
                 continue
@@ -919,8 +998,9 @@ def local_search(
 
         moves = 0
         while moves < max_ls_moves:
+            cache = _PlanCache.from_plan(best)
             # 1. Relocate Move
-            res = _best_relocate(best, nv_ceiling=nv_ceiling, heatmap=heatmap, pruning_threshold=pruning_threshold)
+            res = _best_relocate(best, nv_ceiling=nv_ceiling, heatmap=heatmap, pruning_threshold=pruning_threshold, cache=cache)
             if res is not None:
                 move, cost_delta = res
                 cand = _apply_relocate(best, move)
@@ -934,7 +1014,7 @@ def local_search(
                     continue
 
             # 1.5. String Relocate (Or-Opt Move)
-            res = _best_or_opt(best, nv_ceiling=nv_ceiling, heatmap=heatmap, pruning_threshold=pruning_threshold)
+            res = _best_or_opt(best, nv_ceiling=nv_ceiling, heatmap=heatmap, pruning_threshold=pruning_threshold, cache=cache)
             if res is not None:
                 move, cost_delta = res
                 cand = _apply_or_opt(best, move)
@@ -957,7 +1037,7 @@ def local_search(
                 continue
 
             # 3. Swap Move
-            res = _best_swap(best, heatmap=heatmap, pruning_threshold=pruning_threshold)
+            res = _best_swap(best, heatmap=heatmap, pruning_threshold=pruning_threshold, cache=cache)
             if res is not None:
                 move, cost_delta = res
                 cand = _apply_swap(best, move)
@@ -971,7 +1051,7 @@ def local_search(
                     continue
 
             # 3.5. CROSS Tail-Swap
-            cross_tail = _cross_tail(best, nv_ceiling=nv_ceiling, heatmap=heatmap, pruning_threshold=pruning_threshold)
+            cross_tail = _cross_tail(best, nv_ceiling=nv_ceiling, heatmap=heatmap, pruning_threshold=pruning_threshold, cache=cache)
             if cross_tail is not None:
                 best, improved = cross_tail, True
                 moves += 1
@@ -980,7 +1060,7 @@ def local_search(
                 continue
 
             # 4. Cross Exchange
-            cross = _cross_exchange(best, nv_ceiling=nv_ceiling, heatmap=heatmap, pruning_threshold=pruning_threshold)
+            cross = _cross_exchange(best, nv_ceiling=nv_ceiling, heatmap=heatmap, pruning_threshold=pruning_threshold, cache=cache)
             if cross is not None:
                 best, improved = cross, True
                 moves += 1

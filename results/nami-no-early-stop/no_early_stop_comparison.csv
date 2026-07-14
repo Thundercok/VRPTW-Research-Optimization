@@ -1,0 +1,7 @@
+Instance,Seed,Mode,NV,TD,Runtime_s
+RC202,42,baseline,3,1505.41,239.6
+RC202,42,adaptive,3,1388.98,830.8
+RC202,123,baseline,3,1554.59,272.6
+RC202,123,adaptive,3,1497.12,177.2
+RC202,7,baseline,3,1472.98,718.6
+RC202,7,adaptive,3,1505.41,138.3

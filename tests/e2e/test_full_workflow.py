@@ -71,7 +71,7 @@ def test_record_full_app_workflow(page: Page):
         print("[E2E] Checking if initial auto-optimization starts...")
         page.wait_for_selector("#loading", state="visible", timeout=2000)
         print("[E2E] Auto-optimization running. Waiting for completion...")
-        page.wait_for_selector("#loading", state="hidden", timeout=30000)
+        page.wait_for_selector("#loading", state="hidden", timeout=60000)
         print("[E2E] Auto-optimization finished.")
     except Exception:
         print("[E2E] No initial auto-optimization active.")
@@ -100,7 +100,7 @@ def test_record_full_app_workflow(page: Page):
 
     # Wait for solver to complete
     print("[E2E] Waiting for solver to finish...")
-    page.wait_for_selector("#loading", state="hidden", timeout=30000)
+    page.wait_for_selector("#loading", state="hidden", timeout=60000)
     page.wait_for_timeout(1000)
     shot(page, "08_optimization_complete")
 

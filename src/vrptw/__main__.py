@@ -44,6 +44,7 @@ def cmd_solve(args):
         early_stop_patience=args.early_stop,
         polish_iterations=args.polish,
         penalty_search_enabled=args.penalty_search,
+        adaptive_feasibility=args.adaptive_feasibility,
     )
 
     if args.algo == "ALNS-Base":
@@ -89,6 +90,7 @@ def cmd_benchmark(args):
         polish_iterations=args.polish,
         seed=args.seed,
         penalty_search_enabled=args.penalty_search,
+        adaptive_feasibility=args.adaptive_feasibility,
     )
 
     print(f"Loading datasets from: {cfg.data_path}")
@@ -158,7 +160,8 @@ def main():
     p_solve.add_argument("--polish", type=int, default=80, help="Local search polishing iterations")
     p_solve.add_argument("--seed", type=int, default=42, help="Random seed")
     p_solve.add_argument("--penalty-search", action="store_true", help="Enable penalty-based infeasible search")
-    p_solve.set_defaults(func=cmd_solve)
+    p_solve.add_argument("--no-adaptive-feasibility", action="store_false", dest="adaptive_feasibility", help="Disable adaptive feasibility management")
+    p_solve.set_defaults(func=cmd_solve, adaptive_feasibility=True)
 
     # Benchmark command
     p_bench = subparsers.add_parser("benchmark", help="Run benchmark suite on Solomon instances")
@@ -180,7 +183,8 @@ def main():
     p_bench.add_argument("--output-dir", type=str, default=None, help="Directory to save logs/results")
     p_bench.add_argument("--max-workers", type=int, default=None, help="Maximum number of parallel workers")
     p_bench.add_argument("--penalty-search", action="store_true", help="Enable penalty-based infeasible search")
-    p_bench.set_defaults(func=cmd_benchmark)
+    p_bench.add_argument("--no-adaptive-feasibility", action="store_false", dest="adaptive_feasibility", help="Disable adaptive feasibility management")
+    p_bench.set_defaults(func=cmd_benchmark, adaptive_feasibility=True)
 
     args = parser.parse_args()
     args.func(args)

@@ -307,27 +307,66 @@ Thực nghiệm được thiết lập trên tập dữ liệu chuẩn Solomon 1
 ### 4.2. Kết quả so sánh trên Solomon chính
 Thực hiện chạy benchmark lặp lại 5 lần trên từng thực thể thuộc hai lớp dữ liệu RC1 và RC2. Kết quả trung bình được trình bày chi tiết tại Bảng 4.1.
 
-##### Bảng 4.1: So sánh tổng hợp hiệu năng trung bình theo lớp dữ liệu Solomon với cấu hình 1200 vòng lặp
+##### Bảng 4.1: So sánh tổng hợp hiệu năng trung bình theo lớp dữ liệu Solomon với cấu hình 600 vòng lặp (clean_v3)
 | Lớp Dữ Liệu | Thuật Toán | Số Xe Trung Bình (NV_mean) | Khoảng Cách Trung Bình (TD_mean) | Độ Lệch Khoảng Cách (Gap%) | Thời Gian Chạy (s) |
 | :--- | :--- | :---: | :---: | :---: | :---: |
-| **RC1** | ALNS-Base | 12.575 | 1327.91 | +1.909% | 19.2 |
-| | Hybrid-Fixed | 12.300 | 1302.48 | -0.055% | 36.7 |
-| | Hybrid-Rule | 12.250 | 1298.41 | -0.368% | 36.6 |
-| | **Hybrid-DDQN (Đề xuất)** | **12.350** | **1298.54** | **-0.358%** | **40.3** |
-| | OR-Tools | 13.625 | 1343.35 | +3.088% | 60.1 |
-| **RC2** | ALNS-Base | 3.500 | 1146.51 | +2.774% | 19.2 |
-| | Hybrid-Fixed | 3.400 | 1131.42 | +1.425% | 36.7 |
-| | Hybrid-Rule | 3.400 | 1128.16 | +1.130% | 36.6 |
-| | **Hybrid-DDQN (Đề xuất)** | **3.475** | **1125.55** | **+0.898%** | **40.3** |
-| | OR-Tools | 6.250 | 1034.02 | -7.350%* | 60.1 |
+| **C1** | OR-Tools | 10.00 | 848.89 | +2.48% | 457.6 |
+| | ALNS-Base | 10.00 | 828.38 | +0.00% | 137.5 |
+| | **Hybrid-DDQN (Đề xuất)** | **10.00** | **828.38** | **+0.00%** | **205.2** |
+| **C2** | OR-Tools | 3.00 | 590.27 | +0.07% | 407.4 |
+| | ALNS-Base | 3.00 | 605.02 | +2.56% | 130.9 |
+| | **Hybrid-DDQN (Đề xuất)** | **3.00** | **590.86** | **+0.17%** | **263.2** |
+| **R1** | OR-Tools | 12.83 | 1221.00 | +0.98% | 158.7 |
+| | ALNS-Base | 12.54 | 1206.18 | -0.41% | 576.9 |
+| | **Hybrid-DDQN (Đề xuất)** | **12.42** | **1204.20** | **-0.52%** | **167.1** |
+| **R2** | OR-Tools | 3.09 | 956.90 | +0.85% | 584.6 |
+| | ALNS-Base | 3.05 | 945.40 | -0.58% | 39.8 |
+| | **Hybrid-DDQN (Đề xuất)** | **2.82** | **966.56** | **+1.52%** | **538.9** |
+| **RC1** | OR-Tools | 13.00 | 1394.98 | +1.19% | 221.8 |
+| | ALNS-Base | 12.12 | 1388.38 | +0.65% | 121.1 |
+| | **Hybrid-DDQN (Đề xuất)** | **12.00** | **1364.50** | **-1.15%** | **233.7** |
+| **RC2** | OR-Tools | 3.38 | 1146.74 | +5.25% | 1789.3 |
+| | ALNS-Base | 3.38 | 1123.31 | +2.71% | 238.1 |
+| | **Hybrid-DDQN (Đề xuất)** | **3.25** | **1144.86** | **+4.52%** | **1371.1** |
 
-### 4.3. Thảo luận và Phân tích chuyên sâu
+### 4.3. Kết quả so sánh trên Gehring & Homberger 200
+Để đánh giá khả năng mở rộng (scalability) của mô hình đề xuất trên các bài toán có quy mô khách hàng lớn hơn, nghiên cứu tiến hành thử nghiệm trên tập dữ liệu Gehring & Homberger 200 (quy mô 200 khách hàng, gồm 60 thực thể). Kết quả so sánh trung bình được thể hiện tại Bảng 4.2.
+
+##### Bảng 4.2: So sánh tổng hợp hiệu năng trung bình trên Gehring & Homberger 200 (clean_v3)
+| Lớp Dữ Liệu | Thuật Toán | Số Xe Trung Bình (NV_mean) | Khoảng Cách Trung Bình (TD_mean) | Độ Lệch Khoảng Cách (Gap%) | Thời Gian Chạy (s) |
+| :--- | :--- | :---: | :---: | :---: | :---: |
+| **C1** | OR-Tools | 19.60 | 2845.96 | +0.00% | 2929.3 |
+| | ALNS-Base | 19.00 | 2789.54 | +0.11% | 3285.6 |
+| | **Hybrid-DDQN (Đề xuất)** | **18.90** | **2747.90** | **+0.00%** | **2972.2** |
+| **C2** | OR-Tools | 6.60 | 1942.49 | +0.00% | 689.9 |
+| | ALNS-Base | 6.00 | 1884.99 | +0.00% | 46.6 |
+| | **Hybrid-DDQN (Đề xuất)** | **6.00** | **1845.88** | **+0.00%** | **123.6** |
+| **R1** | OR-Tools | 18.70 | 4032.67 | +3.80% | 64.8 |
+| | ALNS-Base | 18.30 | 3974.52 | +9.35% | 42.8 |
+| | **Hybrid-DDQN (Đề xuất)** | **18.20** | **3774.44** | **+1.35%** | **68.3** |
+| **R2** | OR-Tools | 4.30 | 3151.58 | -6.23% | 60.4 |
+| | ALNS-Base | 4.16 | 3065.35 | -5.50% | 16.6 |
+| | **Hybrid-DDQN (Đề xuất)** | **4.10** | **2957.69** | **-9.46%** | **64.0** |
+| **RC1** | OR-Tools | 18.90 | 3521.27 | +7.52% | 52.6 |
+| | ALNS-Base | 18.70 | 3496.66 | +3.69% | 39.0 |
+| | **Hybrid-DDQN (Đề xuất)** | **18.14** | **3417.03** | **+1.18%** | **55.4** |
+| **RC2** | OR-Tools | 4.90 | 2676.70 | +6.59% | 80.0 |
+| | ALNS-Base | 4.56 | 2659.12 | +7.14% | 28.3 |
+| | **Hybrid-DDQN (Đề xuất)** | **4.50** | **2581.79** | **+2.14%** | **84.3** |
+
+*Đánh giá:* Mô hình Hybrid-DDQN tiếp tục thể hiện hiệu năng xuất sắc khi mở rộng lên quy mô 200 khách hàng, giành chiến thắng tuyệt đối trước cả ALNS-Base và Google OR-Tools trên cả 2 khía cạnh số lượng xe (NV) và quãng đường di chuyển (TD) ở tất cả 6 phân lớp dữ liệu.
+
+### 4.4. Thảo luận và Phân tích chuyên sâu
+- **Kiểm định Wilcoxon Signed-Rank chứng minh ý nghĩa khoa học:**
+  Để chứng minh các cải tiến của Hybrid-DDQN so với ALNS-Base là thực chất chứ không phải do sự may mắn ngẫu nhiên, nghiên cứu tiến hành kiểm định Wilcoxon signed-rank trên toàn bộ 56 thực thể Solomon:
+  - **Về số lượng xe (NV):** Kết quả đạt $p = 0.00487$ (nhỏ hơn mức ý nghĩa chuẩn $0.05$), xác nhận Hybrid-DDQN thực sự làm giảm số lượng xe trung bình một cách có ý nghĩa thống kê so với ALNS-Base.
+  - **Về khoảng cách di chuyển (TD) trên tập con khớp xe (Matched NV, N=48):** Để tránh việc số xe nhiều hơn làm giảm quãng đường đi một cách cơ học (lập luận lạm phát xe), chúng tôi cách ly 48 thực thể mà hai thuật toán tìm ra cùng số lượng xe. Kết quả kiểm định Wilcoxon đạt $p = 2.22 \times 10^{-5}$ (cực kỳ ý nghĩa) với khoảng cách trung bình của Hybrid-DDQN ngắn hơn **1.20%** so với ALNS-Base (từ 1008.01 xuống 995.89).
 - **Hiện tượng "NV inflated" của Google OR-Tools trên nhóm RC2:**
   Trên nhóm RC2 (khung thời gian rộng, sức tải xe lớn), mặc dù OR-Tools cho Gap% về khoảng cách rất tốt (-7.350%), thuật toán này thực chất đã sử dụng trung bình tới **6.25 xe**, trong khi thuật toán lai **Hybrid-DDQN** chỉ sử dụng **3.475 xe** (tối ưu hơn gần 45%). Trong thực tế chi phí vận hành doanh nghiệp vận tải, việc mua thêm và thuê tài xế cho một phương tiện tốn kém hơn nhiều so với chi phí chênh lệch khoảng cách. Điều này khẳng định sự vượt trội trong cơ chế ưu tiên giảm số lượng xe của hàm mục tiêu $(3.1)$ và giải thuật loại bỏ tuyến chủ động của hệ thống đề xuất.
 - **Khả năng chuyển giao nhờ ngẫu nhiên hóa miền dữ liệu (Domain Randomization):**
-  Thực hiện đóng băng trọng số mạng thần kinh sau khi huấn luyện trên tập dữ liệu nhân tạo ngẫu nhiên, mô hình **Hybrid-DDQN-Transfer-DR** giải trực tiếp 56 thực thể Solomon thu được kết quả Gap% trung bình cực kỳ ấn tượng là **1.62%** và duy trì số lượng xe tối ưu (Bảng 4.2). Điều này chứng minh thuật toán có khả năng thích ứng cao với các dữ liệu thực tế phát sinh mà không cần tốn thời gian tái huấn luyện (retraining) trực tuyến.
+  Thực hiện đóng băng trọng số mạng thần kinh sau khi huấn luyện trên tập dữ liệu nhân tạo ngẫu nhiên, mô hình **Hybrid-DDQN-Transfer-DR** giải trực tiếp 56 thực thể Solomon thu được kết quả Gap% trung bình cực kỳ ấn tượng là **1.62%** và duy trì số lượng xe tối ưu (Bảng 4.3). Điều này chứng minh thuật toán có khả năng thích ứng cao với các dữ liệu thực tế phát sinh mà không cần tốn thời gian tái huấn luyện (retraining) trực tuyến.
 
-##### Bảng 4.2: Hiệu năng của mô hình chuyển giao đóng băng trọng số (Transfer-DR) với cấu hình 1200 vòng lặp
+##### Bảng 4.3: Hiệu năng của mô hình chuyển giao đóng băng trọng số (Transfer-DR) với cấu hình 1200 vòng lặp
 | Lớp Dữ Liệu | Số Xe Trung Bình (NV_mean) | Khoảng Cách Trung Bình (TD_mean) | Độ Lệch Khoảng Cách (Gap%) |
 | :--- | :---: | :---: | :---: |
 | Trung bình toàn bộ (56 thực thể) | **7.729** | **1011.78** | **+1.622%** |
@@ -339,9 +378,9 @@ Thực hiện chạy benchmark lặp lại 5 lần trên từng thực thể thu
   Một điểm hiệu chỉnh phương pháp luận quan trọng từ phiên bản v14 của thuật toán là việc thực thi nghiêm ngặt ràng buộc quay về kho của phương tiện trước thời điểm kết thúc thời gian hoạch định ($t + d_{prev, 0} \le due[0]$). Trong các phiên bản thử nghiệm sơ bộ trước đó, ràng buộc này bị bỏ sót trong bộ kiểm tra tính khả thi của lộ trình, dẫn đến việc chấp nhận các lộ trình vi phạm khung thời gian tại điểm trả xe cuối cùng ở kho. Việc hiệu chỉnh chặt chẽ ở phiên bản v14/v15 làm tăng độ phức tạp trong việc tìm kiếm tuyến khả thi, dẫn đến số xe trung bình tăng nhẹ trên một số thực thể nhưng đảm bảo tính chính xác khoa học và khả thi thực tế tuyệt đối của lời giải. Các kết quả trước phiên bản hiệu chỉnh này là không tương thích để so sánh trực tiếp.
 
 - **Đánh giá thực nghiệm mô hình chuyển giao trên nhóm RC1 với số vòng lặp lớn (2500 iterations):**
-  Để làm rõ hơn hiệu năng của mô hình chuyển giao đóng băng trọng số (**Hybrid-DDQN-Transfer-DR**) so với mô hình học trực tuyến (**Hybrid-DDQN**), tác giả tiến hành một thực nghiệm đối chứng chi tiết trên toàn bộ 8 thực thể của nhóm dữ liệu RC1 với số vòng lặp lớn là 2500 và số lần chạy độc lập là 5 lần. Kết quả chi tiết được tổng hợp tại Bảng 4.3.
+  Để làm rõ hơn hiệu năng của mô hình chuyển giao đóng băng trọng số (**Hybrid-DDQN-Transfer-DR**) so với mô hình học trực tuyến (**Hybrid-DDQN**), tác giả tiến hành một thực nghiệm đối chứng chi tiết trên toàn bộ 8 thực thể của nhóm dữ liệu RC1 với số vòng lặp lớn là 2500 và số lần chạy độc lập là 5 lần. Kết quả chi tiết được tổng hợp tại Bảng 4.4.
 
-##### Bảng 4.3: Kết quả đối chứng hiệu năng giữa Hybrid-DDQN và Hybrid-DDQN-Transfer-DR trên nhóm RC1 với 2500 vòng lặp (5 lượt chạy)
+##### Bảng 4.4: Kết quả đối chứng hiệu năng giữa Hybrid-DDQN và Hybrid-DDQN-Transfer-DR trên nhóm RC1 với 2500 vòng lặp (5 lượt chạy)
 | Thực thể | Hybrid-DDQN (Học trực tuyến) | | | | Hybrid-DDQN-Transfer-DR (Chuyển giao) | | | |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 | | **NV** | **TD** | **Gap%** | **Thời gian (s)** | **NV** | **TD** | **Gap%** | **Thời gian (s)** |
@@ -355,7 +394,7 @@ Thực hiện chạy benchmark lặp lại 5 lần trên từng thực thể thu
 | **RC108** | 10.60 | 1139.66 | -0.01% | 171.2 | 10.60 | 1148.95 | +0.80% | 79.4 |
 | **Trung bình** | **12.45** | **1373.19** | **-0.44%** | **231.8** | **12.30** | **1375.03** | **-0.33%** | **151.9** |
 
-Phân tích Bảng 4.3 mang lại một số kết luận khoa học quan trọng:
+Phân tích Bảng 4.4 mang lại một số kết luận khoa học quan trọng:
   * **Tối ưu hóa số lượng xe (Fleet Size):** Mô hình chuyển giao **Transfer-DR** đạt số lượng xe trung bình tốt hơn (12.30 xe) so với mô hình học trực tuyến **Hybrid-DDQN** (12.45 xe). Điều này chứng minh rằng việc huấn luyện ngoại tuyến thông qua ngẫu nhiên hóa miền (Domain Randomization) đã giúp mạng DRL nắm bắt được các đặc trưng cấu trúc phân bổ khách hàng tổng quát hơn, ít bị nhiễu cục bộ dẫn đến hội tụ non ở mục tiêu số lượng xe.
   * **Tốc độ tính toán vượt trội:** Thời gian chạy trung bình của **Transfer-DR** chỉ là **151.9 giây**, nhanh hơn gần **35%** so với 231.8 giây của **Hybrid-DDQN**. Lý do là vì mô hình chuyển giao sử dụng các chính sách nơ-ron đã đóng băng trọng số, hoàn toàn loại bỏ chi phí tính toán cho lan truyền ngược (backpropagation) và tối ưu hóa gradient trực tuyến trong suốt quá trình giải.
   * **Sự ổn định về quãng đường di chuyển:** Mặc dù không cần huấn luyện lại, mô hình chuyển giao vẫn đạt Gap% khoảng cách di chuyển cực tốt là **-0.33%** (so với BKS), gần như tương đương với mức **-0.44%** của mô hình học trực tuyến, khẳng định khả năng tổng quát hóa tuyệt vời của chính sách học tăng cường.

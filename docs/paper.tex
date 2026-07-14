@@ -27,7 +27,7 @@
 
 \pgfplotsset{compat=1.18}
 \usetikzlibrary{shapes.geometric,arrows.meta,positioning,fit,
-                backgrounds,calc,decorations.pathreplacing,patterns}
+                backgrounds,calc,decorations.pathreplacing,patterns,shadows}
 
 % ── Colours ──────────────────────────────────────────────────────────────────
 \definecolor{C_slate}{RGB}{71,85,105}     \definecolor{C_blue}{RGB}{59,130,246}
@@ -96,16 +96,14 @@ Hierarchical MDP, Operator Selection.
 \section{Introduction}
 \label{sec:intro}
 
-The VRPTW lexicographically minimises fleet size then travel distance subject to
-per-customer time windows $[e_i,l_i]$---an NP-hard
-problem~\cite{Dantzig1959} whose search space grows exponentially with customer
-count.
+The Vehicle Routing Problem with Time Windows (VRPTW) generalizes the classical Vehicle Routing Problem (VRP) by requiring each customes to be served within a predefined arrival window, transforming an already NP-Hard combitional problem into one where spatial and spatial feasibility must be sastified simultaneously \cite{Dantzig1959, Solomon1987}.
+The objective is lexicographic: solvers must minimize the number of vehicles deployed, and only secondary minimizes the travel distance. This ordering reflects the real-world fleet economics, where the fixed cost of an additional vehicle typically dominates the marginal routing distance costs by order of magnitude.
 
-ALNS~\cite{shaw1998using,Ropke2006,pisinger2007general} is a leading
-metaheuristic for VRPTW; however, its roulette-wheel operator selection has three
-structural weaknesses: (i)~myopic, reward-dominated operator ranking;
-(ii)~premature plateau convergence; and (iii)~static SA acceptance that cannot
-adapt to route topology.
+Adaptive Large Neighborhood Search has emerged as one of the most effective metaheuristics framework for VRPTW, owing to it destroy-and repair paradigm and the ability to escape local optima through diversified neighborhood exploration \cite{shaw1998using, Ropke2006, pisinger2007general}. However, the standard ALNS formulation relies on a roulette wheel mechanism for operator selection, where each destroy and repair operator is chosen probabilistically according to weights updated from recent performance. This mechanism suffers from three structural limitations that becomes particulary acute on tightly time-windowed instances.
+
+First, the roulete wheel selection is myopic: adpating weights based on a short historical window without modelling the current search state, so it cannot distinguish between an operator that is generally effective and one that is particually effective specifically given the route topology.
+Second, ALNS is prone to  premature plateau convergance, particually on instances where reducing the vehicle count requires tempoarily degrading solution quality - a solution that purely greedy or weighted random-selection rarely discovers unaided.
+Third, the simulated annealing acceptance criterion conventionally paired with ALNS uses a globally defined temperature
 
 End-to-end neural approaches---Pointer Networks~\cite{vinyals2015pointer},
 attention models~\cite{kool2019attention}, and RL
@@ -120,7 +118,7 @@ learning a state-conditioned operator selection policy.
 \textbf{Contributions:}
 \begin{itemize}[leftmargin=1.2em,topsep=2pt]
   \item \textbf{Hierarchical MDP:} Plateau Controller (macro) and Operator
-        Controller (micro) acting as coordinated DDQN agents.
+        Controller (micro) acting as coordinated DDQN agents.ư
   \item \textbf{Learned Acceptance Criterion:} hindsight-labelled binary
         classifier replaces static SA temperature schedules.
   \item \textbf{Welford Normalization~\cite{welford1962}:} online reward
@@ -131,6 +129,30 @@ learning a state-conditioned operator selection policy.
 \end{itemize}
 
 
+A separate line of research has pursued end-to-end neural approaches to vehicle routing, including Pointer Networks [vinyals2015pointer], attention-based construction policies [kool2019attention], and reinforcement learning agents trained to directly output routing decisions [nazari2018reinforcement]. These methods demonstrate that learned policies can capture rich structural regularities in routing problems and generalize across instance distributions. However, they are predominantly designed around scalar or weighted-sum objectives rather than the strict lexicographic fleet-then-distance ordering that VRPTW demands, and they typically function as opaque end-to-end solvers, offering limited visibility into *why* a particular routing decision was made—an important consideration for operational deployment where dispatchers must be able to audit and override automated decisions.
+
+This paper addresses both gaps by embedding a learned, hierarchical decision-making policy directly inside the ALNS search loop rather than replacing the metaheuristic outright. We preserve the hard feasibility guarantees and interpretable operator structure of ALNS, while replacing its static selection and acceptance mechanisms with components trained via reinforcement learning. The result is a search procedure that retains the auditability of classical operations research—every move remains a named destroy or repair operator applied to an explicit route structure—while gaining the adaptivity of a learned policy that conditions its decisions on the live search state.
+
+**Contributions.** This work makes the following contributions:
+
+- We introduce a **Hierarchical Markov Decision Process** formulation for ALNS operator selection, in which a macro-level Plateau Controller selects among coarse search regimes while a micro-level Operator Controller selects destroy-repair operator pairs conditioned on the active regime, both implemented as coordinated Dueling Double DQN agents.
+
+- We replace the conventional simulated annealing acceptance criterion with a **Learned Acceptance Criterion**, a lightweight classifier trained online via hindsight labeling to predict whether accepting a candidate transition—including degrading ones—leads to downstream improvement within a bounded search horizon.
+
+- We identify and resolve a **feasibility entrapment** mechanism that traps strict-feasibility ALNS at vehicle counts above the best-known solution, by introducing penalty-based search over temporarily infeasible intermediate states, combined with structural local search operators (inter-route tail-swap and multi-customer string relocation) absent from the conventional ALNS operator pool.
+
+- We conduct an extensive empirical evaluation across 164 standard benchmark instances spanning 100 to 1000 customers (Solomon and Gehring–Homberger suites), employing strict per-algorithm cold-start isolation to prevent the cross-algorithm result contamination that affects several prior comparative studies in this area, and report a five-condition ablation that isolates the contribution of each architectural component, including a dedicated baseline that controls for self-improvement search dynamics independent of any learned component.
+
+---
+
+**Quiz**: Đoạn cuối Contributions nói về "cross-algorithm result contamination that affects several prior comparative studies in this area" — câu này có nên cite cụ thể paper nào đã mắc lỗi này không, hay nên để chung chung? Tại sao?
+
+
+
+
+
+
+
 
 
 % =============================================================================
@@ -139,7 +161,7 @@ learning a state-conditioned operator selection policy.
 \section{Mathematical Background}
 \label{sec:background}
 
-The VRPTW is defined on graph $\mathcal{G}=(\mathcal{V},\mathcal{A})$ with
+In this section, we formally define the Vehicle Routing Problem with Time Windows (VRPTW) and present its mixed-integer linear programming (MILP) formulation. The VRPTW is defined on graph $\mathcal{G}=(\mathcal{V},\mathcal{A})$ with
 $\mathcal{V}=\mathcal{N}\cup\{0,n{+}1\}$.
 % FIX 2: q_i, s_i, K, Q put into math mode
 Customer $i\in\mathcal{N}$ has demand $q_i$, service time $s_i$, and window
@@ -189,10 +211,135 @@ learning stack.  The search is modeled as a Hierarchical Markov Decision
 Process (HMDP) with two coordinated agents: a \emph{Plateau Controller}
 (macro) that selects among six search regimes, and an \emph{Operator Controller}
 (micro) that picks destroy--repair operator pairs conditioned on the active
-regime, establishing a temporally-coupled hierarchical decision-making loop.
-
+regime, establishing a temporally-coupled hierarchical decision-making loop. The overall system architecture, demonstrating the interaction between the Decision Brain, Search Muscle, and Learning Feedback loop, is illustrated in Fig.~\ref{fig:hybrid_architecture}.
 
 \subsection{Hierarchical MDP Formulation}
+
+\begin{figure*}[!t]
+\centering
+\resizebox{0.95\textwidth}{!}{%
+\begin{tikzpicture}[
+    font=\sffamily\footnotesize, >=Stealth,
+    node distance=1.0cm and 1.8cm,
+    block/.style={rectangle, rounded corners=4pt, semithick, align=center,
+                 minimum width=5.0cm, minimum height=1.3cm, text width=4.8cm, inner sep=3pt,
+                 drop shadow={opacity=0.12, shadow xshift=0.05cm, shadow yshift=-0.05cm}},
+    brain/.style={block, draw=C_rose!85, fill=C_rose!4},
+    muscle/.style={block, draw=C_indigo!80, fill=C_indigo!6},
+    learning/.style={block, draw=C_emerald!80, fill=C_emerald!6},
+    memory/.style={block, draw=C_amber!85, fill=C_amber!5},
+    flow/.style={->, line width=0.9pt, draw=C_slate!80},
+    back/.style={->, dashed, line width=0.65pt, draw=C_sky!60},
+    goal/.style={->, line width=1.4pt, draw=C_fuchsia!85},
+    lbl/.style={font=\sffamily\scriptsize, fill=white, inner sep=1pt, text=C_slate!90, align=center},
+    badge_rose/.style={circle, fill=C_rose!90, text=white, inner sep=1.0pt, font=\sffamily\tiny\bfseries, minimum size=10pt},
+    badge_indigo/.style={circle, fill=C_indigo!90, text=white, inner sep=1.0pt, font=\sffamily\tiny\bfseries, minimum size=10pt},
+    badge_amber/.style={circle, fill=C_amber!90, text=white, inner sep=1.0pt, font=\sffamily\tiny\bfseries, minimum size=10pt},
+    badge_emerald/.style={circle, fill=C_emerald!90, text=white, inner sep=1.0pt, font=\sffamily\tiny\bfseries, minimum size=10pt}
+]
+
+% Column 1: Brain (DRL Decision)
+\node[brain] (SM) at (0, 3.3) {%
+  \textbf{Stagnation Monitor}\\
+  {\color{C_rose!70}\scriptsize\textit{in:}} success flag, $NV_t$, $NV^*$\\
+  {\color{C_slate!70}\scriptsize\textit{out:}} \texttt{no\_imp} counter, trigger};
+
+\node[brain] (PC) at (0, 0.8) {%
+  \textbf{Plateau Controller (Macro DDQN)}\\
+  {\color{C_rose!70}\scriptsize\textit{in:}} state $s_t^c \in \mathbb{R}^{12}$\\
+  {\color{C_slate!70}\scriptsize\textit{out:}} search mode $m \in \{0..5\}$};
+
+\node[brain] (OC) at (0, -1.8) {%
+  \textbf{Operator Controller (Micro DDQN)}\\
+  {\color{C_rose!70}\scriptsize\textit{in:}} state $s_t^o \in \mathbb{R}^{15}$, goal $g_m$, $m$\\
+  {\color{C_slate!70}\scriptsize\textit{out:}} operator pair $a_t = (d, r)$};
+
+% Column 2: Muscle (ALNS Search & MIP Recombination)
+\node[muscle] (AE) at (6.2, 2.0) {%
+  \textbf{ALNS Core Engine}\\
+  {\color{C_indigo!70}\scriptsize\textit{in:}} pair $(d, r)$, solution $x_t$\\
+  {\color{C_slate!70}\scriptsize\textit{out:}} candidate $x'$, removed $\mathcal{R}$};
+
+\node[muscle] (LA) at (6.2, -0.5) {%
+  \textbf{Learned Acceptance (LAC MLP)}\\
+  {\color{C_indigo!70}\scriptsize\textit{in:}} features $[\Delta c, T_t, \dots] \in \mathbb{R}^9$\\
+  {\color{C_slate!70}\scriptsize\textit{out:}} accept bit $b_t$, label $y_t$};
+
+\node[muscle] (EV) at (6.2, -3.0) {%
+  \textbf{MIP Recombination (Two-Phase)}\\
+  {\color{C_indigo!70}\scriptsize\textit{in:}} accepted $x'$, columns $\Omega$\\
+  {\color{C_slate!70}\scriptsize\textit{out:}} incumbent $x^*$, reward $r_t$};
+
+% Column 3: Memory & Learning
+\node[memory] (RP) at (12.4, 2.0) {%
+  \textbf{Route Pool}\\
+  {\color{C_amber!80}\scriptsize\textit{in:}} routes from $x'$\\
+  {\color{C_slate!70}\scriptsize\textit{out:}} columns $\Omega$ for Set Partitioning};
+
+\node[memory] (PER) at (12.4, -0.5) {%
+  \textbf{Replay Buffer (PER)}\\
+  {\color{C_amber!80}\scriptsize\textit{in:}} transitions $(s, a, z, s', d)$\\
+  {\color{C_slate!70}\scriptsize\textit{out:}} prioritized training batches};
+
+\node[learning] (WN) at (12.4, -3.0) {%
+  \textbf{Welford Reward Normalizer}\\
+  {\color{C_emerald!80}\scriptsize\textit{in:}} raw reward $r_t \in \mathbb{R}$\\
+  {\color{C_slate!70}\scriptsize\textit{out:}} normalized $z_t \in [-8, +8]$};
+
+% Group labels (subgraph boxes in TikZ using fit or background)
+\begin{scope}[on background layer]
+  \node[draw=C_rose!40, dashed, fill=C_rose!2, line width=0.8pt, rounded corners=5pt, fit=(SM) (PC) (OC), inner sep=8pt, label={[font=\sffamily\bfseries\scriptsize, text=C_rose!90]above:DECISION BRAIN (DRL)}] {};
+  \node[draw=C_indigo!35, dashed, fill=C_indigo!2, line width=0.8pt, rounded corners=5pt, fit=(AE) (LA) (EV), inner sep=8pt, label={[font=\sffamily\bfseries\scriptsize, text=C_indigo!90]above:SEARCH MUSCLE (ALNS + MIP)}] {};
+  \node[draw=C_emerald!35, dashed, fill=C_emerald!2, line width=0.8pt, rounded corners=5pt, fit=(RP) (PER) (WN), inner sep=8pt, label={[font=\sffamily\bfseries\scriptsize, text=C_emerald!90]above:LEARNING \& FEEDBACK}] {};
+\end{scope}
+
+% Flow arrows with color-coded sequence badges
+\draw[flow] (SM) -- node[badge_rose, left=2pt] {1} node[lbl, right=2pt] {\texttt{no\_imp} $\ge 60$} (PC);
+\draw[flow] (PC) -- node[badge_rose, left=2pt] {2} node[lbl, right=2pt] {mode $m$} (OC);
+\draw[flow] (OC.east) -- (3.3, -1.8) -- node[badge_rose, pos=0.3, left=2pt] {4} node[lbl, pos=0.6, left=2pt] {pair $(d, r)$} (3.3, 2.0) -- (AE.west);
+
+\draw[flow] (AE) -- node[badge_indigo, left=2pt] {5} node[lbl, right=2pt] {candidate $x'$} (LA);
+\draw[flow] (LA) -- node[badge_indigo, left=2pt] {7} node[lbl, right=2pt] {accepted $x'$} (EV);
+\draw[flow] (EV) -- node[badge_amber, pos=0.3, below=2pt] {9} node[lbl, pos=0.7, below=2pt] {reward $r_t$} (WN);
+
+\draw[flow] (AE.east) -- node[badge_indigo, pos=0.3, above=2pt] {6} node[lbl, pos=0.7, above=2pt] {valid routes} (RP.west);
+\draw[flow] (RP.west) -- (9.3, 2.0) -- node[badge_amber, pos=0.3, right=2pt] {8} node[lbl, pos=0.65, right=2pt] {columns $\Omega$} (9.3, -3.0) -- (EV.east);
+
+\draw[flow] (WN) -- node[badge_emerald, left=2pt] {10} node[lbl, right=2pt] {reward $z_t$} (PER);
+
+% Feedback paths (rerouted with color-coded sequence badges)
+\draw[back] (PER.west) -- (9.0, -0.5) -- (9.0, -1.8) -- node[badge_emerald, pos=0.3, above=2pt] {11} node[lbl, pos=0.7, above=2pt] {training batch} (OC.east);
+
+\draw[back] (WN.south) -- (12.4, -4.15) -- node[badge_emerald, pos=0.25, above=2pt] {12} node[lbl, pos=0.5, above=2pt] {reward $z_t$} (-2.5, -4.15) -- (OC.west);
+\draw[back] (WN.south) -- (12.4, -4.5) -- node[badge_emerald, pos=0.25, above=2pt] {13} node[lbl, pos=0.5, above=2pt] {TD error $\delta$} (-3.1, -4.5) -- (-3.1, 0.8) -- (PC.west);
+
+% Goal conditioning with color-coded sequence badge
+\draw[goal] (PC.south east) -- node[badge_rose, pos=0.35, left=2pt] {3} node[lbl, pos=0.75, left=2pt, text=C_fuchsia!90] {goal $g_m$} (OC.north east);
+
+% ── Embedded legend ─────────────────────────────────────────────────────────
+\node[draw=C_slate!20, fill=white, rounded corners=3pt, inner sep=5pt,
+      font=\sffamily\tiny] (leg) at (6.2, -5.6) {};
+% Arrow samples
+\draw[flow]  (-0.5, -5.6) -- ++(0.7, 0)
+  node[right, font=\sffamily\tiny, text=C_slate!80] {Forward flow};
+\draw[back]  (2.1, -5.6)  -- ++(0.7, 0)
+  node[right, font=\sffamily\tiny, text=C_slate!80] {Feedback loop};
+\draw[goal]  (4.8, -5.6)  -- ++(0.7, 0)
+  node[right, font=\sffamily\tiny, text=C_slate!80] {Goal signal};
+% Badge samples
+\node[badge_rose,   minimum size=8pt, inner sep=0pt, font=\sffamily\tiny\bfseries] at (7.4, -5.6) {\,};
+\node[font=\sffamily\tiny, text=C_slate!80, right=3pt] at (7.4, -5.6) {DRL};
+\node[badge_indigo, minimum size=8pt, inner sep=0pt, font=\sffamily\tiny\bfseries] at (8.6, -5.6) {\,};
+\node[font=\sffamily\tiny, text=C_slate!80, right=3pt] at (8.6, -5.6) {Search};
+\node[badge_amber,  minimum size=8pt, inner sep=0pt, font=\sffamily\tiny\bfseries] at (10.0, -5.6) {\,};
+\node[font=\sffamily\tiny, text=C_slate!80, right=3pt] at (10.0, -5.6) {MIP};
+\node[badge_emerald,minimum size=8pt, inner sep=0pt, font=\sffamily\tiny\bfseries] at (11.2, -5.6) {\,};
+\node[font=\sffamily\tiny, text=C_slate!80, right=3pt] at (11.2, -5.6) {Learning};
+\end{tikzpicture}%
+}
+\caption{The proposed Hierarchical Hybrid DDQN-ALNS architecture, illustrating the macro-level Plateau Controller, micro-level Operator Controller, the core ALNS engine with learned acceptance criterion (LAC), the MILP-based Set Partitioning route recombination, and the Welford running variance normalizer. Solid lines represent the data flow, green dashed lines show the reward loop, and magenta arrows represent the coordination goal signal.}
+\label{fig:hybrid_architecture}
+\end{figure*}
 
 The HMDP operates at two temporal granularities.  Every $60$ consecutive
 iterations without an incumbent improvement trigger a \emph{macro decision}:
@@ -289,11 +436,13 @@ Labels are assigned online via hindsight:
 \end{equation}
 and the classifier is trained online with weighted binary cross-entropy. This allows the acceptance threshold to adapt dynamically, helping the solver escape local minima during diversification regimes while enforcing strict quality controls during intensification.
 
-\textbf{Search polishing.}
-Intra-route 2-opt and Or-opt~\cite{pisinger2007general} refine each route
-until convergence ($\Delta c < 10^{-9}$).  At $NV = NV_{\BKS}+1$, hard-mode
-ejection chains widen beam search ($16{\to}32$) and deepen the cascade
-($6{\to}10$) to eliminate near-empty vehicles.
+\textbf{Post-Processing Search Polish Cascade.}
+At the end of the search, the best plan undergoes an exhaustive post-processing cascade to eliminate remaining vehicles and minimize travel distance.
+First, we apply a depth-3 ejection chain (\texttt{\_ejection\_chain\_eliminate}) which processes each customer in a target route. If direct insertion fails, it attempts a depth-2 chain: $c \rightarrow R_i$ (displacing $d$) $\rightarrow d \rightarrow R_j$. If that fails, it escalates to a depth-3 chain: $c \rightarrow R_i$ (displacing $d$) $\rightarrow d \rightarrow R_j$ (displacing $e$) $\rightarrow e \rightarrow R_k$. To prevent combinatorial explosion, branching is capped at \texttt{beam\_width} (default $3$) candidate displacements per route.
+Second, a buffered route elimination search (\texttt{\_buffered\_route\_elimination}) performs multi-route rebalancing. If the fleet size is exactly one vehicle above the BKS floor, it runs in hard-mode, widening the beam search to $16 \to 32$ and deepening the search cascade to $6 \to 10$ ejections.
+Third, if the solution is still above the BKS floor, we trigger a committed NV search (\texttt{\_committed\_nv\_search}) running up to $1500$ iterations with $3$ restarts and pool-based restarts to force merges.
+Finally, travel distance is polished via a convergent intra-route optimization (\texttt{td\_converge\_polish}) running 2-opt and Or-opt ($1, 2, 3$) per route to full convergence ($\Delta c < 10^{-9}$).
+
 
 \subsection{Training and Infrastructure}
 \label{sec:training}
@@ -336,20 +485,27 @@ observations to stabilize early estimates.
 \textbf{Experience replay and route storage.}
 Transitions $(s_t,a_t,z_t,s_{t+1},\text{done})$ are stored in a Prioritized
 Experience Replay buffer~\cite{schaul2016prioritized} with proportional
-prioritization ($\alpha{=}0.6$, $\beta$ annealed $0.4{\to}1.0$).  A
-dual-retention route pool maintains diverse columns for set-partitioning
+prioritization ($\alpha{=}0.6$, $\beta$ annealed $0.4{\to}1.0$).
+
+\textbf{Route Pool Seeding and Column Generation.}
+To ensure the MILP set-partitioning solver can find optimal combinations, the Route Pool is populated using both constructive seeding and dynamic column generation. At initialization, the pool is seeded with three diverse heuristics:
+(1) a randomized Clarke-Wright savings algorithm (\texttt{\_seed\_savings\_routes}) running $12$ restarts with perturbing scaling to generate long, "temporal bridge" routes;
+(2) an NV-targeted construction algorithm (\texttt{\_seed\_nv\_targeted\_construction}) sweeping time-window midpoint seeds, EDF/randomized orders, and 2-opt refinement for a target fleet size of $NV-1$;
+(3) a large-destroy ALNS seeding sweep (\texttt{\_seed\_pool\_large\_destroy}) using 40--65\% destroy ratios and Regret-3 repairs to consolidate routes.
+During search, we algorithmically generate columns from elite plans via sub-route slicing (retaining fragments longer than a minimum threshold to protect long routes), adjacent swaps, reversed sub-segments, and cross-route migrations.
+
+\textbf{Set-Partitioning Recombination.}
+A dual-retention route pool maintains diverse columns for set-partitioning
 recombination: Slot~A (75\%, sorted by cost per customer) preserves locally
 efficient segments, while Slot~B (25\%, sorted by route length) retains
-fleet-reducing columns.  When triggered, a two-phase MILP first minimizes
-fleet size via escalating vehicle penalties, then minimizes travel distance
-with zero penalty.
+fleet-reducing columns. When triggered, a two-phase MILP is solved using SciPy's MILP solver under a strict 4.0-second limit. The formulation first minimizes fleet size via escalating vehicle penalties ($P_{\text{vehicle}} \in \{10, 15, 20, 30, 50\}$), then minimizes travel distance with zero penalty.
 
 \subsection{Graph Neural Network Guided Routing}
 \label{sec:gnn_guidance}
 
 To enhance the reinforcement learning agent's heuristic search capability, we integrate a Graph Neural Network (GNN) Edge Predictor directly into the initialization, repair, local search, and recombination phases of the solver.
 
-\textbf{GNN Edge Predictor.} 
+\textbf{GNN Edge Predictor.}
 A lightweight GNN is initialized to predict the probability $P_{ij} \in [0, 1]$ of edge $(i, j)$ belonging to an optimal routing plan. The network takes node features (comprising coordinates, demands, ready/due times, and service times) and edge features (distances) and performs attention-based message passing. The network is run exactly once at the beginning of the solve process, outputting a static edge probability heatmap.
 
 \textbf{GNN-Guided Initial Heuristic.}
@@ -376,7 +532,10 @@ where $t$ is the current iteration and $T$ is the total iteration budget. The fi
 \textbf{GNN-Aware Shaw Removal.}
 We introduce a GNN-aware Shaw removal operator (\texttt{op\_neural\_shaw}), extending the destroy pool size $N_D$ to 13. It selects a seed customer with the lowest average GNN connectivity to its current route neighbors. The removal set is expanded by scoring remaining customers $n$ against the removed set $R$ using a combination of spatial, temporal, demand, and GNN relatedness:
 \begin{equation}
-  \text{score}(n) = 0.35 d_{\text{spatial}} + 0.25 dt_{\text{temporal}} + 0.10 q_{\text{demand}} + 0.30 \left(1.0 - \bar{P}_{rn}\right)
+  \begin{split}
+    \text{score}(n) ={} & 0.35 d_{\text{spatial}} + 0.25 dt_{\text{temporal}} \\
+    & + 0.10 q_{\text{demand}} + 0.30 \left(1.0 - \bar{P}_{rn}\right)
+  \end{split}
 \end{equation}
 where $\bar{P}_{rn}$ is the mean edge probability between customer $n$ and the removed set $R$.
 
@@ -394,7 +553,67 @@ where $\alpha = 0.15$ biases route selections toward high-confidence GNN predict
 \section{Experimental Results}
 \label{sec:results}
 
+We evaluate the proposed Hybrid DDQN-ALNS methodology against several heuristics and state-of-the-art baselines on the standard Solomon and Gehring--Homberger benchmarks. In the following, we describe the experimental setup, present vehicle minimization and routing distance comparisons, perform ablation studies, and validate the CNN-based heatmap guidance module. An illustrative example of consolidated routing paths optimized by our system is shown in Fig.~\ref{fig:optimized_routes}.
+
 \subsection{Setup}
+
+\begin{figure}[!t]
+\centering
+\definecolor{C_slate}{RGB}{71,85,105}     \definecolor{C_blue}{RGB}{59,130,246}
+\definecolor{C_emerald}{RGB}{16,185,129}  \definecolor{C_amber}{RGB}{245,158,11}
+\resizebox{\columnwidth}{!}{%
+\begin{tikzpicture}[
+    font=\sffamily\scriptsize,
+    depot/.style={draw, rectangle, fill=C_slate!20, minimum size=6pt, inner sep=0pt, thick},
+    cust/.style={draw, circle, fill=white, minimum size=4pt, inner sep=0pt, semithick},
+    route1/.style={->, draw=C_blue!90, thick, >=Stealth},
+    route2/.style={->, draw=C_emerald!90, thick, >=Stealth},
+    route3/.style={->, draw=C_amber!90, thick, >=Stealth},
+]
+% Coordinates (divided by 10 to prevent TeX arithmetic overflow)
+\node[depot] (D) at (4.0, 5.0) [label=above:{\textbf{Depot}}] {};
+
+% Route 1 nodes (Blue)
+\node[cust] (c1) at (2.5, 8.0) [label=left:{$c_1$ [10,35]}] {};
+\node[cust] (c2) at (1.0, 6.5) [label=left:{$c_2$ [20,50]}] {};
+\node[cust] (c3) at (1.5, 3.5) [label=left:{$c_3$ [45,70]}] {};
+\node[cust] (c4) at (3.0, 2.0) [label=below:{$c_4$ [60,85]}] {};
+
+% Route 2 nodes (Emerald)
+\node[cust] (c5) at (6.0, 8.5) [label=right:{$c_5$ [5,30]}] {};
+\node[cust] (c6) at (7.5, 7.0) [label=right:{$c_6$ [15,45]}] {};
+\node[cust] (c7) at (8.0, 4.5) [label=right:{$c_7$ [30,60]}] {};
+\node[cust] (c8) at (6.5, 3.0) [label=below:{$c_8$ [55,80]}] {};
+
+% Route 3 nodes (Orange)
+\node[cust] (c9) at (4.5, 7.5) [label=above:{$c_9$ [20,40]}] {};
+\node[cust] (c10) at (3.5, 3.0) [label=below:{$c_{10}$ [40,65]}] {};
+\node[cust] (c11) at (5.0, 2.5) [label=below:{$c_{11}$ [50,75]}] {};
+
+% Route 1 path (Blue)
+\draw[route1] (D) to[bend left=10] (c1);
+\draw[route1] (c1) to[bend right=5] (c2);
+\draw[route1] (c2) to[bend left=5] (c3);
+\draw[route1] (c3) to[bend right=10] (c4);
+\draw[route1] (c4) to[bend left=15] (D);
+
+% Route 2 path (Emerald)
+\draw[route2] (D) to[bend right=10] (c5);
+\draw[route2] (c5) to[bend left=5] (c6);
+\draw[route2] (c6) to[bend right=5] (c7);
+\draw[route2] (c7) to[bend left=10] (c8);
+\draw[route2] (c8) to[bend right=15] (D);
+
+% Route 3 path (Orange)
+\draw[route3] (D) to[bend left=5] (c9);
+\draw[route3] (c9) to[bend right=15] (c10);
+\draw[route3] (c10) to[bend left=10] (c11);
+\draw[route3] (c11) to[bend right=5] (D);
+\end{tikzpicture}%
+}
+\caption{Visualization of optimized routing paths solved by Hybrid DDQN-ALNS on a representative Solomon instance. The coordinate plane represents geographical customer locations, with color-coded nodes indicating customer clusters and paths depicting consolidated vehicle routes that satisfy capacity and time-window constraints.}
+\label{fig:optimized_routes}
+\end{figure}
 
 Four baselines: OR-Tools~\cite{ortools}, ALNS-Base~\cite{Ropke2006},
 Hybrid-Fixed (static operator weights), Hybrid-Rule (rule-based mode
@@ -595,7 +814,10 @@ To establish a completely unbiased baseline, we also resolved configuration bias
 \subsection{Gehring--Homberger Scalability}
 
 \Cref{tab:gh200} shows 200-customer results~\cite{Gehring1999} under the cooperative production sweep.
-Hybrid-DDQN matches the BKS vehicle count on all clustered instances, matches or outperforms OR-Tools~\cite{ortools} on random families under a fair 120\,s budget (e.g., \texttt{r2\_2\_1}, where both solvers achieve 5 vehicles compared to a BKS of 4, representing a massive reduction over the 12 vehicles OR-Tools returns under a 15\,s cap), and approaches or matches the achievable vehicle count on complex combination families where OR-Tools is suboptimal. In the 10-seed independent cold-start audit sweep (run at 800 iterations), Hybrid-DDQN consistently achieves $19.00 \pm 0.00$ vehicles on \texttt{rc1\_2\_1} (compared to ALNS-Base at $19.30 \pm 0.46$ and OR-Tools at 19.00) while reducing travel distance by 4.07\% compared to ALNS-Base. In the production sweep shown in Table~\ref{tab:gh200}, Hybrid-DDQN matches ALNS-Base's average NV of 19.00 and reduces travel distance by 4.37\% compared to ALNS-Base. On the 400-customer scale (600 iterations, 3 runs), Hybrid-DDQN achieves a statistically significant vehicle count reduction over ALNS-Base ($p = 0.004892$, Wilcoxon signed-rank test across the 24 instances) and reduces travel distance by 7.54\% on average (median: 6.66\%) across the 14 instances where fleet sizes matched, confirming that Hybrid-DDQN's scaling advantage is robust.
+Hybrid-DDQN matches the BKS vehicle count on all clustered instances, matches or outperforms OR-Tools~\cite{ortools} on random families under a fair 120\,s budget (e.g., \texttt{r2\_2\_1}, where both solvers achieve 5 vehicles compared to a BKS of 4, representing a massive reduction over the 12 vehicles OR-Tools returns under a 15\,s cap), and approaches or matches the achievable vehicle count on complex combination families where OR-Tools is suboptimal. In the 10-seed independent cold-start audit sweep (run at 800 iterations), Hybrid-DDQN consistently achieves $19.00 \pm 0.00$ vehicles on \texttt{rc1\_2\_1} (compared to ALNS-Base at $19.30 \pm 0.46$ and OR-Tools at 19.00) while reducing travel distance by 4.07\% compared to ALNS-Base. In the production sweep shown in Table~\ref{tab:gh200}, Hybrid-DDQN matches ALNS-Base's average NV of 19.00 and reduces travel distance by 4.37\% compared to ALNS-Base.
+
+We extend the scalability evaluation to ultra-large scales (400 to 1\,000 customers). On the 400-customer scale (600 iterations, 3 runs), Hybrid-DDQN achieves a statistically significant vehicle count reduction over ALNS-Base ($p = 0.004892$, Wilcoxon signed-rank test across the 24 instances) and reduces travel distance by 7.54\% on average (median: 6.66\%) across the 14 instances where fleet sizes matched. On the 600-customer scale, Hybrid-DDQN reduces the mean vehicle count from 36.67 to 35.97 and travel distance by 8.73\% compared to ALNS-Base. On the 800-customer scale, the vehicle savings increase to 1.44 vehicles (49.00 vs.\ 50.44) and travel distance improves by 9.50\%. Finally, on the largest 1\,000-customer scale, Hybrid-DDQN achieves a massive average fleet reduction of 2.22 vehicles (60.39 vs.\ 62.61) while simultaneously reducing travel distance by 9.37\% compared to ALNS-Base. In comparison, OR-Tools suffers from significant scaling limitations on these large instances, requiring an average of 6454.1\,s on the 1\,000-customer scale with a suboptimal average fleet size of 63.50 vehicles (compared to 4014.5\,s and 60.39 vehicles for Hybrid-DDQN). These results confirm that the scaling advantage of Hybrid-DDQN is highly robust and grows with the problem dimension.
+
 Negative TD gaps in ${}^\dagger$-marked rows reflect vehicle over-allocation, not lexicographic
 improvement~\cite{pisinger2007general}.
 \subsection{Validation of SOTA GNN Heatmap Guidance}
@@ -634,6 +856,8 @@ As shown in \Cref{tab:gnn_comparison}:
 % =============================================================================
 \section{Discussion}
 \label{sec:discussion}
+
+This section discusses the physical interpretation of the learned policies, quantifies the trade-offs between computational overhead and solution quality, and outlines current limitations of the model along with directions for future work.
 
 \subsection{Learned State-Conditioned Neighborhood Selection}
 
@@ -696,7 +920,7 @@ Future work will validate the remaining ${}^\star$ components (N-step
 returns, HER relabelling, adaptive curriculum) via ablation on the Solomon and
 Gehring--Homberger suites, replace handcrafted state features with
 attention-based graph encodings~\cite{kool2019attention,vinyals2015pointer},
-and extend evaluation to Gehring--Homberger 1\,000-customer instances.
+and extend the model to dynamic, real-time routing fleets.
 
 
 % =============================================================================

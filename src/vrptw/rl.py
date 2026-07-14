@@ -11,7 +11,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-from .config import MODES, Config
+from .config import Config
 from .core import Inst, Plan
 from .operators import N_ACTIONS, N_R
 
@@ -170,21 +170,25 @@ class EliteArchive:
             return
         key = plan.inst.name
         bucket = self._plans.setdefault(key, [])
+        # Scale threshold dynamically with instance size (0.01% with 0.1 floor)
+        threshold = max(0.1, 1e-4 * plan.cost)
+        if any(abs(p.cost - plan.cost) < threshold for p in bucket):
+            return
         bucket.append(plan.copy())
         bucket.sort(key=lambda p: (p.nv, p.cost))
         self._plans[key] = bucket[: self.k]
 
-    def sample_diverse(self, inst_name: str, exclude_cost: float | None = None) -> "Plan | None":
+    def sample_diverse(self, inst_name: str, exclude_cost: float | None = None) -> Plan | None:
         """Return a random plan from archive excluding current solution cost."""
         import random
         bucket = self._plans.get(inst_name, [])
-        candidates = [p for p in bucket 
-                      if exclude_cost is None or abs(p.cost - exclude_cost) > 1e-6]
+        threshold = 1.0 if not bucket else max(0.1, 1e-4 * bucket[0].cost)
+        candidates = [p for p in bucket
+                      if exclude_cost is None or abs(p.cost - exclude_cost) >= threshold]
         return random.choice(candidates).copy() if candidates else None
 
-    def crossover(self, inst_name: str) -> "Plan | None":
+    def crossover(self, inst_name: str) -> Plan | None:
         """Route-level crossover between top-2 elite plans."""
-        import random
         bucket = self._plans.get(inst_name, [])
         if len(bucket) < 2:
             return None
@@ -199,7 +203,8 @@ class EliteArchive:
                 used.update(extras)
         missing = set(range(1, p1.inst.n + 1)) - used
         if missing:
-            routes.append(list(missing))
+            sorted_missing = sorted(list(missing), key=lambda c: p1.inst.ready_times[c])
+            routes.append(sorted_missing)
         try:
             from .core import Plan
             return Plan(routes, p1.inst, p1.algo)
@@ -406,24 +411,29 @@ class UCBActionAugmenter:
 # DDQN controllers  (now using PrioritizedReplayBuffer)
 # ---------------------------------------------------------------------------
 class PlateauController:
-    def __init__(self, cfg: Config, n_modes: int = 6):
+    def __init__(self, cfg: Config, n_modes: int = 6, use_rl: bool = True):
         self.cfg = cfg
         self.n_modes = n_modes
-        self.q = QNet(cfg.ctrl_state_dim, n_modes, cfg.ctrl_hidden).to(DEVICE)
-        self.q_t = QNet(cfg.ctrl_state_dim, n_modes, cfg.ctrl_hidden).to(DEVICE)
-        self.q_t.load_state_dict(self.q.state_dict())
-        self.opt = optim.Adam(self.q.parameters(), lr=cfg.ctrl_lr)
-        from torch.optim.lr_scheduler import CosineAnnealingLR
-        self.scheduler = CosineAnnealingLR(self.opt, T_max=5000, eta_min=1e-5)
-        self.buf = PrioritizedReplayBuffer(cfg.ctrl_buffer, expected_steps=cfg.per_beta_steps)
-        self.eps = cfg.ctrl_eps_start
-        self.eps_decay = 0.02 ** (1.0 / max(cfg.hybrid_iterations * 0.8, 1))
-        self.step = 0
+        self.use_rl = use_rl
+        if use_rl:
+            self.q = QNet(cfg.ctrl_state_dim, n_modes, cfg.ctrl_hidden).to(DEVICE)
+            self.q_t = QNet(cfg.ctrl_state_dim, n_modes, cfg.ctrl_hidden).to(DEVICE)
+            self.q_t.load_state_dict(self.q.state_dict())
+            self.opt = optim.Adam(self.q.parameters(), lr=cfg.ctrl_lr)
+            from torch.optim.lr_scheduler import CosineAnnealingLR
+            self.scheduler = CosineAnnealingLR(self.opt, T_max=5000, eta_min=1e-5)
+            self.buf = PrioritizedReplayBuffer(cfg.ctrl_buffer, expected_steps=cfg.per_beta_steps)
+            self.eps = cfg.ctrl_eps_start
+            self.eps_decay = 0.02 ** (1.0 / max(cfg.hybrid_iterations * 0.8, 1))
+            self.step = 0
 
     def reset(self) -> None:
-        self.eps = self.cfg.ctrl_eps_start
+        if self.use_rl:
+            self.eps = self.cfg.ctrl_eps_start
 
     def act(self, state: np.ndarray) -> int:
+        if not self.use_rl:
+            return random.randrange(self.n_modes)
         if random.random() < self.eps:
             return random.randrange(self.n_modes)
         with torch.no_grad():
@@ -432,9 +442,12 @@ class PlateauController:
             )
 
     def observe(self, s, a, r, ns, done=0.0):
-        self.buf.push(s, a, r, ns, done)
+        if self.use_rl:
+            self.buf.push(s, a, r, ns, done)
 
     def train_step(self) -> None:
+        if not self.use_rl:
+            return
         self.step += 1
         if len(self.buf) < self.cfg.ctrl_batch:
             return
@@ -464,21 +477,24 @@ class PlateauController:
 
 
 class OperatorController:
-    def __init__(self, cfg: Config):
+    def __init__(self, cfg: Config, use_rl: bool = True):
         self.cfg = cfg
-        self.q = QNet(cfg.op_state_dim, N_ACTIONS, cfg.op_hidden).to(DEVICE)
-        self.q_t = QNet(cfg.op_state_dim, N_ACTIONS, cfg.op_hidden).to(DEVICE)
-        self.q_t.load_state_dict(self.q.state_dict())
-        self.opt = optim.Adam(self.q.parameters(), lr=cfg.op_lr)
-        from torch.optim.lr_scheduler import CosineAnnealingLR
-        self.scheduler = CosineAnnealingLR(self.opt, T_max=5000, eta_min=1e-5)
-        self.buf = PrioritizedReplayBuffer(cfg.op_buffer, expected_steps=cfg.per_beta_steps)
-        self.eps = cfg.op_eps_start
-        self.eps_decay = 0.02 ** (1.0 / max(cfg.hybrid_iterations * 0.8, 1))
-        self.step = 0
+        self.use_rl = use_rl
+        if use_rl:
+            self.q = QNet(cfg.op_state_dim, N_ACTIONS, cfg.op_hidden).to(DEVICE)
+            self.q_t = QNet(cfg.op_state_dim, N_ACTIONS, cfg.op_hidden).to(DEVICE)
+            self.q_t.load_state_dict(self.q.state_dict())
+            self.opt = optim.Adam(self.q.parameters(), lr=cfg.op_lr)
+            from torch.optim.lr_scheduler import CosineAnnealingLR
+            self.scheduler = CosineAnnealingLR(self.opt, T_max=5000, eta_min=1e-5)
+            self.buf = PrioritizedReplayBuffer(cfg.op_buffer, expected_steps=cfg.per_beta_steps)
+            self.eps = cfg.op_eps_start
+            self.eps_decay = 0.02 ** (1.0 / max(cfg.hybrid_iterations * 0.8, 1))
+            self.step = 0
 
     def reset(self) -> None:
-        self.eps = self.cfg.op_eps_start
+        if self.use_rl:
+            self.eps = self.cfg.op_eps_start
 
     def _prior(self, dw: np.ndarray, rw: np.ndarray) -> np.ndarray:
         dw = np.asarray(dw, np.float32)
@@ -495,6 +511,12 @@ class OperatorController:
     def act(self, state, dw, rw, bandit, frozen=False, ucb_aug=None) -> tuple[int, int, int]:
         prior = self._prior(dw, rw)
         self.last_q = None
+
+        if not self.use_rl:
+            di, ri = bandit.select(prior=prior, prior_strength=self.cfg.bandit_prior_strength)
+            action = di * N_R + ri
+            return int(action), int(di), int(ri)
+
         try:
             with torch.no_grad():
                 q = self.q(torch.as_tensor(state, dtype=torch.float32, device=DEVICE).unsqueeze(0))[0].cpu().numpy()
@@ -533,9 +555,12 @@ class OperatorController:
         return int(action), int(di), int(ri)
 
     def observe(self, s, a, r, ns, done=0.0):
-        self.buf.push(s, a, r, ns, done)
+        if self.use_rl:
+            self.buf.push(s, a, r, ns, done)
 
     def train_step(self) -> None:
+        if not self.use_rl:
+            return
         self.step += 1
         if len(self.buf) < self.cfg.op_batch:
             return
@@ -568,24 +593,26 @@ class OperatorController:
 # Learned Acceptance Criterion
 # ---------------------------------------------------------------------------
 class LearnedAcceptanceCriterion:
-    def __init__(self, cfg: Config):
+    def __init__(self, cfg: Config, use_rl: bool = True):
         self.cfg = cfg
-        self.net = nn.Sequential(
-            nn.Linear(cfg.lac_state_dim, 64),
-            nn.LayerNorm(64),
-            nn.ReLU(),
-            nn.Dropout(0.1),
-            nn.Linear(64, 48),
-            nn.ReLU(),
-            nn.Linear(48, 32),
-            nn.ReLU(),
-            nn.Linear(32, 1),
-            nn.Sigmoid(),
-        ).to(DEVICE)
-        self.opt = optim.Adam(self.net.parameters(), lr=cfg.lac_lr)
-        self.step = 0
-        self._pending: deque = deque()
-        self._train_buf: deque = deque(maxlen=cfg.lac_buf_size)
+        self.use_rl = use_rl
+        if use_rl:
+            self.net = nn.Sequential(
+                nn.Linear(cfg.lac_state_dim, 64),
+                nn.LayerNorm(64),
+                nn.ReLU(),
+                nn.Dropout(0.1),
+                nn.Linear(64, 48),
+                nn.ReLU(),
+                nn.Linear(48, 32),
+                nn.ReLU(),
+                nn.Linear(32, 1),
+                nn.Sigmoid(),
+            ).to(DEVICE)
+            self.opt = optim.Adam(self.net.parameters(), lr=cfg.lac_lr)
+            self.step = 0
+            self._pending: deque = deque()
+            self._train_buf: deque = deque(maxlen=cfg.lac_buf_size)
 
     def features(
         self,

@@ -2,7 +2,7 @@ PWD /Users/thundercock2/Documents/Github/VRPTW-Research-Optimization/VRPTW-Resea
 INPUT /Users/thundercock2/Library/TinyTeX/texmf.cnf
 INPUT /Users/thundercock2/Library/TinyTeX/texmf-dist/web2c/texmf.cnf
 INPUT /Users/thundercock2/Library/TinyTeX/texmf-var/web2c/pdftex/pdflatex.fmt
-INPUT paper.tex
+INPUT /Users/thundercock2/Documents/Github/VRPTW-Research-Optimization/VRPTW-Research-Optimization/docs/paper.tex
 OUTPUT paper.log
 INPUT /Users/thundercock2/Library/TinyTeX/texmf-dist/tex/latex/xcolor/xcolor.sty
 INPUT /Users/thundercock2/Library/TinyTeX/texmf-dist/tex/latex/ieeetran/IEEEtran.cls

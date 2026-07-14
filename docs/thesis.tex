@@ -17,7 +17,7 @@
 \usepackage{bm}                 \usepackage{url}        \usepackage{hyperref}           
 \usepackage[nameinlink, noabbrev]{cleveref} 
 
-\usetikzlibrary{shapes.geometric,arrows.meta,positioning,fit,backgrounds,calc, decorations.pathreplacing, patterns}
+\usetikzlibrary{shapes.geometric,arrows.meta,positioning,fit,backgrounds,calc, decorations.pathreplacing, patterns, shadows}
 
 % ── Custom colours ───────────────────────────────────────────────────────────
 \definecolor{C_slate}{RGB}{71,85,105}       \definecolor{C_blue}{RGB}{59,130,246}
@@ -64,7 +64,8 @@
 
 
 \newcommand{\enableprocedureheader}{%
-\setlength{\headheight}{104pt}%
+\setlength{\headheight}{119.6pt}%
+\addtolength{\topmargin}{-15.6pt}%
 \setlength{\headsep}{12pt}%
 \fancypagestyle{procedurepages}{%
   \fancyhf{}%
@@ -138,7 +139,7 @@
     {\bfseries\fontsize{16pt}{20pt}\selectfont TÓM TẮT CÔNG TRÌNH\par}
 \end{center}
 
-Bài toán định tuyến phương tiện có khung thời gian (Vehicle Routing Problem with Time Windows -- VRPTW) là một bài toán tối ưu hóa tổ hợp thuộc lớp NP-khó, có ý nghĩa quan trọng trong quản trị vận tải và logistics đô thị. Công trình này nghiên cứu hướng tiếp cận lai DDQN-ALNS, kết hợp Tìm kiếm lân cận lớn thích ứng (Adaptive Large Neighborhood Search -- ALNS) với Học tăng cường sâu (Deep Reinforcement Learning -- DRL), trong đó sử dụng kiến trúc Double Deep Q-Network (DDQN) và cơ chế ưu tiên lấy lại trải nghiệm (Prioritized Experience Replay -- PER) để hỗ trợ quá trình ra quyết định trong tìm kiếm lời giải.
+Bài toán định tuyến phương tiện có khung thời gian (Vehicle Routing Problem with Time Windows -- VRPTW) là một bài toán tối ưu hóa tổ hợp thuộc lớp NP-khó, có ý nghĩa quan trọng trong quản trị vận tải và logistics đô thị. Công trình này nghiên cứu hướng tiếp cận lai DDQN-ALNS, kết hợp Tìm kiếm lân cận lớn thích ứng (Adaptive Large Neighborhood Search -- ALNS) với Học tăng cường sâu (Deep Reinforcement Learning -- DRL), trong đó sử dụng kiến trúc Double Deep Q-Network (DDQN) và cơ chế ưu tiên lấy lại trải nghiệm (Prioritized Experience Replay -- PER) \cite{schaul2016} để hỗ trợ quá trình ra quyết định trong tìm kiếm lời giải.
 
 Mô hình đề xuất được tổ chức theo hai tầng điều khiển kết hợp với các bước tối ưu hóa bổ trợ. Ở tầng chiến lược, Plateau Controller sử dụng mạng Dueling Double DQN để nhận diện trạng thái hội tụ của quá trình tìm kiếm và lựa chọn chế độ tìm kiếm phù hợp trong 6 chế độ, qua đó điều tiết quan hệ giữa khai thác (exploitation) và khám phá (exploration). Ở tầng toán tử, Operator Controller sử dụng một mạng DDQN riêng để lựa chọn cặp toán tử phá hủy và sửa chữa trong 40 tổ hợp khả dụng tại từng vòng lặp. Bên cạnh đó, cơ chế học điều kiện chấp nhận (Learned Acceptance Criterion -- LAC) được xây dựng bằng mạng nơ-ron phân loại nhị phân nhằm hỗ trợ quyết định chấp nhận lời giải ứng viên. Thuật toán cũng tích hợp Route Pool và bước tái tổ hợp tuyến đường thông qua bài toán Set Partitioning, được mô hình hóa dưới dạng Quy hoạch nguyên hỗn hợp (Mixed Integer Linear Programming -- MILP).
 
@@ -160,15 +161,15 @@ Từ các phân tích trên, đề tài ``Ứng dụng học tăng cường tron
 \clearpage
 \section{Tổng quan tài liệu}
 
-Bài toán định tuyến phương tiện (VRP) được giới thiệu lần đầu bởi Dantzig và Ramser (1959). Kể từ đó, hàng loạt biến thể của bài toán đã được phát triển nhằm đáp ứng các yêu cầu thực tiễn, trong đó VRPTW là biến thể phổ biến nhất do tính thực tế cao của các ràng buộc về mặt thời gian (Solomon, 1987).
+Bài toán định tuyến phương tiện (VRP) được giới thiệu lần đầu bởi Dantzig và Ramser (1959). Kể từ đó, hàng loạt biến thể của bài toán đã được phát triển nhằm đáp ứng các yêu cầu thực tiễn, trong đó VRPTW là biến thể phổ biến nhất do tính thực tế cao của các ràng buộc về mặt thời gian (Solomon, 1987) \cite{solomon1987}.
 
 Để giải quyết VRPTW, phương pháp tiếp cận trọng lịch sử được chia làm ba nhóm chính:
 
 \textbf{Phương pháp chính xác (Exact Methods):} Sử dụng các thuật toán như Quy hoạch động (Dynamic Programming), Nhánh và Cắt (Branch and Cut), hay Nhánh-Giá và Cắt (Branch-and-Price-and-Cut). Mặc dù các phương pháp này đảm bảo tìm ra lời giải tối ưu toàn cục, chúng gặp hạn chế lớn về khả năng mở rộng (scalability). Khi số lượng khách hàng vượt quá 100, thời gian tính toán tăng lên đến hàng giờ hoặc hàng ngày, khiến chúng không thể áp dụng cho các bài toán điều phối thời gian thực trong doanh nghiệp.
 
-\textbf{Phương pháp Heuristic và Meta-heuristic:} Để đánh đổi độ tối ưu tuyệt đối lấy thời gian tính toán nhanh, các thuật toán tìm kiếm metaheuristic như Giải thuật Di truyền (Genetic Algorithm), Tối ưu hóa bầy đàn (Particle Swarm Optimization), hay Tìm kiếm Tabu (Tabu Search) đã được áp dụng rộng rãi. Đặc biệt, thuật toán Tìm kiếm lân cận lớn thích ứng (ALNS), được đề xuất bởi Ropke và Pisinger (2006), đã trở thành chuẩn mực công nghiệp để giải quyết các bài toán định tuyến quy mô lớn. ALNS hoạt động bằng cách liên tục phá hủy một phần lời giải hiện tại và tái thiết nó bằng các toán tử sửa chữa khác nhau dưới sự điều phối của thuật toán roulette wheel hoặc Thompson Bandit. Tuy nhiên, hạn chế lớn nhất của ALNS là cơ chế cập nhật trọng số toán tử có độ trễ lớn và chỉ dựa trên thống kê tần suất cục bộ, không thể nhận biết được sự thay đổi phức tạp của không gian trạng thái tìm kiếm ở các giai đoạn hội tụ khác nhau. Đồng thời, việc sử dụng tiêu chuẩn Simulated Annealing để chấp nhận lời giải ứng viên phụ thuộc nặng nề vào tham số nhiệt độ ban đầu và hệ số làm nguội cứng nhắc, dễ dẫn đến việc thuật toán bị kẹt trong các cực trị địa phương (local optima) hoặc hội tụ non.
+\textbf{Phương pháp Heuristic và Meta-heuristic:} Để đánh đổi độ tối ưu tuyệt đối lấy thời gian tính toán nhanh, các thuật toán tìm kiếm metaheuristic như Giải thuật Di truyền (Genetic Algorithm), Tối ưu hóa bầy đàn (Particle Swarm Optimization), hay Tìm kiếm Tabu (Tabu Search) đã được áp dụng rộng rãi. Đặc biệt, thuật toán Tìm kiếm lân cận lớn thích ứng (ALNS), được đề xuất bởi Ropke và Pisinger (2006) \cite{ropke2006}, đã trở thành chuẩn mực công nghiệp để giải quyết các bài toán định tuyến quy mô lớn. ALNS hoạt động bằng cách liên tục phá hủy một phần lời giải hiện tại và tái thiết nó bằng các toán tử sửa chữa khác nhau dưới sự điều phối của thuật toán roulette wheel hoặc Thompson Bandit. Tuy nhiên, hạn chế lớn nhất của ALNS là cơ chế cập nhật trọng số toán tử có độ trễ lớn và chỉ dựa trên thống kê tần suất cục bộ, không thể nhận biết được sự thay đổi phức tạp của không gian trạng thái tìm kiếm ở các giai đoạn hội tụ khác nhau. Đồng thời, việc sử dụng tiêu chuẩn Simulated Annealing để chấp nhận lời giải ứng viên phụ thuộc nặng nề vào tham số nhiệt độ ban đầu và hệ số làm nguội cứng nhắc, dễ dẫn đến việc thuật toán bị kẹt trong các cực trị địa phương (local optima) hoặc hội tụ non.
 
-\textbf{Phương pháp Học máy và Học tăng cứu sâu (DRL):} Trong những năm gần đây, xu hướng ứng dụng mạng nơ-ron để học cách giải quyết các bài toán tối ưu hóa tổ hợp phát triển mạnh mẽ. Kool và đồng tác giả (2018) đã đề xuất mô hình Attention Model để giải VRP trực tiếp dưới dạng mô hình end-to-end. Tuy nhiên, các phương pháp end-to-end thuần túy thường gặp khó khăn khi đối mặt với các ràng buộc cứng ngặt nghèo của khung thời gian (Time Windows) và khó tổng quát hóa khi quy mô bài toán thay đổi. Hướng tiếp cận lai (Hybrid) -- kết hợp DRL để đưa ra các quyết định chiến lược cấp cao và meta-heuristic để thực hiện tìm kiếm cấu trúc tuyến đường cấp thấp -- đang là hướng nghiên cứu được quan tâm. Kỹ thuật này giúp tận dụng khả năng học biểu diễn và ra quyết định của mạng thần kinh nhân tạo mà vẫn đảm bảo tính hợp lệ của lời giải thông qua các toán tử heuristic.
+\textbf{Phương pháp Học máy và Học tăng cứu sâu (DRL):} Trong những năm gần đây, xu hướng ứng dụng mạng nơ-ron để học cách giải quyết các bài toán tối ưu hóa tổ hợp phát triển mạnh mẽ. Kool và đồng tác giả (2018) \cite{kool2018} đã đề xuất mô hình Attention Model để giải VRP trực tiếp dưới dạng mô hình end-to-end. Tuy nhiên, các phương pháp end-to-end thuần túy thường gặp khó khăn khi đối mặt với các ràng buộc cứng ngặt nghèo của khung thời gian (Time Windows) và khó tổng quát hóa khi quy mô bài toán thay đổi. Hướng tiếp cận lai (Hybrid) -- kết hợp DRL để đưa ra các quyết định chiến lược cấp cao và meta-heuristic để thực hiện tìm kiếm cấu trúc tuyến đường cấp thấp -- đang là hướng nghiên cứu được quan tâm. Kỹ thuật này giúp tận dụng khả năng học biểu diễn và ra quyết định của mạng thần kinh nhân tạo mà vẫn đảm bảo tính hợp lệ của lời giải thông qua các toán tử heuristic.
 
 Trong nghiên cứu này, nhóm tác giả đề xuất mô hình lai \textbf{DDQN-ALNS} nhằm cải thiện các hạn chế trên thông qua các thành phần sau:
 \begin{itemize}[leftmargin=1.2cm]
@@ -213,7 +214,7 @@ Các mục tiêu cụ thể của nghiên cứu bao gồm:
 
 \subsection{Đặc tả toán học bài toán VRPTW}
 
-Bài toán được phát biểu trên đồ thị định hướng đầy đủ $G = (V, A)$. Đội xe đồng nhất gồm $K$ phương tiện, mỗi phương tiện có sức tải tối đa $Q$. Các ký hiệu và biến quyết định được mô tả như sau:
+Bài toán được phát biểu trên đồ thị định hướng đầy đủ $G = (V, A)$ (minh họa tại Hình~\ref{fig:vrptw_clean}). Đội xe đồng nhất gồm $K$ phương tiện, mỗi phương tiện có sức tải tối đa $Q$. Các ký hiệu và biến quyết định được mô tả như sau:
 
 \vspace{0.10cm}
 \begin{figure}[H]
@@ -335,8 +336,132 @@ Kiến trúc đề xuất tích hợp một quy trình lặp tuần hoàn kết 
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.62\textwidth,height=0.40\textheight,keepaspectratio]{hybrid-ddqn-alns-model-full.png}
-\caption{Kiến trúc Hierarchical MDP temporally-coupled của hệ thống Hybrid DDQN-ALNS, kết hợp Plateau Controller, Operator Controller, ALNS Core Engine, LAC và Welford Normalizer trong một vòng lặp học--tối ưu. Ký hiệu luồng: Mũi tên liền nét (luồng dữ liệu tiến), Mũi tên đứt nét màu xanh (vòng phản hồi phần thưởng), Mũi tên màu hồng/magenta (vector chế độ điều phối mục tiêu).}
+\definecolor{C_slate}{RGB}{71,85,105}     \definecolor{C_blue}{RGB}{59,130,246}
+\definecolor{C_indigo}{RGB}{99,102,241}   \definecolor{C_amber}{RGB}{245,158,11}
+\definecolor{C_rose}{RGB}{244,63,94}      \definecolor{C_sky}{RGB}{14,165,233}
+\definecolor{C_bglight}{RGB}{248,250,252} \definecolor{C_bgmid}{RGB}{241,245,249}
+\definecolor{C_emerald}{RGB}{16,185,129}  \definecolor{negcol}{RGB}{16,185,129}
+\definecolor{C_violet}{RGB}{139,92,246}   \definecolor{C_fuchsia}{RGB}{200,50,220}
+\definecolor{headcol}{RGB}{30,41,59}
+\resizebox{0.88\textwidth}{!}{%
+\begin{tikzpicture}[
+    font=\sffamily\footnotesize, >=Stealth,
+    node distance=1.0cm and 1.8cm,
+    block/.style={rectangle, rounded corners=4pt, semithick, align=center,
+                 minimum width=5.0cm, minimum height=1.3cm, text width=4.8cm, inner sep=3pt,
+                 drop shadow={opacity=0.12, shadow xshift=0.05cm, shadow yshift=-0.05cm}},
+    brain/.style={block, draw=C_rose!85, fill=C_rose!4},
+    muscle/.style={block, draw=C_indigo!80, fill=C_indigo!6},
+    learning/.style={block, draw=C_emerald!80, fill=C_emerald!6},
+    memory/.style={block, draw=C_amber!85, fill=C_amber!5},
+    flow/.style={->, line width=0.9pt, draw=C_slate!80},
+    back/.style={->, dashed, line width=0.65pt, draw=C_sky!60},
+    goal/.style={->, line width=1.4pt, draw=C_fuchsia!85},
+    lbl/.style={font=\sffamily\scriptsize, fill=white, inner sep=1pt, text=C_slate!90, align=center},
+    badge_rose/.style={circle, fill=C_rose!90, text=white, inner sep=1.0pt, font=\sffamily\tiny\bfseries, minimum size=10pt},
+    badge_indigo/.style={circle, fill=C_indigo!90, text=white, inner sep=1.0pt, font=\sffamily\tiny\bfseries, minimum size=10pt},
+    badge_amber/.style={circle, fill=C_amber!90, text=white, inner sep=1.0pt, font=\sffamily\tiny\bfseries, minimum size=10pt},
+    badge_emerald/.style={circle, fill=C_emerald!90, text=white, inner sep=1.0pt, font=\sffamily\tiny\bfseries, minimum size=10pt}
+]
+
+% Column 1: Brain (DRL Decision)
+\node[brain] (SM) at (0, 3.3) {%
+  \textbf{Bộ giám sát trì trệ}\\
+  {\color{C_rose!70}\scriptsize\textit{in:}} success flag, $NV_t$, $NV^*$\\
+  {\color{C_slate!70}\scriptsize\textit{out:}} bộ đếm \texttt{no\_imp}, trigger};
+
+\node[brain] (PC) at (0, 0.8) {%
+  \textbf{Plateau Controller (Macro DDQN)}\\
+  {\color{C_rose!70}\scriptsize\textit{in:}} trạng thái $s_t^c \in \mathbb{R}^{12}$\\
+  {\color{C_slate!70}\scriptsize\textit{out:}} chế độ tìm kiếm $m \in \{0..5\}$};
+
+\node[brain] (OC) at (0, -1.8) {%
+  \textbf{Operator Controller (Micro DDQN)}\\
+  {\color{C_rose!70}\scriptsize\textit{in:}} trạng thái $s_t^o \in \mathbb{R}^{15}$, mục tiêu $g_m$, $m$\\
+  {\color{C_slate!70}\scriptsize\textit{out:}} cặp toán tử $a_t = (d, r)$};
+
+% Column 2: Muscle (ALNS Search & MIP Recombination)
+\node[muscle] (AE) at (6.2, 2.0) {%
+  \textbf{Bộ máy ALNS Core Engine}\\
+  {\color{C_indigo!70}\scriptsize\textit{in:}} cặp $(d, r)$, lời giải $x_t$\\
+  {\color{C_slate!70}\scriptsize\textit{out:}} lời giải ứng viên $x'$, tập $\mathcal{R}$};
+
+\node[muscle] (LA) at (6.2, -0.5) {%
+  \textbf{Bộ lọc chấp nhận (LAC MLP)}\\
+  {\color{C_indigo!70}\scriptsize\textit{in:}} đặc trưng $[\Delta c, T_t, \dots] \in \mathbb{R}^9$\\
+  {\color{C_slate!70}\scriptsize\textit{out:}} bit chấp nhận $b_t$, nhãn $y_t$};
+
+\node[muscle] (EV) at (6.2, -3.0) {%
+  \textbf{Tái tổ hợp tuyến đường MIP}\\
+  {\color{C_indigo!70}\scriptsize\textit{in:}} chấp nhận $x'$, tập cột tuyến $\Omega$\\
+  {\color{C_slate!70}\scriptsize\textit{out:}} kỷ lục $x^*$, phần thưởng thô $r_t$};
+
+% Column 3: Memory & Learning
+\node[memory] (RP) at (12.4, 2.0) {%
+  \textbf{Kho lưu trữ tuyến (Route Pool)}\\
+  {\color{C_amber!80}\scriptsize\textit{in:}} tuyến từ $x'$\\
+  {\color{C_slate!70}\scriptsize\textit{out:}} tập cột $\Omega$ cho Set Partitioning};
+
+\node[memory] (PER) at (12.4, -0.5) {%
+  \textbf{Bộ đệm trải nghiệm (PER)}\\
+  {\color{C_amber!80}\scriptsize\textit{in:}} chuyển đổi $(s, a, z, s', d)$\\
+  {\color{C_slate!70}\scriptsize\textit{out:}} batch huấn luyện ưu tiên};
+
+\node[learning] (WN) at (12.4, -3.0) {%
+  \textbf{Chuẩn hóa phần thưởng Welford}\\
+  {\color{C_emerald!80}\scriptsize\textit{in:}} phần thưởng thô $r_t \in \mathbb{R}$\\
+  {\color{C_slate!70}\scriptsize\textit{out:}} phần thưởng chuẩn hóa $z_t \in [-8, +8]$};
+
+% Group labels (subgraph boxes in TikZ using fit or background)
+\begin{scope}[on background layer]
+  \node[draw=C_rose!40, dashed, fill=C_rose!2, line width=0.8pt, rounded corners=5pt, fit=(SM) (PC) (OC), inner sep=8pt, label={[font=\sffamily\bfseries\scriptsize, text=C_rose!90]above:NÃO BỘ QUYẾT ĐỊNH (DRL)}] {};
+  \node[draw=C_indigo!35, dashed, fill=C_indigo!2, line width=0.8pt, rounded corners=5pt, fit=(AE) (LA) (EV), inner sep=8pt, label={[font=\sffamily\bfseries\scriptsize, text=C_indigo!90]above:CƠ BẮP TÌM KIẾM (ALNS + MIP)}] {};
+  \node[draw=C_emerald!35, dashed, fill=C_emerald!2, line width=0.8pt, rounded corners=5pt, fit=(RP) (PER) (WN), inner sep=8pt, label={[font=\sffamily\bfseries\scriptsize, text=C_emerald!90]above:HỌC HỎI \& PHẢN HỒI}] {};
+\end{scope}
+
+% Flow arrows with color-coded sequence badges (Vietnamese labels)
+\draw[flow] (SM) -- node[badge_rose, left=2pt] {1} node[lbl, right=2pt] {\texttt{no\_imp} $\ge 60$} (PC);
+\draw[flow] (PC) -- node[badge_rose, left=2pt] {2} node[lbl, right=2pt] {chế độ $m$} (OC);
+\draw[flow] (OC.east) -- (3.3, -1.8) -- node[badge_rose, pos=0.3, left=2pt] {4} node[lbl, pos=0.6, left=2pt] {cặp $(d, r)$} (3.3, 2.0) -- (AE.west);
+
+\draw[flow] (AE) -- node[badge_indigo, left=2pt] {5} node[lbl, right=2pt] {ứng viên $x'$} (LA);
+\draw[flow] (LA) -- node[badge_indigo, left=2pt] {7} node[lbl, right=2pt] {chấp nhận $x'$} (EV);
+\draw[flow] (EV) -- node[badge_amber, pos=0.3, below=2pt] {9} node[lbl, pos=0.7, below=2pt] {phần thưởng $r_t$} (WN);
+
+\draw[flow] (AE.east) -- node[badge_indigo, pos=0.3, above=2pt] {6} node[lbl, pos=0.7, above=2pt] {tuyến hợp lệ} (RP.west);
+\draw[flow] (RP.west) -- (9.3, 2.0) -- node[badge_amber, pos=0.3, right=2pt] {8} node[lbl, pos=0.65, right=2pt] {cột tuyến $\Omega$} (9.3, -3.0) -- (EV.east);
+
+\draw[flow] (WN) -- node[badge_emerald, left=2pt] {10} node[lbl, right=2pt] {thưởng $z_t$} (PER);
+
+% Feedback paths (rerouted with color-coded sequence badges)
+\draw[back] (PER.west) -- (9.0, -0.5) -- (9.0, -1.8) -- node[badge_emerald, pos=0.3, above=2pt] {11} node[lbl, pos=0.7, above=2pt] {batch huấn luyện} (OC.east);
+
+\draw[back] (WN.south) -- (12.4, -4.15) -- node[badge_emerald, pos=0.25, above=2pt] {12} node[lbl, pos=0.5, above=2pt] {thưởng $z_t$} (-2.5, -4.15) -- (OC.west);
+\draw[back] (WN.south) -- (12.4, -4.5) -- node[badge_emerald, pos=0.25, above=2pt] {13} node[lbl, pos=0.5, above=2pt] {sai số TD $\delta$} (-3.1, -4.5) -- (-3.1, 0.8) -- (PC.west);
+
+% Goal conditioning with color-coded sequence badge
+\draw[goal] (PC.south east) -- node[badge_rose, pos=0.35, left=2pt] {3} node[lbl, pos=0.75, left=2pt, text=C_fuchsia!90] {mục tiêu $g_m$} (OC.north east);
+
+% ── Chú giải (Embedded legend) ─────────────────────────────────────────────
+\node[draw=C_slate!20, fill=white, rounded corners=3pt, inner sep=5pt,
+      font=\sffamily\tiny] (leg) at (6.2, -5.6) {};
+\draw[flow]  (-0.5, -5.6) -- ++(0.7, 0)
+  node[right, font=\sffamily\tiny, text=C_slate!80] {Luồng tiến};
+\draw[back]  (2.1, -5.6)  -- ++(0.7, 0)
+  node[right, font=\sffamily\tiny, text=C_slate!80] {Phản hồi};
+\draw[goal]  (4.8, -5.6)  -- ++(0.7, 0)
+  node[right, font=\sffamily\tiny, text=C_slate!80] {Tín hiệu mục tiêu};
+\node[badge_rose,   minimum size=8pt, inner sep=0pt, font=\sffamily\tiny\bfseries] at (7.4, -5.6) {\,};
+\node[font=\sffamily\tiny, text=C_slate!80, right=3pt] at (7.4, -5.6) {DRL};
+\node[badge_indigo, minimum size=8pt, inner sep=0pt, font=\sffamily\tiny\bfseries] at (8.6, -5.6) {\,};
+\node[font=\sffamily\tiny, text=C_slate!80, right=3pt] at (8.6, -5.6) {ALNS};
+\node[badge_amber,  minimum size=8pt, inner sep=0pt, font=\sffamily\tiny\bfseries] at (10.0, -5.6) {\,};
+\node[font=\sffamily\tiny, text=C_slate!80, right=3pt] at (10.0, -5.6) {MIP};
+\node[badge_emerald,minimum size=8pt, inner sep=0pt, font=\sffamily\tiny\bfseries] at (11.2, -5.6) {\,};
+\node[font=\sffamily\tiny, text=C_slate!80, right=3pt] at (11.2, -5.6) {Học hỏi};
+\end{tikzpicture}%
+}
+\caption{Kiến trúc Hierarchical MDP temporally-coupled của hệ thống Hybrid DDQN-ALNS, kết hợp các phân vùng Não bộ Quyết định (DRL), Cơ bắp Tìm kiếm (ALNS + MIP Recombination) và Cơ chế Học hỏi \& Phản hồi trong một vòng lặp học--tối ưu đồng bộ.}
 \label{fig:hybrid_ddqn_alns_arch}
 \end{figure}
 
@@ -423,7 +548,7 @@ Vector trạng thái $s \in \mathbb{R}^{12}$ được nhóm thành bốn nhóm �
 
 Như vậy, mỗi đặc trưng đều truy vết được từ dữ liệu VRPTW đầu vào hoặc log chạy thuật toán. Các ngưỡng $1.0$, $1.5$ và $2.0$ chỉ là chặn biên chuẩn hóa, giúp mạng ổn định khi lời giải đầu kỳ dao động mạnh.
 
-Mạng nơ-ron sử dụng kiến trúc Dueling Double DQN với hàm giá trị Q được biểu diễn qua công thức:
+Mạng nơ-ron sử dụng kiến trúc Dueling Double DQN \cite{wang2016} với hàm giá trị Q được biểu diễn qua công thức:
 \begin{equation}
 Q(s, a) = V(s) + \left( A(s, a) - \frac{1}{|\mathcal{A}|} \sum_{a' \in \mathcal{A}} A(s, a') \right)
 \end{equation}
@@ -687,7 +812,7 @@ Phân tích Bảng~\ref{tab:rc1_high_res} mang lại một số kết luận kho
 \subsection{Thực nghiệm tích hợp bản đồ nhiệt GNN Edge Predictor và các nâng cấp cải tiến}
 \label{subsec:gnn_empirical}
 
-Để đánh giá tính hiệu quả của các nâng cấp thuộc Step 4, bao gồm bản đồ nhiệt hướng dẫn GNN, lịch suy giảm ngưỡng lọc cục bộ động (Dynamic Pruning Schedule), toán tử phá hủy Shaw hướng GNN (\texttt{op\_neural\_shaw}) và tái tổ hợp MILP có trọng số GNN, chúng tôi tiến hành chạy thực nghiệm đối chứng trên một số thực thể Solomon tiêu biểu với cấu hình 150 vòng lặp (1 lượt chạy).
+Để đánh giá tính hiệu quả của các nâng cấp thuộc Step 4, bao gồm bản đồ nhiệt hướng dẫn GNN, lịch suy giảm ngưỡng lọc cục bộ động (Dynamic Pruning Schedule), toán tử phá hủy Shaw hướng GNN (\texttt{op\_neural\_shaw}) và tái tổ hợp MILP có trọng số GNN, chúng tôi tiến hành chạy thực nghiệm đối chứng trên một số thực thể Solomon tiêu biểu với cấu hình 150 vòng lặp (1 lượt chạy), kết quả được tổng hợp tại Bảng~\ref{tab:gnn_comparison_vn}.
 
 \begin{table}[!h]
 \centering

@@ -12,13 +12,17 @@ from .heuristics import _best_insert_position, _insert_customer
 from .penalty import PenaltyManager
 
 
+def _remove_nodes(plan: Plan, rs: set[int]) -> Plan:
+    routes = [[n for n in r if n not in rs] for r in plan.routes]
+    plan.routes = [r for r in routes if r]
+    return _invalidate(plan)
+
+
 def op_random(plan: Plan, size: int) -> tuple[Plan, list[int]]:
     nodes = [n for r in plan.routes for n in r]
     removed = random.sample(nodes, min(size, len(nodes)))
     rs = set(removed)
-    plan.routes = [[n for n in r if n not in rs] for r in plan.routes]
-    plan.routes = [r for r in plan.routes if r]
-    return _invalidate(plan), removed
+    return _remove_nodes(plan, rs), removed
 
 
 def op_worst(plan: Plan, size: int) -> tuple[Plan, list[int]]:
@@ -38,9 +42,7 @@ def op_worst(plan: Plan, size: int) -> tuple[Plan, list[int]]:
         _, node = gains.pop(idx)
         removed.append(node)
         rs.add(node)
-    plan.routes = [[n for n in r if n not in rs] for r in plan.routes]
-    plan.routes = [r for r in plan.routes if r]
-    return _invalidate(plan), removed
+    return _remove_nodes(plan, rs), removed
 
 
 def op_shaw(plan: Plan, size: int) -> tuple[Plan, list[int]]:
@@ -51,32 +53,13 @@ def op_shaw(plan: Plan, size: int) -> tuple[Plan, list[int]]:
     seed_node = random.choice(nodes)
     removed = [seed_node]
     rs = {seed_node}
-    max_dist = inst.max_dist + 1e-9
-    max_tw = max(inst.due_times - inst.ready_times) + 1e-9
+    relatedness = inst.relatedness
     while len(removed) < size:
         ref_node = random.choice(removed)
         neighbors = inst.neighbors_k[ref_node]
-        candidates = [
-            (
-                n,
-                0.5 * inst.dist[ref_node, n] / max_dist
-                + 0.4 * abs(inst.ready_times[ref_node] - inst.ready_times[n]) / max_tw
-                + 0.1 * abs(inst.demands[ref_node] - inst.demands[n]) / inst.capacity,
-            )
-            for n in neighbors
-            if n not in rs
-        ]
+        candidates = [(n, relatedness[ref_node, n]) for n in neighbors if n not in rs]
         if not candidates:
-            candidates = [
-                (
-                    n,
-                    0.5 * inst.dist[ref_node, n] / max_dist
-                    + 0.4 * abs(inst.ready_times[ref_node] - inst.ready_times[n]) / max_tw
-                    + 0.1 * abs(inst.demands[ref_node] - inst.demands[n]) / inst.capacity,
-                )
-                for n in nodes
-                if n not in rs
-            ]
+            candidates = [(n, relatedness[ref_node, n]) for n in nodes if n not in rs]
         if not candidates:
             break
         candidates.sort(key=lambda x: x[1])
@@ -85,9 +68,7 @@ def op_shaw(plan: Plan, size: int) -> tuple[Plan, list[int]]:
         chosen = candidates[idx][0]
         removed.append(chosen)
         rs.add(chosen)
-    plan.routes = [[n for n in r if n not in rs] for r in plan.routes]
-    plan.routes = [r for r in plan.routes if r]
-    return _invalidate(plan), removed
+    return _remove_nodes(plan, rs), removed
 
 
 def op_route_portion_removal(plan: Plan, size: int) -> tuple[Plan, list[int]]:
@@ -157,9 +138,7 @@ def op_tw_urgent(plan: Plan, size: int) -> tuple[Plan, list[int]]:
     candidates = sorted(nodes, key=lambda n: (inst.due_times[n] - inst.ready_times[n]) * (1.0 + random.random() * 0.3))
     removed = candidates[:size]
     rs = set(removed)
-    plan.routes = [[n for n in r if n not in rs] for r in plan.routes]
-    plan.routes = [r for r in plan.routes if r]
-    return _invalidate(plan), removed
+    return _remove_nodes(plan, rs), removed
 
 
 def op_route_eliminate(plan: Plan, size: int) -> tuple[Plan, list[int]]:
@@ -221,8 +200,7 @@ def op_cross_route_shaw(plan: Plan, size: int) -> tuple[Plan, list[int]]:
     seed_node = random.choice(nodes)
     removed = [seed_node]
     rs = {seed_node}
-    max_dist = inst.max_dist + 1e-9
-    max_tw = max(inst.due_times - inst.ready_times) + 1e-9
+    relatedness = inst.relatedness
     while len(removed) < size:
         ref_node = random.choice(removed)
         ref_route = node_to_route.get(ref_node, -1)
@@ -231,12 +209,7 @@ def op_cross_route_shaw(plan: Plan, size: int) -> tuple[Plan, list[int]]:
             if n in rs:
                 continue
             cross_route_bonus = -0.2 if node_to_route.get(n, -2) != ref_route else 0.2
-            rel = (
-                0.5 * inst.dist[ref_node, n] / max_dist
-                + 0.4 * abs(inst.ready_times[ref_node] - inst.ready_times[n]) / max_tw
-                + 0.1 * abs(inst.demands[ref_node] - inst.demands[n]) / inst.capacity
-                + cross_route_bonus
-            )
+            rel = relatedness[ref_node, n] + cross_route_bonus
             candidates.append((n, rel))
         if not candidates:
             break
@@ -246,9 +219,7 @@ def op_cross_route_shaw(plan: Plan, size: int) -> tuple[Plan, list[int]]:
         nxt = candidates[idx][0]
         removed.append(nxt)
         rs.add(nxt)
-    plan.routes = [[n for n in r if n not in rs] for r in plan.routes]
-    plan.routes = [r for r in plan.routes if r]
-    return _invalidate(plan), removed
+    return _remove_nodes(plan, rs), removed
 
 
 def _remove_neighborhood_additional(plan: Plan, removed: list[int], size: int) -> list[int]:
@@ -436,9 +407,7 @@ def op_neural_worst(plan: Plan, size: int, heatmap: np.ndarray | None = None) ->
         if node not in rs:
             removed.append(node)
             rs.add(node)
-    plan.routes = [[n for n in r if n not in rs] for r in plan.routes]
-    plan.routes = [r for r in plan.routes if r]
-    return _invalidate(plan), removed
+    return _remove_nodes(plan, rs), removed
 
 
 def op_neural_shaw(plan: Plan, size: int, heatmap: np.ndarray | None = None) -> tuple[Plan, list[int]]:
@@ -471,8 +440,6 @@ def op_neural_shaw(plan: Plan, size: int, heatmap: np.ndarray | None = None) -> 
 
     removed = [seed_node]
     rs = {seed_node}
-    max_dist = inst.max_dist + 1e-9
-    max_tw = max(inst.due_times - inst.ready_times) + 1e-9
 
     while len(removed) < size:
         ref_node = random.choice(removed)
@@ -480,22 +447,24 @@ def op_neural_shaw(plan: Plan, size: int, heatmap: np.ndarray | None = None) -> 
         candidates = []
         for n in neighbors:
             if n not in rs:
-                spatial_rel = inst.dist[ref_node, n] / max_dist
-                temporal_rel = abs(inst.ready_times[ref_node] - inst.ready_times[n]) / max_tw
-                demand_rel = abs(inst.demands[ref_node] - inst.demands[n]) / inst.capacity
                 avg_heatmap_prob = sum(0.5 * (heatmap[r, n] + heatmap[n, r]) for r in removed) / len(removed)
-                score = 0.35 * spatial_rel + 0.25 * temporal_rel + 0.30 * (1.0 - avg_heatmap_prob) + 0.10 * demand_rel
+                score = (
+                    0.35 * inst.spatial_rel[ref_node, n]
+                    + 0.25 * inst.temporal_rel[ref_node, n]
+                    + 0.30 * (1.0 - avg_heatmap_prob)
+                    + 0.10 * inst.demand_rel[ref_node, n]
+                )
                 candidates.append((n, score))
 
         if not candidates:
             for n in nodes:
                 if n not in rs:
-                    spatial_rel = inst.dist[ref_node, n] / max_dist
-                    temporal_rel = abs(inst.ready_times[ref_node] - inst.ready_times[n]) / max_tw
-                    demand_rel = abs(inst.demands[ref_node] - inst.demands[n]) / inst.capacity
                     avg_heatmap_prob = sum(0.5 * (heatmap[r, n] + heatmap[n, r]) for r in removed) / len(removed)
                     score = (
-                        0.35 * spatial_rel + 0.25 * temporal_rel + 0.30 * (1.0 - avg_heatmap_prob) + 0.10 * demand_rel
+                        0.35 * inst.spatial_rel[ref_node, n]
+                        + 0.25 * inst.temporal_rel[ref_node, n]
+                        + 0.30 * (1.0 - avg_heatmap_prob)
+                        + 0.10 * inst.demand_rel[ref_node, n]
                     )
                     candidates.append((n, score))
 
@@ -509,9 +478,7 @@ def op_neural_shaw(plan: Plan, size: int, heatmap: np.ndarray | None = None) -> 
         removed.append(chosen)
         rs.add(chosen)
 
-    plan.routes = [[n for n in r if n not in rs] for r in plan.routes]
-    plan.routes = [r for r in plan.routes if r]
-    return _invalidate(plan), removed
+    return _remove_nodes(plan, rs), removed
 
 
 DESTROY = [

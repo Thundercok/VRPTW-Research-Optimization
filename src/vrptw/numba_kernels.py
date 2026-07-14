@@ -65,7 +65,7 @@ def _two_opt_best_numba(
             dep_prev = departure[i - 1] if i > 0 else 0.0
             prev_node = u
             feasible = True
-            
+
             # Traverse reversed segment: route_arr[j] down to route_arr[i]
             for k in range(j, i - 1, -1):
                 node = route_arr[k]
@@ -173,7 +173,7 @@ def _or_opt_intra_numba(
 
                     # O(1) cost delta calculation
                     delta = (dist[prev_seg, next_seg] + dist[u_rem, first_seg_node] + dist[last_seg_node, v_rem]) - (orig_edges_cost + dist[u_rem, v_rem])
-                    
+
                     if original_cost + delta >= best_cost - 1e-9:
                         continue
 
@@ -808,55 +808,55 @@ def _cross_tail_pair_numba(
     """
     n1 = len(r1)
     n2 = len(r2)
-    
+
     best_delta = -1e-9
     best_i = -1
     best_j = -1
-    
+
     load1 = 0.0
     for k in range(n1):
         load1 += demands[r1[k]]
     load2 = 0.0
     for k in range(n2):
         load2 += demands[r2[k]]
-        
+
     pref_load1 = np.empty(n1 + 1)
     pref_load1[0] = 0.0
     for k in range(n1):
         pref_load1[k + 1] = pref_load1[k] + demands[r1[k]]
-        
+
     pref_load2 = np.empty(n2 + 1)
     pref_load2[0] = 0.0
     for k in range(n2):
         pref_load2[k + 1] = pref_load2[k] + demands[r2[k]]
-        
+
     max_cand = n1 + n2 + 2
     cand1 = np.empty(max_cand, dtype=np.int64)
     cand2 = np.empty(max_cand, dtype=np.int64)
-    
+
     for i in range(n1 + 1):
         t1_load_part = pref_load1[i]
         t2_load_part = load1 - t1_load_part
         for j in range(n2 + 1):
             if (i == 0 and j == 0) or (i == n1 and j == n2):
                 continue
-                
+
             new_load1 = t1_load_part + (load2 - pref_load2[j])
             new_load2 = pref_load2[j] + t2_load_part
-            
+
             if new_load1 > capacity or new_load2 > capacity:
                 continue
-                
+
             u = r1[i - 1] if i > 0 else 0
             u_prime = r1[i] if i < n1 else 0
             v = r2[j - 1] if j > 0 else 0
             v_prime = r2[j] if j < n2 else 0
-            
+
             delta = dist[u, v_prime] + dist[v, u_prime] - dist[u, u_prime] - dist[v, v_prime]
-            
+
             if delta >= best_delta:
                 continue
-                
+
             cn1 = 0
             for k in range(i):
                 cand1[cn1] = r1[k]
@@ -864,7 +864,7 @@ def _cross_tail_pair_numba(
             for k in range(j, n2):
                 cand1[cn1] = r2[k]
                 cn1 += 1
-                
+
             cn2 = 0
             for k in range(j):
                 cand2[cn2] = r2[k]
@@ -872,10 +872,10 @@ def _cross_tail_pair_numba(
             for k in range(i, n1):
                 cand2[cn2] = r1[k]
                 cn2 += 1
-                
+
             c1_slice = cand1[:cn1]
             c2_slice = cand2[:cn2]
-            
+
             feasible = True
             if cn1 > 0:
                 if not _route_ok(c1_slice, demands, capacity, ready, due, service, dist):
@@ -883,14 +883,14 @@ def _cross_tail_pair_numba(
             if feasible and cn2 > 0:
                 if not _route_ok(c2_slice, demands, capacity, ready, due, service, dist):
                     feasible = False
-                    
+
             if not feasible:
                 continue
-                
+
             best_delta = delta
             best_i = i
             best_j = j
-            
+
     return best_delta, best_i, best_j
 
 
@@ -913,59 +913,59 @@ def _cross_tail_pair_pruned_numba(
     """
     n1 = len(r1)
     n2 = len(r2)
-    
+
     best_delta = -1e-9
     best_i = -1
     best_j = -1
-    
+
     load1 = 0.0
     for k in range(n1):
         load1 += demands[r1[k]]
     load2 = 0.0
     for k in range(n2):
         load2 += demands[r2[k]]
-        
+
     pref_load1 = np.empty(n1 + 1)
     pref_load1[0] = 0.0
     for k in range(n1):
         pref_load1[k + 1] = pref_load1[k] + demands[r1[k]]
-        
+
     pref_load2 = np.empty(n2 + 1)
     pref_load2[0] = 0.0
     for k in range(n2):
         pref_load2[k + 1] = pref_load2[k] + demands[r2[k]]
-        
+
     max_cand = n1 + n2 + 2
     cand1 = np.empty(max_cand, dtype=np.int64)
     cand2 = np.empty(max_cand, dtype=np.int64)
-    
+
     for i in range(n1 + 1):
         t1_load_part = pref_load1[i]
         t2_load_part = load1 - t1_load_part
         for j in range(n2 + 1):
             if (i == 0 and j == 0) or (i == n1 and j == n2):
                 continue
-                
+
             new_load1 = t1_load_part + (load2 - pref_load2[j])
             new_load2 = pref_load2[j] + t2_load_part
-            
+
             if new_load1 > capacity or new_load2 > capacity:
                 continue
-                
+
             u = r1[i - 1] if i > 0 else 0
             u_prime = r1[i] if i < n1 else 0
             v = r2[j - 1] if j > 0 else 0
             v_prime = r2[j] if j < n2 else 0
-            
+
             # GNN boundary check: check probability of the two new edges
             if heatmap[u, v_prime] < pruning_threshold or heatmap[v, u_prime] < pruning_threshold:
                 continue
-                
+
             delta = dist[u, v_prime] + dist[v, u_prime] - dist[u, u_prime] - dist[v, v_prime]
-            
+
             if delta >= best_delta:
                 continue
-                
+
             cn1 = 0
             for k in range(i):
                 cand1[cn1] = r1[k]
@@ -973,7 +973,7 @@ def _cross_tail_pair_pruned_numba(
             for k in range(j, n2):
                 cand1[cn1] = r2[k]
                 cn1 += 1
-                
+
             cn2 = 0
             for k in range(j):
                 cand2[cn2] = r2[k]
@@ -981,10 +981,10 @@ def _cross_tail_pair_pruned_numba(
             for k in range(i, n1):
                 cand2[cn2] = r1[k]
                 cn2 += 1
-                
+
             c1_slice = cand1[:cn1]
             c2_slice = cand2[:cn2]
-            
+
             feasible = True
             if cn1 > 0:
                 if not _route_ok(c1_slice, demands, capacity, ready, due, service, dist):
@@ -992,14 +992,14 @@ def _cross_tail_pair_pruned_numba(
             if feasible and cn2 > 0:
                 if not _route_ok(c2_slice, demands, capacity, ready, due, service, dist):
                     feasible = False
-                    
+
             if not feasible:
                 continue
-                
+
             best_delta = delta
             best_i = i
             best_j = j
-            
+
     return best_delta, best_i, best_j
 
 
@@ -1029,25 +1029,25 @@ def _string_relocate_pair_numba(
     """
     n1 = len(r1)
     n2 = len(r2)
-    
+
     best_delta = -1e-9
     best_direction = -1
     best_p1 = -1
     best_length = -1
     best_p2 = -1
     best_rev = 0
-    
+
     load1 = 0.0
     for k in range(n1):
         load1 += demands[r1[k]]
     load2 = 0.0
     for k in range(n2):
         load2 += demands[r2[k]]
-        
+
     max_cand = n1 + n2 + 3
     cand1 = np.empty(max_cand, dtype=np.int64)
     cand2 = np.empty(max_cand, dtype=np.int64)
-    
+
     # 1. Direction: r1 -> r2
     for L in (2, 3):
         if n1 < L:
@@ -1056,10 +1056,10 @@ def _string_relocate_pair_numba(
             seg_load = 0.0
             for k in range(p1, p1 + L):
                 seg_load += demands[r1[k]]
-                
+
             if load2 + seg_load > capacity:
                 continue
-                
+
             # Build cand1 = r1 without r1[p1:p1+L]
             cn1 = 0
             for k in range(p1):
@@ -1068,7 +1068,7 @@ def _string_relocate_pair_numba(
             for k in range(p1 + L, n1):
                 cand1[cn1] = r1[k]
                 cn1 += 1
-                
+
             # Loop over insertion positions in r2
             for p2 in range(n2 + 1):
                 for rev in (0, 1):
@@ -1077,7 +1077,7 @@ def _string_relocate_pair_numba(
                     for k in range(p2):
                         cand2[cn2] = r2[k]
                         cn2 += 1
-                        
+
                     if rev == 0:
                         for k in range(L):
                             cand2[cn2] = r1[p1 + k]
@@ -1086,30 +1086,30 @@ def _string_relocate_pair_numba(
                         for k in range(L - 1, -1, -1):
                             cand2[cn2] = r1[p1 + k]
                             cn2 += 1
-                            
+
                     for k in range(p2, n2):
                         cand2[cn2] = r2[k]
                         cn2 += 1
-                        
+
                     c1_slice = cand1[:cn1]
                     c2_slice = cand2[:cn2]
-                    
+
                     feasible1 = True
                     if cn1 > 0:
                         feasible1 = _route_ok(c1_slice, demands, capacity, ready, due, service, dist)
-                    
+
                     feasible2 = True
                     if cn2 > 0:
                         feasible2 = _route_ok(c2_slice, demands, capacity, ready, due, service, dist)
-                        
+
                     if not (feasible1 and feasible2):
                         continue
-                        
+
                     cost1 = _route_cost(c1_slice, dist) if cn1 > 0 else 0.0
                     cost2 = _route_cost(c2_slice, dist) if cn2 > 0 else 0.0
                     new_cost = cost1 + cost2
                     delta = new_cost - old_pair_cost
-                    
+
                     if delta < best_delta:
                         best_delta = delta
                         best_direction = 1
@@ -1117,7 +1117,7 @@ def _string_relocate_pair_numba(
                         best_length = L
                         best_p2 = p2
                         best_rev = rev
-                        
+
     # 2. Direction: r2 -> r1
     for L in (2, 3):
         if n2 < L:
@@ -1126,10 +1126,10 @@ def _string_relocate_pair_numba(
             seg_load = 0.0
             for k in range(p1, p1 + L):
                 seg_load += demands[r2[k]]
-                
+
             if load1 + seg_load > capacity:
                 continue
-                
+
             # Build cand2 = r2 without r2[p1:p1+L]
             cn2 = 0
             for k in range(p1):
@@ -1138,7 +1138,7 @@ def _string_relocate_pair_numba(
             for k in range(p1 + L, n2):
                 cand2[cn2] = r2[k]
                 cn2 += 1
-                
+
             # Loop over insertion positions in r1
             for p2 in range(n1 + 1):
                 for rev in (0, 1):
@@ -1147,7 +1147,7 @@ def _string_relocate_pair_numba(
                     for k in range(p2):
                         cand1[cn1] = r1[k]
                         cn1 += 1
-                        
+
                     if rev == 0:
                         for k in range(L):
                             cand1[cn1] = r2[p1 + k]
@@ -1156,30 +1156,30 @@ def _string_relocate_pair_numba(
                         for k in range(L - 1, -1, -1):
                             cand1[cn1] = r2[p1 + k]
                             cn1 += 1
-                            
+
                     for k in range(p2, n1):
                         cand1[cn1] = r1[k]
                         cn1 += 1
-                        
+
                     c1_slice = cand1[:cn1]
                     c2_slice = cand2[:cn2]
-                    
+
                     feasible1 = True
                     if cn1 > 0:
                         feasible1 = _route_ok(c1_slice, demands, capacity, ready, due, service, dist)
-                    
+
                     feasible2 = True
                     if cn2 > 0:
                         feasible2 = _route_ok(c2_slice, demands, capacity, ready, due, service, dist)
-                        
+
                     if not (feasible1 and feasible2):
                         continue
-                        
+
                     cost1 = _route_cost(c1_slice, dist) if cn1 > 0 else 0.0
                     cost2 = _route_cost(c2_slice, dist) if cn2 > 0 else 0.0
                     new_cost = cost1 + cost2
                     delta = new_cost - old_pair_cost
-                    
+
                     if delta < best_delta:
                         best_delta = delta
                         best_direction = 2
@@ -1187,7 +1187,7 @@ def _string_relocate_pair_numba(
                         best_length = L
                         best_p2 = p2
                         best_rev = rev
-                        
+
     return best_delta, best_direction, best_p1, best_length, best_p2, best_rev
 
 
@@ -1210,25 +1210,25 @@ def _string_relocate_pair_pruned_numba(
     """
     n1 = len(r1)
     n2 = len(r2)
-    
+
     best_delta = -1e-9
     best_direction = -1
     best_p1 = -1
     best_length = -1
     best_p2 = -1
     best_rev = 0
-    
+
     load1 = 0.0
     for k in range(n1):
         load1 += demands[r1[k]]
     load2 = 0.0
     for k in range(n2):
         load2 += demands[r2[k]]
-        
+
     max_cand = n1 + n2 + 3
     cand1 = np.empty(max_cand, dtype=np.int64)
     cand2 = np.empty(max_cand, dtype=np.int64)
-    
+
     # 1. Direction: r1 -> r2
     for L in (2, 3):
         if n1 < L:
@@ -1236,18 +1236,18 @@ def _string_relocate_pair_pruned_numba(
         for p1 in range(n1 - L + 1):
             prev1 = r1[p1 - 1] if p1 > 0 else 0
             nxt1 = r1[p1 + L] if p1 + L < n1 else 0
-            
+
             # GNN boundary check: check edge created when segment is removed from r1
             if heatmap[prev1, nxt1] < pruning_threshold:
                 continue
-                
+
             seg_load = 0.0
             for k in range(p1, p1 + L):
                 seg_load += demands[r1[k]]
-                
+
             if load2 + seg_load > capacity:
                 continue
-                
+
             # Build cand1 = r1 without r1[p1:p1+L]
             cn1 = 0
             for k in range(p1):
@@ -1256,12 +1256,12 @@ def _string_relocate_pair_pruned_numba(
             for k in range(p1 + L, n1):
                 cand1[cn1] = r1[k]
                 cn1 += 1
-                
+
             # Loop over insertion positions in r2
             for p2 in range(n2 + 1):
                 prev2 = r2[p2 - 1] if p2 > 0 else 0
                 nxt2 = r2[p2] if p2 < n2 else 0
-                
+
                 for rev in (0, 1):
                     # GNN boundary check: check edges created by segment insertion
                     if rev == 0:
@@ -1270,13 +1270,13 @@ def _string_relocate_pair_pruned_numba(
                     else:
                         if heatmap[prev2, r1[p1 + L - 1]] < pruning_threshold or heatmap[r1[p1], nxt2] < pruning_threshold:
                             continue
-                            
+
                     # Build cand2 = r2 with r1[p1:p1+L] inserted at p2
                     cn2 = 0
                     for k in range(p2):
                         cand2[cn2] = r2[k]
                         cn2 += 1
-                        
+
                     if rev == 0:
                         for k in range(L):
                             cand2[cn2] = r1[p1 + k]
@@ -1285,30 +1285,30 @@ def _string_relocate_pair_pruned_numba(
                         for k in range(L - 1, -1, -1):
                             cand2[cn2] = r1[p1 + k]
                             cn2 += 1
-                            
+
                     for k in range(p2, n2):
                         cand2[cn2] = r2[k]
                         cn2 += 1
-                        
+
                     c1_slice = cand1[:cn1]
                     c2_slice = cand2[:cn2]
-                    
+
                     feasible1 = True
                     if cn1 > 0:
                         feasible1 = _route_ok(c1_slice, demands, capacity, ready, due, service, dist)
-                    
+
                     feasible2 = True
                     if cn2 > 0:
                         feasible2 = _route_ok(c2_slice, demands, capacity, ready, due, service, dist)
-                        
+
                     if not (feasible1 and feasible2):
                         continue
-                        
+
                     cost1 = _route_cost(c1_slice, dist) if cn1 > 0 else 0.0
                     cost2 = _route_cost(c2_slice, dist) if cn2 > 0 else 0.0
                     new_cost = cost1 + cost2
                     delta = new_cost - old_pair_cost
-                    
+
                     if delta < best_delta:
                         best_delta = delta
                         best_direction = 1
@@ -1316,7 +1316,7 @@ def _string_relocate_pair_pruned_numba(
                         best_length = L
                         best_p2 = p2
                         best_rev = rev
-                        
+
     # 2. Direction: r2 -> r1
     for L in (2, 3):
         if n2 < L:
@@ -1324,18 +1324,18 @@ def _string_relocate_pair_pruned_numba(
         for p1 in range(n2 - L + 1):
             prev2 = r2[p1 - 1] if p1 > 0 else 0
             nxt2 = r2[p1 + L] if p1 + L < n2 else 0
-            
+
             # GNN boundary check: check edge created when segment is removed from r2
             if heatmap[prev2, nxt2] < pruning_threshold:
                 continue
-                
+
             seg_load = 0.0
             for k in range(p1, p1 + L):
                 seg_load += demands[r2[k]]
-                
+
             if load1 + seg_load > capacity:
                 continue
-                
+
             # Build cand2 = r2 without r2[p1:p1+L]
             cn2 = 0
             for k in range(p1):
@@ -1344,12 +1344,12 @@ def _string_relocate_pair_pruned_numba(
             for k in range(p1 + L, n2):
                 cand2[cn2] = r2[k]
                 cn2 += 1
-                
+
             # Loop over insertion positions in r1
             for p2 in range(n1 + 1):
                 prev1 = r1[p2 - 1] if p2 > 0 else 0
                 nxt1 = r1[p2] if p2 < n1 else 0
-                
+
                 for rev in (0, 1):
                     # GNN boundary check: check edges created by segment insertion
                     if rev == 0:
@@ -1358,13 +1358,13 @@ def _string_relocate_pair_pruned_numba(
                     else:
                         if heatmap[prev1, r2[p1 + L - 1]] < pruning_threshold or heatmap[r2[p1], nxt1] < pruning_threshold:
                             continue
-                            
+
                     # Build cand1 = r1 with r2[p1:p1+L] inserted at p2
                     cn1 = 0
                     for k in range(p2):
                         cand1[cn1] = r1[k]
                         cn1 += 1
-                        
+
                     if rev == 0:
                         for k in range(L):
                             cand1[cn1] = r2[p1 + k]
@@ -1373,30 +1373,30 @@ def _string_relocate_pair_pruned_numba(
                         for k in range(L - 1, -1, -1):
                             cand1[cn1] = r2[p1 + k]
                             cn1 += 1
-                            
+
                     for k in range(p2, n1):
                         cand1[cn1] = r1[k]
                         cn1 += 1
-                        
+
                     c1_slice = cand1[:cn1]
                     c2_slice = cand2[:cn2]
-                    
+
                     feasible1 = True
                     if cn1 > 0:
                         feasible1 = _route_ok(c1_slice, demands, capacity, ready, due, service, dist)
-                    
+
                     feasible2 = True
                     if cn2 > 0:
                         feasible2 = _route_ok(c2_slice, demands, capacity, ready, due, service, dist)
-                        
+
                     if not (feasible1 and feasible2):
                         continue
-                        
+
                     cost1 = _route_cost(c1_slice, dist) if cn1 > 0 else 0.0
                     cost2 = _route_cost(c2_slice, dist) if cn2 > 0 else 0.0
                     new_cost = cost1 + cost2
                     delta = new_cost - old_pair_cost
-                    
+
                     if delta < best_delta:
                         best_delta = delta
                         best_direction = 2
@@ -1404,6 +1404,6 @@ def _string_relocate_pair_pruned_numba(
                         best_length = L
                         best_p2 = p2
                         best_rev = rev
-                        
+
     return best_delta, best_direction, best_p1, best_length, best_p2, best_rev
 

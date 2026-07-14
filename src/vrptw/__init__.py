@@ -13,6 +13,7 @@ from .benchmark import (
 from .config import (
     ALGO_ALNS_BASE,
     ALGO_ALNS_BASE_PLUS,
+    ALGO_DQN,
     ALGO_HYBRID_DDQN,
     ALGO_HYBRID_DDQN_TRANSFER,
     ALGO_HYBRID_DDQN_TRANSFER_DR,
@@ -20,7 +21,6 @@ from .config import (
     ALGO_HYBRID_FIXED,
     ALGO_HYBRID_RULE,
     ALGO_ORTOOLS,
-    ALGO_DQN,
     BKS,
     MODES,
     Config,

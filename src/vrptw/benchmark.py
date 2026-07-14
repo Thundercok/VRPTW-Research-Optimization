@@ -14,6 +14,7 @@ import torch
 from .config import (
     ALGO_ALNS_BASE,
     ALGO_ALNS_BASE_PLUS,
+    ALGO_DQN,
     ALGO_HYBRID_DDQN,
     ALGO_HYBRID_DDQN_TRANSFER,
     ALGO_HYBRID_DDQN_TRANSFER_DR,
@@ -21,7 +22,6 @@ from .config import (
     ALGO_HYBRID_FIXED,
     ALGO_HYBRID_RULE,
     ALGO_ORTOOLS,
-    ALGO_DQN,
     BKS,
     Config,
     canonical_algo_label,
@@ -32,7 +32,6 @@ from .generators import SyntheticVRPTWGenerator
 from .operators import op_regret_2, op_shaw
 from .rl import EliteArchive, WelfordRewardNormalizer
 from .solvers import ALNSSolver, DQNSolver, HybridDDQNSolver, HybridFixedSolver, HybridRuleSolver, run_ortools
-
 
 try:
     from safetensors.torch import load_file as _st_load
@@ -66,6 +65,19 @@ def _load_weights(stem: str) -> dict | None:
     return None
 
 
+SOLVER_REGISTRY = {
+    ALGO_ALNS_BASE: ALNSSolver,
+    ALGO_ALNS_BASE_PLUS: ALNSSolver,
+    ALGO_HYBRID_FIXED: HybridFixedSolver,
+    ALGO_HYBRID_RULE: HybridRuleSolver,
+    ALGO_HYBRID_DDQN: HybridDDQNSolver,
+    ALGO_HYBRID_DDQN_TRANSFER: HybridDDQNSolver,
+    ALGO_HYBRID_DDQN_TRANSFER_RC2: HybridDDQNSolver,
+    ALGO_HYBRID_DDQN_TRANSFER_DR: HybridDDQNSolver,
+    ALGO_DQN: DQNSolver,
+}
+
+
 def run_instance(
     inst: Inst,
     algo: str,
@@ -73,15 +85,23 @@ def run_instance(
     seed: int,
     transfer_weights: dict | None = None,
     init_plan: Plan | None = None,
+    ddqn_time: float | None = None,
 ) -> tuple[dict, Plan | None]:
+    import copy
+    import inspect
     start = time.time()
     algo_canonical = canonical_algo_label(algo)
     use_gnn = algo_canonical.startswith("GNN-")
     target_algo = algo_canonical[4:] if use_gnn else algo_canonical
 
     plan: Plan | None = None
+    history: list[float] = []
+
     if target_algo == ALGO_ORTOOLS:
-        plan, elapsed = run_ortools(inst, cfg)
+        cfg_matched = copy.copy(cfg)
+        if ddqn_time is not None:
+            cfg_matched.ortools_time_limit = max(30.0, float(ddqn_time) * 0.95)
+        plan, elapsed = run_ortools(inst, cfg_matched)
         if plan is None:
             return {
                 "algo": algo_canonical,
@@ -94,41 +114,25 @@ def run_instance(
                 "hist": [],
             }, None
         history = [plan.cost]
-    elif target_algo in (ALGO_ALNS_BASE, ALGO_ALNS_BASE_PLUS):
-        solver = ALNSSolver(inst, cfg)
-        if use_gnn and getattr(cfg, "gnn_model_path", None) is not None:
+    elif target_algo in SOLVER_REGISTRY:
+        solver_cls = SOLVER_REGISTRY[target_algo]
+        solver = solver_cls(inst, cfg)
+        if use_gnn and getattr(cfg, "gnn_model_path", None) is not None and hasattr(solver, "load_gnn_model"):
             solver.load_gnn_model(cfg.gnn_model_path)
-        plan, history = solver.solve(seed=seed, init=init_plan)
-        plan.algo = algo_canonical
-    elif target_algo == ALGO_HYBRID_FIXED:
-        solver = HybridFixedSolver(inst, cfg)
-        if use_gnn and getattr(cfg, "gnn_model_path", None) is not None:
-            solver.load_gnn_model(cfg.gnn_model_path)
-        plan, history = solver.solve(seed=seed, init=init_plan)
-        plan.algo = algo_canonical
-    elif target_algo == ALGO_HYBRID_RULE:
-        solver = HybridRuleSolver(inst, cfg)
-        if use_gnn and getattr(cfg, "gnn_model_path", None) is not None:
-            solver.load_gnn_model(cfg.gnn_model_path)
-        plan, history = solver.solve(seed=seed, init=init_plan)
-        plan.algo = algo_canonical
-    elif target_algo == ALGO_HYBRID_DDQN:
-        solver = HybridDDQNSolver(inst, cfg)
-        if use_gnn and getattr(cfg, "gnn_model_path", None) is not None:
-            solver.load_gnn_model(cfg.gnn_model_path)
-        plan, history = solver.solve(seed=seed, init=init_plan)
-        plan.algo = algo_canonical
-    elif target_algo in (ALGO_HYBRID_DDQN_TRANSFER, ALGO_HYBRID_DDQN_TRANSFER_RC2, ALGO_HYBRID_DDQN_TRANSFER_DR):
-        solver = HybridDDQNSolver(inst, cfg)
-        if use_gnn and getattr(cfg, "gnn_model_path", None) is not None:
-            solver.load_gnn_model(cfg.gnn_model_path)
-        if transfer_weights is not None:
-            solver.load_weights(transfer_weights)
-        plan, history = solver.solve(seed=seed, frozen=True, init=init_plan)
-        plan.algo = algo_canonical
-    elif target_algo == ALGO_DQN:
-        solver = DQNSolver(inst, cfg)
-        plan, history = solver.solve(seed=seed)
+
+        solve_kwargs = {"seed": seed}
+        sig = inspect.signature(solver.solve)
+        if "init" in sig.parameters and init_plan is not None:
+            solve_kwargs["init"] = init_plan
+
+        is_transfer = target_algo in (ALGO_HYBRID_DDQN_TRANSFER, ALGO_HYBRID_DDQN_TRANSFER_RC2, ALGO_HYBRID_DDQN_TRANSFER_DR)
+        if is_transfer:
+            if transfer_weights is not None and hasattr(solver, "load_weights"):
+                solver.load_weights(transfer_weights)
+            if "frozen" in sig.parameters:
+                solve_kwargs["frozen"] = True
+
+        plan, history = solver.solve(**solve_kwargs)
         plan.algo = algo_canonical
     else:
         raise ValueError(f"Unsupported algorithm: {algo_canonical}")
@@ -170,7 +174,7 @@ def _benchmark_instance_worker(packed: tuple) -> list[dict]:
     except Exception:
         pass
 
-    inst, algorithms, cfg, transfer_weights, plans_folder, completed, wall_start = packed
+    inst, algorithms, cfg, transfer_weights, plans_folder, completed, completed_times, wall_start = packed
     torch.set_num_threads(1)
     print(f"    [PROCESSING] {inst.name}...", flush=True)
     t0 = time.time()
@@ -213,11 +217,22 @@ def _benchmark_instance_worker(packed: tuple) -> list[dict]:
                 else None
             )
 
+            ddqn_time = None
+            if algo_label == ALGO_ORTOOLS:
+                ddqn_time = completed_times.get((inst.name, ALGO_HYBRID_DDQN))
+                if ddqn_time is None:
+                    ddqn_time = completed_times.get((inst.name, f"GNN-{ALGO_HYBRID_DDQN}"))
+                if ddqn_time is None:
+                    for row in inst_rows:
+                        if row["Algorithm"] in (ALGO_HYBRID_DDQN, f"GNN-{ALGO_HYBRID_DDQN}"):
+                            ddqn_time = row["Time_s"]
+                            break
+
             for i in range(n_runs_eff):
                 seed = cfg.seed + i
                 init = best_overall.copy() if best_overall is not None else _diversified_init(i, inst, archive, cfg)
 
-                res, plan = run_instance(inst, algo_label, cfg, seed, weights, init)
+                res, plan = run_instance(inst, algo_label, cfg, seed, weights, init, ddqn_time=ddqn_time)
                 elapsed_h = (time.time() - wall_start) / 3600
                 if res["nv"] is not None:
                     print(
@@ -381,12 +396,16 @@ def run_benchmark(
 
     rows: list[dict] = []
     completed: set = set()
+    completed_times: dict = {}
     if not no_checkpoint and os.path.exists(ckpt_path):
         try:
             ckpt_df = pd.read_csv(ckpt_path)
             rows = ckpt_df.to_dict("records")
             for row in rows:
-                completed.add((row["Instance"], canonical_algo_label(str(row["Algorithm"]))))
+                key = (row["Instance"], canonical_algo_label(str(row["Algorithm"])))
+                completed.add(key)
+                if "Time_s" in row and not pd.isna(row["Time_s"]):
+                    completed_times[key] = float(row["Time_s"])
             print(f"Resumed from checkpoint: {len(completed)} combo(s) already done")
         except Exception as exc:
             print(f"Checkpoint read failed ({exc}), starting fresh")
@@ -405,7 +424,7 @@ def run_benchmark(
                 needs_run = True
                 break
         if needs_run:
-            worker_args.append((inst, algorithms, cfg, transfer_weights, plans_folder, completed, wall_start))
+            worker_args.append((inst, algorithms, cfg, transfer_weights, plans_folder, completed, completed_times, wall_start))
         else:
             # Already completed in checkpoint — print status for progress monitor
             print(f"    [PROCESSING] {inst.name}...", flush=True)
@@ -427,8 +446,11 @@ def run_benchmark(
                         raise exc
                     for row in inst_rows:
                         rows.append(row)
-                        completed.add((row["Instance"], row["Algorithm"]))
-    
+                        key = (row["Instance"], row["Algorithm"])
+                        completed.add(key)
+                        if "Time_s" in row and row["Time_s"] is not None:
+                            completed_times[key] = float(row["Time_s"])
+
                     # Check for wall time limit
                     elapsed_h = (time.time() - wall_start) / 3600
                     if elapsed_h >= cfg.max_wall_hours:
@@ -439,7 +461,7 @@ def run_benchmark(
                         pd.DataFrame(rows).to_csv(result_path, index=False)
                         ex.shutdown(wait=False, cancel_futures=True)
                         return normalize_algorithm_frame(pd.DataFrame(rows))
-    
+
                     # Save checkpoint and print progress
                     pd.DataFrame(rows).to_csv(ckpt_path, index=False)
                     print(

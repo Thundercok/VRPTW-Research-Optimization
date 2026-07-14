@@ -52,6 +52,21 @@ class Inst:
             nearest = list(np.argsort(dists)[:k_neighbors])
             self.neighbors_k.append(nearest)
 
+        # Precompute Shaw relatedness components and matrix
+        max_d_val = self.max_dist + 1e-9
+        max_tw_val = max(self.due_times - self.ready_times) + 1e-9
+        self.spatial_rel = (self.dist / max_d_val).astype(np.float32)
+        ready_diff = np.abs(self.ready_times[:, None] - self.ready_times[None, :])
+        self.temporal_rel = (ready_diff / max_tw_val).astype(np.float32)
+        demand_diff = np.abs(self.demands[:, None] - self.demands[None, :])
+        self.demand_rel = (demand_diff / self.capacity).astype(np.float32)
+        self.relatedness = (
+            0.5 * self.spatial_rel
+            + 0.4 * self.temporal_rel
+            + 0.1 * self.demand_rel
+        )
+
+
 
 @njit(cache=True)
 def _route_cost(route: np.ndarray, dist: np.ndarray) -> float:
@@ -73,12 +88,12 @@ def _route_violations(route, demands, capacity, ready, due, service, dist):
             tw_violation += t - due[node]
         t = max(t, ready[node]) + service[node]
         prev = node
-    
+
     # Return to depot
     t += dist[prev, 0]
     if t > due[0]:
         tw_violation += t - due[0]
-        
+
     cap_violation = max(0.0, load - capacity)
     return cap_violation, tw_violation
 
@@ -213,7 +228,14 @@ class Plan:
         return self.nv < other.nv or (self.nv == other.nv and self.cost < other.cost - 1e-6)
 
     def copy(self) -> Plan:
-        return Plan([r[:] for r in self.routes], self.inst, self.algo)
+        p = Plan([r[:] for r in self.routes], self.inst, self.algo)
+        p._cost = self._cost
+        p._ok = self._ok
+        p._violation_capacity = self._violation_capacity
+        p._violation_tw = self._violation_tw
+        if self._route_arrays is not None:
+            p._route_arrays = [arr.copy() for arr in self._route_arrays]
+        return p
 
     def invalidate(self) -> None:
         self._cost = None

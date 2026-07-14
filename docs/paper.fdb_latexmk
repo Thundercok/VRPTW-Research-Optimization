@@ -1,5 +1,6 @@
 # Fdb version 4
-["pdflatex"] 1782055883.86173 "paper.tex" "paper.pdf" "paper" 1782055887.4344 0
+["pdflatex"] 1783139900.94354 "/Users/thundercock2/Documents/Github/VRPTW-Research-Optimization/VRPTW-Research-Optimization/docs/paper.tex" "paper.pdf" "paper" 1783139903.54144 0
+  "/Users/thundercock2/Documents/Github/VRPTW-Research-Optimization/VRPTW-Research-Optimization/docs/paper.tex" 1783139899.02614 48205 44b660c38dee30437f9772b8167a7d55 ""
   "/Users/thundercock2/Library/TinyTeX/texmf-dist/fonts/enc/dvips/vntex/t5.enc" 1136849721 7824 21ade6c3c7fd67cb4ace8dbc91c53118 ""
   "/Users/thundercock2/Library/TinyTeX/texmf-dist/fonts/tfm/adobe/times/ptmb7t.tfm" 1136768653 2172 fd0c924230362ff848a33632ed45dc23 ""
   "/Users/thundercock2/Library/TinyTeX/texmf-dist/fonts/tfm/adobe/times/ptmbi7t.tfm" 1136768653 2228 e564491c42a4540b5ebb710a75ff306c ""
@@ -265,9 +266,9 @@
   "/Users/thundercock2/Library/TinyTeX/texmf-var/fonts/map/pdftex/updmap/pdftex.map" 1781176520 100575 458fd866518d5e4a67183e816f8deb29 ""
   "/Users/thundercock2/Library/TinyTeX/texmf-var/web2c/pdftex/pdflatex.fmt" 1782054977 2301026 4f601c788752864899d6f4fad3c46e7e ""
   "/Users/thundercock2/Library/TinyTeX/texmf.cnf" 1781152756 637 edd806fb06a89761a6034e1968af9017 ""
-  "paper.aux" 1782055887.0139 10593 4de883d7651ce6bc52d41b687451df7e "pdflatex"
-  "paper.out" 1782055887.01692 4040 1fab7b755fe92ba186f6d298549d2bf4 "pdflatex"
-  "paper.tex" 1782055877.33459 43257 580e227c6c545402f2a869fb205136c0 ""
+  "paper.aux" 1783139903.30825 10515 88f53c42d29e699ee20fd3d3313203a0 "pdflatex"
+  "paper.out" 1783139903.30977 4040 1fab7b755fe92ba186f6d298549d2bf4 "pdflatex"
+  "paper.tex" 1783139899.02614 48205 44b660c38dee30437f9772b8167a7d55 ""
   (generated)
   "paper.aux"
   "paper.log"

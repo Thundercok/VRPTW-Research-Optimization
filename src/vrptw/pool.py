@@ -184,6 +184,7 @@ def _milp_recombine(
     vehicle_penalty: float | None = None,
     heatmap: np.ndarray | None = None,
     alpha: float = 0.15,
+    _stats: dict | None = None,
 ) -> Plan | None:
     if not MILP_OK or not route_records:
         return None
@@ -229,9 +230,16 @@ def _milp_recombine(
         constraints=constraints,
         integrality=np.ones(n_routes, dtype=int),
         bounds=Bounds(np.zeros(n_routes), np.ones(n_routes)),
-        options={"time_limit": float(cfg.sp_time_limit), "disp": False},
+        options={"time_limit": float(cfg.sp_time_limit), "disp": False, "threads": 1},
     )
-    # Relax success check: if the solver hits the time limit but returns a valid 
+    if _stats is not None:
+        _stats["calls"] = _stats.get("calls", 0) + 1
+        if result is not None and getattr(result, "status", None) == 1:
+            _stats["timeouts"] = _stats.get("timeouts", 0) + 1
+        _stats["milp_fired"] = True
+        _stats["milp_cadence_skip"] = 0
+
+    # Relax success check: if the solver hits the time limit but returns a valid
     # integer solution x, we should still accept it. We verify feasibility below.
     if result is None or result.x is None:
         return None
@@ -280,6 +288,7 @@ def recombine_with_route_pool(
     td_only: bool = False,
     heatmap: np.ndarray | None = None,
     alpha: float = 0.15,
+    _stats: dict | None = None,
 ) -> Plan:
     pool.add_plan(incumbent)
     recs = pool.records(incumbent)
@@ -295,6 +304,7 @@ def recombine_with_route_pool(
             cfg,
             nv_ceiling=effective_ceiling,
             vehicle_penalty=0.0,
+            _stats=_stats,
         )
         if candidate is None:
             candidate = _greedy_recombine(recs, incumbent, nv_ceiling=effective_ceiling)
@@ -321,6 +331,7 @@ def recombine_with_route_pool(
             vehicle_penalty=0.0,
             heatmap=heatmap,
             alpha=alpha,
+            _stats=_stats,
         )
         if candidate is None:
             candidate = _greedy_recombine(recs, incumbent, nv_ceiling=effective_ceiling)
@@ -353,6 +364,7 @@ def recombine_with_route_pool(
             vehicle_penalty=penalty,
             heatmap=heatmap,
             alpha=alpha,
+            _stats=_stats,
         )
         if candidate is not None and (effective_ceiling is None or candidate.nv <= effective_ceiling):
             # Run LS at the new NV to recover TD
