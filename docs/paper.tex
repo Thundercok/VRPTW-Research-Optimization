@@ -96,13 +96,13 @@ Hierarchical MDP, Operator Selection.
 \section{Introduction}
 \label{sec:intro}
 
-The Vehicle Routing Problem with Time Windows (VRPTW) generalizes the classical Vehicle Routing Problem (VRP) by requiring each customes to be served within a predefined arrival window, transforming an already NP-Hard combitional problem into one where spatial and spatial feasibility must be sastified simultaneously \cite{Dantzig1959, Solomon1987}.
-The objective is lexicographic: solvers must minimize the number of vehicles deployed, and only secondary minimizes the travel distance. This ordering reflects the real-world fleet economics, where the fixed cost of an additional vehicle typically dominates the marginal routing distance costs by order of magnitude.
+The Vehicle Routing Problem with Time Windows (VRPTW) generalizes the classical Vehicle Routing Problem (VRP) by requiring each customer to be served within a predefined arrival window, transforming an already NP-Hard combinatorial problem into one where spatial and temporal feasibility must be satisfied simultaneously \cite{Dantzig1959, Solomon1987}.
+The objective is lexicographic: solvers must minimize the number of vehicles deployed, and only secondarily minimize the travel distance. This ordering reflects real-world fleet economics, where the fixed cost of an additional vehicle typically dominates the marginal routing distance costs by an order of magnitude.
 
-Adaptive Large Neighborhood Search has emerged as one of the most effective metaheuristics framework for VRPTW, owing to it destroy-and repair paradigm and the ability to escape local optima through diversified neighborhood exploration \cite{shaw1998using, Ropke2006, pisinger2007general}. However, the standard ALNS formulation relies on a roulette wheel mechanism for operator selection, where each destroy and repair operator is chosen probabilistically according to weights updated from recent performance. This mechanism suffers from three structural limitations that becomes particulary acute on tightly time-windowed instances.
+Adaptive Large Neighborhood Search has emerged as one of the most effective metaheuristic frameworks for VRPTW, owing to its destroy-and-repair paradigm and the ability to escape local optima through diversified neighborhood exploration \cite{shaw1998using, Ropke2006, pisinger2007general}. However, the standard ALNS formulation relies on a roulette-wheel mechanism for operator selection, where each destroy-and-repair operator is chosen probabilistically according to weights updated from recent performance. This mechanism suffers from three structural limitations that become particularly acute on tightly time-windowed instances.
 
-First, the roulete wheel selection is myopic: adpating weights based on a short historical window without modelling the current search state, so it cannot distinguish between an operator that is generally effective and one that is particually effective specifically given the route topology.
-Second, ALNS is prone to  premature plateau convergance, particually on instances where reducing the vehicle count requires tempoarily degrading solution quality - a solution that purely greedy or weighted random-selection rarely discovers unaided.
+First, the roulette-wheel selection is myopic: adapting weights based on a short historical window without modeling the current search state, so it cannot distinguish between an operator that is generally effective and one that is particularly effective specifically given the route topology.
+Second, ALNS is prone to premature plateau convergence, particularly on instances where reducing the vehicle count requires temporarily degrading solution quality - a solution that purely greedy or weighted random-selection rarely discovers unaided.
 Third, the simulated annealing acceptance criterion conventionally paired with ALNS uses a globally defined temperature
 
 End-to-end neural approaches---Pointer Networks~\cite{vinyals2015pointer},
@@ -209,7 +209,7 @@ Hybrid DDQN-ALNS preserves the feasibility guarantees of ALNS while replacing
 its static roulette-wheel operator selection with a hierarchical reinforcement
 learning stack.  The search is modeled as a Hierarchical Markov Decision
 Process (HMDP) with two coordinated agents: a \emph{Plateau Controller}
-(macro) that selects among six search regimes, and an \emph{Operator Controller}
+(macro) that selects among seven search regimes, and an \emph{Operator Controller}
 (micro) that picks destroy--repair operator pairs conditioned on the active
 regime, establishing a temporally-coupled hierarchical decision-making loop. The overall system architecture, demonstrating the interaction between the Decision Brain, Search Muscle, and Learning Feedback loop, is illustrated in Fig.~\ref{fig:hybrid_architecture}.
 
@@ -247,12 +247,12 @@ regime, establishing a temporally-coupled hierarchical decision-making loop. The
 \node[brain] (PC) at (0, 0.8) {%
   \textbf{Plateau Controller (Macro DDQN)}\\
   {\color{C_rose!70}\scriptsize\textit{in:}} state $s_t^c \in \mathbb{R}^{12}$\\
-  {\color{C_slate!70}\scriptsize\textit{out:}} search mode $m \in \{0..5\}$};
+  {\color{C_slate!70}\scriptsize\textit{out:}} search mode $m \in \{0..6\}$};
 
 \node[brain] (OC) at (0, -1.8) {%
   \textbf{Operator Controller (Micro DDQN)}\\
-  {\color{C_rose!70}\scriptsize\textit{in:}} state $s_t^o \in \mathbb{R}^{15}$, goal $g_m$, $m$\\
-  {\color{C_slate!70}\scriptsize\textit{out:}} operator pair $a_t = (d, r)$};
+  {\color{C_rose!70}\scriptsize\textit{in:}} state $s_t^o \in \mathbb{R}^{20}$, mode $m$\\
+  {\color{C_slate!70}\scriptsize\textit{out:}} operator pair $a_t \in \{1..65\}$};
 
 % Column 2: Muscle (ALNS Search & MIP Recombination)
 \node[muscle] (AE) at (6.2, 2.0) {%
@@ -770,16 +770,16 @@ $c2\_2\_1$ & $6/1931.44$
   & \textbf{$6/+0.00\%$}    & $6/+0.00\%$\\
 $r1\_2\_1$ & $20/4784.11$
   & $20/+9.35\%$            & $20/+2.34\%$           & $20/+1.17\%$
-  & \textbf{$20/+0.79\%$}   & $22/+1.80\%{}^\dagger$\\
+  & \textbf{$20/+0.79\%$}   & $22/\text{--}{}^\dagger$\\
 $r2\_2\_1$ & $4/4483.16$
-  & $5/-5.50\%{}^\dagger$   & $5/-8.18\%{}^\dagger$  & $5/-8.18\%{}^\dagger$
-  & \textbf{$5/-8.24\%{}^\dagger$}  & $5/-6.23\%{}^\dagger$\\
+  & $5/\text{--}{}^\dagger$   & $5/\text{--}{}^\dagger$  & $5/\text{--}{}^\dagger$
+  & \textbf{$5/\text{--}{}^\dagger$}  & $5/\text{--}{}^\dagger$\\
 $rc1\_2\_1$ & $18/3602.80$
-  & $19/+3.83\%{}^\dagger$  & $19/+0.11\%{}^\dagger$ & $19/-0.70\%{}^\dagger$
-  & \textbf{$19/-0.70\%{}^\dagger$} & $19/+7.52\%{}^\dagger$\\
+  & $19/\text{--}{}^\dagger$  & $19/\text{--}{}^\dagger$ & $19/\text{--}{}^\dagger$
+  & \textbf{$19/\text{--}{}^\dagger$} & $19/\text{--}{}^\dagger$\\
 $rc2\_2\_1$ & $6/3099.53$
   & $6/+7.14\%$             & $6/+3.87\%$            & $6/+2.87\%$
-  & \textbf{$6/+2.56\%$}    & $7/+2.22\%{}^\dagger$\\
+  & \textbf{$6/+2.56\%$}    & $7/\text{--}{}^\dagger$\\
 \bottomrule
 \end{tabular}}
 \end{table*}

@@ -1094,123 +1094,68 @@ def local_search(
 
 def _try_chain_elimination(plan: Plan, target_idx: int, beam_width: int = 3, max_depth: int = 3) -> Plan | None:
     """
-    Depth-3 ejection chain: c → Ri (displacing d) → d → Rj (displacing e) → e → Rk.
-    Falls back to depth-2 then depth-1 per customer; depth-3 only fires when
-    shallower levels fail, keeping average runtime close to depth-2.
-
-    Branching cap: at depth-3, only the top-beam_width displacement candidates per route
-    are evaluated to bound worst-case complexity at O(k × r × L × r × beam_width × r).
+    Generalized ejection chain search: c -> Ri (displacing d) -> d -> Rj ... -> Rk.
+    Falls back to direct insertion (depth 1), then depth 2, then depth 3, etc. up to max_depth.
     """
     inst = plan.inst
     target = plan.routes[target_idx]
     routes = [r[:] for i, r in enumerate(plan.routes) if i != target_idx]
 
     for c in sorted(target, key=lambda n: inst.due_times[n] - inst.ready_times[n]):
-        # ── Level 1: direct insertion ─────────────────────────────────────────
-        best_delta, best_ri, best_pos = float("inf"), None, None
-        for ri, route in enumerate(routes):
-            if not _capacity_ok(route + [c], inst):
-                continue
-            delta, pos = _best_insert_position(c, route, inst)
-            if pos is not None and delta < best_delta:
-                best_delta, best_ri, best_pos = delta, ri, pos
-        if best_ri is not None:
-            routes[best_ri].insert(best_pos, c)
-            continue
+        # We search for a chain to insert customer `c`
+        # active_states is a list of tuples: (current_routes, node, visited_route_indices, cost)
+        active_states = [(routes, c, set(), 0.0)]
+        placed_routes = None
 
-        # ── Level 2: single ejection  c → Ri (ejects d) → d → Rj ────────────
-        chain2: tuple | None = None
-        best2 = float("inf")
-        if max_depth >= 2:
-            for ri, route in enumerate(routes):
-                for eject_pos, d in enumerate(route):
-                    stripped = route[:eject_pos] + route[eject_pos + 1 :]
-                    if not _capacity_ok(stripped + [c], inst):
-                        continue
-                    dc, pc = _best_insert_position(c, stripped, inst)
-                    if pc is None:
-                        continue
-                    for rj in range(len(routes)):
-                        if rj == ri:
-                            continue
-                        if not _capacity_ok(routes[rj] + [d], inst):
-                            continue
-                        dd, pd = _best_insert_position(d, routes[rj], inst)
-                        if pd is not None and dc + dd < best2:
-                            best2 = dc + dd
-                            chain2 = (ri, eject_pos, d, rj)
+        # Try increasing depth d from 1 to max_depth
+        for d in range(1, max_depth + 1):
+            completed_states_at_this_depth = []
+            next_active_states = []
 
-        if chain2 is not None:
-            ri, ep, d, rj = chain2
-            stripped_ri = routes[ri][:ep] + routes[ri][ep + 1 :]
-            _, pc = _best_insert_position(c, stripped_ri, inst)
-            if pc is None:
-                return None
-            routes[ri] = stripped_ri[:pc] + [c] + stripped_ri[pc:]
-            _, pd = _best_insert_position(d, routes[rj], inst)
-            if pd is None:
-                return None
-            routes[rj].insert(pd, d)
-            continue
-
-        # ── Level 3: double ejection  c→Ri(d)→Rj(e)→Rk ─────────────────────
-        # Capped branching: only top-beam_width (ri, d) pairs by marginal insertion cost
-        chain3: tuple | None = None
-        if max_depth >= 3:
-            depth3_candidates: list[tuple[float, int, int, int]] = []  # (cost_c, ri, eject_pos, d)
-            for ri, route in enumerate(routes):
-                for eject_pos, d in enumerate(route):
-                    stripped = route[:eject_pos] + route[eject_pos + 1 :]
-                    if not _capacity_ok(stripped + [c], inst):
+            for curr_routes, node, visited, cost in active_states:
+                for rj, route in enumerate(curr_routes):
+                    if rj in visited:
                         continue
-                    dc, pc = _best_insert_position(c, stripped, inst)
-                    if pc is not None:
-                        depth3_candidates.append((dc, ri, eject_pos, d))
-            depth3_candidates.sort()
 
-            best3 = float("inf")
-            for dc, ri, eject_pos, d in depth3_candidates[:beam_width]:  # cap at beam_width
-                for rj in range(len(routes)):
-                    if rj == ri:
-                        continue
-                    for eject_pos_j, e in enumerate(routes[rj]):
-                        stripped_j = routes[rj][:eject_pos_j] + routes[rj][eject_pos_j + 1 :]
-                        if not _capacity_ok(stripped_j + [d], inst):
-                            continue
-                        dd, pd = _best_insert_position(d, stripped_j, inst)
-                        if pd is None:
-                            continue
-                        for rk in range(len(routes)):
-                            if rk in (ri, rj):
+                    # 1. Try direct insertion of node into curr_routes[rj]
+                    if _capacity_ok(route + [node], inst):
+                        delta, pos = _best_insert_position(node, route, inst)
+                        if pos is not None:
+                            new_routes = curr_routes[:]
+                            new_routes[rj] = route[:pos] + [node] + route[pos:]
+                            completed_states_at_this_depth.append((new_routes, cost + delta))
+
+                    # 2. Try ejections from curr_routes[rj] if we can go deeper
+                    if d < max_depth:
+                        for eject_pos, eject_val in enumerate(route):
+                            stripped = route[:eject_pos] + route[eject_pos + 1 :]
+                            if not _capacity_ok(stripped + [node], inst):
                                 continue
-                            if not _capacity_ok(routes[rk] + [e], inst):
-                                continue
-                            de, pe = _best_insert_position(e, routes[rk], inst)
-                            if pe is not None and dc + dd + de < best3:
-                                best3 = dc + dd + de
-                                chain3 = (ri, eject_pos, d, rj, eject_pos_j, e, rk)
+                            delta, pos = _best_insert_position(node, stripped, inst)
+                            if pos is not None:
+                                new_routes = curr_routes[:]
+                                new_routes[rj] = stripped[:pos] + [node] + stripped[pos:]
+                                next_active_states.append((new_routes, eject_val, visited | {rj}, cost + delta))
 
-        if chain3 is None:
-            return None  # c unplaceable; this target route cannot be eliminated
+            # If we found any complete insertions at this depth, choose the best one
+            if completed_states_at_this_depth:
+                completed_states_at_this_depth.sort(key=lambda x: x[1])
+                placed_routes, _ = completed_states_at_this_depth[0]
+                break
 
-        ri, ep_i, d, rj, ep_j, e, rk = chain3
-        # Apply depth-3 chain
-        stripped_ri = routes[ri][:ep_i] + routes[ri][ep_i + 1 :]
-        _, pc = _best_insert_position(c, stripped_ri, inst)
-        if pc is None:
+            # Otherwise, sort and prune the next active states to keep only the top beam_width candidates
+            if not next_active_states:
+                break
+            # Sort by cumulative delta cost
+            next_active_states.sort(key=lambda x: x[3])
+            active_states = next_active_states[:beam_width]
+
+        if placed_routes is not None:
+            # Successfully placed customer c! Update routes for the next customer in target
+            routes = placed_routes
+        else:
+            # c could not be placed at any depth; target route cannot be eliminated
             return None
-        routes[ri] = stripped_ri[:pc] + [c] + stripped_ri[pc:]
-
-        stripped_rj = routes[rj][:ep_j] + routes[rj][ep_j + 1 :]
-        _, pd = _best_insert_position(d, stripped_rj, inst)
-        if pd is None:
-            return None
-        routes[rj] = stripped_rj[:pd] + [d] + stripped_rj[pd:]
-
-        _, pe = _best_insert_position(e, routes[rk], inst)
-        if pe is None:
-            return None
-        routes[rk].insert(pe, e)
 
     cand = Plan([r for r in routes if r], inst, plan.algo)
     return cand if cand.feasible else None

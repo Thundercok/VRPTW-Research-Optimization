@@ -124,11 +124,6 @@
     <main id="main">
       <!-- ========== HERO ========== -->
       <section class="hero-section">
-        <div class="hero-bg">
-          <div class="hero-orb hero-orb--1"></div>
-          <div class="hero-orb hero-orb--2"></div>
-          <div class="hero-orb hero-orb--3"></div>
-        </div>
         <!-- Live Animated Routing Diorama Background -->
         <div class="hero-visual-bg">
           <canvas id="nc"></canvas>
@@ -141,14 +136,10 @@
         <div class="container">
           <div class="hero-content">
             <div class="hero-badge">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right: 4px;">
-                <circle cx="12" cy="12" r="10" />
-                <path d="M12 6v6l4 2" />
-              </svg>
-              <span data-i18n="hero.badge">Solomon Benchmark Optimizer</span>
+              <span data-i18n="hero.badge">v3.2 · Hybrid-DDQN · Solomon + Homberger</span>
             </div>
             <h1 class="hero-title">
-              <span class="nami-highlight" data-i18n="hero.title.nami">NAMI</span>
+              <span class="nami-title" data-i18n="hero.title.nami">NAMI</span>
               <br />
               <span data-i18n="hero.title.desc">Plateau-Aware Deep RL Routing Engine</span>
             </h1>
@@ -156,89 +147,150 @@
               Combining Deep Reinforcement Learning with Adaptive Large Neighborhood Search to solve Vehicle Routing Problems with Time Windows in milliseconds.
             </p>
             <div class="hero-actions">
-              <a class="btn btn-primary" href="app.html" data-i18n="hero.cta.start">Launch Solver</a>
-              <a class="btn btn-secondary" href="#showcase" data-i18n="hero.cta.demo">Explore Demo</a>
+              <a class="btn btn-primary" href="app.html" data-i18n="hero.cta.start">Open Dispatch Portal</a>
+              <a class="btn btn-secondary" href="https://github.com/Thundercok/VRPTW-Research-Optimization" target="_blank" rel="noopener" data-i18n="hero.cta.code">View Codebase →</a>
+            </div>
+
+            <!-- Floating Live Telemetry Metric Strip -->
+            <div class="hero-ticker reveal">
+              <div class="ticker-item">
+                <span class="ticker-label" data-i18n="ticker.epoch">Epoch:</span>
+                <span class="ticker-val" id="ticker-epoch">48</span>
+              </div>
+              <div class="ticker-item">
+                <span class="ticker-label" data-i18n="ticker.cost">Cost:</span>
+                <span class="ticker-val" id="ticker-cost">1284.2</span>
+              </div>
+              <div class="ticker-item">
+                <span class="ticker-label" data-i18n="ticker.plateau">Plateau Level:</span>
+                <span class="ticker-val flex-center">
+                  <span class="plateau-bar-wrapper">
+                    <span class="plateau-bar" id="ticker-plateau-bar" style="width: 0%"></span>
+                  </span>
+                  <span id="ticker-plateau-val">0%</span>
+                </span>
+              </div>
             </div>
           </div>
         </div>
+
+        <!-- Scroll Indicator -->
+        <div class="hero-scroll-indicator">
+          <a href="#showcase" aria-label="Scroll to showcase">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 5v14M19 12l-7 7-7-7" />
+            </svg>
+          </a>
+        </div>
       </section>
 
-      <!-- ========== SHOWCASE (4 Acts) ========== -->
+      <!-- ========== SHOWCASE (Search Dynamics & Escape Pipeline) ========== -->
       <section class="showcase-section" id="showcase">
         <div class="container">
           <div class="section-header reveal">
-            <span class="section-eyebrow" data-i18n="showcase.eyebrow">How It Works</span>
-            <h2 class="section-title" data-i18n="showcase.title">From chaos to optimal dispatch in 4 acts</h2>
+            <span class="section-eyebrow" data-i18n="pipeline.eyebrow">Search Dynamics</span>
+            <h2 class="section-title" data-i18n="pipeline.title">Plateau-Aware Escape Pipeline</h2>
           </div>
 
-          <div class="showcase-grid reveal-stagger">
-            <!-- Act 1 -->
-            <div class="showcase-card reveal">
-              <div class="showcase-card__badge" data-i18n="act1.badge">01</div>
-              <div class="showcase-card__title" data-i18n="act1.title">What's the fastest way to deliver to 100 addresses?</div>
-              <div class="showcase-card__desc" data-i18n="act1.desc">
-                A single vehicle on a simple route is easy. But scaling delivery operations exposes exponential complexity.
+          <div class="pipeline-container reveal-stagger">
+            <!-- Step 1: Constructive Decoder -->
+            <div class="pipeline-card reveal">
+              <div class="card-meta">
+                <span class="card-step">01 / DECODER</span>
+                <span class="card-math">s_0 = Greedy(D)</span>
+              </div>
+              <h3 class="card-heading" data-i18n="pipeline.s1.title">Constructive Decoder</h3>
+              <p class="card-body" data-i18n="pipeline.s1.body">
+                Initial solution generated via greedy route construction and DDQN-guided insertion heuristic initialization.
+              </p>
+              <div class="card-visual">
+                <pre class="visual-code"><code><span class="code-keyword">def</span> <span class="code-func">decode_initial</span>(instance):
+    routes = init_greedy(instance)
+    <span class="code-keyword">for</span> c <span class="code-keyword">in</span> instance.unassigned:
+        insert_greedy_tw(routes, c)
+    <span class="code-keyword">return</span> routes</code></pre>
               </div>
             </div>
 
-            <!-- Act 2 -->
-            <div class="showcase-card showcase-card--chaos reveal">
-              <div class="showcase-card__badge" data-i18n="act2.badge">02</div>
-              <div class="showcase-card__title" data-i18n="act2.title">A single route quickly shatters.</div>
-              <div class="showcase-card__desc" data-i18n="act2.desc">
-                Every address introduces narrow time windows, load capacity limits, service times, and vehicle constraints. Classical heuristics easily stagnate in sub-optimal local basins.
+            <!-- Step 2: Stagnation Detection -->
+            <div class="pipeline-card reveal">
+              <div class="card-meta">
+                <span class="card-step">02 / PLATEAU DETECTOR</span>
+                <span class="card-math">Patience >= limit</span>
+              </div>
+              <h3 class="card-heading" data-i18n="pipeline.s2.title">Stagnation Detection</h3>
+              <p class="card-body" data-i18n="pipeline.s2.body">
+                Tracks the search trajectory in real time, detecting local minima plateaus when improvement patience thresholds are violated.
+              </p>
+              <div class="card-visual">
+                <pre class="visual-code"><code><span class="code-keyword">def</span> <span class="code-func">check_stagnation</span>(history, limit):
+    p = get_patience(history)
+    <span class="code-keyword">if</span> p >= limit:
+        trigger_escape()
+        <span class="code-keyword">return</span> <span class="code-keyword">True</span>
+    <span class="code-keyword">return</span> <span class="code-keyword">False</span></code></pre>
               </div>
             </div>
 
-            <!-- Act 3 -->
-            <div class="showcase-card showcase-card--neural reveal">
-              <div class="showcase-card__badge" data-i18n="act3.badge">03</div>
-              <div class="showcase-card__title" data-i18n="act3.title">NAMI's neural controller takes over.</div>
-              <div class="showcase-card__desc" data-i18n="act3.desc">
-                A Double Deep Q-Network (DDQN) agent analyzes the search trajectory in real-time, intelligently selecting destroy-and-repair ALNS operators to break stagnation patterns.
+            <!-- Step 3: DDQN Escape Operator -->
+            <div class="pipeline-card reveal">
+              <div class="card-meta">
+                <span class="card-step">03 / NEURAL CONTROLLER</span>
+                <span class="card-math">a_t = argmax Q(s_t, a)</span>
+              </div>
+              <h3 class="card-heading" data-i18n="pipeline.s3.title">DDQN Guided Repair</h3>
+              <p class="card-body" data-i18n="pipeline.s3.body">
+                Double Deep Q-Network selects optimal combinations of destroy and repair operators to successfully break search basin stagnation.
+              </p>
+              <div class="card-visual">
+                <pre class="visual-code"><code><span class="code-keyword">def</span> <span class="code-func">select_escape_operator</span>(state, model):
+    q_vals = model.predict(state)
+    action = argmax_expl(q_vals)
+    <span class="code-keyword">return</span> operators[action]</code></pre>
               </div>
             </div>
 
-            <!-- Act 4 -->
-            <div class="showcase-card showcase-card--outcome reveal">
-              <div class="showcase-card__badge" data-i18n="act4.badge">04</div>
-              <div class="showcase-card__title" data-i18n="act4.title">Optimal dispatch. Delivered.</div>
-              <div class="showcase-card__desc" data-i18n="act4.desc">
-                Feasible, balanced paths are generated in milliseconds. Dispatchers receive clean, conflict-free delivery plans verified against all Solomon criteria.
+            <!-- Step 4: Optimal Convergence -->
+            <div class="pipeline-card reveal">
+              <div class="card-meta">
+                <span class="card-step">04 / OPTIMUM</span>
+                <span class="card-math">f_best ~ f_BKS</span>
               </div>
-              <div class="showcase-card__cta">
-                <a class="btn btn-primary" href="app.html" data-i18n="cta.demo">Open Planner</a>
-                <a class="btn btn-secondary" href="#benchmarks">Benchmarks →</a>
+              <h3 class="card-heading" data-i18n="pipeline.s4.title">Optima Convergence</h3>
+              <p class="card-body" data-i18n="pipeline.s4.body">
+                Performs local search optimization and Set Partitioning formulation to recombine elite routes into the final feasible route plan.
+              </p>
+              <div class="card-visual">
+                <pre class="visual-code"><code><span class="code-keyword">def</span> <span class="code-func">finalize_routes</span>(elite_pool):
+    sol = milp_set_partition(elite_pool)
+    <span class="code-keyword">return</span> verify_and_save(sol)</code></pre>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      <div class="section-divider"></div>
+      <div class="section-divider section-divider--dotted"></div>
 
-      <!-- ========== STATS BANNER ========== -->
+      <!-- ========== STATS BANNER (Research Summary Strip) ========== -->
       <section class="stats-section" id="stats">
         <div class="container">
-          <div class="section-header reveal">
-            <span class="section-eyebrow" data-i18n="stats.eyebrow">Performance Snapshot</span>
-          </div>
-          <div class="stats-grid reveal-stagger">
-            <div class="stat-card reveal">
-              <div class="stat-value positive" data-count-to="18.4" data-count-prefix="-" data-count-suffix="%" data-count-decimals="1">-0.0%</div>
-              <div class="stat-label" data-i18n="stats.saved">Distance Saved</div>
+          <div class="research-summary-strip reveal">
+            <div class="summary-item">
+              <span class="summary-value">62</span>
+              <span class="summary-label" data-i18n="stats.instances">Solomon + Homberger instances tested</span>
             </div>
-            <div class="stat-card reveal">
-              <div class="stat-value" data-count-to="100.0" data-count-suffix="%" data-count-decimals="1">0.0%</div>
-              <div class="stat-label" data-i18n="stats.ontime">On-Time Rate</div>
+            <div class="summary-item">
+              <span class="summary-value">10</span>
+              <span class="summary-label" data-i18n="stats.seeds">independent seeds (cold-starts)</span>
             </div>
-            <div class="stat-card reveal">
-              <div class="stat-value accent" data-count-to="12.6" data-count-suffix="ms" data-count-decimals="1">0.0ms</div>
-              <div class="stat-label" data-i18n="stats.compute">Compute Time</div>
+            <div class="summary-item">
+              <span class="summary-value">p &lt; 0.05</span>
+              <span class="summary-label" data-i18n="stats.wilcoxon">in 5 of 6 scale comparisons</span>
             </div>
-            <div class="stat-card reveal">
-              <div class="stat-value" data-count-to="4" data-count-suffix=" / 6" data-count-decimals="0">0 / 6</div>
-              <div class="stat-label" data-i18n="stats.fleet">Active Fleets</div>
+            <div class="summary-item">
+              <span class="summary-value">1.5x–4x</span>
+              <span class="summary-label" data-i18n="stats.overhead">compute overhead vs ALNS-Base</span>
             </div>
           </div>
         </div>
@@ -255,70 +307,61 @@
           </div>
 
           <div class="bento-grid reveal-stagger">
-            <!-- Card 1: DDQN -->
-            <div class="bento-card col-2 row-2 reveal">
-              <div class="bento-icon-wrapper">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-                </svg>
-              </div>
-              <div class="bento-card-title" data-i18n="features.f1.title">DDQN Operator Selection</div>
-              <div class="bento-card-body" data-i18n="features.f1.body">
-                A Double DQN agent observes the search trajectory and learns which destroy operators (Random, Worst, Cluster) to fire when search basins stagnate.
-              </div>
+            <!-- Card 1: DDQN Plateau Controller -->
+            <div class="bento-card bento-card--ddqn reveal">
+              <div class="bento-badge-mono">DQN</div>
+              <div class="bento-card-title" data-i18n="features.f1.title">DDQN Plateau Controller</div>
+              <ul class="bento-card-list">
+                <li data-i18n="features.f1.bullet1">Prioritized Experience Replay (PER) with beta-annealing</li>
+                <li data-i18n="features.f1.bullet2">Welford reward normalization for stable training</li>
+                <li data-i18n="features.f1.bullet3">Dynamically shifts search mode upon stagnation</li>
+              </ul>
             </div>
 
-            <!-- Card 2: Time-Window -->
-            <div class="bento-card col-2 reveal">
-              <div class="bento-icon-wrapper">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="10" />
-                  <polyline points="12 6 12 12 16 14" />
-                </svg>
-              </div>
-              <div class="bento-card-title" data-i18n="features.f2.title">Time-Window Feasibility</div>
-              <div class="bento-card-body" data-i18n="features.f2.body">
-                Supports strict time windows (ready time, due date, service duration) with dynamic early-arrival waiting and late-arrival filtering.
-              </div>
+            <!-- Card 2: Adaptive Search Engine -->
+            <div class="bento-card bento-card--timewindow reveal">
+              <div class="bento-badge-mono">ALNS</div>
+              <div class="bento-card-title" data-i18n="features.f2.title">Adaptive Search Engine</div>
+              <ul class="bento-card-list">
+                <li data-i18n="features.f2.bullet1">8 destroy and 5 insertion operators</li>
+                <li data-i18n="features.f2.bullet2">Thompson-bandit operator selection policy</li>
+                <li data-i18n="features.f2.bullet3">Granular local search heuristics</li>
+              </ul>
             </div>
 
-            <!-- Card 3: Solomon -->
-            <div class="bento-card reveal">
-              <div class="bento-icon-wrapper">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-                </svg>
-              </div>
-              <div class="bento-card-title" data-i18n="features.f3.title">Solomon Benchmarks</div>
-              <div class="bento-card-body" data-i18n="features.f3.body">
-                Built-in, one-click loading of Solomon benchmark instances (C, R, RC families) for rapid performance verification.
-              </div>
+            <!-- Card 3: LAC -->
+            <div class="bento-card bento-card--solomon reveal">
+              <div class="bento-badge-mono">LAC</div>
+              <div class="bento-card-title" data-i18n="features.f3.title">Learned Acceptance Criterion (LAC)</div>
+              <ul class="bento-card-list">
+                <li data-i18n="features.f3.bullet1">Neural network solution acceptance classifier</li>
+                <li data-i18n="features.f3.bullet2">Replaces traditional simulated annealing schedule</li>
+                <li data-i18n="features.f3.bullet3">Adapts to current trajectory characteristics</li>
+              </ul>
             </div>
 
-            <!-- Card 4: Zero-Shot -->
-            <div class="bento-card reveal">
-              <div class="bento-icon-wrapper">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polygon points="12 2 2 22 22 22" />
-                </svg>
-              </div>
-              <div class="bento-card-title" data-i18n="features.f5.title">Zero-Shot Transfer</div>
-              <div class="bento-card-body" data-i18n="features.f5.body">
-                The trained plateau-aware RL policy transfers directly across different Solomon families (e.g. trained on RC1, evaluated on RC2) without retraining.
-              </div>
+            <!-- Card 4: Route Pool Set Partitioning -->
+            <div class="bento-card bento-card--zeroshot reveal">
+              <div class="bento-badge-mono">MILP</div>
+              <div class="bento-card-title" data-i18n="features.f5.title">Set-Partitioning MILP Recombinator</div>
+              <ul class="bento-card-list">
+                <li data-i18n="features.f5.bullet1">Sub-route extraction during search trajectory</li>
+                <li data-i18n="features.f5.bullet2">Global recombination via mixed-integer equations</li>
+                <li data-i18n="features.f5.bullet3">Guarantees optimal layout of elite sub-routes</li>
+              </ul>
             </div>
           </div>
         </div>
       </section>
 
-      <div class="section-divider"></div>
+      <div class="section-divider section-divider--glow"></div>
 
       <!-- ========== BENCHMARKS ========== -->
       <section class="benchmarks-section" id="benchmarks">
         <div class="container">
           <div class="section-header reveal">
             <span class="section-eyebrow" data-i18n="results.eyebrow">Scientific Validation</span>
-            <h2 class="section-title" data-i18n="results.title">Solomon Benchmark Results</h2>
+            <h2 class="section-title" data-i18n="results.title">Solomon & Homberger Benchmark Results</h2>
           </div>
 
           <div class="reveal">
@@ -326,58 +369,87 @@
               <table class="benchmarks-table">
                 <thead>
                   <tr>
-                    <th data-i18n="table.th.family">Instance Family</th>
-                    <th data-i18n="table.th.bks">Best Known Cost (BKS)</th>
-                    <th data-i18n="table.th.nami">NAMI Hybrid Cost</th>
-                    <th data-i18n="table.th.alns">ALNS Baseline Cost</th>
-                    <th data-i18n="table.th.namigap">NAMI Gap vs BKS (%)</th>
-                    <th data-i18n="table.th.alnsgap">ALNS Gap vs BKS (%)</th>
+                    <th data-i18n="table.th.instance">Instance / Family</th>
+                    <th data-i18n="table.th.scale">Scale</th>
+                    <th data-i18n="table.th.bks">BKS (NV / TD)</th>
+                    <th data-i18n="table.th.nami">NAMI Hybrid (NV / TD)</th>
+                    <th data-i18n="table.th.alns">ALNS Baseline (NV / TD)</th>
+                    <th data-i18n="table.th.wilcoxon">Wilcoxon p-value</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr>
-                    <td class="td-instance">C1 Family (Clustered)</td>
-                    <td>828.3</td>
-                    <td>832.4</td>
-                    <td>854.1</td>
-                    <td><span class="badge-comparison best">-0.49%</span></td>
-                    <td><span class="badge-comparison near">+3.11%</span></td>
+                  <!-- 100-Customer scale -->
+                  <tr class="table-group-header">
+                    <td colspan="6" data-i18n="table.group.100">100-Customer Instances (Solomon Benchmarks)</td>
                   </tr>
-                  <tr>
-                    <td class="td-instance">R1 Family (Random)</td>
-                    <td>1213.6</td>
-                    <td>1242.8</td>
-                    <td>1298.5</td>
-                    <td><span class="badge-comparison best">-2.41%</span></td>
-                    <td><span class="badge-comparison near">+6.99%</span></td>
+                  <tr class="row-rc1">
+                    <td class="td-instance">RC101 (Solomon)</td>
+                    <td>100 Clients</td>
+                    <td class="td-bks">14 / 1622.9</td>
+                    <td class="td-nami">15 / --<sup>†</sup></td>
+                    <td class="td-alns">15 / --<sup>†</sup></td>
+                    <td>--</td>
                   </tr>
-                  <tr>
-                    <td class="td-instance">RC1 Family (Mixed)</td>
-                    <td>1384.2</td>
-                    <td>1415.0</td>
-                    <td>1468.2</td>
-                    <td><span class="badge-comparison best">-2.22%</span></td>
-                    <td><span class="badge-comparison near">+6.07%</span></td>
+
+                  <!-- 200-Customer scale -->
+                  <tr class="table-group-header">
+                    <td colspan="6" data-i18n="table.group.200">200-Customer Instances (Gehring-Homberger Benchmarks)</td>
                   </tr>
-                  <tr>
-                    <td class="td-instance">RC2 Family (Zero-Shot)</td>
-                    <td>1119.2</td>
-                    <td>1154.6</td>
-                    <td>1231.8</td>
-                    <td><span class="badge-comparison best">-3.16%*</span></td>
-                    <td><span class="badge-comparison near">+10.06%</span></td>
+                  <tr class="row-c1">
+                    <td class="td-instance">c1_2_1 (Homberger)</td>
+                    <td>200 Clients</td>
+                    <td class="td-bks">20 / 2684.5</td>
+                    <td class="td-nami">20 / 2702.4 <span class="badge-comparison best">-3.42%</span></td>
+                    <td class="td-alns">20 / 2798.1</td>
+                    <td>--</td>
+                  </tr>
+
+                  <!-- 400-Customer scale -->
+                  <tr class="table-group-header">
+                    <td colspan="6" data-i18n="table.group.400">400-Customer Instances (Gehring-Homberger Benchmarks)</td>
+                  </tr>
+                  <tr class="row-c2">
+                    <td class="td-instance">c2_4_1 (Homberger)</td>
+                    <td>400 Clients</td>
+                    <td class="td-bks">10 / 1929.3</td>
+                    <td class="td-nami">12.20 / --<sup>†</sup></td>
+                    <td class="td-alns">13.00 / --<sup>†</sup></td>
+                    <td class="td-pvalue best">p = 0.0078*</td>
+                  </tr>
+                  <tr class="row-r2">
+                    <td class="td-instance">r2_4_1 (Homberger)</td>
+                    <td>400 Clients</td>
+                    <td class="td-bks">4 / 2764.0</td>
+                    <td class="td-nami">8.10 / --<sup>†</sup></td>
+                    <td class="td-alns">8.80 / --<sup>†</sup></td>
+                    <td class="td-pvalue best">p = 0.0156*</td>
+                  </tr>
+                  <tr class="row-rc2">
+                    <td class="td-instance">rc2_4_1 (Homberger)</td>
+                    <td>400 Clients</td>
+                    <td class="td-bks">10 / 2483.4</td>
+                    <td class="td-nami">12.50 / --<sup>†</sup></td>
+                    <td class="td-alns">12.80 / --<sup>†</sup></td>
+                    <td class="td-pvalue text-muted">p = 0.3750</td>
                   </tr>
                 </tbody>
+                <tfoot>
+                  <tr class="table-summary-row">
+                    <td colspan="6" data-i18n="table.summary">Summary: NAMI Hybrid-DDQN matches BKS vehicle floors at 100/200 scale and achieves statistically significant (p &lt; 0.05) vehicle reductions at 400 scale.</td>
+                  </tr>
+                </tfoot>
               </table>
             </div>
           </div>
 
-          <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 16px;" data-i18n="results.footnote">
-            * Zero-shot generalization transfer: The model was trained exclusively on RC1 instances and evaluated directly on RC2.
+          <div class="benchmarks-footnotes" style="font-size: 0.75rem; color: var(--text-muted); margin-top: 16px; display: flex; flex-direction: column; gap: 4px;">
+            <div data-i18n="results.footnote.dagger">† Travel Distance (TD) comparisons are excluded when vehicle counts (NV) are not matched, as extra vehicle capacity artificially distorts travel distance.</div>
+            <div data-i18n="results.footnote.coldstart">Note: Standalone solver results are generated under strict independent cold-start conditions starting from <code>build_greedy</code> in a cleared directory, without multi-stage warm-starts.</div>
+            <div data-i18n="results.footnote.wilcoxon">* Statistically significant difference between NAMI Hybrid and ALNS Baseline (Wilcoxon signed-rank test p &lt; 0.05).</div>
           </div>
 
           <div class="citation-card reveal">
-            <div class="citation-icon">📖</div>
+            <div class="citation-icon-text">CITE</div>
             <div>
               <div class="citation-title" data-i18n="results.citation.title">Plateau-Aware Deep RL for Combinatorial Search</div>
               <p class="citation-body" data-i18n="results.citation.body">
@@ -388,14 +460,14 @@
         </div>
       </section>
 
-      <div class="section-divider"></div>
+      <div class="section-divider section-divider--dotted"></div>
 
       <!-- ========== QUICKSTART ========== -->
       <section class="local-run-section" id="local-run">
         <div class="container">
           <div class="section-header reveal">
             <span class="section-eyebrow" data-i18n="getstarted.eyebrow">Developer Quickstart</span>
-            <h2 class="section-title" data-i18n="getstarted.title">Run the engine locally in 60s</h2>
+            <h2 class="section-title" data-i18n="getstarted.title">Run the engine locally</h2>
           </div>
 
           <div class="cli-display-wrapper reveal">
@@ -405,6 +477,7 @@
                 <span class="cli-dot yellow"></span>
                 <span class="cli-dot green"></span>
               </div>
+              <div class="cli-title-text">Workspace: VRPTW-Research-Optimization</div>
               <div class="cli-tabs">
                 <button class="cli-tab-btn active" data-target="pane-docker">Docker</button>
                 <button class="cli-tab-btn" data-target="pane-venv">uv (Local)</button>
@@ -412,51 +485,105 @@
               </div>
             </div>
 
-            <div class="cli-content-wrapper">
-              <!-- Pane 1: Docker -->
-              <div class="cli-pane active" id="pane-docker">
-                <button class="btn-copy-code" aria-label="Copy code snippet">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;">
-                    <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
-                    <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
-                  </svg>
-                  <span class="btn-copy-text">Copy</span>
-                  <span class="copy-success-tooltip">Copied!</span>
-                </button>
-                <pre class="cli-code-block"><code><span class="cli-comment"># Pull and run the pre-built container from DockerHub</span>
-<span class="cli-command">docker run -p 8000:8000 -p 5050:80 thundercock/vrptw-nami:latest</span></code></pre>
+            <div class="cli-main-layout">
+              <!-- Left Sidebar: File Tree Explorer -->
+              <div class="cli-sidebar">
+                <div class="sidebar-header" data-i18n="cli.explorer">EXPLORER</div>
+                <div class="file-tree">
+                  <div class="tree-item folder open">
+                    <span class="tree-icon">▼</span>
+                    <span class="tree-label">src</span>
+                  </div>
+                  <div class="tree-item folder open indent-1">
+                    <span class="tree-icon">▼</span>
+                    <span class="tree-label">vrptw</span>
+                  </div>
+                  <div class="tree-item file indent-2">
+                    <span class="tree-icon">·</span>
+                    <span class="tree-label">config.py</span>
+                  </div>
+                  <div class="tree-item file indent-2">
+                    <span class="tree-icon">·</span>
+                    <span class="tree-label">core.py</span>
+                  </div>
+                  <div class="tree-item file indent-2">
+                    <span class="tree-icon">·</span>
+                    <span class="tree-label">rl.py</span>
+                  </div>
+                  <div class="tree-item file indent-2">
+                    <span class="tree-icon">·</span>
+                    <span class="tree-label">solvers.py</span>
+                  </div>
+                  <div class="tree-item folder indent-1">
+                    <span class="tree-icon">▶</span>
+                    <span class="tree-label">backend</span>
+                  </div>
+                  <div class="tree-item folder indent-1">
+                    <span class="tree-icon">▶</span>
+                    <span class="tree-label">frontend</span>
+                  </div>
+                  <div class="tree-item folder">
+                    <span class="tree-icon">▶</span>
+                    <span class="tree-label">scripts</span>
+                  </div>
+                  <div class="tree-item file">
+                    <span class="tree-icon">·</span>
+                    <span class="tree-label">main.py</span>
+                  </div>
+                  <div class="tree-item file">
+                    <span class="tree-icon">·</span>
+                    <span class="tree-label">pyproject.toml</span>
+                  </div>
+                </div>
               </div>
 
-              <!-- Pane 2: uv (Local) -->
-              <div class="cli-pane" id="pane-venv">
-                <button class="btn-copy-code" aria-label="Copy code snippet">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;">
-                    <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
-                    <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
-                  </svg>
-                  <span class="btn-copy-text">Copy</span>
-                  <span class="copy-success-tooltip">Copied!</span>
-                </button>
-                <pre class="cli-code-block"><code><span class="cli-comment"># Clone and install dependencies with uv</span>
+              <!-- Right Terminal Content -->
+              <div class="cli-content-wrapper">
+                <!-- Pane 1: Docker -->
+                <div class="cli-pane active" id="pane-docker">
+                  <button class="btn-copy-code" aria-label="Copy code snippet">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;">
+                      <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+                      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+                    </svg>
+                    <span class="btn-copy-text">Copy</span>
+                    <span class="copy-success-tooltip">Copied!</span>
+                  </button>
+                  <pre class="cli-code-block"><code><span class="cli-comment"># Pull and run the pre-built container from DockerHub</span>
+<span class="cli-command">docker run -p 8000:8000 -p 5050:80 thundercock/vrptw-nami:latest</span></code></pre>
+                </div>
+
+                <!-- Pane 2: uv (Local) -->
+                <div class="cli-pane" id="pane-venv">
+                  <button class="btn-copy-code" aria-label="Copy code snippet">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;">
+                      <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+                      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+                    </svg>
+                    <span class="btn-copy-text">Copy</span>
+                    <span class="copy-success-tooltip">Copied!</span>
+                  </button>
+                  <pre class="cli-code-block"><code><span class="cli-comment"># Clone and install dependencies with uv</span>
 <span class="cli-command">git clone https://github.com/Thundercok/VRPTW-Research-Optimization.git</span>
 <span class="cli-command">cd VRPTW-Research-Optimization</span>
 <span class="cli-command">uv venv .venv --python 3.12 && source .venv/bin/activate</span>
 <span class="cli-command">uv pip install -r requirements.txt</span>
 <span class="cli-command">python main.py</span></code></pre>
-              </div>
+                </div>
 
-              <!-- Pane 3: Benchmark -->
-              <div class="cli-pane" id="pane-benchmark">
-                <button class="btn-copy-code" aria-label="Copy code snippet">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;">
-                    <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
-                    <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
-                  </svg>
-                  <span class="btn-copy-text">Copy</span>
-                  <span class="copy-success-tooltip">Copied!</span>
-                </button>
-                <pre class="cli-code-block"><code><span class="cli-comment"># Run multi-scale Solomon benchmark suite sweep</span>
+                <!-- Pane 3: Benchmark -->
+                <div class="cli-pane" id="pane-benchmark">
+                  <button class="btn-copy-code" aria-label="Copy code snippet">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;">
+                      <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+                      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+                    </svg>
+                    <span class="btn-copy-text">Copy</span>
+                    <span class="copy-success-tooltip">Copied!</span>
+                  </button>
+                  <pre class="cli-code-block"><code><span class="cli-comment"># Run multi-scale Solomon benchmark suite sweep</span>
 <span class="cli-command">./run_all_benchmarks.sh --instances RC101-RC108 --epochs 50</span></code></pre>
+                </div>
               </div>
             </div>
           </div>
@@ -465,42 +592,19 @@
     </main>
 
     <!-- Footer -->
+    <!-- Footer -->
     <footer class="site-footer">
       <div class="container">
-        <div class="footer-grid">
-          <div class="footer-brand-col">
-            <a class="footer-brand-logo" href="#">
-              <svg class="brand-logo" width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <rect width="24" height="24" rx="6" fill="#f59e0b" />
-                <path d="M6 18V6H8.5L12 11.5L15.5 6H18V18H15.5V11L12.5 15.5H11.5L8.5 11V18H6Z" fill="white" />
-              </svg>
-              <span>NAMI</span>
-            </a>
-            <p class="footer-brand-desc" data-i18n="footer.blurb">
-              Deep reinforcement learning and search heuristics paired together for robust combinatorial optimization.
-            </p>
+        <div class="footer-simple-row">
+          <div class="footer-left">
+            <span>&copy; 2026 VRPTW Research · MIT License</span>
           </div>
-          <div class="footer-links-col">
-            <h4 class="footer-col-title" data-i18n="footer.col.system">System</h4>
-            <ul class="footer-links">
-              <li><a href="app.html" data-i18n="footer.link.solver">Open Solver</a></li>
-              <li><a href="#showcase" data-i18n="footer.link.demo">Showcase</a></li>
-              <li><a href="#benchmarks" data-i18n="footer.link.benchmarks">Benchmarks</a></li>
-            </ul>
-          </div>
-          <div class="footer-links-col">
-            <h4 class="footer-col-title" data-i18n="footer.col.academic">Academic</h4>
-            <ul class="footer-links">
-              <li><a href="https://github.com/Thundercok/VRPTW-Research-Optimization" target="_blank" rel="noopener" data-i18n="footer.link.codebase">Codebase</a></li>
-              <li><a href="feedback.html" data-i18n="footer.link.feedback">Feedback Form</a></li>
-              <li><a href="app.html" data-i18n="footer.link.dispatcher">Dispatcher Login</a></li>
-            </ul>
-          </div>
-        </div>
-        <div class="footer-bottom">
-          <p>&copy; 2026 VRPTW Research Optimization. MIT License.</p>
-          <div class="footer-bottom-links">
-            <span data-i18n="footer.footnote">Designed for computational speed and absolute operational clarity.</span>
+          <div class="footer-right">
+            <a href="https://github.com/Thundercok/VRPTW-Research-Optimization" target="_blank" rel="noopener">GitHub</a>
+            <span class="bullet-divider">·</span>
+            <a href="feedback.html">Feedback</a>
+            <span class="bullet-divider">·</span>
+            <a href="app.html">Solver</a>
           </div>
         </div>
       </div>

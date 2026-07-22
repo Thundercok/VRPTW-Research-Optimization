@@ -296,14 +296,27 @@ export class MapController {
     const waypoints = route.path; // [[lat,lng], ...]
     if (waypoints.length < 2) return;
     const coords = waypoints.map((w) => `${w[1]},${w[0]}`).join(';');
-    const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`;
+    const proxyUrl = `/api/route-geometry?coords=${encodeURIComponent(coords)}`;
+    const directUrl = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`;
+
     try {
-      const resp = await fetch(url);
+      let resp;
+      try {
+        resp = await fetch(proxyUrl);
+      } catch (err) {
+        console.info('Backend route proxy unavailable, trying direct OSRM:', err);
+      }
+
+      if (!resp || !resp.ok) {
+        resp = await fetch(directUrl);
+      }
+
       if (!resp.ok) {
         this.triggerOsrmWarning();
         return;
       }
       const data = await resp.json();
+
       if (data.code !== 'Ok' || !data.routes?.length) {
         this.triggerOsrmWarning();
         return;

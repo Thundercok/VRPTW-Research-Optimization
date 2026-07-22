@@ -8,7 +8,7 @@ export VECLIB_MAXIMUM_THREADS=1
 export NUMEXPR_NUM_THREADS=1
 export PYTHONUNBUFFERED=1
 
-OUTPUT_BASE="results/clean_v3"
+OUTPUT_BASE="results/clean_v5"
 mkdir -p "$OUTPUT_BASE"
 
 # Max workers: default 6, can be overridden by environment variable

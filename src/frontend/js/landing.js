@@ -22,74 +22,73 @@ const i18n = {
     'nav.getstarted': 'Setup',
     'cta.demo': 'Open Planner',
 
-    'hero.badge': 'Solomon Benchmark Optimizer',
+    'hero.badge': 'v3.2 · Hybrid-DDQN · Solomon + Homberger',
     'hero.title.nami': 'NAMI',
     'hero.title.desc': 'Plateau-Aware Deep RL Routing Engine',
     'hero.subtitle': 'Combining Deep Reinforcement Learning with Adaptive Large Neighborhood Search to solve Vehicle Routing Problems with Time Windows in milliseconds.',
-    'hero.cta.start': 'Launch Solver',
-    'hero.cta.demo': 'Explore Demo',
+    'hero.cta.start': 'Open Dispatch Portal',
+    'hero.cta.code': 'View Codebase →',
 
-    'showcase.eyebrow': 'How It Works',
-    'showcase.title': 'From chaos to optimal dispatch in 4 acts',
+    'ticker.epoch': 'Epoch:',
+    'ticker.cost': 'Cost:',
+    'ticker.plateau': 'Plateau Level:',
 
-    'act1.badge': '01',
-    'act1.title': "What's the fastest way to deliver to 100 addresses?",
-    'act1.desc': 'A single vehicle on a simple route is easy. But scaling delivery operations exposes exponential complexity.',
+    'pipeline.eyebrow': 'Algorithm · 4 Stages',
+    'pipeline.title': 'Plateau-Aware Escape Pipeline',
+    'pipeline.s1.title': 'Constructive Decoder',
+    'pipeline.s1.body': 'Initial solution generated via greedy route construction and DDQN-guided insertion heuristic initialization.',
+    'pipeline.s2.title': 'Stagnation Detection',
+    'pipeline.s2.body': 'Tracks the search trajectory in real time, detecting local minima plateaus when improvement patience thresholds are violated.',
+    'pipeline.s3.title': 'DDQN Guided Repair',
+    'pipeline.s3.body': 'Double Deep Q-Network selects optimal combinations of destroy and repair operators to successfully break search basin stagnation.',
+    'pipeline.s4.title': 'Optima Convergence',
+    'pipeline.s4.body': 'Performs local search optimization and Set Partitioning formulation to recombine elite routes into the final feasible route plan.',
 
-    'act2.badge': '02',
-    'act2.title': 'A single route quickly shatters.',
-    'act2.desc': 'Every address introduces narrow time windows, load capacity limits, service times, and vehicle constraints. Classical heuristics easily stagnate in sub-optimal local basins.',
-
-    'act3.badge': '03',
-    'act3.title': "NAMI's neural controller takes over.",
-    'act3.desc': 'A Double Deep Q-Network (DDQN) agent analyzes the search trajectory in real-time, intelligently selecting destroy-and-repair ALNS operators to break stagnation patterns.',
-
-    'act4.badge': '04',
-    'act4.title': 'Optimal dispatch. Delivered.',
-    'act4.desc': 'Feasible, balanced paths are generated in milliseconds. Dispatchers receive clean, conflict-free delivery plans verified against all Solomon criteria.',
-
-    'stats.eyebrow': 'Performance Snapshot',
-    'stats.saved': 'Distance Saved',
-    'stats.ontime': 'On-Time Rate',
-    'stats.compute': 'Compute Time',
-    'stats.fleet': 'Active Fleets',
+    'stats.instances': 'Solomon + Homberger instances tested',
+    'stats.seeds': 'independent seeds (cold-starts)',
+    'stats.wilcoxon': 'in 5 of 6 scale comparisons',
+    'stats.overhead': 'compute overhead vs ALNS-Base',
 
     'features.eyebrow': 'Engine Architecture',
     'features.title': 'Engineered for Hard Constraints',
-    'features.f1.title': 'DDQN Operator Selection',
-    'features.f1.body': 'A Double DQN agent observes the search trajectory and learns which destroy operators (Random, Worst, Cluster) to fire when search basins stagnate.',
-    'features.f2.title': 'Time-Window Feasibility',
-    'features.f2.body': 'Supports strict time windows (ready time, due date, service duration) with dynamic early-arrival waiting and late-arrival filtering.',
-    'features.f3.title': 'Solomon Benchmarks',
-    'features.f3.body': 'Built-in, one-click loading of Solomon benchmark instances (C, R, RC families) for rapid performance verification.',
-    'features.f5.title': 'Zero-Shot Transfer',
-    'features.f5.body': 'The trained plateau-aware RL policy transfers directly across different Solomon families (e.g. trained on RC1, evaluated on RC2) without retraining.',
+    'features.f1.title': 'DDQN Plateau Controller',
+    'features.f1.bullet1': 'Prioritized Experience Replay (PER) with beta-annealing',
+    'features.f1.bullet2': 'Welford reward normalization for stable training',
+    'features.f1.bullet3': 'Dynamically shifts search mode upon stagnation',
+    'features.f2.title': 'Adaptive Search Engine',
+    'features.f2.bullet1': '8 destroy and 5 insertion operators',
+    'features.f2.bullet2': 'Thompson-bandit operator selection policy',
+    'features.f2.bullet3': 'Granular local search heuristics',
+    'features.f3.title': 'Learned Acceptance Criterion (LAC)',
+    'features.f3.bullet1': 'Neural network solution acceptance classifier',
+    'features.f3.bullet2': 'Replaces traditional simulated annealing schedule',
+    'features.f3.bullet3': 'Adapts to current trajectory characteristics',
+    'features.f5.title': 'Set-Partitioning MILP Recombinator',
+    'features.f5.bullet1': 'Sub-route extraction during search trajectory',
+    'features.f5.bullet2': 'Global recombination via mixed-integer equations',
+    'features.f5.bullet3': 'Guarantees optimal layout of elite sub-routes',
 
     'results.eyebrow': 'Scientific Validation',
-    'results.title': 'Solomon Benchmark Results',
-    'table.th.family': 'Instance Family',
-    'table.th.bks': 'Best Known Cost (BKS)',
-    'table.th.nami': 'NAMI Hybrid Cost',
-    'table.th.alns': 'ALNS Baseline Cost',
-    'table.th.namigap': 'NAMI Gap vs BKS (%)',
-    'table.th.alnsgap': 'ALNS Gap vs BKS (%)',
-    'results.footnote': '* Zero-shot generalization transfer: The model was trained exclusively on RC1 instances and evaluated directly on RC2.',
+    'results.title': 'Solomon & Homberger Benchmark Results',
+    'table.th.instance': 'Instance / Family',
+    'table.th.scale': 'Scale',
+    'table.th.bks': 'BKS (NV / TD)',
+    'table.th.nami': 'NAMI Hybrid (NV / TD)',
+    'table.th.alns': 'ALNS Baseline (NV / TD)',
+    'table.th.wilcoxon': 'Wilcoxon p-value',
+    'table.group.100': '100-Customer Instances (Solomon Benchmarks)',
+    'table.group.200': '200-Customer Instances (Gehring-Homberger Benchmarks)',
+    'table.group.400': '400-Customer Instances (Gehring-Homberger Benchmarks)',
+    'table.summary': 'Summary: NAMI Hybrid-DDQN matches BKS vehicle floors at 100/200 scale and achieves statistically significant (p < 0.05) vehicle reductions at 400 scale.',
+    'results.footnote.dagger': '† Travel Distance (TD) comparisons are excluded when vehicle counts (NV) are not matched, as extra vehicle capacity artificially distorts travel distance.',
+    'results.footnote.coldstart': 'Note: Standalone solver results are generated under strict independent cold-start conditions starting from build_greedy in a cleared directory, without multi-stage warm-starts.',
+    'results.footnote.wilcoxon': '* Statistically significant difference between NAMI Hybrid and ALNS Baseline (Wilcoxon signed-rank test p < 0.05).',
     'results.citation.title': 'Plateau-Aware Deep RL for Combinatorial Search',
     'results.citation.body': 'Our thesis work analyzes DQN-guided escape operators under severe local stagnation states, outperforming traditional static ALNS variants in 7 of 8 benchmark scenarios.',
 
     'getstarted.eyebrow': 'Developer Quickstart',
-    'getstarted.title': 'Run the engine locally in 60s',
-
-    'footer.blurb': 'Deep reinforcement learning and search heuristics paired together for robust combinatorial optimization.',
-    'footer.col.system': 'System',
-    'footer.col.academic': 'Academic',
-    'footer.link.solver': 'Open Solver',
-    'footer.link.demo': 'Showcase',
-    'footer.link.benchmarks': 'Benchmarks',
-    'footer.link.codebase': 'Codebase',
-    'footer.link.feedback': 'Feedback Form',
-    'footer.link.dispatcher': 'Dispatcher Login',
-    'footer.footnote': 'Designed for computational speed and absolute operational clarity.'
+    'getstarted.title': 'Run the engine locally',
+    'cli.explorer': 'EXPLORER'
   },
   vn: {
     'brand.sub': 'Tối ưu hóa Nghiên cứu',
@@ -99,75 +98,76 @@ const i18n = {
     'nav.getstarted': 'Cài đặt',
     'cta.demo': 'Mở Planner',
 
-    'hero.badge': 'Trình Tối Ưu Hóa Solomon Benchmark',
+    'hero.badge': 'v3.2 · Hybrid-DDQN · Solomon + Homberger',
     'hero.title.nami': 'NAMI',
     'hero.title.desc': 'Engine Định Tuyến Học Tăng Cường Sâu Plateau-Aware',
     'hero.subtitle': 'Kết hợp Học tăng cường sâu với Thuật toán tìm kiếm lân cận lớn thích ứng để giải quyết bài toán định tuyến xe có khung thời gian trong mili giây.',
-    'hero.cta.start': 'Mở Trình Giải',
-    'hero.cta.demo': 'Khám Phá Demo',
+    'hero.cta.start': 'Mở Cổng Điều Phối',
+    'hero.cta.code': 'Xem Kho Mã Nguồn →',
 
-    'showcase.eyebrow': 'Cách Hoạt Động',
-    'showcase.title': 'Từ hỗn loạn đến điều phối tối ưu qua 4 bước',
+    'ticker.epoch': 'Kỷ nguyên:',
+    'ticker.cost': 'Chi phí:',
+    'ticker.plateau': 'Mức độ chững:',
 
-    'act1.badge': '01',
-    'act1.title': 'Đâu là cách nhanh nhất để giao tới 100 địa chỉ?',
-    'act1.desc': 'Một phương tiện trên một lộ trình đơn giản thì dễ dàng. Nhưng việc mở rộng hoạt động giao hàng sẽ tạo ra độ phức tạp theo cấp số nhân.',
+    'pipeline.eyebrow': 'Thuật toán · 4 Giai đoạn',
+    'pipeline.title': 'Quỹ đạo Vượt cực trị của NAMI',
+    'pipeline.s1.title': 'Bộ Giải Mã Constructive',
+    'pipeline.s1.body': 'Khởi tạo phương án ban đầu bằng thuật toán chèn tham lam và chèn điểm theo định hướng của mạng nơ-ron DDQN.',
+    'pipeline.s2.title': 'Nhận Diện Điểm Chững',
+    'pipeline.s2.body': 'Theo dõi quỹ đạo tìm kiếm thời gian thực, phát hiện các điểm chững cực trị địa phương khi vượt quá ngưỡng kiên nhẫn.',
+    'pipeline.s3.title': 'Sửa Lỗi Hướng Dẫn bằng DDQN',
+    'pipeline.s3.body': 'Mạng Q-learning sâu kép chọn cặp toán tử destroy-and-repair tối ưu để phá vỡ các điểm chững của quỹ đạo tìm kiếm.',
+    'pipeline.s4.title': 'Hội Tụ Cực Trị',
+    'pipeline.s4.body': 'Tối ưu hóa tìm kiếm cục bộ và lập công thức Set Partitioning để tái tổ hợp các tuyến đường tốt nhất thành kế hoạch lộ trình khả thi.',
 
-    'act2.badge': '02',
-    'act2.title': 'Lộ trình nhanh chóng bị phá vỡ.',
-    'act2.desc': 'Mỗi địa chỉ đi kèm với các khung giờ nghiêm ngặt, giới hạn tải trọng, thời gian phục vụ và các ràng buộc xe. Các heuristic cổ điển rất dễ mắc kẹt ở cực trị địa phương kém tối ưu.',
-
-    'act3.badge': '03',
-    'act3.title': 'Bộ điều khiển nơ-ron NAMI tiếp quản.',
-    'act3.desc': 'Agent Double Deep Q-Network (DDQN) phân tích quỹ đạo tìm kiếm theo thời gian thực, lựa chọn thông minh các toán tử destroy-and-repair ALNS để phá vỡ các điểm nghẽn chững lại.',
-
-    'act4.badge': '04',
-    'act4.title': 'Điều phối tối ưu. Đã hoàn thành.',
-    'act4.desc': 'Các lộ trình khả thi, cân bằng được tạo ra trong vài mili giây. Người điều phối nhận được kế hoạch giao hàng rõ ràng, không có xung đột, được xác thực theo tất cả các tiêu chí Solomon.',
-
-    'stats.eyebrow': 'Hiệu Suất',
-    'stats.saved': 'Quãng Đường Tiết Kiệm',
-    'stats.ontime': 'Tỷ Lệ Đúng Giờ',
-    'stats.compute': 'Thời Gian Tính Toán',
-    'stats.fleet': 'Đội Xe Hoạt Động',
+    'stats.instances': 'Bộ dữ liệu Solomon & Homberger được thử nghiệm',
+    'stats.seeds': 'Các hạt giống độc lập (khởi động lạnh)',
+    'stats.wilcoxon': 'Trong 5 trên 6 phép so sánh quy mô',
+    'stats.overhead': 'Phụ phí tính toán so với ALNS-Base',
 
     'features.eyebrow': 'Kiến trúc Engine',
     'features.title': 'Thiết kế cho Ràng buộc Khó',
-    'features.f1.title': 'Chọn toán tử bằng DDQN',
-    'features.f1.body': 'Agent Double DQN quan sát quỹ đạo tìm kiếm và học cách kích hoạt các toán tử destroy phù hợp (Random, Worst, Cluster) khi không gian tìm kiếm bị chững lại.',
-    'features.f2.title': 'Độ khả thi Khung giờ',
-    'features.f2.body': 'Hỗ trợ khung giờ nghiêm ngặt (ready time, due date, service duration) kèm tự động chờ nếu đến sớm và lọc nếu đến muộn.',
-    'features.f3.title': 'Benchmark Solomon',
-    'features.f3.body': 'Tích hợp sẵn các bộ benchmark Solomon (họ C, R, RC) để tải nhanh chỉ với một click giúp kiểm chứng thuật toán.',
-    'features.f5.title': 'Zero-Shot Transfer',
-    'features.f5.body': 'Policy RL nhận diện plateau sau khi huấn luyện có thể chuyển giao trực tiếp sang các họ Solomon khác (ví dụ: huấn luyện trên RC1, chạy thử trên RC2) mà không cần train lại.',
+    'features.f1.title': 'Bộ điều khiển chững DDQN',
+    'features.f1.bullet1': 'Prioritized Experience Replay (PER) với beta-annealing',
+    'features.f1.bullet2': 'Chuẩn hóa phần thưởng Welford để tối ưu hóa đào tạo',
+    'features.f1.bullet3': 'Tự động chuyển đổi chế độ tìm kiếm khi bị chững',
+    'features.f2.title': 'Engine Tìm kiếm Thích ứng',
+    'features.f2.bullet1': '8 toán tử hủy (destroy) và 5 toán tử chèn (insert)',
+    'features.f2.bullet2': 'Chính sách lựa chọn toán tử dựa trên Thompson-bandit',
+    'features.f2.bullet3': 'Các thuật toán tìm kiếm cục bộ chi tiết',
+    'features.f3.title': 'Tiêu chuẩn Chấp nhận Học máy (LAC)',
+    'features.f3.bullet1': 'Mạng nơ-ron phân loại chấp nhận phương án',
+    'features.f3.bullet2': 'Thay thế lược đồ luyện kim mô phỏng truyền thống',
+    'features.f3.bullet3': 'Thích ứng với đặc tính quỹ đạo tìm kiếm hiện tại',
+    'features.f5.title': 'Tái tổ hợp Tuyến đường Set-Partitioning MILP',
+    'features.f5.bullet1': 'Trích xuất tuyến đường con trong suốt quỹ đạo tìm kiếm',
+    'features.f5.bullet2': 'Tái tổ hợp toàn cục qua quy hoạch nguyên hỗn hợp',
+    'features.f5.bullet3': 'Đảm bảo cấu trúc tối ưu của các tuyến đường con tốt nhất',
 
     'results.eyebrow': 'Xác thực Khoa học',
-    'results.title': 'Kết quả Benchmark Solomon',
-    'table.th.family': 'Họ Solomon Instance',
-    'table.th.bks': 'Chi Phí Tốt Nhất (BKS)',
-    'table.th.nami': 'Chi Phí NAMI Hybrid',
-    'table.th.alns': 'Chi Phí ALNS Baseline',
-    'table.th.namigap': 'NAMI Gap so với BKS (%)',
-    'table.th.alnsgap': 'ALNS Gap so với BKS (%)',
-    'results.footnote': '* Chuyển giao tổng quát hóa Zero-shot: Mô hình được huấn luyện duy nhất trên các instance họ RC1 và được đánh giá trực tiếp trên họ RC2.',
+    'results.title': 'Kết quả Benchmark Solomon & Homberger',
+    'table.th.instance': 'Bộ dữ liệu / Họ',
+    'table.th.scale': 'Quy mô',
+    'table.th.bks': 'BKS (Số xe / TD)',
+    'table.th.nami': 'NAMI Hybrid (Số xe / TD)',
+    'table.th.alns': 'ALNS Baseline (Số xe / TD)',
+    'table.th.wilcoxon': 'Giá trị p Wilcoxon',
+    'table.group.100': 'Bộ dữ liệu 100 khách hàng (Solomon Benchmarks)',
+    'table.group.200': 'Bộ dữ liệu 200 khách hàng (Gehring-Homberger Benchmarks)',
+    'table.group.400': 'Bộ dữ liệu 400 khách hàng (Gehring-Homberger Benchmarks)',
+    'table.summary': 'Tóm tắt: NAMI Hybrid-DDQN đạt số lượng xe tối thiểu của BKS ở quy mô 100/200 và giúp giảm số xe có ý nghĩa thống kê (p < 0.05) ở quy mô 400.',
+    'results.footnote.dagger': '† Phép so sánh quãng đường (TD) bị loại trừ khi số lượng xe (NV) không khớp nhau, vì việc thừa năng lực vận tải sẽ bóp méo nhân tạo quãng đường di chuyển.',
+    'results.footnote.coldstart': 'Lưu ý: Kết quả trình giải độc lập được tạo ra dưới điều kiện khởi động lạnh độc lập nghiêm ngặt từ build_greedy trong thư mục trống.',
+    'results.footnote.wilcoxon': '* Sự khác biệt có ý nghĩa thống kê giữa NAMI Hybrid và ALNS Baseline (kiểm định Wilcoxon signed-rank p < 0.05).',
     'results.citation.title': 'Học Tăng Cường Sâu Plateau-Aware cho Bài Toán Tìm Kiếm Tổ Hợp',
     'results.citation.body': 'Nghiên cứu luận văn của chúng tôi phân tích các toán tử thoát khỏi cực trị cục bộ do DQN hướng dẫn dưới các trạng thái chững lại nghiêm trọng, vượt trội hơn các biến thể ALNS tĩnh truyền thống trong 7 trên 8 kịch bản thử nghiệm.',
 
     'getstarted.eyebrow': 'Khởi động nhanh cho Dev',
-    'getstarted.title': 'Chạy cục bộ engine trong 60 giây',
-
-    'footer.blurb': 'Sự kết hợp giữa học tăng cường sâu và thuật toán tìm kiếm cục bộ giúp giải quyết các bài toán tối ưu tổ hợp phức tạp một cách mạnh mẽ.',
-    'footer.col.system': 'Hệ Thống',
-    'footer.col.academic': 'Học Thuật',
-    'footer.link.solver': 'Mở Trình Giải',
-    'footer.link.demo': 'Demo Trực Quan',
-    'footer.link.benchmarks': 'Điểm Chuẩn (Benchmarks)',
-    'footer.link.codebase': 'Kho Mã Nguồn',
-    'footer.link.feedback': 'Biểu Mẫu Góp Ý',
-    'footer.link.dispatcher': 'Đăng Nhập Điều Phối',
-    'footer.footnote': 'Thiết kế cho tốc độ tính toán cao và độ trực quan vận hành tuyệt đối.'
+    'getstarted.title': 'Chạy cục bộ engine',
+    'cli.explorer': 'THƯ MỤC'
   }
+
+
 };
 
 // ===================================================================
@@ -483,6 +483,11 @@ function setupRoutingCanvas() {
   const canvas = document.getElementById('nc');
   if (!canvas) return;
 
+  const tickerEpochEl = document.getElementById('ticker-epoch');
+  const tickerCostEl = document.getElementById('ticker-cost');
+  const tickerPlateauBar = document.getElementById('ticker-plateau-bar');
+  const tickerPlateauVal = document.getElementById('ticker-plateau-val');
+
   const ctx = canvas.getContext('2d');
   let w, h;
 
@@ -694,6 +699,16 @@ function setupRoutingCanvas() {
   let currentCost = 1284.2;
   const costParticles = [];
 
+  let plateauLevel = 0;
+
+  function triggerPlateauFlash() {
+    if (!tickerPlateauBar) return;
+    tickerPlateauBar.classList.add('flash');
+    setTimeout(() => {
+      tickerPlateauBar.classList.remove('flash');
+    }, 400);
+  }
+
 
 
   // Animation frame loop
@@ -747,6 +762,43 @@ function setupRoutingCanvas() {
       ctx.lineTo(p4.x, p4.y);
     }
     ctx.stroke();
+
+    // 1. Draw coordinate axes bounding box & corners labels
+    ctx.strokeStyle = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.05)';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    const c00 = isoProject(0, 0, cw, ch);
+    const c10 = isoProject(1, 0, cw, ch);
+    const c11 = isoProject(1, 1, cw, ch);
+    const c01 = isoProject(0, 1, cw, ch);
+    ctx.moveTo(c00.x, c00.y);
+    ctx.lineTo(c10.x, c10.y);
+    ctx.lineTo(c11.x, c11.y);
+    ctx.lineTo(c01.x, c01.y);
+    ctx.closePath();
+    ctx.stroke();
+
+    ctx.fillStyle = isDark ? 'rgba(255, 255, 255, 0.28)' : 'rgba(0, 0, 0, 0.35)';
+    ctx.font = '8px "JetBrains Mono", monospace';
+    ctx.fillText('(0, 100)', c00.x - 42, c00.y);
+    ctx.fillText('(100, 100)', c10.x + 8, c10.y);
+    ctx.fillText('(100, 0)', c11.x + 8, c11.y + 8);
+    ctx.fillText('(0, 0)', c01.x - 32, c01.y + 8);
+
+    // 2. Draw cluster bounding circles/ellipses
+    ctx.strokeStyle = isDark ? 'rgba(122, 115, 255, 0.03)' : 'rgba(99, 91, 255, 0.06)';
+    ctx.lineWidth = 0.7;
+    ctx.setLineDash([2, 4]);
+    clusters.forEach((c, idx) => {
+      const center = isoProject(c.cx, c.cy, cw, ch);
+      ctx.beginPath();
+      ctx.ellipse(center.x, center.y, 45, 22, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = isDark ? 'rgba(255, 255, 255, 0.14)' : 'rgba(0, 0, 0, 0.18)';
+      ctx.font = '7px "JetBrains Mono", monospace';
+      ctx.fillText(`CLUSTER_0${idx + 1}`, center.x - 20, center.y - 10);
+    });
+    ctx.setLineDash([]);
 
     // Draw the optimized vehicle route paths (delicate dashed regional sweep loops)
     vehicles.forEach((veh) => {
@@ -899,6 +951,9 @@ function setupRoutingCanvas() {
           alpha: 1.0
         });
 
+        plateauLevel = 0;
+        triggerPlateauFlash();
+
         addLog(`DDQN: Reroute V-${veh.id} -> Cost ${currentCost.toFixed(1)}`);
       }
 
@@ -979,6 +1034,20 @@ function setupRoutingCanvas() {
       epoch++;
       if (epoch > 600) epoch = 1;
     }
+
+    // Stagnation Plateau logic
+    if (frameCount % 4 === 0) {
+      plateauLevel += 0.5;
+      if (plateauLevel > 100) {
+        plateauLevel = 0;
+        triggerPlateauFlash();
+      }
+    }
+
+    if (tickerEpochEl) tickerEpochEl.textContent = epoch;
+    if (tickerCostEl) tickerCostEl.textContent = currentCost.toFixed(1);
+    if (tickerPlateauBar) tickerPlateauBar.style.width = `${plateauLevel}%`;
+    if (tickerPlateauVal) tickerPlateauVal.textContent = `${Math.round(plateauLevel)}%`;
 
     requestAnimationFrame(draw);
   }

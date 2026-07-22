@@ -1599,7 +1599,7 @@ class HybridDDQNSolver:
                     if alt is not None and alt.feasible and (alt.nv < best.nv or (alt.nv == best.nv and alt.cost <= 1.10 * best.cost)):
                         print(f"[{self.inst.name}] Population restart triggered at iter {it} (no_best_imp={no_best_imp}): NV={cur.nv}->{alt.nv}, cost={cur.cost:.1f}->{alt.cost:.1f} (best_nv={best.nv}, best_cost={best.cost:.1f})")
                         cur = alt
-                        temp = cfg.temp_control * cur.cost / math.log(2) * 1.5
+                        temp = cfg.temp_control * cur.cost / math.log(2) * 4.0
                         no_best_imp = 0
 
 
@@ -1928,7 +1928,7 @@ class HybridDDQNSolver:
                 # destroy) allow structural rearrangement while maintaining NV.
                 # Runs only for wide-TW instances where the TD gap is significant.
                 if is_wide_tw:
-                    best = self._fixed_nv_polish(best, pool, inherited_bandit=self.mode_bandits[MODE_INTENSIFY], initial_temp=1.0, gamma=0.0)
+                    best = self._fixed_nv_polish(best, pool, inherited_bandit=self.mode_bandits[MODE_INTENSIFY], initial_temp=1.0)
                     history.append(best.cost)
                     # Final intra-route convergence after destroy-repair
                     best = td_converge_polish(best, max_passes=n_intra_passes)

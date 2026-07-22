@@ -31,7 +31,7 @@ from core.rate_limit import GEOCODE_LIMIT, JOBS_LIMIT, limiter
 from models.schemas import JobRequest, MatrixRequest, ReoptimizeRequest
 from services.geocode_service import geocode_address, reverse_geocode_address
 from services.job_service import job_service
-from services.matrix_service import calculate_matrix
+from services.matrix_service import calculate_matrix, fetch_route_geometry
 from services.solomon_service import list_solomon_datasets, load_solomon_dataset
 from services.solver_service import device_summary, transfer_weights_summary
 
@@ -355,6 +355,14 @@ async def analysis_activity(
 @router.post("/matrix")
 async def matrix(body: MatrixRequest, _: dict[str, str] = Depends(require_user)) -> dict[str, Any]:
     return await calculate_matrix(body.points)
+
+
+@router.get("/route-geometry")
+async def route_geometry(coords: str = Query(..., description="Semicolon-separated lng,lat points")) -> dict[str, Any]:
+    try:
+        return await fetch_route_geometry(coords)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"OSRM geometry fetch failed: {exc}") from exc
 
 
 @router.post("/reoptimize")
