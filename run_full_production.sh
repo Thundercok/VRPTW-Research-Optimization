@@ -8,6 +8,15 @@ export VECLIB_MAXIMUM_THREADS=1
 export NUMEXPR_NUM_THREADS=1
 export PYTHONUNBUFFERED=1
 
+# Interpreter used for every shard. Defaults to the project venv; override for a
+# different environment, e.g. PYTHON=python on Windows where .venv/bin does not exist:
+#   PYTHON=/c/Users/you/AppData/Local/Programs/Python/Python311/python.exe ./run_full_production.sh
+PYTHON="${PYTHON:-.venv/bin/python}"
+if ! command -v "$PYTHON" >/dev/null 2>&1 && [[ ! -x "$PYTHON" ]]; then
+    echo "ERROR: interpreter '$PYTHON' not found. Set PYTHON=<path-to-python>." >&2
+    exit 1
+fi
+
 OUTPUT_BASE="results/clean_v2"
 mkdir -p "$OUTPUT_BASE"
 
@@ -37,7 +46,7 @@ fi
 # ── SHARD 1: CLUSTERED INSTANCES (C1 & C2) ──────────────────────────────────
 echo ""
 echo "--> Shard 1: Solomon Clustered (C1/C2) — 17 instances, 7 runs"
-PYTHONPATH=src .venv/bin/python docs/run_benchmark.py "${workers_arg[@]}" \
+PYTHONPATH=src "$PYTHON" docs/run_benchmark.py "${workers_arg[@]}" \
   --data-path data/Solomon \
   --output-dir "$OUTPUT_BASE/solomon_clustered" \
   --runs 7 \
@@ -52,7 +61,7 @@ PYTHONPATH=src .venv/bin/python docs/run_benchmark.py "${workers_arg[@]}" \
 # ── SHARD 2: RANDOM/MIXED SHORT HORIZON (R1 & RC1) ──────────────────────────
 echo ""
 echo "--> Shard 2: Solomon Short-Horizon (R1/RC1) — 20 instances, 7 runs"
-PYTHONPATH=src .venv/bin/python docs/run_benchmark.py "${workers_arg[@]}" \
+PYTHONPATH=src "$PYTHON" docs/run_benchmark.py "${workers_arg[@]}" \
   --data-path data/Solomon \
   --output-dir "$OUTPUT_BASE/solomon_short_horizon" \
   --runs 7 \
@@ -67,7 +76,7 @@ PYTHONPATH=src .venv/bin/python docs/run_benchmark.py "${workers_arg[@]}" \
 # ── SHARD 3: RANDOM/MIXED WIDE HORIZON (R2 & RC2) ───────────────────────────
 echo ""
 echo "--> Shard 3: Solomon Wide-Horizon (R2/RC2) — 20 instances, 7 runs"
-PYTHONPATH=src .venv/bin/python docs/run_benchmark.py "${workers_arg[@]}" \
+PYTHONPATH=src "$PYTHON" docs/run_benchmark.py "${workers_arg[@]}" \
   --data-path data/Solomon \
   --output-dir "$OUTPUT_BASE/solomon_wide_horizon" \
   --runs 7 \
@@ -85,7 +94,7 @@ PYTHONPATH=src .venv/bin/python docs/run_benchmark.py "${workers_arg[@]}" \
 
 echo ""
 echo "--> Shard 4: Homberger-200 (All 60 instances) — 5 runs"
-PYTHONPATH=src .venv/bin/python docs/run_benchmark.py "${workers_arg[@]}" \
+PYTHONPATH=src "$PYTHON" docs/run_benchmark.py "${workers_arg[@]}" \
   --data-path data/Gehring_Homberger/homberger_200_customer_instances \
   --output-dir "$OUTPUT_BASE/gehring_homberger_200" \
   --runs 5 \
@@ -111,7 +120,7 @@ PYTHONPATH=src .venv/bin/python docs/run_benchmark.py "${workers_arg[@]}" \
 
 echo ""
 echo "--> Shard 5: Homberger-400 (24 instances) — 3 runs"
-PYTHONPATH=src .venv/bin/python docs/run_benchmark.py "${workers_arg[@]}" \
+PYTHONPATH=src "$PYTHON" docs/run_benchmark.py "${workers_arg[@]}" \
   --data-path data/Gehring_Homberger/homberger_400_customer_instances \
   --output-dir "$OUTPUT_BASE/gehring_homberger_400" \
   --runs 3 \
@@ -137,7 +146,7 @@ PYTHONPATH=src .venv/bin/python docs/run_benchmark.py "${workers_arg[@]}" \
 
 echo ""
 echo "--> Shard 6: Homberger-600 (12 instances) — 3 runs"
-PYTHONPATH=src .venv/bin/python docs/run_benchmark.py "${workers_arg[@]}" \
+PYTHONPATH=src "$PYTHON" docs/run_benchmark.py "${workers_arg[@]}" \
   --data-path data/Gehring_Homberger/homberger_600_customer_instances \
   --output-dir "$OUTPUT_BASE/gehring_homberger_600" \
   --runs 3 \
@@ -163,7 +172,7 @@ PYTHONPATH=src .venv/bin/python docs/run_benchmark.py "${workers_arg[@]}" \
 
 echo ""
 echo "--> Shard 7: Homberger-800 (6 instances) — 3 runs"
-PYTHONPATH=src .venv/bin/python docs/run_benchmark.py "${workers_arg[@]}" \
+PYTHONPATH=src "$PYTHON" docs/run_benchmark.py "${workers_arg[@]}" \
   --data-path data/Gehring_Homberger/homberger_800_customer_instances \
   --output-dir "$OUTPUT_BASE/gehring_homberger_800" \
   --runs 3 \
@@ -184,7 +193,7 @@ PYTHONPATH=src .venv/bin/python docs/run_benchmark.py "${workers_arg[@]}" \
 
 echo ""
 echo "--> Shard 8: Homberger-1000 STRESS (6 instances) — 3 runs"
-PYTHONPATH=src .venv/bin/python docs/run_benchmark.py "${workers_arg[@]}" \
+PYTHONPATH=src "$PYTHON" docs/run_benchmark.py "${workers_arg[@]}" \
   --data-path data/Gehring_Homberger/homberger_1000_customer_instances \
   --output-dir "$OUTPUT_BASE/gehring_homberger_1000" \
   --runs 3 \

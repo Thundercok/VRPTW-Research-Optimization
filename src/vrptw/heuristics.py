@@ -7,6 +7,100 @@ from .core import Inst, Plan, _route_cost
 
 
 @njit(cache=True)
+def _route_timing_numba(
+    route: np.ndarray,
+    dist: np.ndarray,
+    ready: np.ndarray,
+    due: np.ndarray,
+    service: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray, int]:
+    """Precompute the timing profile of an existing route.
+
+    Returns ``(arrivals, latest, first_violation)`` where
+
+    * ``arrivals[i]`` is the service start time at ``route[i]`` (after any wait),
+    * ``latest[i]`` is the *latest* service start at ``route[i]`` for which the
+      remainder of the route — including the return leg to the depot — stays
+      feasible,
+    * ``first_violation`` is the index of the first node whose service start
+      already exceeds its due date (``len(route)`` when the route is feasible).
+
+    ``latest`` is the exact feasibility threshold, not a conservative bound:
+    since ``ready[i+1] <= latest[i+1]`` whenever the suffix is feasible at all,
+    ``max(arrival, ready[i+1]) <= latest[i+1]`` reduces to ``arrival <=
+    latest[i+1]``, so waiting is handled correctly by the recursion. This is what
+    lets the insertion feasibility test below run in O(1) per position rather
+    than re-simulating the whole route.
+    """
+    m = len(route)
+    arrivals = np.empty(m, dtype=np.float64)
+    latest = np.empty(m, dtype=np.float64)
+    first_violation = m
+
+    t = 0.0
+    prev = 0
+    for i in range(m):
+        node = route[i]
+        t += dist[prev, node]
+        if t < ready[node]:
+            t = ready[node]
+        arrivals[i] = t
+        if t > due[node] and first_violation == m:
+            first_violation = i
+        t += service[node]
+        prev = node
+
+    if m > 0:
+        last = route[m - 1]
+        latest[m - 1] = min(due[last], due[0] - service[last] - dist[last, 0])
+        for i in range(m - 2, -1, -1):
+            node = route[i]
+            nxt = route[i + 1]
+            cand = latest[i + 1] - service[node] - dist[node, nxt]
+            latest[i] = min(due[node], cand)
+
+    return arrivals, latest, first_violation
+
+
+@njit(cache=True)
+def _insert_feasible_numba(
+    node: int,
+    pos: int,
+    route: np.ndarray,
+    arrivals: np.ndarray,
+    latest: np.ndarray,
+    dist: np.ndarray,
+    ready: np.ndarray,
+    due: np.ndarray,
+    service: np.ndarray,
+) -> bool:
+    """O(1) push-forward feasibility test for inserting ``node`` at ``pos``.
+
+    The caller is responsible for the capacity check and for ensuring the prefix
+    ``route[:pos]`` is itself feasible (``pos <= first_violation``).
+    """
+    n_nodes = len(route)
+    prev = route[pos - 1] if pos > 0 else 0
+    t_prev_depart = (arrivals[pos - 1] + service[prev]) if pos > 0 else 0.0
+
+    t_node = t_prev_depart + dist[prev, node]
+    if t_node < ready[node]:
+        t_node = ready[node]
+    if t_node > due[node]:
+        return False
+    t_depart = t_node + service[node]
+
+    if pos == n_nodes:
+        return t_depart + dist[node, 0] <= due[0]
+
+    nxt = route[pos]
+    t_nxt = t_depart + dist[node, nxt]
+    if t_nxt < ready[nxt]:
+        t_nxt = ready[nxt]
+    return t_nxt <= latest[pos]
+
+
+@njit(cache=True)
 def _best_insert_position_numba(
     node: int,
     route: np.ndarray,
@@ -27,33 +121,18 @@ def _best_insert_position_numba(
     if current_load + demands[node] > capacity:
         return 1e18, -1
 
+    arrivals, latest, first_violation = _route_timing_numba(route, dist, ready, due, service)
+
     for pos in range(n_nodes + 1):
+        if pos > first_violation:
+            break
         prev = route[pos - 1] if pos > 0 else 0
         nxt = route[pos] if pos < n_nodes else 0
         delta = dist[prev, node] + dist[node, nxt] - dist[prev, nxt]
         if delta >= best_cost:
             continue
 
-        t = 0.0
-        prev_node = 0
-        feasible = True
-
-        for idx in range(n_nodes + 1):
-            if idx == pos:
-                curr = node
-            else:
-                curr = route[idx if idx < pos else idx - 1]
-
-            t += dist[prev_node, curr]
-            if t < ready[curr]:
-                t = ready[curr]
-            if t > due[curr]:
-                feasible = False
-                break
-            t += service[curr]
-            prev_node = curr
-
-        if feasible and t + dist[prev_node, 0] <= due[0]:
+        if _insert_feasible_numba(node, pos, route, arrivals, latest, dist, ready, due, service):
             best_cost = delta
             best_pos = pos
 
@@ -83,7 +162,11 @@ def _best_insert_position_pruned_numba(
     if current_load + demands[node] > capacity:
         return 1e18, -1
 
+    arrivals, latest, first_violation = _route_timing_numba(route, dist, ready, due, service)
+
     for pos in range(n_nodes + 1):
+        if pos > first_violation:
+            break
         prev = route[pos - 1] if pos > 0 else 0
         nxt = route[pos] if pos < n_nodes else 0
 
@@ -95,35 +178,266 @@ def _best_insert_position_pruned_numba(
         if delta >= best_cost:
             continue
 
-        t = 0.0
-        prev_node = 0
-        feasible = True
-
-        for idx in range(n_nodes + 1):
-            if idx == pos:
-                curr = node
-            else:
-                curr = route[idx if idx < pos else idx - 1]
-
-            t += dist[prev_node, curr]
-            if t < ready[curr]:
-                t = ready[curr]
-            if t > due[curr]:
-                feasible = False
-                break
-            t += service[curr]
-            prev_node = curr
-
-        if feasible and t + dist[prev_node, 0] <= due[0]:
+        if _insert_feasible_numba(node, pos, route, arrivals, latest, dist, ready, due, service):
             best_cost = delta
             best_pos = pos
 
     return best_cost, best_pos
 
 
+@njit(cache=True)
+def _best_insert_in_route_numba(
+    node: int,
+    route: np.ndarray,
+    route_load: float,
+    arrivals: np.ndarray,
+    latest: np.ndarray,
+    first_violation: int,
+    dist: np.ndarray,
+    demands: np.ndarray,
+    capacity: float,
+    ready: np.ndarray,
+    due: np.ndarray,
+    service: np.ndarray,
+    heatmap: np.ndarray,
+    gamma: float,
+    use_bias: bool,
+) -> tuple[float, float, int]:
+    """Best insertion of ``node`` into one route whose timing profile is already known.
+
+    Separating the timing precomputation from the position scan is what makes the
+    batched kernels below cheap: the O(m) profile is built once per route and
+    reused across every node being inserted, instead of once per (node, route).
+    """
+    if route_load + demands[node] > capacity:
+        return 1e18, 1e18, -1
+
+    n_nodes = len(route)
+    best_key = 1e18
+    best_delta = 1e18
+    best_pos = -1
+
+    for pos in range(n_nodes + 1):
+        if pos > first_violation:
+            break
+        prev = route[pos - 1] if pos > 0 else 0
+        nxt = route[pos] if pos < n_nodes else 0
+        delta = dist[prev, node] + dist[node, nxt] - dist[prev, nxt]
+
+        if use_bias:
+            key = delta * (1.0 - gamma * heatmap[prev, node]) * (1.0 - gamma * heatmap[node, nxt])
+        else:
+            key = delta
+
+        if key >= best_key:
+            continue
+
+        if _insert_feasible_numba(node, pos, route, arrivals, latest, dist, ready, due, service):
+            best_key = key
+            best_delta = delta
+            best_pos = pos
+
+    return best_key, best_delta, best_pos
+
+
+@njit(cache=True)
+def _best_insert_in_route_pruned_numba(
+    node: int,
+    route: np.ndarray,
+    route_load: float,
+    arrivals: np.ndarray,
+    latest: np.ndarray,
+    first_violation: int,
+    dist: np.ndarray,
+    demands: np.ndarray,
+    capacity: float,
+    ready: np.ndarray,
+    due: np.ndarray,
+    service: np.ndarray,
+    heatmap: np.ndarray,
+    pruning_threshold: float,
+) -> tuple[float, int]:
+    """Heatmap-pruned counterpart of :func:`_best_insert_in_route_numba`."""
+    if route_load + demands[node] > capacity:
+        return 1e18, -1
+
+    n_nodes = len(route)
+    best_cost = 1e18
+    best_pos = -1
+
+    for pos in range(n_nodes + 1):
+        if pos > first_violation:
+            break
+        prev = route[pos - 1] if pos > 0 else 0
+        nxt = route[pos] if pos < n_nodes else 0
+
+        if heatmap[prev, node] < pruning_threshold or heatmap[node, nxt] < pruning_threshold:
+            continue
+
+        delta = dist[prev, node] + dist[node, nxt] - dist[prev, nxt]
+        if delta >= best_cost:
+            continue
+
+        if _insert_feasible_numba(node, pos, route, arrivals, latest, dist, ready, due, service):
+            best_cost = delta
+            best_pos = pos
+
+    return best_cost, best_pos
+
+
+@njit(cache=True)
+def _insert_costs_matrix_numba(
+    nodes: np.ndarray,
+    routes_flat: np.ndarray,
+    route_lens: np.ndarray,
+    route_loads: np.ndarray,
+    dist: np.ndarray,
+    demands: np.ndarray,
+    capacity: float,
+    ready: np.ndarray,
+    due: np.ndarray,
+    service: np.ndarray,
+    heatmap: np.ndarray,
+    gamma: float,
+    use_bias: bool,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Best-insertion cost of every ``node`` into every route, in one call.
+
+    Returns ``(keys, deltas, positions)`` each shaped ``(len(nodes), n_routes)``;
+    ``positions[i, r] == -1`` marks an infeasible pair. ``keys`` is the (possibly
+    heatmap-biased) selection criterion, ``deltas`` the true distance increase.
+
+    Every route is evaluated. A kNN candidate-route filter was tried here and
+    removed: it cost 1.15pp of gap-to-BKS for no speedup, because after the
+    batching above this scan is no longer the bottleneck (9% of runtime at n=400).
+    """
+    n = len(nodes)
+    r_count = len(route_lens)
+    keys = np.full((n, r_count), 1e18, dtype=np.float64)
+    deltas = np.full((n, r_count), 1e18, dtype=np.float64)
+    positions = np.full((n, r_count), -1, dtype=np.int64)
+
+    for r in range(r_count):
+        route = routes_flat[r, : route_lens[r]]
+        arrivals, latest, first_violation = _route_timing_numba(route, dist, ready, due, service)
+        for i in range(n):
+            k, d, p = _best_insert_in_route_numba(
+                nodes[i], route, route_loads[r], arrivals, latest, first_violation,
+                dist, demands, capacity, ready, due, service, heatmap, gamma, use_bias,
+            )
+            keys[i, r] = k
+            deltas[i, r] = d
+            positions[i, r] = p
+
+    return keys, deltas, positions
+
+
+@njit(cache=True)
+def _insert_costs_column_numba(
+    nodes: np.ndarray,
+    route: np.ndarray,
+    route_load: float,
+    dist: np.ndarray,
+    demands: np.ndarray,
+    capacity: float,
+    ready: np.ndarray,
+    due: np.ndarray,
+    service: np.ndarray,
+    heatmap: np.ndarray,
+    gamma: float,
+    use_bias: bool,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Best-insertion cost of every ``node`` into a single route.
+
+    Used to refresh only the column invalidated by an insertion, instead of
+    rebuilding the whole matrix each round.
+    """
+    n = len(nodes)
+    keys = np.full(n, 1e18, dtype=np.float64)
+    deltas = np.full(n, 1e18, dtype=np.float64)
+    positions = np.full(n, -1, dtype=np.int64)
+
+    arrivals, latest, first_violation = _route_timing_numba(route, dist, ready, due, service)
+    for i in range(n):
+        k, d, p = _best_insert_in_route_numba(
+            nodes[i], route, route_load, arrivals, latest, first_violation,
+            dist, demands, capacity, ready, due, service, heatmap, gamma, use_bias,
+        )
+        keys[i] = k
+        deltas[i] = d
+        positions[i] = p
+
+    return keys, deltas, positions
+
+
+@njit(cache=True)
+def _best_insert_over_routes_numba(
+    node: int,
+    routes_flat: np.ndarray,
+    route_lens: np.ndarray,
+    route_loads: np.ndarray,
+    dist: np.ndarray,
+    demands: np.ndarray,
+    capacity: float,
+    ready: np.ndarray,
+    due: np.ndarray,
+    service: np.ndarray,
+    heatmap: np.ndarray,
+    gamma: float,
+    use_bias: bool,
+) -> tuple[float, int, int]:
+    """Cheapest insertion of a single node across every route, in one call.
+
+    Returns ``(delta, route_index, pos)`` with ``route_index == -1`` when the node
+    fits nowhere. Ties resolve to the lowest route index, matching the strict
+    ``<`` comparison of the Python loop this replaces.
+    """
+    best_key = 1e18
+    best_delta = 1e18
+    best_ri = -1
+    best_pos = -1
+
+    for r in range(len(route_lens)):
+        route = routes_flat[r, : route_lens[r]]
+        arrivals, latest, first_violation = _route_timing_numba(route, dist, ready, due, service)
+        key, delta, pos = _best_insert_in_route_numba(
+            node, route, route_loads[r], arrivals, latest, first_violation,
+            dist, demands, capacity, ready, due, service, heatmap, gamma, use_bias,
+        )
+        if pos >= 0 and key < best_key:
+            best_key = key
+            best_delta = delta
+            best_ri = r
+            best_pos = pos
+
+    return best_delta, best_ri, best_pos
+
+
+_NO_HEATMAP = np.zeros((1, 1), dtype=np.float32)
+
+
+def pack_routes(routes: list[list[int]], inst: Inst) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Pack routes into the padded (routes_flat, route_lens, route_loads) form the
+    batched insertion kernels expect."""
+    r_count = len(routes)
+    max_len = max((len(r) for r in routes), default=0)
+    routes_flat = np.zeros((r_count, max(max_len, 1)), dtype=np.int64)
+    route_lens = np.empty(r_count, dtype=np.int64)
+    route_loads = np.empty(r_count, dtype=np.float64)
+    for i, route in enumerate(routes):
+        route_lens[i] = len(route)
+        if route:
+            routes_flat[i, : len(route)] = route
+            route_loads[i] = float(inst.demands[routes_flat[i, : len(route)]].sum())
+        else:
+            route_loads[i] = 0.0
+    return routes_flat, route_lens, route_loads
+
+
 def _best_insert_position(node: int, route: list[int], inst: Inst) -> tuple[float, int | None]:
-    if sum(inst.demands[c] for c in route) + inst.demands[node] > inst.capacity:
-        return float("inf"), None
+    # No Python-side capacity pre-check: the kernel recomputes the load itself and
+    # returns (1e18, -1) in exactly that case. The pre-check cost 19% of total
+    # runtime at n=400 purely to duplicate work the kernel already does.
     route_arr = np.array(route, dtype=np.int64)
     best_cost, best_pos = _best_insert_position_numba(
         node,
@@ -164,7 +478,11 @@ def _best_insert_position_biased_numba(
     if current_load + demands[node] > capacity:
         return 1e18, 1e18, -1
 
+    arrivals, latest, first_violation = _route_timing_numba(route, dist, ready, due, service)
+
     for pos in range(n_nodes + 1):
+        if pos > first_violation:
+            break
         prev = route[pos - 1] if pos > 0 else 0
         nxt = route[pos] if pos < n_nodes else 0
         delta = dist[prev, node] + dist[node, nxt] - dist[prev, nxt]
@@ -177,26 +495,7 @@ def _best_insert_position_biased_numba(
         if delta_biased >= best_biased_cost:
             continue
 
-        t = 0.0
-        prev_node = 0
-        feasible = True
-
-        for idx in range(n_nodes + 1):
-            if idx == pos:
-                curr = node
-            else:
-                curr = route[idx if idx < pos else idx - 1]
-
-            t += dist[prev_node, curr]
-            if t < ready[curr]:
-                t = ready[curr]
-            if t > due[curr]:
-                feasible = False
-                break
-            t += service[curr]
-            prev_node = curr
-
-        if feasible and t + dist[prev_node, 0] <= due[0]:
+        if _insert_feasible_numba(node, pos, route, arrivals, latest, dist, ready, due, service):
             best_biased_cost = delta_biased
             actual_cost = delta
             best_pos = pos
@@ -229,17 +528,35 @@ def _best_insert_position_biased(
     return float(best_biased), float(actual_cost), int(best_pos)
 
 
-def _insert_customer(plan: Plan, node: int, inst: Inst) -> None:
-    best_cost, best_route, best_pos = float("inf"), None, None
-    for ri, route in enumerate(plan.routes):
-        delta, pos = _best_insert_position(node, route, inst)
-        if pos is not None and delta < best_cost:
-            best_cost, best_route, best_pos = delta, ri, pos
-    if best_route is not None:
+def _insert_into_cheapest_route(
+    plan: Plan,
+    node: int,
+    inst: Inst,
+    heatmap: np.ndarray | None = None,
+    gamma: float = 0.0,
+) -> None:
+    """Insert ``node`` at its cheapest feasible position, opening a new route if it
+    fits nowhere. One kernel call covers every route."""
+    use_bias = heatmap is not None and gamma > 0.0
+    if plan.routes:
+        routes_flat, route_lens, route_loads = pack_routes(plan.routes, inst)
+        _delta, best_route, best_pos = _best_insert_over_routes_numba(
+            node, routes_flat, route_lens, route_loads,
+            inst.dist, inst.demands, inst.capacity,
+            inst.ready_times, inst.due_times, inst.service_times,
+            heatmap if use_bias else _NO_HEATMAP, gamma, use_bias,
+        )
+    else:
+        best_route = -1
+    if best_route >= 0:
         plan.routes[best_route].insert(best_pos, node)
     else:
         plan.routes.append([node])
     plan.invalidate()
+
+
+def _insert_customer(plan: Plan, node: int, inst: Inst) -> None:
+    _insert_into_cheapest_route(plan, node, inst)
 
 
 def _insert_customer_biased(
@@ -249,16 +566,7 @@ def _insert_customer_biased(
     heatmap: np.ndarray,
     gamma: float,
 ) -> None:
-    best_biased_cost, _best_actual_cost, best_route, best_pos = float("inf"), float("inf"), None, None
-    for ri, route in enumerate(plan.routes):
-        biased, actual, pos = _best_insert_position_biased(node, route, inst, heatmap, gamma)
-        if pos is not None and biased < best_biased_cost:
-            best_biased_cost, _best_actual_cost, best_route, best_pos = biased, actual, ri, pos
-    if best_route is not None:
-        plan.routes[best_route].insert(best_pos, node)
-    else:
-        plan.routes.append([node])
-    plan.invalidate()
+    _insert_into_cheapest_route(plan, node, inst, heatmap, gamma)
 
 
 def _route_cost_list(route: list[int], inst: Inst) -> float:

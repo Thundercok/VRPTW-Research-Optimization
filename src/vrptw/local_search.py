@@ -6,11 +6,13 @@ import numpy as np
 
 from .core import Inst, Plan, _check_route, _route_cost
 from .heuristics import (
+    _NO_HEATMAP,
+    _best_insert_in_route_numba,
+    _best_insert_in_route_pruned_numba,
     _best_insert_position,
-    _best_insert_position_numba,
-    _best_insert_position_pruned_numba,
     _route_cost_list,
     _route_load,
+    _route_timing_numba,
 )
 from .numba_kernels import (
     _cross_exchange_pair_numba,
@@ -38,12 +40,30 @@ class _PlanCache:
     node_to_route: dict[int, int]
     route_readys: list[float]
     route_dues: list[float]
+    centroid_arr: np.ndarray
+    centroid_sqdist: np.ndarray
+    route_timings: list[tuple[np.ndarray, np.ndarray, int]]
 
     @classmethod
     def from_plan(cls, plan: Plan) -> _PlanCache:
         inst = plan.inst
         route_arrays = plan.route_arrays
+        # Arrival/latest profiles are a property of the route, not of the node being
+        # inserted, so they are built once per route here and reused across the
+        # whole move scan instead of being rebuilt per (node, route) pair.
+        route_timings = [
+            _route_timing_numba(arr, inst.dist, inst.ready_times, inst.due_times, inst.service_times)
+            for arr in route_arrays
+        ]
         centroids = [inst.coords[arr].mean(axis=0) if len(arr) > 0 else inst.coords[0] for arr in route_arrays]
+        # Pairwise centroid distances, precomputed once and compared squared. The
+        # per-pair np.linalg.norm this replaces accounted for 3.8M calls / 22s at
+        # n=400.
+        centroid_arr = (
+            np.asarray(centroids, dtype=np.float64) if centroids else np.zeros((0, 2), dtype=np.float64)
+        )
+        cdiff = centroid_arr[:, None, :] - centroid_arr[None, :, :]
+        centroid_sqdist = (cdiff * cdiff).sum(axis=2)
         route_sets = [set(r) for r in plan.routes]
         route_neighbors = []
         for r in plan.routes:
@@ -69,6 +89,9 @@ class _PlanCache:
             node_to_route=node_to_route,
             route_readys=route_readys,
             route_dues=route_dues,
+            centroid_arr=centroid_arr,
+            centroid_sqdist=centroid_sqdist,
+            route_timings=route_timings,
         )
 
 
@@ -107,9 +130,11 @@ def _best_relocate(
         cache = _PlanCache.from_plan(plan)
 
     route_arrays = cache.route_arrays
-    centroids = cache.centroids
     route_loads = cache.route_loads
     node_to_route = cache.node_to_route
+    centroid_arr = cache.centroid_arr
+    route_timings = cache.route_timings
+    relocate_thresh_sq = (0.55 * max_dist) ** 2
 
     for si in range(len(plan.routes)):
         source_route = plan.routes[si]
@@ -132,8 +157,11 @@ def _best_relocate(
             candidate_routes.discard(si)
             # Fallback: if kNN yields too few candidates, use centroid filter
             if len(candidate_routes) < 3:
-                for di in range(len(plan.routes)):
-                    if di != si and float(np.linalg.norm(centroids[di] - node_coord)) <= 0.55 * max_dist:
+                cdiff = centroid_arr - node_coord
+                near = np.flatnonzero((cdiff * cdiff).sum(axis=1) <= relocate_thresh_sq)
+                for di in near:
+                    di = int(di)
+                    if di != si:
                         candidate_routes.add(di)
 
             for di in candidate_routes:
@@ -141,11 +169,16 @@ def _best_relocate(
                 if route_loads[di] + inst.demands[node] > inst.capacity:
                     continue
 
+                arrivals, latest, first_violation = route_timings[di]
                 # Check if pruning is enabled and heatmap is provided
                 if heatmap is not None and pruning_threshold > 0.0:
-                    insert_delta, best_pos = _best_insert_position_pruned_numba(
+                    insert_delta, best_pos = _best_insert_in_route_pruned_numba(
                         node,
                         route_arrays[di],
+                        route_loads[di],
+                        arrivals,
+                        latest,
+                        first_violation,
                         inst.dist,
                         inst.demands,
                         inst.capacity,
@@ -156,15 +189,22 @@ def _best_relocate(
                         pruning_threshold,
                     )
                 else:
-                    insert_delta, best_pos = _best_insert_position_numba(
+                    _key, insert_delta, best_pos = _best_insert_in_route_numba(
                         node,
                         route_arrays[di],
+                        route_loads[di],
+                        arrivals,
+                        latest,
+                        first_violation,
                         inst.dist,
                         inst.demands,
                         inst.capacity,
                         inst.ready_times,
                         inst.due_times,
                         inst.service_times,
+                        _NO_HEATMAP,
+                        0.0,
+                        False,
                     )
                 if best_pos == -1:
                     continue
@@ -208,9 +248,10 @@ def _best_swap(
         cache = _PlanCache.from_plan(plan)
 
     route_arrays = cache.route_arrays
-    centroids = cache.centroids
+    centroid_sqdist = cache.centroid_sqdist
     route_sets = cache.route_sets
     route_neighbors = cache.route_neighbors
+    pair_thresh_sq = (0.65 * max_dist) ** 2
 
     for si in range(len(plan.routes)):
         for di in range(si + 1, len(plan.routes)):
@@ -218,7 +259,7 @@ def _best_swap(
             if route_sets[si].isdisjoint(route_neighbors[di]) and route_sets[di].isdisjoint(route_neighbors[si]):
                 continue
             # Spatial filter: skip route pairs whose centroids are too far apart
-            if float(np.linalg.norm(centroids[si] - centroids[di])) > 0.65 * max_dist:
+            if centroid_sqdist[si, di] > pair_thresh_sq:
                 continue
             if heatmap is not None and pruning_threshold > 0.0:
                 delta, sp, dp = _swap_evaluate_pruned_numba(
@@ -277,11 +318,12 @@ def _cross_exchange(
         cache = _PlanCache.from_plan(plan)
 
     route_arrays = cache.route_arrays
-    route_coords_mean = cache.centroids
+    centroid_sqdist = cache.centroid_sqdist
     route_readys = cache.route_readys
     route_dues = cache.route_dues
     route_sets = cache.route_sets
     route_neighbors = cache.route_neighbors
+    pair_thresh_sq = (0.55 * max_dist) ** 2
 
     for i in range(len(plan.routes)):
         for j in range(i + 1, len(plan.routes)):
@@ -295,10 +337,9 @@ def _cross_exchange(
 
             r1_arr, r2_arr = route_arrays[i], route_arrays[j]
             # Route-level spatial/temporal filter
-            c1, c2 = route_coords_mean[i], route_coords_mean[j]
             r1_ready, r1_due = route_readys[i], route_dues[i]
             r2_ready, r2_due = route_readys[j], route_dues[j]
-            if float(np.linalg.norm(c1 - c2)) > 0.55 * max_dist and not (
+            if centroid_sqdist[i, j] > pair_thresh_sq and not (
                 min(r1_due, r2_due) >= max(r1_ready, r2_ready)
             ):
                 continue
@@ -372,9 +413,10 @@ def _cross_tail(
         cache = _PlanCache.from_plan(plan)
 
     route_arrays = cache.route_arrays
-    centroids = cache.centroids
+    centroid_sqdist = cache.centroid_sqdist
     route_sets = cache.route_sets
     route_neighbors = cache.route_neighbors
+    pair_thresh_sq = (0.65 * max_dist) ** 2
 
     for i in range(len(plan.routes)):
         for j in range(i + 1, len(plan.routes)):
@@ -387,7 +429,7 @@ def _cross_tail(
                 continue
 
             # Spatial filter: skip route pairs whose centroids are too far apart
-            if float(np.linalg.norm(centroids[i] - centroids[j])) > 0.65 * max_dist:
+            if centroid_sqdist[i, j] > pair_thresh_sq:
                 continue
 
             r1_arr, r2_arr = route_arrays[i], route_arrays[j]
@@ -503,9 +545,10 @@ def _best_or_opt(
         cache = _PlanCache.from_plan(plan)
 
     route_arrays = cache.route_arrays
-    centroids = cache.centroids
+    centroid_sqdist = cache.centroid_sqdist
     route_sets = cache.route_sets
     route_neighbors = cache.route_neighbors
+    pair_thresh_sq = (0.65 * max_dist) ** 2
 
     for si in range(len(plan.routes)):
         for di in range(si + 1, len(plan.routes)):
@@ -513,7 +556,7 @@ def _best_or_opt(
             if route_sets[si].isdisjoint(route_neighbors[di]) and route_sets[di].isdisjoint(route_neighbors[si]):
                 continue
             # Spatial filter: skip route pairs whose centroids are too far apart
-            if float(np.linalg.norm(centroids[si] - centroids[di])) > 0.65 * max_dist:
+            if centroid_sqdist[si, di] > pair_thresh_sq:
                 continue
 
             r1_arr, r2_arr = route_arrays[si], route_arrays[di]

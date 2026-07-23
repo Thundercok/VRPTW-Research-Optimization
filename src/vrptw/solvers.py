@@ -150,19 +150,11 @@ class ALNSSolver:
         self.gamma = 0.0
 
     def load_gnn_model(self, model_path: str) -> None:
-        import os
+        from .gnn import load_edge_predictor
 
-        if os.path.exists(model_path):
-            from .gnn import GNNEdgePredictor
-
-            self.gnn_model = GNNEdgePredictor(node_dim=6, edge_dim=1, hidden_dim=64, num_layers=3).to(DEVICE)
-            if model_path.endswith(".safetensors"):
-                from safetensors.torch import load_file
-
-                state_dict = load_file(model_path)
-            else:
-                state_dict = torch.load(model_path, map_location=DEVICE)
-            self.gnn_model.load_state_dict(state_dict)
+        model = load_edge_predictor(model_path, DEVICE)
+        if model is not None:
+            self.gnn_model = model
 
     def _destroy(self, di: int, plan: Plan, size: int) -> tuple[Plan, list[int]]:
         destroy_fn = DESTROY[di]
@@ -186,6 +178,15 @@ class ALNSSolver:
         cfg = self.cfg
         self.bandit = ThompsonBandit(N_D, N_R)
 
+        # Anytime budget (see Config.time_limit). ALNS-Base has no tail phases, so
+        # it gets the whole budget for its main loop.
+        t_start = time.time()
+        time_limit = cfg.time_limit
+        if time_limit is None and cfg.time_limit_per_customer > 0.0:
+            time_limit = cfg.time_limit_per_customer * self.inst.n
+        deadline = (t_start + time_limit) if time_limit else None
+        self.time_limit_hit = False
+
         # Initialize GNN edge predictor heatmap once per solve()
         self.heatmap = None
         self.gamma = 0.0
@@ -194,8 +195,10 @@ class ALNSSolver:
 
             self.gnn_model.eval()
             with torch.no_grad():
-                node_feats, edge_feats = get_gnn_features(self.inst)
-                logits = self.gnn_model(node_feats.to(DEVICE), edge_feats.to(DEVICE))
+                node_feats, edge_feats, nbr_idx = get_gnn_features(self.inst)
+                logits = self.gnn_model(
+                    node_feats.to(DEVICE), edge_feats.to(DEVICE), nbr_idx.to(DEVICE)
+                )
                 probs = torch.sigmoid(logits)[0].cpu().numpy()
                 self.heatmap = probs
                 self.gamma = getattr(cfg, "gnn_guidance_strength", 0.45)
@@ -211,6 +214,9 @@ class ALNSSolver:
         no_imp = 0
         self.q_scale = 1.0
         for it in range(cfg.alns_iterations):
+            if deadline is not None and time.time() >= deadline:
+                self.time_limit_hit = True
+                break
             di, ri = self.bandit.select()
             size = destroy_size(it, cfg.alns_iterations, cfg, self.inst.n, scale=self.q_scale)
             dest, removed = self._destroy(di, cur.copy(), size)
@@ -322,6 +328,16 @@ class HybridDDQNSolver:
         return best_plan
 
 
+    def _out_of_time(self) -> bool:
+        """True once the hard anytime deadline has passed."""
+        deadline = getattr(self, "_deadline", None)
+        if deadline is None:
+            return False
+        if time.time() >= deadline:
+            self.time_limit_hit = True
+            return True
+        return False
+
     def _adapt_params_to_instance(self, cfg, inst):
         """Tune search parameters based on instance characteristics."""
         import copy
@@ -341,22 +357,19 @@ class HybridDDQNSolver:
         if customers >= 200:  # Scale plateau trigger
             cfg.plateau_start = int(cfg.plateau_start * 1.5)
 
+        # Derive the anytime wall-clock budget from instance size when not set
+        # explicitly. Set time_limit_per_customer to 0.0 to run unbounded.
+        if cfg.time_limit is None and cfg.time_limit_per_customer > 0.0:
+            cfg.time_limit = cfg.time_limit_per_customer * customers
+
         return cfg
 
     def load_gnn_model(self, model_path: str) -> None:
-        import os
+        from .gnn import load_edge_predictor
 
-        if os.path.exists(model_path):
-            from .gnn import GNNEdgePredictor
-
-            self.gnn_model = GNNEdgePredictor(node_dim=6, edge_dim=1, hidden_dim=64, num_layers=3).to(DEVICE)
-            if model_path.endswith(".safetensors"):
-                from safetensors.torch import load_file
-
-                state_dict = load_file(model_path)
-            else:
-                state_dict = torch.load(model_path, map_location=DEVICE)
-            self.gnn_model.load_state_dict(state_dict)
+        model = load_edge_predictor(model_path, DEVICE)
+        if model is not None:
+            self.gnn_model = model
 
     def _destroy(self, di: int, plan: Plan, size: int) -> tuple[Plan, list[int]]:
         """Dispatch destroy operator, passing heatmap to op_neural_worst and op_neural_shaw."""
@@ -1310,8 +1323,11 @@ class HybridDDQNSolver:
         shared_norm: WelfordRewardNormalizer | None = None,
         _warm_start: bool = False,
         _is_sub_solve: bool = False,
+        _deadline: float | None = None,
     ) -> tuple[Plan, list[float]]:
         self.solver_history = []
+        self._t_start = time.time()
+        self.time_limit_hit = False
         self.phase1_done = False
         self.sp_stats = {"calls": 0, "timeouts": 0, "milp_fired": False, "milp_cadence_skip": 0}
         _stats = self.sp_stats
@@ -1324,6 +1340,17 @@ class HybridDDQNSolver:
         cfg = self.cfg
         cfg = self._adapt_params_to_instance(cfg, self.inst)
         self.cfg = cfg
+
+        # Anytime budget. An inherited ``_deadline`` wins so that sub-solves and the
+        # reconcile pass share the parent's budget rather than each claiming a fresh
+        # one; it must be resolved before the split block below, which spawns them.
+        if _deadline is not None:
+            self._deadline = _deadline
+        elif cfg.time_limit:
+            self._deadline = self._t_start + cfg.time_limit
+        else:
+            self._deadline = None
+        split_deadline = self._deadline
         if self.use_rl:
             self.ctrl.reset()
             self.op_ctrl.reset()
@@ -1345,8 +1372,10 @@ class HybridDDQNSolver:
 
             self.gnn_model.eval()
             with torch.no_grad():
-                node_feats, edge_feats = get_gnn_features(self.inst)
-                logits = self.gnn_model(node_feats.to(DEVICE), edge_feats.to(DEVICE))
+                node_feats, edge_feats, nbr_idx = get_gnn_features(self.inst)
+                logits = self.gnn_model(
+                    node_feats.to(DEVICE), edge_feats.to(DEVICE), nbr_idx.to(DEVICE)
+                )
                 probs = torch.sigmoid(logits)[0].cpu().numpy()
                 self.heatmap = probs
                 self.gamma = getattr(cfg, "gnn_guidance_strength", 0.45)
@@ -1416,8 +1445,20 @@ class HybridDDQNSolver:
                 solver2 = HybridDDQNSolver(inst2, cfg=sub_cfg)
                 solver2.gnn_model = self.gnn_model
 
-                res1, _ = solver1.solve(init=init1, seed=seed, _is_sub_solve=True)
-                res2, _ = solver2.solve(init=init2, seed=seed, _is_sub_solve=True)
+                # Share the parent's budget: a third to each sub-problem, the rest
+                # to the reconcile pass below. Without this each sub-solve would
+                # derive its own full budget and the split would triple the run.
+                if split_deadline is not None:
+                    now = time.time()
+                    share = (split_deadline - now) / 3.0
+                    sub1_deadline, sub2_deadline = now + share, None
+                else:
+                    sub1_deadline = sub2_deadline = None
+
+                res1, _ = solver1.solve(init=init1, seed=seed, _is_sub_solve=True, _deadline=sub1_deadline)
+                if split_deadline is not None:
+                    sub2_deadline = time.time() + (split_deadline - time.time()) / 2.0
+                res2, _ = solver2.solve(init=init2, seed=seed, _is_sub_solve=True, _deadline=sub2_deadline)
 
                 # Map back to original IDs
                 final_routes = []
@@ -1429,8 +1470,20 @@ class HybridDDQNSolver:
                 merged_plan = Plan(final_routes, self.inst, self.algo_name)
 
                 # Run the remaining iterations on the merged plan to reconcile
-                return self.solve(init=merged_plan, seed=seed, _is_sub_solve=True, _warm_start=True)
+                return self.solve(
+                    init=merged_plan, seed=seed, _is_sub_solve=True, _warm_start=True,
+                    _deadline=split_deadline,
+                )
         self._init_nv = cur.nv
+        # The main destroy/repair loop only gets time_limit_main_loop_frac of the
+        # remaining budget; the rest is reserved for the tail phases (route
+        # elimination, TD polish, recombination), which contribute most of the
+        # final TD quality and must not be truncated.
+        main_loop_deadline = (
+            self._t_start + (self._deadline - self._t_start) * cfg.time_limit_main_loop_frac
+            if self._deadline is not None
+            else None
+        )
         temp = cfg.temp_control * cur.cost / math.log(2)
         if _warm_start:
             temp *= 2.0
@@ -1448,6 +1501,9 @@ class HybridDDQNSolver:
         phase1_iters = int(cfg.hybrid_iterations * getattr(cfg, "phase1_ratio", 0.60)) if getattr(cfg, "adaptive_feasibility", True) else 0
 
         for seg_idx in range(n_segments):
+            if main_loop_deadline is not None and time.time() >= main_loop_deadline:
+                self.time_limit_hit = True
+                break
             if getattr(cfg, "adaptive_feasibility", True) and not self.phase1_done and (seg_idx * cfg.segment_size >= phase1_iters):
                 self.phase1_done = True
                 self.phase1_best_nv = best.nv
@@ -1489,6 +1545,10 @@ class HybridDDQNSolver:
             for offset in range(cfg.segment_size):
                 it = seg_idx * cfg.segment_size + offset
                 if it >= cfg.hybrid_iterations:
+                    break
+                # Checked per iteration too: a single segment can be long at scale.
+                if main_loop_deadline is not None and time.time() >= main_loop_deadline:
+                    self.time_limit_hit = True
                     break
                 self.current_it = it
                 no_best_imp += 1
@@ -1849,8 +1909,11 @@ class HybridDDQNSolver:
         # ── Phase C: large-destroy seeding (existing, unchanged) ──────────────
         self._seed_pool_large_destroy(best, pool, n_seeds=n_seeds_phc)
 
-        # For very small iteration limits (e.g. smoke tests/quick checks), skip the heavy NV-reduction heuristics
-        if cfg.hybrid_iterations > 5:
+        # For very small iteration limits (e.g. smoke tests/quick checks), skip the heavy NV-reduction heuristics.
+        # The NV-reduction block is also the most expensive part of the tail, so it
+        # is skipped outright once the hard deadline has passed; the cheaper TD
+        # polish below still runs so the incumbent is always returned tidied up.
+        if cfg.hybrid_iterations > 5 and not self._out_of_time():
             # ── Resolve BKS floor: never search below BKS NV ─────────────────────
             # Prevents 22-second committed search on instances already at optimal NV
             # (e.g. RC207 at NV=3 wasting time chasing NV=2 instead of fixing TD).
@@ -1898,7 +1961,7 @@ class HybridDDQNSolver:
                 history.append(best.cost)
 
             # Committed NV search only if still above BKS floor
-            if best.nv > _bks_nv:
+            if best.nv > _bks_nv and not self._out_of_time():
                 committed = self._committed_nv_search(best, pool, target_nv=best.nv - 1)
                 if (
                     committed is not None
@@ -1955,8 +2018,10 @@ class HybridDDQNSolver:
                 # gets trapped in deep local minima. Large perturbations (40-60%
                 # destroy) allow structural rearrangement while maintaining NV.
                 # Runs only for wide-TW instances where the TD gap is significant.
-                if is_wide_tw:
-                    best = self._fixed_nv_polish(best, pool, inherited_bandit=self.mode_bandits[MODE_INTENSIFY], initial_temp=1.0)
+                if is_wide_tw and not self._out_of_time():
+                    best = self._fixed_nv_polish(
+                        best, pool, inherited_bandit=self.mode_bandits[MODE_INTENSIFY], initial_temp=1.0
+                    )
                     history.append(best.cost)
                     # Final intra-route convergence after destroy-repair
                     best = td_converge_polish(best, max_passes=n_intra_passes)

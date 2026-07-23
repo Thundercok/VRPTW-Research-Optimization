@@ -506,7 +506,29 @@ fleet-reducing columns. When triggered, a two-phase MILP is solved using SciPy's
 To enhance the reinforcement learning agent's heuristic search capability, we integrate a Graph Neural Network (GNN) Edge Predictor directly into the initialization, repair, local search, and recombination phases of the solver.
 
 \textbf{GNN Edge Predictor.}
-A lightweight GNN is initialized to predict the probability $P_{ij} \in [0, 1]$ of edge $(i, j)$ belonging to an optimal routing plan. The network takes node features (comprising coordinates, demands, ready/due times, and service times) and edge features (distances) and performs attention-based message passing. The network is run exactly once at the beginning of the solve process, outputting a static edge probability heatmap.
+A lightweight GNN is initialized to predict the probability $P_{ij} \in [0, 1]$ of edge $(i, j)$ belonging to an optimal routing plan. The network takes node features (comprising coordinates, demands, ready/due times, and service times) and edge features (distances) and performs message passing. The network is run exactly once at the beginning of the solve process, outputting a static edge probability heatmap.
+
+Message passing is restricted to a $K$-nearest-neighbour edge set ($K=16$, with
+the depot pinned to one slot of every customer's neighbourhood so the graph
+remains connected through it). A dense formulation, in which every layer
+materialises an $\mathcal{O}(N^2 H)$ edge tensor, is the binding constraint at
+scale: at $N=1000$ with $H=64$ a single forward pass allocates $1{,}517$\,MB and
+takes $3.96$\,s, which is what previously placed the $600$--$1000$-customer shards
+out of reach. The sparse formulation reduces this to $1.3$\,MB and $0.049$\,s.
+
+Because the downstream operators query $P_{ij}$ for arbitrary pairs --- including
+depot-adjacent edges, and because the pruning schedule described below treats a
+low probability as a skip signal ---
+the \emph{output} must remain a dense $N \times N$ matrix; restricting it to the
+$K$-nearest set would silently forbid every insertion adjacent to an unscored
+node. We therefore decouple propagation from prediction: sparse message passing
+produces node embeddings $h_i$, and edge probabilities are recovered by a
+bilinear head
+\begin{equation}
+  P_{ij} = \sigma\!\left( \frac{\langle W_s h_i,\; W_t h_j \rangle}{\sqrt{H}} + b \right),
+\end{equation}
+which costs a single $N \times N$ matrix product and never forms an
+$\mathcal{O}(N^2 H)$ intermediate.
 
 \textbf{GNN-Guided Initial Heuristic.}
 To prevent solver trajectories from starting in suboptimal basins, we integrate GNN heatmap guidance directly into the sequential regret insertion builder (\texttt{build\_greedy}). The cost of inserting customer $u$ between adjacent nodes $i$ and $j$ is scaled using the edge probabilities:
@@ -625,6 +647,16 @@ Average Solomon runtimes: $31.5$\,s (ALNS-Base), $47.1$\,s (Hybrid-Rule),
 $58.9$\,s (Hybrid-DDQN).  Neural inference adds $24.4\%$ overhead over the
 static-rule baseline.  Numba-JIT reduces 200-customer DDQN evaluation from
 $861.3$\,s to $60.3$\,s ($14{\times}$).
+
+\textbf{Anytime budget.} The search additionally accepts a wall-clock budget,
+derived per instance as $0.6\,\text{s} \times n$ unless set explicitly. The main
+destroy--repair loop is granted $80\%$ of the budget and the remaining $20\%$ is
+reserved for the post-processing phases (route elimination, distance polish, and
+set-partitioning recombination), which contribute the majority of the final
+distance quality and therefore must not be truncated. This makes the comparison
+against OR-Tools, which is itself run under a fixed $120$\,s limit, an iso-time
+one; the iteration-bounded protocol used previously left the two methods on
+different budgets.
 
 \subsection{Ablation Analysis}
 
