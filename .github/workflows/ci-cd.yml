@@ -2,9 +2,9 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, develop, "Add-GAT(Graph-Attention-Network)"]
   pull_request:
-    branches: [main, develop]
+    branches: [main, develop, "Add-GAT(Graph-Attention-Network)"]
   workflow_dispatch:
 
 permissions:
@@ -140,9 +140,9 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # Only log in and push to GHCR on pushes to main or develop branches
+      # Log in and push to GHCR on pushes to main, develop, or Add-GAT branch
       - name: Log in to GitHub Container Registry (GHCR)
-        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/Add-GAT(Graph-Attention-Network)')
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -150,7 +150,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and Push Docker image to GHCR
-        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/Add-GAT(Graph-Attention-Network)')
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -159,6 +159,7 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository }}:latest
             ghcr.io/${{ github.repository }}:${{ github.sha }}
+            ghcr.io/${{ github.repository }}:uat-gat
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -191,6 +192,44 @@ jobs:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_VRPTW_CD89D }}
           projectId: vrptw-cd89d
+
+  # ── DEPLOY UAT / STAGING (FOR Add-GAT BRANCH) ─────────────────────────────
+  deploy-uat:
+    name: Deploy UAT Environment (Add-GAT Branch)
+    needs: [build-and-test, docker-build]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/Add-GAT(Graph-Attention-Network)'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install & Build Frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Deploy to Firebase Hosting (UAT Channel)
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_VRPTW_CD89D }}
+          channelId: uat-gat
+          projectId: vrptw-cd89d
+
+      - name: Post UAT Deployment Summary
+        run: |
+          echo "### 🚀 UAT Environment Deployed Successfully!" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch:** \`Add-GAT(Graph-Attention-Network)\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Firebase Channel:** \`uat-gat\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Docker Tag:** \`ghcr.io/${{ github.repository }}:uat-gat\`" >> $GITHUB_STEP_SUMMARY
 
   # ── DEPLOY PRODUCTION (FOR MERGE TO MAIN/DEVELOP) ───────────────────────────
   deploy-production:

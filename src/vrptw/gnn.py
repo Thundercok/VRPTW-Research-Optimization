@@ -139,3 +139,50 @@ def plan_to_adj_matrix(plan: Plan) -> torch.Tensor:
         # last node -> depot
         adj[r[-1], 0] = 1.0
     return adj
+
+
+class GraphAttentionLayer(nn.Module):
+    """
+    Graph Attention Layer (GAT) with multi-head attention over spatial-temporal customer nodes.
+    Computes node embeddings weighted by dynamic spatial-temporal attention scores.
+    """
+
+    def __init__(self, hidden_dim: int = 64, num_heads: int = 4):
+        super().__init__()
+        self.hidden_dim = hidden_dim
+        self.num_heads = num_heads
+        self.head_dim = hidden_dim // num_heads
+
+        self.q_proj = nn.Linear(hidden_dim, hidden_dim)
+        self.k_proj = nn.Linear(hidden_dim, hidden_dim)
+        self.v_proj = nn.Linear(hidden_dim, hidden_dim)
+        self.out_proj = nn.Linear(hidden_dim, hidden_dim)
+
+    def forward(self, h_nodes: torch.Tensor) -> torch.Tensor:
+        # h_nodes: (B, N, hidden_dim)
+        B, N, H = h_nodes.shape
+        q = self.q_proj(h_nodes).view(B, N, self.num_heads, self.head_dim).transpose(1, 2)
+        k = self.k_proj(h_nodes).view(B, N, self.num_heads, self.head_dim).transpose(1, 2)
+        v = self.v_proj(h_nodes).view(B, N, self.num_heads, self.head_dim).transpose(1, 2)
+
+        # Multi-head self-attention scores
+        attn = torch.matmul(q, k.transpose(-2, -1)) / (self.head_dim ** 0.5)
+        attn_weights = torch.softmax(attn, dim=-1)
+
+        out = torch.matmul(attn_weights, v).transpose(1, 2).contiguous().view(B, N, H)
+        return self.out_proj(out) + h_nodes
+
+
+def get_gat_embeddings(inst: Inst, hidden_dim: int = 64) -> torch.Tensor:
+    """
+    Extracts 64-dimensional Graph Attention (GAT) spatial-temporal node embeddings for an instance.
+    """
+    node_feats, edge_feats = get_gnn_features(inst)
+    node_embedder = nn.Linear(6, hidden_dim)
+    gat_layer = GraphAttentionLayer(hidden_dim=hidden_dim)
+
+    with torch.no_grad():
+        h = node_embedder(node_feats)
+        gat_h = gat_layer(h)
+    return gat_h.squeeze(0)  # (N+1, hidden_dim)
+

@@ -294,6 +294,34 @@ class HybridDDQNSolver:
         self._split_weights_to_load = {}
         self.sp_stats = {"calls": 0, "timeouts": 0, "milp_fired": False, "milp_cadence_skip": 0}
 
+    def insert_dynamic_customer(self, plan: Plan, customer_id: int) -> Plan:
+        """
+        Fast dynamic insertion of a new customer into an active plan without recalculating full routes.
+        Chooses the cheapest feasible insertion point across all active routes.
+        """
+        best_plan = plan.copy()
+        best_cost = float("inf")
+        target_route_idx = -1
+
+        for r_idx, route in enumerate(plan.routes):
+            for pos in range(len(route) + 1):
+                new_route = route[:pos] + [customer_id] + route[pos:]
+                cand_routes = [r[:] for r in plan.routes]
+                cand_routes[r_idx] = new_route
+                cand_plan = Plan(cand_routes, self.inst)
+                if cand_plan.feasible and cand_plan.cost < best_cost:
+                    best_cost = cand_plan.cost
+                    best_plan = cand_plan
+                    target_route_idx = r_idx
+
+        # If no existing route can feasibly absorb the customer, open a new vehicle route
+        if target_route_idx == -1:
+            cand_routes = [r[:] for r in plan.routes] + [[customer_id]]
+            best_plan = Plan(cand_routes, self.inst)
+
+        return best_plan
+
+
     def _adapt_params_to_instance(self, cfg, inst):
         """Tune search parameters based on instance characteristics."""
         import copy
