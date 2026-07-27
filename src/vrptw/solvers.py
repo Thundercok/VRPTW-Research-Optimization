@@ -1949,11 +1949,16 @@ class HybridDDQNSolver:
         if not self._out_of_time():
             self._seed_pool_large_destroy(best, pool, n_seeds=n_seeds_phc)
 
-        # For very small iteration limits (e.g. smoke tests/quick checks), skip the heavy NV-reduction heuristics.
+        # For very small iteration limits (e.g. smoke tests/quick checks), skip the heavy
+        # NV-reduction heuristics and the TD polish alike.
         # The NV-reduction block is also the most expensive part of the tail, so it
         # is skipped outright once the hard deadline has passed; the cheaper TD
         # polish below still runs so the incumbent is always returned tidied up.
-        if cfg.hybrid_iterations > 5 and not self._out_of_time():
+        # (It must therefore sit outside this guard, not inside it — each of its
+        # own expensive phases carries its own _out_of_time() check, and
+        # td_converge_polish degenerates to a copy once the deadline has passed.)
+        run_tail = cfg.hybrid_iterations > 5
+        if run_tail and not self._out_of_time():
             # ── Resolve BKS floor: never search below BKS NV ─────────────────────
             # Prevents 22-second committed search on instances already at optimal NV
             # (e.g. RC207 at NV=3 wasting time chasing NV=2 instead of fixing TD).
@@ -2036,68 +2041,68 @@ class HybridDDQNSolver:
                         pool.add_plan(best)
                         history.append(best.cost)
 
-            # ── TD polish ────────────────────────────────
-            if True:
-                # Phase A: convergent intra-route sequence optimization
-                # Runs 2-opt + or-opt(1,2,3) per route to convergence with no move cap.
-                # Critical for wide-TW instances (RC2, R2) where routes carry 30+ customers.
-                is_wide_tw = self.inst.tw_tight_frac < 0.15
-                n_intra_passes = 35 if is_wide_tw else 20
+        # ── TD polish ────────────────────────────────
+        if run_tail:
+            # Phase A: convergent intra-route sequence optimization
+            # Runs 2-opt + or-opt(1,2,3) per route to convergence with no move cap.
+            # Critical for wide-TW instances (RC2, R2) where routes carry 30+ customers.
+            is_wide_tw = self.inst.tw_tight_frac < 0.15
+            n_intra_passes = 35 if is_wide_tw else 20
+            best = td_converge_polish(
+                best, max_passes=n_intra_passes, deadline=getattr(self, "_deadline", None)
+            )
+            if best.feasible:
+                history.append(best.cost)
+
+            # Phase B: inter-route local search + MILP recombination
+            td_scale = 4 if is_wide_tw else 2
+            td_polished = (
+                self._local_search(
+                    best,
+                    max_passes=cfg.polish_ls_passes + td_scale,
+                    nv_ceiling=best.nv,
+                    max_ls_moves=cfg.max_ls_moves * (td_scale + 1),
+                )
+                if not self._out_of_time()
+                else best
+            )
+            if td_polished.feasible and td_polished.cost + 1e-6 < best.cost:
+                best = td_polished
+                history.append(best.cost)
+
+            td_rec = (
+                recombine_with_route_pool(
+                    best,
+                    pool,
+                    cfg,
+                    nv_ceiling=best.nv,
+                    td_only=True,
+                    _stats=_stats,
+                )
+                if not self._out_of_time()
+                else best
+            )
+            if td_rec.feasible and td_rec.cost + 1e-6 < best.cost:
+                best = td_rec
+                pool.add_plan(best)
+                history.append(best.cost)
+
+            # Phase C: Destroy-repair ALNS at fixed NV (wide-TW intensification)
+            # After NV reduction, routes carry 30+ customers and local search
+            # gets trapped in deep local minima. Large perturbations (40-60%
+            # destroy) allow structural rearrangement while maintaining NV.
+            # Runs only for wide-TW instances where the TD gap is significant.
+            if is_wide_tw and not self._out_of_time():
+                best = self._fixed_nv_polish(
+                    best, pool, inherited_bandit=self.mode_bandits[MODE_INTENSIFY], initial_temp=1.0
+                )
+                history.append(best.cost)
+                # Final intra-route convergence after destroy-repair
                 best = td_converge_polish(
                     best, max_passes=n_intra_passes, deadline=getattr(self, "_deadline", None)
                 )
                 if best.feasible:
                     history.append(best.cost)
-
-                # Phase B: inter-route local search + MILP recombination
-                td_scale = 4 if is_wide_tw else 2
-                td_polished = (
-                    self._local_search(
-                        best,
-                        max_passes=cfg.polish_ls_passes + td_scale,
-                        nv_ceiling=best.nv,
-                        max_ls_moves=cfg.max_ls_moves * (td_scale + 1),
-                    )
-                    if not self._out_of_time()
-                    else best
-                )
-                if td_polished.feasible and td_polished.cost + 1e-6 < best.cost:
-                    best = td_polished
-                    history.append(best.cost)
-
-                td_rec = (
-                    recombine_with_route_pool(
-                        best,
-                        pool,
-                        cfg,
-                        nv_ceiling=best.nv,
-                        td_only=True,
-                        _stats=_stats,
-                    )
-                    if not self._out_of_time()
-                    else best
-                )
-                if td_rec.feasible and td_rec.cost + 1e-6 < best.cost:
-                    best = td_rec
-                    pool.add_plan(best)
-                    history.append(best.cost)
-
-                # Phase C: Destroy-repair ALNS at fixed NV (wide-TW intensification)
-                # After NV reduction, routes carry 30+ customers and local search
-                # gets trapped in deep local minima. Large perturbations (40-60%
-                # destroy) allow structural rearrangement while maintaining NV.
-                # Runs only for wide-TW instances where the TD gap is significant.
-                if is_wide_tw and not self._out_of_time():
-                    best = self._fixed_nv_polish(
-                        best, pool, inherited_bandit=self.mode_bandits[MODE_INTENSIFY], initial_temp=1.0
-                    )
-                    history.append(best.cost)
-                    # Final intra-route convergence after destroy-repair
-                    best = td_converge_polish(
-                        best, max_passes=n_intra_passes, deadline=getattr(self, "_deadline", None)
-                    )
-                    if best.feasible:
-                        history.append(best.cost)
 
         # Final split controller attempt at the end of search
         if not frozen and self.split_ctrl is not None and not self._out_of_time():

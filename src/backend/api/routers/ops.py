@@ -1,6 +1,7 @@
 # ruff: noqa: E402
 from __future__ import annotations
 
+import asyncio
 import json
 import multiprocessing as mp
 import os
@@ -892,13 +893,46 @@ async def solve_dynamic_insert(
     """
     Real-time dynamic order insertion endpoint without full solver restart.
     """
-    from services.solomon_service import load_solomon_dataset
+    from services.solomon_service import load_solomon_dataset, to_inst_payload
     from vrptw.config import Config
     from vrptw.core import Inst, Plan
     from vrptw.solvers import HybridDDQNSolver
 
-    raw_data = load_solomon_dataset(body.dataset)
-    inst = Inst(raw_data)
+    try:
+        inst = Inst(to_inst_payload(load_solomon_dataset(body.dataset)))
+    except (ValueError, FileNotFoundError) as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    # Customers are nodes 1..inst.n (node 0 is the depot). Without this check an
+    # out-of-range id raises IndexError out of the handler as a 500, and a
+    # negative id silently wraps under numpy indexing and inserts the wrong
+    # customer while echoing the requested id back to the caller.
+    if not 1 <= body.customer_id <= inst.n:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"customer_id must be between 1 and {inst.n} for dataset "
+                f"{body.dataset}; got {body.customer_id}."
+            ),
+        )
+    routed = {c for route in body.existing_routes for c in route}
+    out_of_range = sorted(c for c in routed if not 1 <= c <= inst.n)
+    if out_of_range:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"existing_routes contains ids outside 1..{inst.n} for dataset "
+                f"{body.dataset}: {out_of_range[:10]}."
+            ),
+        )
+    # Re-inserting an already-routed customer would serve it twice and report
+    # nv/td/pareto_metrics over that invalid plan without complaint.
+    if body.customer_id in routed:
+        raise HTTPException(
+            status_code=409,
+            detail=f"customer_id {body.customer_id} is already served by existing_routes.",
+        )
+
     plan = Plan(body.existing_routes, inst)
     solver = HybridDDQNSolver(inst, Config())
 
@@ -920,28 +954,37 @@ async def solve_stream(
     _: dict[str, str] = Depends(require_user),
 ):
     """
-    Server-Sent Events (SSE) streaming endpoint for live solver progress metrics.
+    Server-Sent Events (SSE) transport demo for solver progress.
+
+    NOTE: this endpoint does **not** run the solver. The ``nv``/``td``/``mode``
+    values are a fixed synthetic ramp used to exercise the SSE wiring, and every
+    payload carries ``"simulated": true`` to say so. Streaming real progress
+    needs a per-iteration callback on ``HybridDDQNSolver.solve()`` (which does
+    not exist yet) plus running the solve off the event loop; until then, do not
+    present these numbers as solver output.
     """
 
     async def event_generator():
-        from services.solomon_service import load_solomon_dataset
-        from vrptw.config import Config
+        from services.solomon_service import load_solomon_dataset, to_inst_payload
         from vrptw.core import Inst
-        from vrptw.solvers import HybridDDQNSolver
 
-        raw_data = load_solomon_dataset(dataset)
-        inst = Inst(raw_data)
-        cfg = Config(hybrid_iterations=iterations)
-        solver = HybridDDQNSolver(inst, cfg)
+        # Inst() builds an (n+1)^2 distance matrix plus a per-node argsort. Doing
+        # that inline would block the whole event loop for seconds on a large
+        # dataset, stalling every other in-flight request.
+        def _load() -> Inst:
+            return Inst(to_inst_payload(load_solomon_dataset(dataset)))
 
-        yield f"data: {json.dumps({'event': 'start', 'dataset': dataset, 'max_iters': iterations})}\n\n"
+        inst = await asyncio.to_thread(_load)
+
+        yield f"data: {json.dumps({'event': 'start', 'dataset': dataset, 'max_iters': iterations, 'simulated': True})}\n\n"
 
         for step in range(1, 6):
-            time.sleep(0.05)
-            progress_pct = step * 20
+            # await, not time.sleep: this generator runs on the ASGI event loop.
+            await asyncio.sleep(0.05)
             payload = {
                 "event": "progress",
-                "progress_pct": progress_pct,
+                "simulated": True,
+                "progress_pct": step * 20,
                 "current_it": int(step * (iterations / 5)),
                 "nv": int(max(1, inst.n // 10)),
                 "td": float(round(1000.0 - step * 20.0, 2)),
@@ -949,7 +992,7 @@ async def solve_stream(
             }
             yield f"data: {json.dumps(payload)}\n\n"
 
-        yield f"data: {json.dumps({'event': 'complete', 'status': 'finished'})}\n\n"
+        yield f"data: {json.dumps({'event': 'complete', 'status': 'finished', 'simulated': True})}\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 

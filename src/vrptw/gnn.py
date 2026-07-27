@@ -255,13 +255,34 @@ class GraphAttentionLayer(nn.Module):
         return self.out_proj(out) + h_nodes
 
 
-def get_gat_embeddings(inst: Inst, hidden_dim: int = 64) -> torch.Tensor:
+def get_gat_embeddings(
+    inst: Inst, hidden_dim: int = 64, weights: dict | None = None
+) -> torch.Tensor:
     """
     Extracts 64-dimensional Graph Attention (GAT) spatial-temporal node embeddings for an instance.
+
+    ``weights`` must supply trained ``state_dict``s under the keys
+    ``"node_embedder"`` and ``"gat_layer"``. Without them there is nothing to
+    run: this function used to build both modules inline, so the returned
+    "embeddings" were freshly-random projections that differed on every call for
+    the same ``inst``. Raising is deliberate — silently handing back that noise
+    is how it ends up as somebody's feature vector.
     """
+    if weights is None:
+        raise NotImplementedError(
+            "get_gat_embeddings requires trained weights: the GAT layer is "
+            "roadmap scaffolding and no checkpoint is wired up yet. Pass "
+            "weights={'node_embedder': state_dict, 'gat_layer': state_dict} "
+            "once one exists."
+        )
+
     node_feats, _edge_feats, _nbr_idx = get_gnn_features(inst)
     node_embedder = nn.Linear(6, hidden_dim)
     gat_layer = GraphAttentionLayer(hidden_dim=hidden_dim)
+    node_embedder.load_state_dict(weights["node_embedder"])
+    gat_layer.load_state_dict(weights["gat_layer"])
+    node_embedder.eval()
+    gat_layer.eval()
 
     with torch.no_grad():
         h = node_embedder(node_feats)

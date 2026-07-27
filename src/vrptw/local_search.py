@@ -1149,6 +1149,17 @@ def _buffered_route_elimination(
         smallest_len = len(best.routes[ranked[0]]) if ranked else 0
         n_targets = len(ranked) if smallest_len <= 4 else min(6, len(ranked))
         improved = False
+        # GES runs on every target the beam gives up on, and the beam failing is
+        # the common case: a measured run saw 18/18 (n=200) and 35/35 (n=400)
+        # beam failures, at ~130-190ms per GES call. When the smallest route is
+        # tiny, `n_targets` above becomes one-per-route, so an unbudgeted round
+        # costs O(R) GES calls — and with `deadline is None` (the default, and
+        # what --no-time-limit and scripts/capture_golden.py produce) nothing
+        # else bounds it. Measured maxima were 6 (n=200) and 23 (n=400) GES
+        # calls per round, so this ceiling does not bind at those scales; it
+        # caps the O(R) growth past them.
+        ges_budget = max(6, min(24, len(best.routes)))
+        ges_used = 0
         for target_idx in ranked[:n_targets]:
             if deadline is not None and time.time() >= deadline:
                 break
@@ -1159,9 +1170,10 @@ def _buffered_route_elimination(
                 max_ejections=local_ejections,
                 beam_width=beam_width,
             )
-            if cand is None:
+            if cand is None and ges_used < ges_budget:
                 # Guided Ejection Search picks up exactly where the beam gave
                 # up: LIFO pool + penalty-guided ejections + perturbation.
+                ges_used += 1
                 cand = _guided_ejection_search(
                     best, target_idx, ges_penalties, deadline=deadline
                 )

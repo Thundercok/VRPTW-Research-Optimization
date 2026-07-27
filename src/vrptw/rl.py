@@ -83,10 +83,17 @@ class PrioritizedReplayBuffer:
     def update_priorities(self, idxs, td_errors: np.ndarray) -> None:
         idxs = np.asarray(idxs)
         ps = np.abs(np.asarray(td_errors, dtype=np.float64)) + 1e-6
-        # Duplicate indices keep last-write-wins semantics of the loop this
-        # replaces; running the assignments in order does exactly that.
-        self.priorities[idxs] = ps
-        self._pri_alpha[idxs] = self.priorities[idxs] ** np.float32(self.alpha)
+        # `sample()` draws with replace=True, so a batch routinely carries the
+        # same index twice with different TD errors. NumPy does not define which
+        # value survives `a[idxs] = ps` when idxs repeats (only the `np.*.at`
+        # family has specified semantics), so resolve the duplicates explicitly
+        # rather than relying on it: np.unique over the reversed batch selects
+        # the LAST occurrence of each index, which is the last-write-wins rule
+        # the per-element loop this replaced had.
+        if len(idxs):
+            uniq, last_pos = np.unique(idxs[::-1], return_index=True)
+            self.priorities[uniq] = ps[::-1][last_pos]
+            self._pri_alpha[uniq] = self.priorities[uniq] ** np.float32(self.alpha)
         m = float(ps.max()) if len(ps) else 0.0
         self.max_pri = max(self.max_pri, m)
 
