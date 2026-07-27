@@ -55,6 +55,8 @@ class RoutePool:
         self.cfg.sp_time_limit = min(30.0, 4.0 + 0.05 * n)
         self._routes: dict[tuple[int, ...], RouteRecord] = {}
         self._cover_to_key: dict[tuple[int, ...], tuple[int, ...]] = {}
+        # Memoised _milp_recombine solves, keyed by (column set, parameters).
+        self._milp_cache: dict = {}
 
     def _priority(self, rec: RouteRecord) -> tuple[float, ...]:
         lr = rec.load / max(self.inst.capacity, 1)
@@ -176,6 +178,58 @@ def _sp_vehicle_penalty(inst: Inst, cfg: Config) -> float:
     return cfg.sp_vehicle_penalty_scale * max(inst.max_dist, 1.0) * max(inst.n, 1)
 
 
+def _select_milp_columns(
+    route_records: list[RouteRecord], inst: Inst, max_cols: int
+) -> list[RouteRecord]:
+    """Truncate the SP column set, guaranteeing every customer keeps a column.
+
+    Returns exactly ``route_records[:max_cols]`` — same set, same order —
+    whenever that slice already covers every customer, so the search trajectory
+    is untouched in the normal case. Only when some customer would lose every
+    column (the case where ``_milp_recombine`` used to die on
+    ``row_sums == 0``) are rescue columns swapped in, displacing the
+    lowest-priority slice columns that are not themselves sole coverage.
+
+    A broader reshuffle (guaranteeing >=3 columns per customer) was tried here
+    and reverted: it perturbed every recombination and cost a vehicle on
+    rc1_2_1 in the paired A/B. Keep this surgical.
+    """
+    if len(route_records) <= max_cols:
+        return route_records
+    head = list(route_records[:max_cols])
+
+    counts = np.zeros(inst.n + 1, dtype=np.int64)
+    for rec in head:
+        counts[np.asarray(rec.nodes, dtype=np.int64)] += 1
+    missing = set(int(c) for c in np.flatnonzero(counts[1:] == 0) + 1)
+    if not missing:
+        return head
+
+    rescues: list[RouteRecord] = []
+    for rec in route_records[max_cols:]:
+        if not missing:
+            break
+        nodes = set(rec.nodes)
+        if nodes & missing:
+            rescues.append(rec)
+            missing -= nodes
+
+    # Displace lowest-priority head columns whose customers all keep >=1 other
+    # column; if too few are droppable, overflow max_cols by the difference —
+    # the cap is a hang guard, not a hard constraint.
+    droppable = 0
+    for idx in range(len(head) - 1, -1, -1):
+        if droppable >= len(rescues):
+            break
+        rec = head[idx]
+        nodes = np.asarray(rec.nodes, dtype=np.int64)
+        if (counts[nodes] >= 2).all():
+            counts[nodes] -= 1
+            head.pop(idx)
+            droppable += 1
+    return head + rescues
+
+
 def _milp_recombine(
     route_records: list[RouteRecord],
     inst: Inst,
@@ -185,13 +239,32 @@ def _milp_recombine(
     heatmap: np.ndarray | None = None,
     alpha: float = 0.15,
     _stats: dict | None = None,
+    _cache: dict | None = None,
 ) -> Plan | None:
     if not MILP_OK or not route_records:
         return None
     _MILP_MAX_COLS = 400  # cap columns to prevent SciPy O(N²) extraction hang
-    if len(route_records) > _MILP_MAX_COLS:
-        route_records = route_records[:_MILP_MAX_COLS]
+    route_records = _select_milp_columns(route_records, inst, _MILP_MAX_COLS)
     n_routes = len(route_records)
+
+    # The same column set is often re-solved with identical parameters within a
+    # run (recombination fires on a fixed cadence while the pool is stable), so
+    # completed solves are memoised on the pool.
+    cache_key = None
+    if _cache is not None:
+        cache_key = (
+            tuple(rec.nodes for rec in route_records),
+            nv_ceiling,
+            round(vehicle_penalty, 6) if vehicle_penalty is not None else None,
+            id(heatmap) if heatmap is not None else None,
+            round(alpha, 6),
+        )
+        hit = _cache.get(cache_key)
+        if hit is not None:
+            if hit == ():  # cached "no solution"
+                return None
+            plan = Plan([list(nodes) for nodes in hit], inst, "SP-RECOMBINE")
+            return plan if plan.feasible and _is_exact_cover(plan) else None
     from scipy.sparse import csc_matrix
 
     rows = []
@@ -242,9 +315,15 @@ def _milp_recombine(
     # Relax success check: if the solver hits the time limit but returns a valid
     # integer solution x, we should still accept it. We verify feasibility below.
     if result is None or result.x is None:
+        if _cache is not None and cache_key is not None:
+            _cache[cache_key] = ()  # remember "no solution" too
         return None
     chosen = [list(route_records[i].nodes) for i, v in enumerate(result.x) if v >= 0.5]
     plan = Plan(chosen, inst, "SP-RECOMBINE")
+    if _cache is not None and cache_key is not None:
+        if len(_cache) > 256:
+            _cache.clear()
+        _cache[cache_key] = tuple(tuple(r) for r in chosen)
     return plan if plan.feasible and _is_exact_cover(plan) else None
 
 
@@ -305,6 +384,7 @@ def recombine_with_route_pool(
             nv_ceiling=effective_ceiling,
             vehicle_penalty=0.0,
             _stats=_stats,
+            _cache=pool._milp_cache,
         )
         if candidate is None:
             candidate = _greedy_recombine(recs, incumbent, nv_ceiling=effective_ceiling)
@@ -332,6 +412,7 @@ def recombine_with_route_pool(
             heatmap=heatmap,
             alpha=alpha,
             _stats=_stats,
+            _cache=pool._milp_cache,
         )
         if candidate is None:
             candidate = _greedy_recombine(recs, incumbent, nv_ceiling=effective_ceiling)
@@ -365,6 +446,7 @@ def recombine_with_route_pool(
             heatmap=heatmap,
             alpha=alpha,
             _stats=_stats,
+            _cache=pool._milp_cache,
         )
         if candidate is not None and (effective_ceiling is None or candidate.nv <= effective_ceiling):
             # Run LS at the new NV to recover TD

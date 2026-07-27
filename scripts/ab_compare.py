@@ -57,13 +57,13 @@ def load_instance(path: str) -> Inst:
     )
 
 
-def make_cfg() -> Config:
+def make_cfg(iters: int) -> Config:
     """Build a Config using only fields the checked-out revision defines, so this
     script runs unchanged against both sides of the comparison."""
     known = {f.name for f in dataclasses.fields(Config)}
     kwargs = {
-        "alns_iterations": ITERS,
-        "hybrid_iterations": ITERS,
+        "alns_iterations": iters,
+        "hybrid_iterations": iters,
         "early_stop_patience": 10**9,
         "split_enabled": False,
     }
@@ -76,7 +76,7 @@ def make_cfg() -> Config:
     return Config(**{k: v for k, v in kwargs.items() if k in known})
 
 
-def run() -> dict:
+def run(iters: int) -> dict:
     records = []
     for label, rel in INSTANCES:
         path = os.path.join(_REPO, rel)
@@ -86,7 +86,7 @@ def run() -> dict:
         inst = load_instance(path)
         for solver_name, cls in (("Hybrid-DDQN", HybridDDQNSolver), ("ALNS-Base", ALNSSolver)):
             for seed in SEEDS:
-                solver = cls(inst, make_cfg())
+                solver = cls(inst, make_cfg(iters))
                 t0 = time.time()
                 best, _ = solver.solve(seed=seed)
                 elapsed = time.time() - t0
@@ -103,7 +103,7 @@ def run() -> dict:
                 )
                 print(f"  {label:9s} {solver_name:12s} s{seed} nv={best.nv:3d} "
                       f"td={best.cost:10.2f} {elapsed:7.2f}s", flush=True)
-    return {"iters": ITERS, "seeds": SEEDS, "records": records}
+    return {"iters": iters, "seeds": SEEDS, "records": records}
 
 
 def _key(r: dict) -> tuple:
@@ -175,13 +175,15 @@ def main() -> None:
     sub = ap.add_subparsers(dest="cmd", required=True)
     r = sub.add_parser("run")
     r.add_argument("--out", required=True)
+    r.add_argument("--iters", type=int, default=ITERS,
+                   help="iteration budget; raise it to compare a slower variant iso-time")
     c = sub.add_parser("compare")
     c.add_argument("before")
     c.add_argument("after")
     args = ap.parse_args()
 
     if args.cmd == "run":
-        payload = run()
+        payload = run(args.iters)
         with open(args.out, "w", encoding="utf-8") as fh:
             json.dump(payload, fh, indent=2)
         print(f"\nWrote {len(payload['records'])} records to {args.out}")

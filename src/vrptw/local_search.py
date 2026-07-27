@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass
 
 import numpy as np
@@ -37,25 +38,83 @@ class _PlanCache:
     route_sets: list[set[int]]
     route_neighbors: list[set[int]]
     route_loads: list[float]
-    node_to_route: dict[int, int]
+    node_to_route: np.ndarray
     route_readys: list[float]
     route_dues: list[float]
     centroid_arr: np.ndarray
     centroid_sqdist: np.ndarray
     route_timings: list[tuple[np.ndarray, np.ndarray, int]]
+    content_map: dict[bytes, int]
+    route_keys: list[bytes]
+    # Memo of pure kernel results keyed by route-content bytes:
+    #   (kernel_tag, key_i, key_j)  for pairwise scans,
+    #   (kernel_tag, node, key_j)   for per-(node, dest-route) insert scans.
+    # Kernel outputs are pure functions of route contents (+inst), so entries
+    # stay valid across moves and are carried over via ``prev``; after a move
+    # only pairs touching a changed route miss. Only the heatmap-free paths are
+    # memoised — heatmap variants depend on external state.
+    scan_memo: dict
 
     @classmethod
-    def from_plan(cls, plan: Plan) -> _PlanCache:
+    def from_plan(cls, plan: Plan, prev: _PlanCache | None = None) -> _PlanCache:
+        """Build the per-plan move-scan cache.
+
+        When ``prev`` is the cache of the plan this one was derived from (the
+        local-search loop passes the previous iteration's cache), per-route data
+        is reused for every route whose node sequence is unchanged — a single
+        move touches at most two routes, so rebuilding all of it per accepted
+        move repeated O(R) work for O(1) change. Routes are keyed by the raw
+        bytes of their node array; all reused entries are pure functions of
+        (route content, inst) and are never mutated by the scans, so sharing
+        them across caches is safe.
+        """
         inst = plan.inst
         route_arrays = plan.route_arrays
-        # Arrival/latest profiles are a property of the route, not of the node being
-        # inserted, so they are built once per route here and reused across the
-        # whole move scan instead of being rebuilt per (node, route) pair.
-        route_timings = [
-            _route_timing_numba(arr, inst.dist, inst.ready_times, inst.due_times, inst.service_times)
-            for arr in route_arrays
-        ]
-        centroids = [inst.coords[arr].mean(axis=0) if len(arr) > 0 else inst.coords[0] for arr in route_arrays]
+        n_r = len(route_arrays)
+        prev_map = prev.content_map if prev is not None and prev.inst is inst else None
+
+        route_timings: list = [None] * n_r
+        centroids: list = [None] * n_r
+        route_sets: list = [None] * n_r
+        route_neighbors: list = [None] * n_r
+        route_loads: list = [0.0] * n_r
+        route_readys: list = [0.0] * n_r
+        route_dues: list = [0.0] * n_r
+        content_map: dict[bytes, int] = {}
+        route_keys: list = [b""] * n_r
+
+        for i, arr in enumerate(route_arrays):
+            key = arr.tobytes()
+            content_map[key] = i
+            route_keys[i] = key
+            j = prev_map.get(key, -1) if prev_map is not None else -1
+            if j >= 0:
+                route_timings[i] = prev.route_timings[j]
+                centroids[i] = prev.centroids[j]
+                route_sets[i] = prev.route_sets[j]
+                route_neighbors[i] = prev.route_neighbors[j]
+                route_loads[i] = prev.route_loads[j]
+                route_readys[i] = prev.route_readys[j]
+                route_dues[i] = prev.route_dues[j]
+                continue
+            # Arrival/latest profiles are a property of the route, not of the
+            # node being inserted: built once per route, reused across the whole
+            # move scan instead of per (node, route) pair.
+            route_timings[i] = _route_timing_numba(
+                arr, inst.dist, inst.ready_times, inst.due_times, inst.service_times
+            )
+            centroids[i] = inst.coords[arr].mean(axis=0) if len(arr) > 0 else inst.coords[0]
+            r = plan.routes[i]
+            route_sets[i] = set(r)
+            nbrs: set[int] = set()
+            for u in r:
+                if u < len(inst.neighbors_k):
+                    nbrs.update(inst.neighbors_k[u])
+            route_neighbors[i] = nbrs
+            route_loads[i] = sum(inst.demands[c] for c in r)
+            route_readys[i] = float(np.min(inst.ready_times[arr])) if len(arr) > 0 else 0.0
+            route_dues[i] = float(np.max(inst.due_times[arr])) if len(arr) > 0 else 0.0
+
         # Pairwise centroid distances, precomputed once and compared squared. The
         # per-pair np.linalg.norm this replaces accounted for 3.8M calls / 22s at
         # n=400.
@@ -64,21 +123,12 @@ class _PlanCache:
         )
         cdiff = centroid_arr[:, None, :] - centroid_arr[None, :, :]
         centroid_sqdist = (cdiff * cdiff).sum(axis=2)
-        route_sets = [set(r) for r in plan.routes]
-        route_neighbors = []
-        for r in plan.routes:
-            nbrs = set()
-            for u in r:
-                if u < len(inst.neighbors_k):
-                    nbrs.update(inst.neighbors_k[u])
-            route_neighbors.append(nbrs)
-        route_loads = [sum(inst.demands[c] for c in r) for r in plan.routes]
-        node_to_route = {}
-        for ri, route in enumerate(plan.routes):
-            for node in route:
-                node_to_route[node] = ri
-        route_readys = [float(np.min(inst.ready_times[arr])) if len(arr) > 0 else 0.0 for arr in route_arrays]
-        route_dues = [float(np.max(inst.due_times[arr])) if len(arr) > 0 else 0.0 for arr in route_arrays]
+
+        # Vectorised per-route writes replace the O(n) Python dict rebuild.
+        node_to_route = np.full(inst.n + 1, -1, dtype=np.int64)
+        for ri, arr in enumerate(route_arrays):
+            node_to_route[arr] = ri
+
         return cls(
             inst=inst,
             route_arrays=route_arrays,
@@ -92,6 +142,15 @@ class _PlanCache:
             centroid_arr=centroid_arr,
             centroid_sqdist=centroid_sqdist,
             route_timings=route_timings,
+            content_map=content_map,
+            route_keys=route_keys,
+            # Cache, not state: dropping it is always safe. The size cap only
+            # matters if a caller chains caches across an unusually long run.
+            scan_memo=(
+                prev.scan_memo
+                if prev is not None and prev.inst is inst and len(prev.scan_memo) < 100_000
+                else {}
+            ),
         )
 
 
@@ -134,6 +193,8 @@ def _best_relocate(
     node_to_route = cache.node_to_route
     centroid_arr = cache.centroid_arr
     route_timings = cache.route_timings
+    route_keys = cache.route_keys
+    scan_memo = cache.scan_memo
     relocate_thresh_sq = (0.55 * max_dist) ** 2
 
     for si in range(len(plan.routes)):
@@ -148,12 +209,15 @@ def _best_relocate(
             remove_delta = inst.dist[prev_s, next_s] - inst.dist[prev_s, node] - inst.dist[node, next_s]
             node_coord = inst.coords[node]
 
-            # kNN-filtered destination routes
+            # kNN-filtered destination routes. Same insertion order as the dict
+            # this replaces (-1 marks unrouted, mirroring the old `in` check),
+            # so equal-delta tie-breaking is unchanged.
             candidate_routes = set()
             if node < len(inst.neighbors_k):
                 for neighbor in inst.neighbors_k[node]:
-                    if neighbor in node_to_route:
-                        candidate_routes.add(node_to_route[neighbor])
+                    ri_n = node_to_route[neighbor]
+                    if ri_n >= 0:
+                        candidate_routes.add(int(ri_n))
             candidate_routes.discard(si)
             # Fallback: if kNN yields too few candidates, use centroid filter
             if len(candidate_routes) < 3:
@@ -169,9 +233,9 @@ def _best_relocate(
                 if route_loads[di] + inst.demands[node] > inst.capacity:
                     continue
 
-                arrivals, latest, first_violation = route_timings[di]
                 # Check if pruning is enabled and heatmap is provided
                 if heatmap is not None and pruning_threshold > 0.0:
+                    arrivals, latest, first_violation = route_timings[di]
                     insert_delta, best_pos = _best_insert_in_route_pruned_numba(
                         node,
                         route_arrays[di],
@@ -189,23 +253,31 @@ def _best_relocate(
                         pruning_threshold,
                     )
                 else:
-                    _key, insert_delta, best_pos = _best_insert_in_route_numba(
-                        node,
-                        route_arrays[di],
-                        route_loads[di],
-                        arrivals,
-                        latest,
-                        first_violation,
-                        inst.dist,
-                        inst.demands,
-                        inst.capacity,
-                        inst.ready_times,
-                        inst.due_times,
-                        inst.service_times,
-                        _NO_HEATMAP,
-                        0.0,
-                        False,
-                    )
+                    # Pure function of (node, destination route content):
+                    # memoised across moves that leave the destination unchanged.
+                    mkey = (1, node, route_keys[di])
+                    hit = scan_memo.get(mkey)
+                    if hit is None:
+                        arrivals, latest, first_violation = route_timings[di]
+                        hit = _best_insert_in_route_numba(
+                            node,
+                            route_arrays[di],
+                            route_loads[di],
+                            arrivals,
+                            latest,
+                            first_violation,
+                            inst.dist,
+                            inst.demands,
+                            inst.capacity,
+                            inst.ready_times,
+                            inst.due_times,
+                            inst.service_times,
+                            _NO_HEATMAP,
+                            0.0,
+                            False,
+                        )
+                        scan_memo[mkey] = hit
+                    _key, insert_delta, best_pos = hit
                 if best_pos == -1:
                     continue
                 new_nv = plan.nv - (1 if sn_empty else 0)
@@ -251,6 +323,8 @@ def _best_swap(
     centroid_sqdist = cache.centroid_sqdist
     route_sets = cache.route_sets
     route_neighbors = cache.route_neighbors
+    route_keys = cache.route_keys
+    scan_memo = cache.scan_memo
     pair_thresh_sq = (0.65 * max_dist) ** 2
 
     for si in range(len(plan.routes)):
@@ -275,16 +349,21 @@ def _best_swap(
                     pruning_threshold,
                 )
             else:
-                delta, sp, dp = _swap_evaluate_numba(
-                    route_arrays[si],
-                    route_arrays[di],
-                    inst.dist,
-                    inst.demands,
-                    inst.capacity,
-                    inst.ready_times,
-                    inst.due_times,
-                    inst.service_times,
-                )
+                mkey = (2, route_keys[si], route_keys[di])
+                hit = scan_memo.get(mkey)
+                if hit is None:
+                    hit = _swap_evaluate_numba(
+                        route_arrays[si],
+                        route_arrays[di],
+                        inst.dist,
+                        inst.demands,
+                        inst.capacity,
+                        inst.ready_times,
+                        inst.due_times,
+                        inst.service_times,
+                    )
+                    scan_memo[mkey] = hit
+                delta, sp, dp = hit
             if sp >= 0 and delta < best_delta:
                 best_delta = delta
                 best_move = (si, int(sp), di, int(dp))
@@ -323,6 +402,8 @@ def _cross_exchange(
     route_dues = cache.route_dues
     route_sets = cache.route_sets
     route_neighbors = cache.route_neighbors
+    route_keys = cache.route_keys
+    scan_memo = cache.scan_memo
     pair_thresh_sq = (0.55 * max_dist) ** 2
 
     for i in range(len(plan.routes)):
@@ -343,11 +424,11 @@ def _cross_exchange(
                 min(r1_due, r2_due) >= max(r1_ready, r2_ready)
             ):
                 continue
-            old_pair = float(_route_cost(r1_arr, inst.dist)) + float(_route_cost(r2_arr, inst.dist))
-            max_len1 = 3 if len(r1) >= 12 else 2
-            max_len2 = 3 if len(r2) >= 12 else 2
             # Delegate entire (p1, p2, len1, len2) search to JIT
             if heatmap is not None and pruning_threshold > 0.0:
+                old_pair = float(_route_cost(r1_arr, inst.dist)) + float(_route_cost(r2_arr, inst.dist))
+                max_len1 = 3 if len(r1) >= 12 else 2
+                max_len2 = 3 if len(r2) >= 12 else 2
                 delta, p1, len1, p2, len2 = _cross_exchange_pair_pruned_numba(
                     r1_arr,
                     r2_arr,
@@ -364,19 +445,27 @@ def _cross_exchange(
                     pruning_threshold,
                 )
             else:
-                delta, p1, len1, p2, len2 = _cross_exchange_pair_numba(
-                    r1_arr,
-                    r2_arr,
-                    max_len1,
-                    max_len2,
-                    inst.dist,
-                    inst.demands,
-                    inst.capacity,
-                    inst.ready_times,
-                    inst.due_times,
-                    inst.service_times,
-                    old_pair,
-                )
+                mkey = (3, route_keys[i], route_keys[j])
+                hit = scan_memo.get(mkey)
+                if hit is None:
+                    old_pair = float(_route_cost(r1_arr, inst.dist)) + float(_route_cost(r2_arr, inst.dist))
+                    max_len1 = 3 if len(r1) >= 12 else 2
+                    max_len2 = 3 if len(r2) >= 12 else 2
+                    hit = _cross_exchange_pair_numba(
+                        r1_arr,
+                        r2_arr,
+                        max_len1,
+                        max_len2,
+                        inst.dist,
+                        inst.demands,
+                        inst.capacity,
+                        inst.ready_times,
+                        inst.due_times,
+                        inst.service_times,
+                        old_pair,
+                    )
+                    scan_memo[mkey] = hit
+                delta, p1, len1, p2, len2 = hit
             if p1 >= 0 and delta < best_delta:
                 seg2 = list(r2[p2 : p2 + len2])
                 seg1 = list(r1[p1 : p1 + len1])
@@ -416,6 +505,8 @@ def _cross_tail(
     centroid_sqdist = cache.centroid_sqdist
     route_sets = cache.route_sets
     route_neighbors = cache.route_neighbors
+    route_keys = cache.route_keys
+    scan_memo = cache.scan_memo
     pair_thresh_sq = (0.65 * max_dist) ** 2
 
     for i in range(len(plan.routes)):
@@ -433,9 +524,9 @@ def _cross_tail(
                 continue
 
             r1_arr, r2_arr = route_arrays[i], route_arrays[j]
-            old_pair = float(_route_cost(r1_arr, inst.dist)) + float(_route_cost(r2_arr, inst.dist))
 
             if heatmap is not None and pruning_threshold > 0.0:
+                old_pair = float(_route_cost(r1_arr, inst.dist)) + float(_route_cost(r2_arr, inst.dist))
                 delta, split_i, split_j = _cross_tail_pair_pruned_numba(
                     r1_arr,
                     r2_arr,
@@ -450,17 +541,23 @@ def _cross_tail(
                     pruning_threshold,
                 )
             else:
-                delta, split_i, split_j = _cross_tail_pair_numba(
-                    r1_arr,
-                    r2_arr,
-                    inst.dist,
-                    inst.demands,
-                    inst.capacity,
-                    inst.ready_times,
-                    inst.due_times,
-                    inst.service_times,
-                    old_pair,
-                )
+                mkey = (4, route_keys[i], route_keys[j])
+                hit = scan_memo.get(mkey)
+                if hit is None:
+                    old_pair = float(_route_cost(r1_arr, inst.dist)) + float(_route_cost(r2_arr, inst.dist))
+                    hit = _cross_tail_pair_numba(
+                        r1_arr,
+                        r2_arr,
+                        inst.dist,
+                        inst.demands,
+                        inst.capacity,
+                        inst.ready_times,
+                        inst.due_times,
+                        inst.service_times,
+                        old_pair,
+                    )
+                    scan_memo[mkey] = hit
+                delta, split_i, split_j = hit
 
             if split_i >= 0:
                 # A vehicle is eliminated if either tail swap makes a route empty.
@@ -548,6 +645,8 @@ def _best_or_opt(
     centroid_sqdist = cache.centroid_sqdist
     route_sets = cache.route_sets
     route_neighbors = cache.route_neighbors
+    route_keys = cache.route_keys
+    scan_memo = cache.scan_memo
     pair_thresh_sq = (0.65 * max_dist) ** 2
 
     for si in range(len(plan.routes)):
@@ -560,9 +659,9 @@ def _best_or_opt(
                 continue
 
             r1_arr, r2_arr = route_arrays[si], route_arrays[di]
-            old_pair = float(_route_cost(r1_arr, inst.dist)) + float(_route_cost(r2_arr, inst.dist))
 
             if heatmap is not None and pruning_threshold > 0.0:
+                old_pair = float(_route_cost(r1_arr, inst.dist)) + float(_route_cost(r2_arr, inst.dist))
                 delta, direction, p1, L, p2, rev = _string_relocate_pair_pruned_numba(
                     r1_arr,
                     r2_arr,
@@ -577,17 +676,23 @@ def _best_or_opt(
                     pruning_threshold,
                 )
             else:
-                delta, direction, p1, L, p2, rev = _string_relocate_pair_numba(
-                    r1_arr,
-                    r2_arr,
-                    inst.dist,
-                    inst.demands,
-                    inst.capacity,
-                    inst.ready_times,
-                    inst.due_times,
-                    inst.service_times,
-                    old_pair,
-                )
+                mkey = (5, route_keys[si], route_keys[di])
+                hit = scan_memo.get(mkey)
+                if hit is None:
+                    old_pair = float(_route_cost(r1_arr, inst.dist)) + float(_route_cost(r2_arr, inst.dist))
+                    hit = _string_relocate_pair_numba(
+                        r1_arr,
+                        r2_arr,
+                        inst.dist,
+                        inst.demands,
+                        inst.capacity,
+                        inst.ready_times,
+                        inst.due_times,
+                        inst.service_times,
+                        old_pair,
+                    )
+                    scan_memo[mkey] = hit
+                delta, direction, p1, L, p2, rev = hit
 
             if direction != -1:
                 if direction == 1:
@@ -896,6 +1001,124 @@ def _try_buffered_route_elimination(
     return None
 
 
+def _ges_perturb(routes: list[list[int]], inst: Inst, n_moves: int) -> None:
+    """Random feasible relocations that reshape the partial solution in place.
+
+    This is the escape hatch GES needs when no single ejection admits the
+    pending customer: the beam search this complements simply gave up here.
+    Moves are feasibility-checked and applied regardless of cost — the goal is
+    reachability, not improvement.
+    """
+    import random as _random
+
+    for _ in range(n_moves):
+        non_empty = [i for i, r in enumerate(routes) if r]
+        if len(non_empty) < 2:
+            return
+        si = _random.choice(non_empty)
+        sp = _random.randrange(len(routes[si]))
+        node = routes[si][sp]
+        di = _random.choice([i for i in non_empty if i != si])
+        trial = routes[si][:sp] + routes[si][sp + 1 :]
+        cost, pos = _best_insert_position(node, routes[di], inst)
+        if pos is None:
+            continue
+        routes[si] = trial
+        routes[di] = routes[di][:pos] + [node] + routes[di][pos:]
+
+
+def _guided_ejection_search(
+    plan: Plan,
+    target_idx: int,
+    p_counters: dict[int, int],
+    max_steps: int | None = None,
+    k_max: int = 2,
+    n_perturb: int = 20,
+    deadline: float | None = None,
+) -> Plan | None:
+    """Guided Ejection Search route elimination (Nagata & Bräysy 2009, adapted).
+
+    Four ingredients the beam search in :func:`_try_buffered_route_elimination`
+    lacks, which is why this runs where the beam has already failed:
+
+    * a LIFO **ejection pool** of unplaced customers,
+    * per-customer **penalty counters** ``p_counters`` that persist across
+      targets — customers that keep getting ejected become expensive to eject,
+    * ejections chosen to **minimise the summed penalty** of the ejected set,
+    * a **perturbation phase** when no ejection is admissible, instead of
+      giving up.
+
+    Returns a feasible plan with one route fewer, or None.
+    """
+    inst = plan.inst
+    if len(plan.routes) <= 1:
+        return None
+    routes = [r[:] for i, r in enumerate(plan.routes) if i != target_idx]
+    pool_stack = list(plan.routes[target_idx])
+    if max_steps is None:
+        max_steps = min(1500, 60 * max(len(pool_stack), 1))
+
+    nbrs_of = inst.neighbors_k
+    steps = 0
+    while pool_stack:
+        if steps >= max_steps:
+            return None
+        if deadline is not None and time.time() >= deadline:
+            return None
+        steps += 1
+        v = pool_stack.pop()
+
+        # 1) Plain feasible insertion, cheapest across all routes.
+        best_delta, best_ri, best_pos = float("inf"), -1, -1
+        for ri, r in enumerate(routes):
+            if not r:
+                continue
+            cost, pos = _best_insert_position(v, r, inst)
+            if pos is not None and cost < best_delta:
+                best_delta, best_ri, best_pos = cost, ri, pos
+        if best_ri >= 0:
+            routes[best_ri] = routes[best_ri][:best_pos] + [v] + routes[best_ri][best_pos:]
+            continue
+
+        # 2) Ejection: replace 1..k_max consecutive customers by v, choosing the
+        #    set with minimal summed penalty (ties: fewer ejected customers).
+        v_nbrs = set(nbrs_of[v]) if v < len(nbrs_of) else set()
+        best_score: tuple[int, int] | None = None
+        best_apply = None
+        for ri, r in enumerate(routes):
+            if not r or (v_nbrs and v_nbrs.isdisjoint(r)):
+                continue
+            for start in range(len(r)):
+                for k in range(1, min(k_max, len(r) - start) + 1):
+                    cand = r[:start] + [v] + r[start + k :]
+                    if not _check_route(cand, inst):
+                        continue
+                    ejected = r[start : start + k]
+                    score = (sum(p_counters.get(w, 1) for w in ejected), k)
+                    if best_score is None or score < best_score:
+                        best_score = score
+                        best_apply = (ri, cand, ejected)
+        if best_apply is not None:
+            ri, cand, ejected = best_apply
+            routes[ri] = cand
+            pool_stack.extend(ejected)  # LIFO: most recently ejected pops first
+            p_counters[v] = p_counters.get(v, 1) + 1
+            continue
+
+        # 3) No admissible ejection: perturb and retry this customer.
+        _ges_perturb(routes, inst, n_perturb)
+        pool_stack.append(v)
+
+    cand_plan = Plan([r for r in routes if r], inst, plan.algo)
+    if (
+        cand_plan.nv == plan.nv - 1
+        and cand_plan.feasible
+        and _covers_all_customers(cand_plan.routes, inst)
+    ):
+        return cand_plan
+    return None
+
+
 def _buffered_route_elimination(
     plan: Plan,
     max_rounds: int = 2,
@@ -903,11 +1126,13 @@ def _buffered_route_elimination(
     beam_width: int = 16,
     pool=None,
     hard_mode: bool = False,
+    deadline: float | None = None,
 ) -> Plan:
     if hard_mode:
         beam_width = max(beam_width * 2, 32)
         max_ejections = max(max_ejections + 4, 10)
     best = plan.copy()
+    ges_penalties: dict[int, int] = {}  # persists across targets and rounds
     for _ in range(max_rounds):
         if len(best.routes) <= 1:
             break
@@ -925,6 +1150,8 @@ def _buffered_route_elimination(
         n_targets = len(ranked) if smallest_len <= 4 else min(6, len(ranked))
         improved = False
         for target_idx in ranked[:n_targets]:
+            if deadline is not None and time.time() >= deadline:
+                break
             local_ejections = max(2, min(max_ejections, len(best.routes[target_idx]) // 2 + 1))
             cand = _try_buffered_route_elimination(
                 best,
@@ -932,6 +1159,12 @@ def _buffered_route_elimination(
                 max_ejections=local_ejections,
                 beam_width=beam_width,
             )
+            if cand is None:
+                # Guided Ejection Search picks up exactly where the beam gave
+                # up: LIFO pool + penalty-guided ejections + perturbation.
+                cand = _guided_ejection_search(
+                    best, target_idx, ges_penalties, deadline=deadline
+                )
             if cand is None:
                 continue
             cand = local_search(cand, max_passes=1, nv_ceiling=cand.nv, max_ls_moves=10, pool=pool)
@@ -1003,13 +1236,22 @@ def _intra_route_optimize(route: list[int], inst: Inst, max_passes: int = 25) ->
     return list(result)
 
 
-def td_converge_polish(plan: Plan, max_passes: int = 25) -> Plan:
+def td_converge_polish(plan: Plan, max_passes: int = 25, deadline: float | None = None) -> Plan:
     """
     Apply _intra_route_optimize to every route independently.
     Called during the BKS-NV TD polish phase. Unlike local_search(),
     this never modifies route assignments — only improves sequence quality.
+
+    ``deadline`` (absolute ``time.time()`` value) makes this anytime-safe:
+    routes not yet optimised when the deadline passes are kept as-is. Without
+    it this phase was a measured contributor to the 8% budget overrun at n=1000.
     """
-    routes = [_intra_route_optimize(r, plan.inst, max_passes) for r in plan.routes]
+    routes = []
+    for r in plan.routes:
+        if deadline is not None and time.time() >= deadline:
+            routes.append(r[:])
+        else:
+            routes.append(_intra_route_optimize(r, plan.inst, max_passes))
     cand = Plan(routes, plan.inst, plan.algo)
     return cand if cand.feasible and cand.cost + 1e-9 < plan.cost else plan
 
@@ -1027,6 +1269,7 @@ def local_search(
         return plan
     best = plan.copy()
 
+    cache = None
     for _ in range(max_passes):
         improved = False
         routes = []
@@ -1041,7 +1284,9 @@ def local_search(
 
         moves = 0
         while moves < max_ls_moves:
-            cache = _PlanCache.from_plan(best)
+            # Passing the previous iteration's cache reuses per-route data for
+            # every route the last move didn't touch.
+            cache = _PlanCache.from_plan(best, prev=cache)
             # 1. Relocate Move
             res = _best_relocate(best, nv_ceiling=nv_ceiling, heatmap=heatmap, pruning_threshold=pruning_threshold, cache=cache)
             if res is not None:

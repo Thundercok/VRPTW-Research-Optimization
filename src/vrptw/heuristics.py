@@ -140,52 +140,6 @@ def _best_insert_position_numba(
 
 
 @njit(cache=True)
-def _best_insert_position_pruned_numba(
-    node: int,
-    route: np.ndarray,
-    dist: np.ndarray,
-    demands: np.ndarray,
-    capacity: float,
-    ready: np.ndarray,
-    due: np.ndarray,
-    service: np.ndarray,
-    heatmap: np.ndarray,
-    pruning_threshold: float,
-) -> tuple[float, int]:
-    best_cost = 1e18
-    best_pos = -1
-
-    n_nodes = len(route)
-    current_load = 0.0
-    for idx in range(n_nodes):
-        current_load += demands[route[idx]]
-    if current_load + demands[node] > capacity:
-        return 1e18, -1
-
-    arrivals, latest, first_violation = _route_timing_numba(route, dist, ready, due, service)
-
-    for pos in range(n_nodes + 1):
-        if pos > first_violation:
-            break
-        prev = route[pos - 1] if pos > 0 else 0
-        nxt = route[pos] if pos < n_nodes else 0
-
-        # Check GNN heatmap pruning
-        if heatmap[prev, node] < pruning_threshold or heatmap[node, nxt] < pruning_threshold:
-            continue
-
-        delta = dist[prev, node] + dist[node, nxt] - dist[prev, nxt]
-        if delta >= best_cost:
-            continue
-
-        if _insert_feasible_numba(node, pos, route, arrivals, latest, dist, ready, due, service):
-            best_cost = delta
-            best_pos = pos
-
-    return best_cost, best_pos
-
-
-@njit(cache=True)
 def _best_insert_in_route_numba(
     node: int,
     route: np.ndarray,
@@ -454,80 +408,6 @@ def _best_insert_position(node: int, route: list[int], inst: Inst) -> tuple[floa
     return float(best_cost), int(best_pos)
 
 
-@njit(cache=True)
-def _best_insert_position_biased_numba(
-    node: int,
-    route: np.ndarray,
-    dist: np.ndarray,
-    demands: np.ndarray,
-    capacity: float,
-    ready: np.ndarray,
-    due: np.ndarray,
-    service: np.ndarray,
-    heatmap: np.ndarray,
-    gamma: float,
-) -> tuple[float, float, int]:
-    best_biased_cost = 1e18
-    actual_cost = 1e18
-    best_pos = -1
-
-    n_nodes = len(route)
-    current_load = 0.0
-    for idx in range(n_nodes):
-        current_load += demands[route[idx]]
-    if current_load + demands[node] > capacity:
-        return 1e18, 1e18, -1
-
-    arrivals, latest, first_violation = _route_timing_numba(route, dist, ready, due, service)
-
-    for pos in range(n_nodes + 1):
-        if pos > first_violation:
-            break
-        prev = route[pos - 1] if pos > 0 else 0
-        nxt = route[pos] if pos < n_nodes else 0
-        delta = dist[prev, node] + dist[node, nxt] - dist[prev, nxt]
-
-        # Apply GNN heatmap edge prediction bias
-        p_prev_node = heatmap[prev, node]
-        p_node_nxt = heatmap[node, nxt]
-        delta_biased = delta * (1.0 - gamma * p_prev_node) * (1.0 - gamma * p_node_nxt)
-
-        if delta_biased >= best_biased_cost:
-            continue
-
-        if _insert_feasible_numba(node, pos, route, arrivals, latest, dist, ready, due, service):
-            best_biased_cost = delta_biased
-            actual_cost = delta
-            best_pos = pos
-
-    return best_biased_cost, actual_cost, best_pos
-
-
-def _best_insert_position_biased(
-    node: int,
-    route: list[int],
-    inst: Inst,
-    heatmap: np.ndarray,
-    gamma: float,
-) -> tuple[float, float, int | None]:
-    route_arr = np.array(route, dtype=np.int64)
-    best_biased, actual_cost, best_pos = _best_insert_position_biased_numba(
-        node,
-        route_arr,
-        inst.dist,
-        inst.demands,
-        inst.capacity,
-        inst.ready_times,
-        inst.due_times,
-        inst.service_times,
-        heatmap,
-        gamma,
-    )
-    if best_pos == -1:
-        return float("inf"), float("inf"), None
-    return float(best_biased), float(actual_cost), int(best_pos)
-
-
 def _insert_into_cheapest_route(
     plan: Plan,
     node: int,
@@ -557,16 +437,6 @@ def _insert_into_cheapest_route(
 
 def _insert_customer(plan: Plan, node: int, inst: Inst) -> None:
     _insert_into_cheapest_route(plan, node, inst)
-
-
-def _insert_customer_biased(
-    plan: Plan,
-    node: int,
-    inst: Inst,
-    heatmap: np.ndarray,
-    gamma: float,
-) -> None:
-    _insert_into_cheapest_route(plan, node, inst, heatmap, gamma)
 
 
 def _route_cost_list(route: list[int], inst: Inst) -> float:

@@ -1,109 +1,127 @@
-# Re-run checklist for `paper.tex`
+# Re-run checklist for `paper.tex` — V2 upgrade (2026-07-24)
 
-The solver changes described below alter search trajectories, so **every measured
-number in the paper must be regenerated** before submission. This file lists
-exactly what is invalidated, what has already been updated, and what has not.
+> **STATUS 2026-07-26: COMPLETE.** All 8 shards ran clean (984 rows, 0 null,
+> 0 sleep-corrupted after the keep-awake fix). Tables regenerated from
+> `results/rerun_combined.csv` via `scripts/make_paper_tables.py` into
+> `docs/tables/*.tex` and `\input`-ed by `paper.tex`. All prose numbers, the
+> abstract, the GNN section (rewritten to a scalability result + honest negative
+> guidance ablation), the ablation/distance narrative, and the OR-Tools/GH prose
+> were updated to the new data. `paper.tex` compiles clean (MiKTeX, 10 pages,
+> 0 undefined refs). The headline change: NV improved (DDQN $+0.089$ vs the old
+> $+0.143$), distance-at-matched-NV is best-in-class within the sweep ($+0.575\%$
+> fair intersection) but the vehicle-distance trade means it is not a Pareto win
+> over the previous version — reported honestly.
 
-## What changed in the solver
+The V2 solver changes below alter search trajectories, so **every measured
+number in the paper must be regenerated**. The regeneration sweeps are defined
+in `scripts/run_rerun_sweeps.sh` (two protocols):
 
-| Change | Effect on results |
+| Protocol | Shards | Output |
+|---|---|---|
+| Iteration-bounded (`--no-time-limit`) | Solomon ×3, H200, H400 | `results/rerun_iters/` |
+| Time-bounded (anytime, 0.6 s × n) | H600, H800, H1000 | `results/rerun_time/` |
+
+The split is deliberate: the paper's existing tables cover Solomon/H200/H400,
+so that branch stays iteration-bounded for continuity with
+`results/ultimate-publication-suite/`; H600–1000 are new scalability results
+where iso-time against OR-Tools is the natural protocol.
+
+## What changed in the solver (V2)
+
+### Behaviour-preserving (verified bit-identical against regenerated goldens)
+
+| Change | Where |
 |---|---|
-| Push-forward O(1) insertion feasibility; batched repair kernels; incremental regret columns; vectorised centroid filters; hoisted route timings | **None** — verified bit-identical against `tests/golden/baseline.json` |
-| `op_fts_greedy` feasibility fix (was returning an infeasible plan on 100% of trials) | Changes trajectories; recovers ~20% of the ALNS iteration budget |
-| `op_fts_greedy` slack-bonus term removed | Changes trajectories; protects vehicle counts |
-| Anytime wall-clock budget, on by default | Changes the experimental protocol |
-| Sparse-kNN GNN edge predictor | Requires a retrained checkpoint; heatmap quality not yet validated |
+| Incremental `_PlanCache` — per-route data reused via content keys; Python sets/dict replaced by arrays | `local_search.py` |
+| Exact pair-scan memoization (`scan_memo`) — kernel results reused across moves that don't touch the pair. Chosen over don't-look bits deliberately: DLB changes trajectories, this doesn't | `local_search.py` |
+| Greedy repair via matrix + column refresh (same pattern as `_regret`) | `operators.py::_sequential_cheapest_insert` |
+| RL structural state features cached per `cur` identity | `solvers.py::_StructuralFeatureCache` |
+| PER priorities\*\*alpha maintained incrementally (sum-tree rejected: not bit-identical) | `rl.py` |
 
-Measured on 90 paired runs (9 instances x 2 solvers x 5 seeds, 400 iterations,
-n<=200): **2.62x faster**, mean gap-to-BKS 3.92% -> 3.84%, vehicle count
-statistically unchanged (Wilcoxon p=0.617).
+### Trajectory-changing (measured on the 90-run paired A/B, 400 iters)
 
-> Caveat: that A/B ran at n<=200 with 400 iterations. Production runs 5000
-> iterations at up to n=1000. Do not assume the deltas transfer.
+| Change | Evidence |
+|---|---|
+| **B1 Guided Ejection Search** (`_guided_ejection_search`): LIFO ejection pool, per-customer penalty counters, min-Σp ejections, perturbation phase; fires where the beam search gave up | RC105 reached the **BKS floor of 13 vehicles on 4/5 seeds** (baseline: 0/5). Overall NV 5 better / 1 worse / 84 tie, mean 13.400→13.356, Wilcoxon p=0.102 — while total wall time *dropped* 594→545 s |
+| **B2 SREX crossover**: old crossover produced feasible but fragmented offspring — **0/600 measured offspring could pass the `alt.nv < best.nv` gate**, so it never contributed. SREX: 491/600 pass | `rl.py::EliteArchive.crossover` |
+| **B3 surgical SP column rescue + MILP memo**: plain `[:400]` truncation could drop every column of a customer (`row_sums == 0` → recombination dead). Rescue swaps in coverage columns only in that case. A broader reshuffle (≥3 columns/customer) was tried and **reverted — it cost a vehicle on rc1_2_1** | `pool.py::_select_milp_columns` |
+| **A5 deadline-aware tail**: every tail phase now checks `_out_of_time()`; `td_converge_polish` takes a deadline. Measured: solve() finishes at **29.76 s on a 30 s budget (−0.8%)** vs +8% overrun before. Benchmark `Time_s` additionally includes ~2 s solver construction outside `solve()` — state this when claiming iso-time | `solvers.py`, `local_search.py` |
 
-## Already updated in `paper.tex`
+### Speed (paired A/B, bit-identical set only)
 
-- [x] GNN Edge Predictor subsection — rewritten for the sparse-kNN architecture
-      and the bilinear output head, including the measured memory/latency figures
-      (1517 MB / 3.96 s -> 1.3 MB / 0.049 s at n=1000).
-- [x] Setup subsection — added the anytime budget paragraph and the iso-time
-      justification for the OR-Tools comparison.
+Baseline HEAD (already 2.62× over the original) → +Tier A: **594.1 s → 500.4 s
+(~1.16× excluding the cold-JIT first run; 75/90 runs bit-identical)**. With GES
+enabled the suite still runs faster than baseline (545.2 s) while winning
+vehicles.
 
-**Not verified:** no LaTeX toolchain was available, so the PDF was not recompiled.
-Run `pdflatex -interaction=nonstopmode -output-directory=docs docs/paper.tex`
-before trusting the edits.
+### Iso-time verdict for GES (the gate that killed the sawtooth)
 
-## Must be regenerated (numbers untouched — do NOT trust these as they stand)
+GES consumed ~9% extra time and bought −0.044 mean NV. The measured
+iterations-route to the same budget (+100% time → −0.111 NV) prices 9% of time
+at ≈ −0.010 NV. **GES buys ~4× more NV per unit time than spending the same
+time on more ALNS iterations.** It passes.
+
+## Protocol notes for the paper
+
+- **OR-Tools budget is iso-time, not a flat 120 s.** `benchmark.py` sets the
+  OR-Tools time limit to `max(30, 0.95 × mean DDQN Time_s)`, overriding the
+  `--ortools-time-limit` CLI value. On easy instances (DDQN ~35–90 s) OR-Tools
+  runs well under 120 s; on hard ones it runs longer. The `120\,s` label in the
+  tables should be corrected to state that OR-Tools is matched to DDQN wall time.
+  This behaviour is unchanged from the previous suite, so old/new remain
+  comparable — but any single anomalous DDQN run inflates the OR-Tools budget
+  for that instance (observed: an overnight machine-sleep on R211 pushed its
+  OR-Tools budget to ~3 h). The `--time-limit` fuses below bound this.
+- **Safety fuses on the sweep** (`scripts/run_rerun_sweeps.sh`): solomon-wide
+  1200 s, H200 1500 s, H400 3600 s — each ≥2.5× the healthy run time, so all
+  iterations complete before they fire; they only cap runaways. After the sweep,
+  verify no run's `Time_s` sits near its fuse; flag any that did.
+- Anytime budget: deadline applies to `solve()`; construction (~2 s, torch
+  init) is outside it. Deadline adherence after A5: within ±2%.
+- Thread pinning: `run_benchmark.py` pins NUMBA/OMP/MKL to 1 thread per worker
+  when parallel (was ~4× oversubscribed → noisy `Time_s`).
+- GNN guidance stays **off** in production sweeps (validated: no quality gain,
+  gap +0.22 pp, p=0.683). Report GNN separately as a scalability result
+  (1517 MB → 1.3 MB, 3.96 s → 0.049 s at n=1000).
+
+## Regeneration procedure
+
+```bash
+# 1. Full two-protocol sweep (~16 h wall on 12 logical cores)
+bash scripts/run_rerun_sweeps.sh
+
+# 2. Cross-check against the previous suite (UNPAIRED — sanity only)
+python scripts/compare_sweeps.py <old.csv> <new.csv> --algorithms Hybrid-DDQN
+
+# 3. Regenerate the six LaTeX tables
+python scripts/make_paper_tables.py --sweep <combined_new.csv> --out-dir docs/tables
+
+# 4. Recompile (MiKTeX 25.12 now installed at
+#    C:\Users\han\AppData\Local\Programs\MiKTeX\miktex\bin\x64\pdflatex.exe,
+#    user scope, auto-install on). Run 3 passes to resolve \cite/\Cref refs:
+pdflatex -interaction=nonstopmode docs/paper.tex   # x3
+```
+The current `paper.tex` compiles clean to a 9-page PDF (all citations resolve,
+including the new GES/SREX refs). PDF recompilation is no longer a blocker.
+
+## Still stale in `paper.tex` until the sweep finishes
 
 | Location | Claim |
 |---|---|
 | Abstract, ~line 80 | `+0.139` NV inflation, `13.3%` vs ALNS-Base, `92.7%` vs OR-Tools, `5.8%` TD gain |
-| Setup, ~line 640 | Runtimes `31.5 / 47.1 / 58.9` s; `24.4%` neural overhead; `861.3 s -> 60.3 s (14x)` Numba claim — **all now stale, the solver is materially faster** |
-| Table, ~line 672 | Ablation ($N=62$): NV diff `+0.276 / +0.171 / +0.161 / +0.161`, TD Gap `+0.231 / +0.174 / -0.069 / -0.138`% |
-| Table, ~line 694 | $NV_\text{diff}$ on Solomon |
-| Table, ~line 729 | NV-filtered TD Gap% |
-| Table, ~line 755 | Strict fair intersection ($N=39$) by family |
-| Table, ~line 780 | Gehring-Homberger 200-customer at 800 iterations |
-| Table, ~line 862 | Baseline vs GNN-guided at 150 iterations; `1.2-1.7x` acceleration claim |
-| Throughout | All Wilcoxon p-values, including the H400 significance boundary recorded in `CLAUDE.md` |
+| Setup, ~line 640 | Runtimes `31.5/47.1/58.9` s; `861.3 s -> 60.3 s (14x)` Numba claim |
+| Tables ~672, 694, 729, 755, 780, 862 | All result tables |
+| Throughout | All Wilcoxon p-values |
 
-## Procedure
+When quoting improvement *deltas*, cite the paired A/B numbers above — the
+old-vs-new sweep comparison is unpaired (different seeds/machine) and is a
+sanity check, not evidence.
 
-```bash
-# 1. Retrain the GNN — the sparse architecture cannot load the old checkpoint
-PYTHONPATH=src python -m vrptw.train_gnn 150
+## Rejected in V2 (do not re-add without an iso-time win)
 
-# 2. Full production sweep (multi-day; PYTHON overrides the interpreter)
-PYTHON=python ./run_full_production.sh
-
-# 3. Regenerate tables from results/clean_v2/, then recompile
-pdflatex -interaction=nonstopmode -output-directory=docs docs/paper.tex
-```
-
-## GNN guidance is NOT currently a quality win
-
-The sparse predictor was retrained (150 epochs, loss 0.969 -> 0.228, 116 pairs —
-60 Homberger-200 instances now included for the first time). Falling loss only
-shows it fits elite plans, so `scripts/validate_gnn.py` measures whether the
-heatmap actually helps: same instances, same seeds, guidance on vs off.
-
-Result over 15 paired runs (5 instances x 3 seeds, 400 iterations):
-
-| Metric | Guidance off | Guidance on |
-|---|---|---|
-| Vehicle count | 11.800 | 11.800 — **identical in 15/15 runs** |
-| Mean distance | 1996.83 | 1991.12 |
-| **Gap-to-BKS** | **2.05%** | **2.27% (+0.22 pp, worse)** |
-
-TD better on 8, worse on 6, Wilcoxon p=0.683. The mean-distance improvement and
-the gap-to-BKS regression disagree because the mean is dominated by one large
-instance; gap-to-BKS weights instances equally and is the metric the paper uses.
-
-The effect is family-dependent and consistent within family:
-
-| Family | Seeds improved |
+| Idea | Why rejected |
 |---|---|
-| R1 (R101) | 3/3 |
-| C2 (C203) | 2/3 — reaches the BKS optimum of 591.17 |
-| RC1 (RC105) | 1/3 |
-| RC2 (RC207) | **0/3** — worse by +31 to +47 every seed |
-
-**Do not claim GNN guidance improves solution quality without re-establishing it.**
-Two things are untested: `gnn_guidance_strength = 0.45` was tuned for the dense
-architecture and may not transfer, and the sparse predictor has never been
-compared against the dense one head-to-head — only against no guidance at all.
-What Phase 5 does establish is scalability: 1517 MB -> 1.3 MB and 3.96 s -> 0.049 s
-per forward pass at n=1000.
-
-The previous dense checkpoint was overwritten by retraining. Recover it with
-`git checkout HEAD -- docs/model/gnn_edge_predictor.pt` (it will not load into the
-sparse architecture, but is needed for any dense-vs-sparse comparison).
-
-## Open risk
-
-`op_fts_greedy` was inert before this work — it returned an infeasible plan every
-time, so its composite objective had never been exercised by any experiment. Its
-remaining weight, `wait_weight = 0.10 + 0.35 * tw_tight_frac`, is therefore still
-un-validated, exactly as the removed slack term was. It was left at its original
-value rather than tuned, because tuning it on the same instances the paper reports
-would be fitting to the test set. If it is to be tuned, hold out a separate set.
+| Don't-look bits | Trajectory-changing; exact memoization achieves the same reuse bit-identically |
+| Sum-tree PER | Different RNG stream → not bit-identical; incremental `_pri_alpha` captures the dominant saving |
+| SP column reshuffle (≥3 cols/customer) | Cost a vehicle on rc1_2_1 in the paired A/B |
+| (V1 list) kNN candidate filter, FTS slack bonus, SISR, sawtooth schedule | See git history — each lost on measurement |

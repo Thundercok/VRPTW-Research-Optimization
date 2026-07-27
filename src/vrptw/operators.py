@@ -13,7 +13,6 @@ from .heuristics import (
     _best_insert_position,
     _insert_costs_column_numba,
     _insert_costs_matrix_numba,
-    _insert_customer,
     _insert_feasible_numba,
     _route_timing_numba,
     pack_routes,
@@ -507,17 +506,86 @@ DESTROY = [
 ]
 
 
+def _sequential_cheapest_insert(
+    plan: Plan, order: list[int], heatmap: np.ndarray | None, gamma: float
+) -> Plan:
+    """Insert ``order`` one node at a time, each at its cheapest feasible position.
+
+    Behaviour-identical to calling ``_insert_into_cheapest_route`` per node, but
+    the (node x route) insertion-cost matrix is built once and refreshed one
+    column at a time — the same pattern ``_regret`` uses. The per-node path
+    re-derived every route's timing profile for every insertion, O(|order| x R x m)
+    instead of O(R x m + |order| x m).
+
+    A node that fits nowhere opens a new route, which becomes a new column so
+    later nodes can insert into it, exactly as before.
+    """
+    inst = plan.inst
+    if not order:
+        return Plan(plan.routes, inst, plan.algo)
+    use_bias = heatmap is not None and gamma > 0.0
+    hm = heatmap if use_bias else _NO_HEATMAP
+
+    nodes = np.asarray(order, dtype=np.int64)
+    n = len(nodes)
+
+    n_routes = len(plan.routes)
+    width = n_routes + n  # worst case: every node opens a new route
+    keys = np.full((n, width), 1e18, dtype=np.float64)
+    positions = np.full((n, width), -1, dtype=np.int64)
+    loads = np.zeros(width, dtype=np.float64)
+
+    if n_routes > 0:
+        routes_flat, route_lens, route_loads = pack_routes(plan.routes, inst)
+        k0, _d0, p0 = _insert_costs_matrix_numba(
+            nodes, routes_flat, route_lens, route_loads,
+            inst.dist, inst.demands, inst.capacity,
+            inst.ready_times, inst.due_times, inst.service_times,
+            hm, gamma, use_bias,
+        )
+        keys[:, :n_routes] = k0
+        positions[:, :n_routes] = p0
+        loads[:n_routes] = route_loads
+
+    for i in range(n):
+        node = int(nodes[i])
+        ri = -1
+        if n_routes > 0:
+            cand_ri = int(np.argmin(keys[i, :n_routes]))
+            # key < 1e18 iff the kernel found a feasible position; argmin picks
+            # the first (lowest-index) minimum, matching the strict `<` scan of
+            # _best_insert_over_routes_numba.
+            if positions[i, cand_ri] >= 0:
+                ri = cand_ri
+        if ri >= 0:
+            plan.routes[ri].insert(int(positions[i, ri]), node)
+            loads[ri] += float(inst.demands[node])
+        else:
+            plan.routes.append([node])
+            ri = n_routes
+            n_routes += 1
+            loads[ri] = float(inst.demands[node])
+        if i + 1 < n:
+            # Only the column of the modified (or newly opened) route is stale.
+            new_route = np.array(plan.routes[ri], dtype=np.int64)
+            col_k, _cd, col_p = _insert_costs_column_numba(
+                nodes, new_route, loads[ri],
+                inst.dist, inst.demands, inst.capacity,
+                inst.ready_times, inst.due_times, inst.service_times,
+                hm, gamma, use_bias,
+            )
+            keys[:, ri] = col_k
+            positions[:, ri] = col_p
+
+    plan.invalidate()
+    return Plan(plan.routes, inst, plan.algo)
+
+
 def op_greedy(plan: Plan, removed: list[int], heatmap: np.ndarray | None = None, gamma: float = 0.0) -> Plan:
     inst = plan.inst
-    if heatmap is not None and gamma > 0.0:
-        from .heuristics import _insert_customer_biased
-
-        for node in sorted(removed, key=lambda n: inst.due_times[n]):
-            _insert_customer_biased(plan, node, inst, heatmap, gamma)
-    else:
-        for node in sorted(removed, key=lambda n: inst.due_times[n]):
-            _insert_customer(plan, node, inst)
-    return Plan(plan.routes, inst, plan.algo)
+    return _sequential_cheapest_insert(
+        plan, sorted(removed, key=lambda n: inst.due_times[n]), heatmap, gamma
+    )
 
 
 def _regret(plan: Plan, removed: list[int], k: int, heatmap: np.ndarray | None = None, gamma: float = 0.0) -> Plan:
@@ -614,15 +682,12 @@ def op_regret_3(plan: Plan, removed: list[int], heatmap: np.ndarray | None = Non
 
 def op_tw_greedy(plan: Plan, removed: list[int], heatmap: np.ndarray | None = None, gamma: float = 0.0) -> Plan:
     inst = plan.inst
-    if heatmap is not None and gamma > 0.0:
-        from .heuristics import _insert_customer_biased
-
-        for node in sorted(removed, key=lambda n: inst.due_times[n] - inst.ready_times[n]):
-            _insert_customer_biased(plan, node, inst, heatmap, gamma)
-    else:
-        for node in sorted(removed, key=lambda n: inst.due_times[n] - inst.ready_times[n]):
-            _insert_customer(plan, node, inst)
-    return Plan(plan.routes, inst, plan.algo)
+    return _sequential_cheapest_insert(
+        plan,
+        sorted(removed, key=lambda n: inst.due_times[n] - inst.ready_times[n]),
+        heatmap,
+        gamma,
+    )
 
 
 @njit(cache=True)
@@ -771,6 +836,18 @@ def accept_penalized(cur: Plan, cand: Plan, temp: float, penalty_manager: Penalt
 
 
 def destroy_size(it: int, n_iters: int, cfg: Config, n_customers: int, scale: float = 1.0) -> int:
+    """Monotone ramp from ratio_max down to ratio_min across the run.
+
+    A sawtooth (cyclic) variant was tried here, motivated by the measurement that
+    the incumbent's excursion above the best shrinks from 3.44% to 0.93% over a
+    3000-iteration run while population restarts reheat the temperature but not
+    the perturbation size. At equal *iterations* it looked like a win (net -5
+    vehicles, distance unchanged at matched vehicle count). At equal *wall time*
+    it lost on both metrics: the cyclic schedule costs ~2x per iteration, and
+    simply running this monotone schedule for twice as many iterations beat it
+    (13.289 vs 13.344 vehicles, 3.85% vs 4.46% gap-to-BKS). Do not re-add it
+    without an iso-time comparison.
+    """
     ratio = cfg.destroy_ratio_max - ((cfg.destroy_ratio_max - cfg.destroy_ratio_min) * (it / max(n_iters, 1)))
     ratio = min(cfg.destroy_ratio_max, max(cfg.destroy_ratio_min, ratio * scale))
     return max(3, int(ratio * n_customers))
