@@ -1,12 +1,3 @@
 {
-  "mcpServers": {
-    "huggingface": {
-      "type": "http",
-      "url": "https://huggingface.co/mcp"
-    },
-    "render": {
-      "type": "http",
-      "url": "https://mcp.render.com/mcp"
-    }
-  }
+  "mcpServers": {}
 }
