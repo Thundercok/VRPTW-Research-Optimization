@@ -15,6 +15,10 @@ def _data_dirs() -> list[Path]:
         if p.exists():
             dirs.append(p)
     project_root = Path(__file__).resolve().parents[3]
+    # The checked-in directory is `data/Solomon`; the lowercase spelling only
+    # resolves on case-insensitive filesystems, so both must be listed or every
+    # dataset lookup 404s once deployed on Linux.
+    dirs.append(project_root / "data" / "Solomon")
     dirs.append(project_root / "data" / "solomon")
     dirs.append(project_root / "data")
     return dirs

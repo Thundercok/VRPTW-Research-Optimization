@@ -1,0 +1,20 @@
+# Solver service: the heavy half of the stack. Kept in sync with the research
+# pins in the repo root requirements.txt.
+fastapi>=0.116
+uvicorn[standard]>=0.35
+pydantic>=2.11
+
+# <2.4 is numba 0.63.1's ceiling; the V2 sweep + golden fingerprints were
+# validated under numpy 2.3.5, so the ceiling must stay above 2.3.
+numpy>=1.26,<2.4
+scipy>=1.13
+numba>=0.60
+torch>=2.4
+safetensors>=0.4
+
+# OR-Tools is an optional import in vrptw.solvers; without it the `ortools`
+# baseline silently drops out of every comparison the UI renders.
+ortools>=9.10
+
+# Boot-time weight refresh from the Hugging Face model repo.
+huggingface_hub>=0.28

@@ -1,3 +1,5 @@
+import { createSkillBadge } from './skillUtils.js';
+
 export class SimulationController {
   constructor(app) {
     this.app = app;
@@ -891,7 +893,7 @@ export class SimulationController {
     let html = `
       <div style="display: flex; justify-content: space-between; align-items: center; background: white; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border); box-shadow: var(--shadow-sm); margin-bottom: 8px;">
         <span style="font-size: 10.5px; color: var(--text-muted); font-weight: 500;">Route Cargo: <strong>${route.load} units</strong></span>
-        <span style="font-size: 9px; background: rgba(59,130,246,0.1); color: var(--primary); padding: 2px 6px; border-radius: 4px; font-weight: 700;">Skills: ${driverSkills}</span>
+        ${createSkillBadge(driverSkills)}
       </div>
       <div style="font-size: 11px; font-weight: 700; color: #27272a; margin-top: 6px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.03em;">Manifest Queue:</div>
       <div style="display: flex; flex-direction: column; gap: 8px;">

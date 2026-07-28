@@ -33,6 +33,7 @@ from core.firebase import is_firebase_enabled
 from core.rate_limit import GEOCODE_LIMIT, JOBS_LIMIT, limiter
 from models.schemas import JobRequest, MatrixRequest, ReoptimizeRequest
 from services.geocode_service import geocode_address, reverse_geocode_address
+from services.compute_gateway import call_remote, remote_enabled, remote_health
 from services.job_service import job_service
 from services.matrix_service import calculate_matrix, fetch_route_geometry
 from services.solomon_service import list_solomon_datasets, load_solomon_dataset
@@ -69,7 +70,7 @@ def _version_key(version: str) -> tuple[int, ...]:
 async def health() -> dict[str, object]:
     fb = is_firebase_enabled()
     bypass = demo_auth_bypass_enabled()
-    return {
+    payload: dict[str, object] = {
         "status": "ok",
         "firebase_enabled": fb,
         "demo_auth_bypass": bypass,
@@ -77,6 +78,11 @@ async def health() -> dict[str, object]:
         "torch": device_summary(),
         "model": transfer_weights_summary(),
     }
+    if remote_enabled():
+        # In the Render deployment the local torch/model fields are both empty
+        # by design; the Space is what actually answers a solve.
+        payload["remote_solver"] = await remote_health()
+    return payload
 
 
 @router.get("/geocode")
@@ -373,6 +379,9 @@ async def reoptimize(
     body: ReoptimizeRequest,
     _: dict[str, str] = Depends(require_user),
 ) -> dict[str, Any]:
+    if remote_enabled():
+        return await call_remote("/reoptimize", body.model_dump())
+
     try:
         from services.research_adapter import build_inst, plan_to_payload
 
@@ -791,11 +800,30 @@ def run_smoke_test_thread():
             task_manager.smoke_test_state["error"] = str(e)
 
 
+def _reject_if_research_offloaded(operation: str) -> None:
+    """Block the long-running research jobs when the solver lives off-box.
+
+    Benchmarks and training runs take hours and write into ``docs/logs``. They
+    are local research operations, not something the slim API container or a
+    request-scoped Space call can carry, so fail loudly instead of starting a
+    thread that dies on ``import vrptw``.
+    """
+    if remote_enabled():
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                f"{operation} is disabled in this deployment: the solver runs on a remote "
+                "compute service and this operation must be run locally against the research stack."
+            ),
+        )
+
+
 @router.post("/benchmark")
 async def start_benchmark(
     body: BenchmarkSubmitRequest,
     _: dict[str, str] = Depends(require_user),
 ):
+    _reject_if_research_offloaded("Benchmarking")
     global task_manager
     with task_manager.lock:
         if task_manager.benchmark_state["status"] == "running":
@@ -822,6 +850,7 @@ async def start_train_dr(
     body: DRTrainSubmitRequest,
     _: dict[str, str] = Depends(require_user),
 ):
+    _reject_if_research_offloaded("Domain randomization training")
     global task_manager
     with task_manager.lock:
         if task_manager.training_state["status"] == "running":
@@ -837,6 +866,7 @@ async def start_train_transfer(
     body: TransferTrainSubmitRequest,
     _: dict[str, str] = Depends(require_user),
 ):
+    _reject_if_research_offloaded("Transfer learning training")
     global task_manager
     with task_manager.lock:
         if task_manager.training_state["status"] == "running":
@@ -860,6 +890,7 @@ async def get_train_status(
 async def start_smoke_test(
     _: dict[str, str] = Depends(require_user),
 ):
+    _reject_if_research_offloaded("Smoke test")
     global task_manager
     with task_manager.lock:
         if task_manager.smoke_test_state["status"] == "running":
@@ -893,6 +924,9 @@ async def solve_dynamic_insert(
     """
     Real-time dynamic order insertion endpoint without full solver restart.
     """
+    if remote_enabled():
+        return await call_remote("/dynamic_insert", body.model_dump())
+
     from services.solomon_service import load_solomon_dataset, to_inst_payload
     from vrptw.config import Config
     from vrptw.core import Inst, Plan
@@ -965,16 +999,16 @@ async def solve_stream(
     """
 
     async def event_generator():
-        from services.solomon_service import load_solomon_dataset, to_inst_payload
-        from vrptw.core import Inst
+        from services.solomon_service import load_solomon_dataset
 
-        # Inst() builds an (n+1)^2 distance matrix plus a per-node argsort. Doing
-        # that inline would block the whole event loop for seconds on a large
-        # dataset, stalling every other in-flight request.
-        def _load() -> Inst:
-            return Inst(to_inst_payload(load_solomon_dataset(dataset)))
+        # Parsing the .txt blocks for a moment on a large dataset, so keep it off
+        # the event loop. Only the customer count is needed for the synthetic
+        # ramp below, so this deliberately avoids building a vrptw ``Inst`` —
+        # that would drag the research stack into the slim Render image.
+        def _customer_count() -> int:
+            return max(0, len(load_solomon_dataset(dataset).get("customers", [])) - 1)
 
-        inst = await asyncio.to_thread(_load)
+        n_customers = await asyncio.to_thread(_customer_count)
 
         yield f"data: {json.dumps({'event': 'start', 'dataset': dataset, 'max_iters': iterations, 'simulated': True})}\n\n"
 
@@ -986,7 +1020,7 @@ async def solve_stream(
                 "simulated": True,
                 "progress_pct": step * 20,
                 "current_it": int(step * (iterations / 5)),
-                "nv": int(max(1, inst.n // 10)),
+                "nv": int(max(1, n_customers // 10)),
                 "td": float(round(1000.0 - step * 20.0, 2)),
                 "mode": "Default" if step < 3 else "Intensify",
             }

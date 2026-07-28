@@ -583,6 +583,14 @@ def _validate(payload: JobRequest) -> None:
 
 
 async def solve_model(payload: JobRequest, matrix: list[list[float]] | None = None) -> dict[str, Any]:
+    from services.compute_gateway import call_remote, remote_enabled
+
+    if remote_enabled():
+        # The API process on Render cannot import torch, so validation and the
+        # solve both happen on the Space.
+        body = payload.model_dump() if hasattr(payload, "model_dump") else payload.dict()
+        return await call_remote("/solve", {"payload": body, "matrix": matrix})
+
     try:
         runtime = _load_solver_runtime()
         _get_web_config()

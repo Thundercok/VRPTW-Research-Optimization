@@ -164,10 +164,10 @@
   position: fixed;
   z-index: 9999;
   pointer-events: none;
-  background: rgba(15, 23, 42, 0.94);
+  background: var(--ink);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  color: #f1f5f9;
+  color: var(--surface);
   padding: 10px 14px;
   border-radius: var(--r);
   font-family: var(--font-main);
@@ -207,14 +207,14 @@
 }
 
 .gantt-tooltip-label {
-  color: #94a3b8;
+  color: var(--ink-faint);
   font-weight: 500;
 }
 
 .gantt-tooltip-value {
   font-family: var(--font-data);
   font-weight: 500;
-  color: #e2e8f0;
+  color: var(--surface);
   font-size: 11px;
 }
 
@@ -245,12 +245,12 @@
 }
 
 .gantt-legend-swatch.travel {
-  background: repeating-linear-gradient(45deg, #94a3b8, #94a3b8 2px, transparent 2px, transparent 4px);
+  background: repeating-linear-gradient(45deg, var(--ink-faint), var(--ink-faint) 2px, transparent 2px, transparent 4px);
   opacity: 0.6;
 }
 
 .gantt-legend-swatch.wait {
-  background: #f59e0b;
+  background: var(--warn);
   opacity: 0.55;
 }
 

@@ -203,3 +203,15 @@ app.include_router(config_router.router, prefix="/api")
 frontend_path = Path(__file__).resolve().parents[1] / "frontend"
 if frontend_path.exists():
     app.mount("", StaticFiles(directory=str(frontend_path), html=True), name="frontend")
+else:
+    # API-only deployment (Render): the frontend is served by Vercel. Without
+    # this the root path is a bare 404, which reads like a broken service to
+    # anyone opening the backend URL or pointing a health check at "/".
+    @app.get("/")
+    async def _api_root() -> dict[str, str]:
+        return {
+            "service": "VRPTW API",
+            "status": "ok",
+            "docs": "/docs",
+            "health": "/api/health",
+        }

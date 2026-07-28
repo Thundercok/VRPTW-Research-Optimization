@@ -1,0 +1,27 @@
+# Slim API image for Render. The solver lives in the Hugging Face Space built by
+# hf_space/Dockerfile; this container must never import torch or numba.
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY requirements-render.txt .
+RUN pip install --no-cache-dir -r requirements-render.txt
+
+# Backend only. src/vrptw is intentionally excluded so an accidental
+# `import vrptw` fails loudly here instead of quietly bloating the image.
+COPY src/backend/ /app/src/backend/
+
+# Solomon instances back /api/solomon; docs/logs backs /api/analysis/*.
+COPY data/Solomon/ /app/data/Solomon/
+COPY docs/logs/ /app/docs/logs/
+
+RUN mkdir -p /app/logs
+
+ENV PYTHONPATH=/app/src:/app/src/backend \
+    PYTHONUNBUFFERED=1 \
+    PORT=8080
+
+EXPOSE 8080
+
+# Render injects $PORT; the default keeps `docker run` working locally.
+CMD ["sh", "-c", "uvicorn src.backend.main:app --host 0.0.0.0 --port ${PORT:-8080}"]

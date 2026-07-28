@@ -25,24 +25,30 @@ const i18n = {
     'hero.badge': 'v3.2 · Hybrid-DDQN · Solomon + Homberger',
     'hero.title.nami': 'NAMI',
     'hero.title.desc': 'Plateau-Aware Deep RL Routing Engine',
-    'hero.subtitle': 'Combining Deep Reinforcement Learning with Adaptive Large Neighborhood Search to solve Vehicle Routing Problems with Time Windows in milliseconds.',
+    'hero.subtitle':
+      'Combining Deep Reinforcement Learning with Adaptive Large Neighborhood Search to solve Vehicle Routing Problems with Time Windows in milliseconds.',
     'hero.cta.start': 'Open Dispatch Portal',
     'hero.cta.code': 'View Codebase →',
 
-    'ticker.epoch': 'Epoch:',
-    'ticker.cost': 'Cost:',
-    'ticker.plateau': 'Plateau Level:',
+    'ticker.epoch': 'Epoch',
+    'ticker.cost': 'Cost',
+    'ticker.plateau': 'Plateau',
+    'specimen.title': 'Live search · R1 cluster',
 
     'pipeline.eyebrow': 'Algorithm · 4 Stages',
     'pipeline.title': 'Plateau-Aware Escape Pipeline',
     'pipeline.s1.title': 'Constructive Decoder',
-    'pipeline.s1.body': 'Initial solution generated via greedy route construction and DDQN-guided insertion heuristic initialization.',
+    'pipeline.s1.body':
+      'Initial solution generated via greedy route construction and DDQN-guided insertion heuristic initialization.',
     'pipeline.s2.title': 'Stagnation Detection',
-    'pipeline.s2.body': 'Tracks the search trajectory in real time, detecting local minima plateaus when improvement patience thresholds are violated.',
+    'pipeline.s2.body':
+      'Tracks the search trajectory in real time, detecting local minima plateaus when improvement patience thresholds are violated.',
     'pipeline.s3.title': 'DDQN Guided Repair',
-    'pipeline.s3.body': 'Double Deep Q-Network selects optimal combinations of destroy and repair operators to successfully break search basin stagnation.',
+    'pipeline.s3.body':
+      'Double Deep Q-Network selects optimal combinations of destroy and repair operators to successfully break search basin stagnation.',
     'pipeline.s4.title': 'Optima Convergence',
-    'pipeline.s4.body': 'Performs local search optimization and Set Partitioning formulation to recombine elite routes into the final feasible route plan.',
+    'pipeline.s4.body':
+      'Performs local search optimization and Set Partitioning formulation to recombine elite routes into the final feasible route plan.',
 
     'stats.instances': 'Solomon + Homberger instances tested',
     'stats.seeds': 'independent seeds (cold-starts)',
@@ -79,16 +85,21 @@ const i18n = {
     'table.group.100': '100-Customer Instances (Solomon Benchmarks)',
     'table.group.200': '200-Customer Instances (Gehring-Homberger Benchmarks)',
     'table.group.400': '400-Customer Instances (Gehring-Homberger Benchmarks)',
-    'table.summary': 'Summary: NAMI Hybrid-DDQN matches BKS vehicle floors at 100/200 scale and achieves statistically significant (p < 0.05) vehicle reductions at 400 scale.',
-    'results.footnote.dagger': '† Travel Distance (TD) comparisons are excluded when vehicle counts (NV) are not matched, as extra vehicle capacity artificially distorts travel distance.',
-    'results.footnote.coldstart': 'Note: Standalone solver results are generated under strict independent cold-start conditions starting from build_greedy in a cleared directory, without multi-stage warm-starts.',
-    'results.footnote.wilcoxon': '* Statistically significant difference between NAMI Hybrid and ALNS Baseline (Wilcoxon signed-rank test p < 0.05).',
+    'table.summary':
+      'Summary: NAMI Hybrid-DDQN matches BKS vehicle floors at 100/200 scale and achieves statistically significant (p < 0.05) vehicle reductions at 400 scale.',
+    'results.footnote.dagger':
+      '† Travel Distance (TD) comparisons are excluded when vehicle counts (NV) are not matched, as extra vehicle capacity artificially distorts travel distance.',
+    'results.footnote.coldstart':
+      'Note: Standalone solver results are generated under strict independent cold-start conditions starting from build_greedy in a cleared directory, without multi-stage warm-starts.',
+    'results.footnote.wilcoxon':
+      '* Statistically significant difference between NAMI Hybrid and ALNS Baseline (Wilcoxon signed-rank test p < 0.05).',
     'results.citation.title': 'Plateau-Aware Deep RL for Combinatorial Search',
-    'results.citation.body': 'Our thesis work analyzes DQN-guided escape operators under severe local stagnation states, outperforming traditional static ALNS variants in 7 of 8 benchmark scenarios.',
+    'results.citation.body':
+      'Our thesis work analyzes DQN-guided escape operators under severe local stagnation states, outperforming traditional static ALNS variants in 7 of 8 benchmark scenarios.',
 
     'getstarted.eyebrow': 'Developer Quickstart',
     'getstarted.title': 'Run the engine locally',
-    'cli.explorer': 'EXPLORER'
+    'cli.explorer': 'EXPLORER',
   },
   vn: {
     'brand.sub': 'Tối ưu hóa Nghiên cứu',
@@ -101,24 +112,30 @@ const i18n = {
     'hero.badge': 'v3.2 · Hybrid-DDQN · Solomon + Homberger',
     'hero.title.nami': 'NAMI',
     'hero.title.desc': 'Engine Định Tuyến Học Tăng Cường Sâu Plateau-Aware',
-    'hero.subtitle': 'Kết hợp Học tăng cường sâu với Thuật toán tìm kiếm lân cận lớn thích ứng để giải quyết bài toán định tuyến xe có khung thời gian trong mili giây.',
+    'hero.subtitle':
+      'Kết hợp Học tăng cường sâu với Thuật toán tìm kiếm lân cận lớn thích ứng để giải quyết bài toán định tuyến xe có khung thời gian trong mili giây.',
     'hero.cta.start': 'Mở Cổng Điều Phối',
     'hero.cta.code': 'Xem Kho Mã Nguồn →',
 
-    'ticker.epoch': 'Kỷ nguyên:',
-    'ticker.cost': 'Chi phí:',
-    'ticker.plateau': 'Mức độ chững:',
+    'ticker.epoch': 'Kỷ nguyên',
+    'ticker.cost': 'Chi phí',
+    'ticker.plateau': 'Mức chững',
+    'specimen.title': 'Tìm kiếm trực tiếp · Cụm R1',
 
     'pipeline.eyebrow': 'Thuật toán · 4 Giai đoạn',
     'pipeline.title': 'Quỹ đạo Vượt cực trị của NAMI',
     'pipeline.s1.title': 'Bộ Giải Mã Constructive',
-    'pipeline.s1.body': 'Khởi tạo phương án ban đầu bằng thuật toán chèn tham lam và chèn điểm theo định hướng của mạng nơ-ron DDQN.',
+    'pipeline.s1.body':
+      'Khởi tạo phương án ban đầu bằng thuật toán chèn tham lam và chèn điểm theo định hướng của mạng nơ-ron DDQN.',
     'pipeline.s2.title': 'Nhận Diện Điểm Chững',
-    'pipeline.s2.body': 'Theo dõi quỹ đạo tìm kiếm thời gian thực, phát hiện các điểm chững cực trị địa phương khi vượt quá ngưỡng kiên nhẫn.',
+    'pipeline.s2.body':
+      'Theo dõi quỹ đạo tìm kiếm thời gian thực, phát hiện các điểm chững cực trị địa phương khi vượt quá ngưỡng kiên nhẫn.',
     'pipeline.s3.title': 'Sửa Lỗi Hướng Dẫn bằng DDQN',
-    'pipeline.s3.body': 'Mạng Q-learning sâu kép chọn cặp toán tử destroy-and-repair tối ưu để phá vỡ các điểm chững của quỹ đạo tìm kiếm.',
+    'pipeline.s3.body':
+      'Mạng Q-learning sâu kép chọn cặp toán tử destroy-and-repair tối ưu để phá vỡ các điểm chững của quỹ đạo tìm kiếm.',
     'pipeline.s4.title': 'Hội Tụ Cực Trị',
-    'pipeline.s4.body': 'Tối ưu hóa tìm kiếm cục bộ và lập công thức Set Partitioning để tái tổ hợp các tuyến đường tốt nhất thành kế hoạch lộ trình khả thi.',
+    'pipeline.s4.body':
+      'Tối ưu hóa tìm kiếm cục bộ và lập công thức Set Partitioning để tái tổ hợp các tuyến đường tốt nhất thành kế hoạch lộ trình khả thi.',
 
     'stats.instances': 'Bộ dữ liệu Solomon & Homberger được thử nghiệm',
     'stats.seeds': 'Các hạt giống độc lập (khởi động lạnh)',
@@ -155,19 +172,22 @@ const i18n = {
     'table.group.100': 'Bộ dữ liệu 100 khách hàng (Solomon Benchmarks)',
     'table.group.200': 'Bộ dữ liệu 200 khách hàng (Gehring-Homberger Benchmarks)',
     'table.group.400': 'Bộ dữ liệu 400 khách hàng (Gehring-Homberger Benchmarks)',
-    'table.summary': 'Tóm tắt: NAMI Hybrid-DDQN đạt số lượng xe tối thiểu của BKS ở quy mô 100/200 và giúp giảm số xe có ý nghĩa thống kê (p < 0.05) ở quy mô 400.',
-    'results.footnote.dagger': '† Phép so sánh quãng đường (TD) bị loại trừ khi số lượng xe (NV) không khớp nhau, vì việc thừa năng lực vận tải sẽ bóp méo nhân tạo quãng đường di chuyển.',
-    'results.footnote.coldstart': 'Lưu ý: Kết quả trình giải độc lập được tạo ra dưới điều kiện khởi động lạnh độc lập nghiêm ngặt từ build_greedy trong thư mục trống.',
-    'results.footnote.wilcoxon': '* Sự khác biệt có ý nghĩa thống kê giữa NAMI Hybrid và ALNS Baseline (kiểm định Wilcoxon signed-rank p < 0.05).',
+    'table.summary':
+      'Tóm tắt: NAMI Hybrid-DDQN đạt số lượng xe tối thiểu của BKS ở quy mô 100/200 và giúp giảm số xe có ý nghĩa thống kê (p < 0.05) ở quy mô 400.',
+    'results.footnote.dagger':
+      '† Phép so sánh quãng đường (TD) bị loại trừ khi số lượng xe (NV) không khớp nhau, vì việc thừa năng lực vận tải sẽ bóp méo nhân tạo quãng đường di chuyển.',
+    'results.footnote.coldstart':
+      'Lưu ý: Kết quả trình giải độc lập được tạo ra dưới điều kiện khởi động lạnh độc lập nghiêm ngặt từ build_greedy trong thư mục trống.',
+    'results.footnote.wilcoxon':
+      '* Sự khác biệt có ý nghĩa thống kê giữa NAMI Hybrid và ALNS Baseline (kiểm định Wilcoxon signed-rank p < 0.05).',
     'results.citation.title': 'Học Tăng Cường Sâu Plateau-Aware cho Bài Toán Tìm Kiếm Tổ Hợp',
-    'results.citation.body': 'Nghiên cứu luận văn của chúng tôi phân tích các toán tử thoát khỏi cực trị cục bộ do DQN hướng dẫn dưới các trạng thái chững lại nghiêm trọng, vượt trội hơn các biến thể ALNS tĩnh truyền thống trong 7 trên 8 kịch bản thử nghiệm.',
+    'results.citation.body':
+      'Nghiên cứu luận văn của chúng tôi phân tích các toán tử thoát khỏi cực trị cục bộ do DQN hướng dẫn dưới các trạng thái chững lại nghiêm trọng, vượt trội hơn các biến thể ALNS tĩnh truyền thống trong 7 trên 8 kịch bản thử nghiệm.',
 
     'getstarted.eyebrow': 'Khởi động nhanh cho Dev',
     'getstarted.title': 'Chạy cục bộ engine',
-    'cli.explorer': 'THƯ MỤC'
-  }
-
-
+    'cli.explorer': 'THƯ MỤC',
+  },
 };
 
 // ===================================================================
@@ -197,16 +217,17 @@ function applyLang(lang) {
 // Theme
 // ===================================================================
 function getStoredTheme() {
-  const v = localStorage.getItem(STORAGE_THEME);
+  const v = localStorage.getItem('vrptw_theme') || localStorage.getItem(STORAGE_THEME);
   if (v === 'light' || v === 'dark') return v;
-  return 'dark';
+  return 'light';
 }
 
 function applyTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
   localStorage.setItem(STORAGE_THEME, theme);
+  localStorage.setItem('vrptw_theme', theme);
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute('content', theme === 'dark' ? '#070913' : '#f6f9fc');
+  if (meta) meta.setAttribute('content', theme === 'dark' ? '#0d110f' : '#fbfbf9');
   const sunIcon = document.querySelector('.sun-icon');
   const moonIcon = document.querySelector('.moon-icon');
   if (sunIcon && moonIcon) {
@@ -313,7 +334,9 @@ function setupNavbarScroll() {
   if (!nav) return;
   window.addEventListener(
     'scroll',
-    () => { nav.classList.toggle('is-scrolled', window.scrollY > 20); },
+    () => {
+      nav.classList.toggle('is-scrolled', window.scrollY > 20);
+    },
     { passive: true }
   );
 }
@@ -376,7 +399,10 @@ function setupCLITabs() {
         .join('\n');
 
       if (navigator.clipboard?.writeText) {
-        navigator.clipboard.writeText(commands).then(() => showTooltip(btn)).catch(() => fallbackCopyText(commands, btn));
+        navigator.clipboard
+          .writeText(commands)
+          .then(() => showTooltip(btn))
+          .catch(() => fallbackCopyText(commands, btn));
       } else {
         fallbackCopyText(commands, btn);
       }
@@ -391,6 +417,13 @@ function setupScrollReveal() {
   const revealEls = document.querySelectorAll('.reveal');
   if (!revealEls.length) return;
 
+  // Reduced motion, or no observer support: show everything immediately.
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduced || !('IntersectionObserver' in window)) {
+    document.documentElement.classList.add('reveal-all');
+    return;
+  }
+
   const observer = new IntersectionObserver(
     (entries) => {
       entries.forEach((entry) => {
@@ -400,10 +433,19 @@ function setupScrollReveal() {
         }
       });
     },
-    { rootMargin: '0px 0px -60px 0px', threshold: 0.1 }
+    { rootMargin: '0px 0px -40px 0px', threshold: 0.05 }
   );
 
   revealEls.forEach((el) => observer.observe(el));
+
+  // Fail-safe: nothing may stay invisible. If an element is still unrevealed a
+  // few seconds in, drop the animation entirely rather than hide its content.
+  setTimeout(() => {
+    document.querySelectorAll('.reveal:not(.revealed)').forEach((el) => {
+      const box = el.getBoundingClientRect();
+      if (box.top < window.innerHeight && box.bottom > 0) el.classList.add('revealed');
+    });
+  }, 2500);
 }
 
 // ===================================================================
@@ -445,8 +487,6 @@ function setupCounters() {
 
   counters.forEach((el) => observer.observe(el));
 }
-
-
 
 // ===================================================================
 // Bento Card Glow Effect
@@ -512,11 +552,11 @@ function setupRoutingCanvas() {
 
   // Define 5 wide cluster zones covering the entire page background
   const clusters = [
-    { cx: 0.20, cy: 0.25 }, // Top Left
-    { cx: 0.80, cy: 0.22 }, // Top Right
+    { cx: 0.2, cy: 0.25 }, // Top Left
+    { cx: 0.8, cy: 0.22 }, // Top Right
     { cx: 0.22, cy: 0.75 }, // Bottom Left
     { cx: 0.78, cy: 0.72 }, // Bottom Right
-    { cx: 0.50, cy: 0.48 }  // Center Cluster
+    { cx: 0.5, cy: 0.48 }, // Center Cluster
   ];
 
   // Distribute 55 clients among clusters to cover the background densely
@@ -530,7 +570,7 @@ function setupRoutingCanvas() {
       y: c.cy + Math.sin(angle) * dist,
       type: 'client',
       r: 2,
-      label: `C-${100 + i}`
+      label: `C-${100 + i}`,
     });
   }
 
@@ -538,12 +578,12 @@ function setupRoutingCanvas() {
   function isoProject(x, y, cw, ch) {
     const cx = cw / 2;
     const cy = ch * 0.52; // Centered vertically, leaving navbar space
-    
+
     // Scale uniformly to cover 92% of screen height/width
     const scale = Math.min(cw, ch) * 0.92;
     const px = (x - 0.5) * scale;
     const py = (y - 0.5) * scale;
-    
+
     // Isometric mapping with slightly wider projection angles for widescreen visual
     const isoX = cx + (px - py) * 0.95;
     const isoY = cy + (px + py) * 0.46;
@@ -578,7 +618,7 @@ function setupRoutingCanvas() {
       trail: [],
       rerouteActive: false,
       rerouteTime: 0,
-      reroutePos: null
+      reroutePos: null,
     },
     {
       id: 2,
@@ -590,7 +630,7 @@ function setupRoutingCanvas() {
       trail: [],
       rerouteActive: false,
       rerouteTime: 0,
-      reroutePos: null
+      reroutePos: null,
     },
     {
       id: 3,
@@ -602,7 +642,7 @@ function setupRoutingCanvas() {
       trail: [],
       rerouteActive: false,
       rerouteTime: 0,
-      reroutePos: null
+      reroutePos: null,
     },
     {
       id: 4,
@@ -614,7 +654,7 @@ function setupRoutingCanvas() {
       trail: [],
       rerouteActive: false,
       rerouteTime: 0,
-      reroutePos: null
+      reroutePos: null,
     },
     {
       id: 5,
@@ -626,7 +666,7 @@ function setupRoutingCanvas() {
       trail: [],
       rerouteActive: false,
       rerouteTime: 0,
-      reroutePos: null
+      reroutePos: null,
     },
     {
       id: 6,
@@ -638,7 +678,7 @@ function setupRoutingCanvas() {
       trail: [],
       rerouteActive: false,
       rerouteTime: 0,
-      reroutePos: null
+      reroutePos: null,
     },
     {
       id: 7,
@@ -650,26 +690,26 @@ function setupRoutingCanvas() {
       trail: [],
       rerouteActive: false,
       rerouteTime: 0,
-      reroutePos: null
-    }
+      reroutePos: null,
+    },
   ];
 
   // Catmull-Rom spline interpolation
   function catmullRom(p0, p1, p2, p3, t) {
     const t2 = t * t;
     const t3 = t2 * t;
-    const x = 0.5 * (
-      (2 * p1.x) +
-      (-p0.x + p2.x) * t +
-      (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 +
-      (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3
-    );
-    const y = 0.5 * (
-      (2 * p1.y) +
-      (-p0.y + p2.y) * t +
-      (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 +
-      (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3
-    );
+    const x =
+      0.5 *
+      (2 * p1.x +
+        (-p0.x + p2.x) * t +
+        (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 +
+        (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3);
+    const y =
+      0.5 *
+      (2 * p1.y +
+        (-p0.y + p2.y) * t +
+        (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 +
+        (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3);
     return { x, y };
   }
 
@@ -684,7 +724,7 @@ function setupRoutingCanvas() {
     'SYSTEM: Cluster-aware VRPTW solver online',
     'GNN: Embedding active nodes for edge weights',
     'DDQN: Evaluating escape operator pool...',
-    'ALNS: Base constructive layout initialized'
+    'ALNS: Base constructive layout initialized',
   ];
 
   function addLog(text) {
@@ -709,8 +749,6 @@ function setupRoutingCanvas() {
     }, 400);
   }
 
-
-
   // Animation frame loop
   function draw() {
     const cw = canvas.offsetWidth;
@@ -719,31 +757,33 @@ function setupRoutingCanvas() {
       requestAnimationFrame(draw);
       return;
     }
-    
+
     // Clear canvas transparently to let gradient orbs and page background show through
     ctx.clearRect(0, 0, cw, ch);
 
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
 
+    // Vehicle routes stay within the pine/rust family so the specimen reads as
+    // one plot rather than a rainbow. Each vehicle gets a distinguishable tint.
     const vehColors = {
-      '#00d4ff': isDark ? '#00d4ff' : '#0284c7', // Cyan
-      '#a855f7': isDark ? '#a855f7' : '#7c3aed', // Purple
-      '#ec4899': isDark ? '#ec4899' : '#db2777', // Pink
-      '#f59e0b': isDark ? '#f59e0b' : '#d97706', // Orange
-      '#10b981': isDark ? '#10b981' : '#059669', // Emerald
-      '#22c55e': isDark ? '#22c55e' : '#16a34a', // Green
-      '#0ea5e9': isDark ? '#0ea5e9' : '#0284c7'  // Sky Blue
+      '#00d4ff': isDark ? '#38bdf8' : '#0284c7',
+      '#a855f7': isDark ? '#7dd3fc' : '#0369a1',
+      '#ec4899': isDark ? '#fb923c' : '#ea580c',
+      '#f59e0b': isDark ? '#fbbf24' : '#d97706',
+      '#10b981': isDark ? '#60a5fa' : '#3b82f6',
+      '#22c55e': isDark ? '#34d399' : '#059669',
+      '#0ea5e9': isDark ? '#a78bfa' : '#7c3aed',
     };
-    
-    // Dynamic theme-based colors configuration (brighter connections, fainter grid)
+
     const colors = {
-      grid: isDark ? 'rgba(122, 115, 255, 0.015)' : 'rgba(99, 91, 255, 0.03)',
-      connections: isDark ? 'rgba(122, 115, 255, 0.28)' : 'rgba(99, 91, 255, 0.32)',
-      depot: isDark ? '#7a73ff' : '#635bff',
-      depotGlow: isDark ? 'rgba(122, 115, 255, 0.12)' : 'rgba(99, 91, 255, 0.18)',
-      clientStroke: isDark ? 'rgba(0, 212, 255, 0.65)' : 'rgba(2, 132, 199, 0.75)',
-      clientFill: isDark ? 'rgba(0, 212, 255, 0.04)' : 'rgba(2, 132, 199, 0.06)',
-      nodeCore: '#ffffff'
+      grid: isDark ? 'rgba(56, 189, 248, 0.05)' : 'rgba(2, 132, 199, 0.05)',
+      connections: isDark ? 'rgba(56, 189, 248, 0.3)' : 'rgba(2, 132, 199, 0.32)',
+      depot: isDark ? '#38bdf8' : '#0284c7',
+      depotGlow: isDark ? 'rgba(56, 189, 248, 0.14)' : 'rgba(2, 132, 199, 0.14)',
+      clientStroke: isDark ? 'rgba(148, 163, 184, 0.7)' : 'rgba(71, 85, 105, 0.55)',
+      clientFill: isDark ? 'rgba(56, 189, 248, 0.06)' : 'rgba(2, 132, 199, 0.05)',
+      // The node core must contrast with the page ground, not match it.
+      nodeCore: isDark ? '#020617' : '#ffffff',
     };
 
     // Draw isometric grid (extremely sparse, minimal perspective references)
@@ -803,7 +843,7 @@ function setupRoutingCanvas() {
     // Draw the optimized vehicle route paths (delicate dashed regional sweep loops)
     vehicles.forEach((veh) => {
       const drawColor = vehColors[veh.color] || veh.color;
-      
+
       // Convert hex color to rgba with low opacity for an elegant outline
       let rgbaColor = 'rgba(122, 115, 255, 0.08)';
       if (drawColor.startsWith('#')) {
@@ -812,12 +852,12 @@ function setupRoutingCanvas() {
         const b = parseInt(drawColor.slice(5, 7), 16);
         rgbaColor = `rgba(${r}, ${g}, ${b}, ${isDark ? 0.06 : 0.11})`;
       }
-      
+
       ctx.strokeStyle = rgbaColor;
       ctx.lineWidth = 0.85;
       ctx.setLineDash([2, 4]); // Dashed line for blueprint aesthetic
       ctx.beginPath();
-      
+
       const rLen = veh.route.length;
       // Draw smooth closed loop using Catmull-Rom interpolation
       for (let s = 0; s < rLen - 1; s++) {
@@ -825,7 +865,7 @@ function setupRoutingCanvas() {
         const w1 = getWaypoint(veh.route, s);
         const w2 = getWaypoint(veh.route, s + 1);
         const w3 = getWaypoint(veh.route, s + 2);
-        
+
         for (let step = 0; step <= 20; step++) {
           const t = step / 20;
           const normPos = catmullRom(w0, w1, w2, w3, t);
@@ -841,8 +881,6 @@ function setupRoutingCanvas() {
       ctx.setLineDash([]); // Reset dash pattern
     });
     ctx.globalAlpha = 1.0;
-
-
 
     // Update & draw vehicles
     vehicles.forEach((veh) => {
@@ -876,7 +914,7 @@ function setupRoutingCanvas() {
           ctx.beginPath();
           ctx.moveTo(veh.trail[k - 1].x, veh.trail[k - 1].y);
           ctx.lineTo(veh.trail[k].x, veh.trail[k].y);
-          
+
           ctx.strokeStyle = drawColor;
           ctx.lineWidth = ratio * 2.8 + 0.5; // thick to thin
           ctx.globalAlpha = Math.pow(ratio, 2.5) * 0.95; // fast fade towards tail
@@ -892,7 +930,7 @@ function setupRoutingCanvas() {
         const nodePos = isoProject(node.x, node.y, cw, ch);
         const dx = pos.x - nodePos.x;
         const dy = pos.y - nodePos.y;
-        const dist = Math.sqrt(dx*dx + dy*dy);
+        const dist = Math.sqrt(dx * dx + dy * dy);
         if (dist < 160) {
           const alpha = (1.0 - dist / 160) * (isDark ? 0.32 : 0.42);
           // Convert hex vehicle color to rgba dynamically
@@ -925,14 +963,20 @@ function setupRoutingCanvas() {
       ctx.lineWidth = 0.6;
       ctx.stroke();
 
-      // Draw glowing vehicle head
+      // Draw vehicle head: solid in the route colour, ringed in the panel
+      // colour so it stays visible against either ground.
       ctx.beginPath();
       ctx.arc(pos.x, pos.y, 4, 0, Math.PI * 2);
-      ctx.fillStyle = '#ffffff';
-      ctx.shadowBlur = 12;
-      ctx.shadowColor = drawColor;
+      ctx.fillStyle = drawColor;
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = `rgba(${ringRgb}, 0.5)`;
       ctx.fill();
       ctx.shadowBlur = 0;
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, 4, 0, Math.PI * 2);
+      ctx.strokeStyle = isDark ? '#151a18' : '#ffffff';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
 
       // 4. Stochastic Reroute Event
       if (Math.random() < 0.0018) {
@@ -948,7 +992,7 @@ function setupRoutingCanvas() {
           x: pos.x,
           y: pos.y - 12,
           text: `-${reduction.toFixed(1)}`,
-          alpha: 1.0
+          alpha: 1.0,
         });
 
         plateauLevel = 0;
@@ -985,7 +1029,7 @@ function setupRoutingCanvas() {
     // Draw nodes
     allNodes.forEach((node) => {
       const pos = isoProject(node.x, node.y, cw, ch);
-      
+
       if (node.type === 'depot') {
         const pulse = Math.sin(Date.now() / 250) * 2.5;
         ctx.beginPath();

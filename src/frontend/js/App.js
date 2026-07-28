@@ -9,6 +9,7 @@ import { solveDemo } from './DemoEngine.js';
 import { FleetController } from './FleetController.js';
 import { SettingsController } from './SettingsController.js';
 import { GanttController } from './GanttController.js';
+import { createSkillBadge, SKILL_CONFIG } from './skillUtils.js';
 
 const APP_COPY = {
   en: {
@@ -2354,7 +2355,7 @@ export class App {
     }
 
     if (field === 'skill') {
-      const allowed = ['None', 'Refrigerated', 'Hazmat'];
+      const allowed = Object.keys(SKILL_CONFIG);
       const matched = allowed.find((a) => a.toLowerCase() === nextValue.toLowerCase()) || 'None';
       customer.skill = matched;
       this.renderCustomers();
@@ -3765,16 +3766,7 @@ export class App {
           }
           td.appendChild(badge);
         } else if (field === 'skill' && !c.isDepot) {
-          td.textContent = '';
-          const badge = document.createElement('span');
-          badge.textContent = value;
-          if (value !== 'None') {
-            badge.style =
-              'background: rgba(16, 185, 129, 0.1); color: var(--success); border: 1px solid rgba(16,185,129,0.2); font-weight: 600; padding: 2px 6px; border-radius: 4px; font-size: 10px; display: inline-block;';
-          } else {
-            badge.style = 'color: var(--text-muted); font-size: 10px;';
-          }
-          td.appendChild(badge);
+          td.innerHTML = createSkillBadge(value);
         } else {
           td.textContent = value;
         }

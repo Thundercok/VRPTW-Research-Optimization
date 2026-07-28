@@ -3,7 +3,7 @@ import { useAppContext } from '../context/AppContext.jsx';
 import { SAMPLE_SOLOMON_RC } from '../constants.js';
 
 export default function Header() {
-  const { state, updateState, status, statusTone, submitJob, loadSolomonDataset } = useAppContext();
+  const { state, updateState, status, statusTone, submitJob, loadSolomonDataset, backendAvailable, t } = useAppContext();
 
   const handleDatasetChange = (e) => {
     const value = e.target.value;
@@ -81,25 +81,46 @@ export default function Header() {
   const getPageTitle = () => {
     switch (state.activeTab) {
       case 'dispatch':
-        return 'Route Optimization';
+        return t('headerTitleDefault');
       case 'fleet':
-        return 'Fleet Management';
+        return t('headerTitleFleet');
       case 'analytics':
-        return 'Diagnostics';
+        return t('headerTitleAnalytics');
       case 'settings':
-        return 'Preferences';
+        return t('headerTitleSettings');
       default:
-        return 'Route Optimization';
+        return t('headerTitleDefault');
+    }
+  };
+
+  const getPageContext = () => {
+    switch (state.activeTab) {
+      case 'dispatch':
+      case 'fleet':
+        return t('headerCtxPlanning');
+      case 'analytics':
+      case 'settings':
+        return t('headerCtxIntelligence');
+      default:
+        return t('headerCtxPlanning');
     }
   };
 
   return (
     <header className="saas-header">
       <div className="header-left">
-        <h1 className="page-title">{getPageTitle()}</h1>
+        <div className="page-title-group">
+          <h1 className="page-title">{getPageTitle()}</h1>
+          <span className="page-subtitle">{getPageContext()}</span>
+        </div>
         <span className={`status-pill status-ready ${statusTone}`} id="status">
           {status}
         </span>
+        {backendAvailable === false && (
+          <div className="backend-warning" style={{ fontSize: '11px', color: 'var(--alert)', background: 'var(--alert-wash)', padding: '4px 8px', borderRadius: '4px', fontWeight: 'bold' }}>
+            ⚠ Backend Offline
+          </div>
+        )}
       </div>
 
       {state.activeTab === 'dispatch' && (
@@ -119,11 +140,18 @@ export default function Header() {
             ) : (
               <option value="demo">Solomon RC101 (Demo)</option>
             )}
-            <option value="custom">Custom Import...</option>
+            <option value="custom">{t('headerCustomImport')}</option>
           </select>
+          <button 
+            className="btn-secondary btn-sm" 
+            onClick={() => window.dispatchEvent(new CustomEvent('open-manifest'))}
+            disabled={state.selectedDataset !== 'custom'}
+          >
+            {t('manifestBtn')}
+          </button>
           <div className="fleet-toggles">
             <label>
-              Vehicles:{' '}
+              {t('headerVehicles')}:{' '}
               <input 
                 type="number" 
                 id="vehicles-slider" 
@@ -135,7 +163,7 @@ export default function Header() {
               />
             </label>
             <label>
-              Capacity:{' '}
+              {t('headerCapacity')}:{' '}
               <input 
                 type="number" 
                 id="capacity-slider" 
@@ -148,7 +176,7 @@ export default function Header() {
             </label>
           </div>
           <button id="run-model" className="btn-primary" onClick={submitJob}>
-            Execute Solver
+            {t('headerExecute')}
           </button>
         </div>
       )}

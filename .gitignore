@@ -42,7 +42,7 @@ venv/
 env/
 .python-version
 .uv/
-
+.vercel
 # ---------------------------------------------------------------
 # IDE, Editor & Tooling
 # ---------------------------------------------------------------
@@ -85,3 +85,13 @@ dist/
 # ---------------------------------------------------------------
 CLAUDE.md
 .env.test
+
+.vercel
+.vercel_python_packages/
+
+# Superseded by deploying the real Vite build from the repo root.
+vercel-static-deploy/
+
+# Scratch prompt notes. Has held live API keys; GitHub push protection
+# rejected a push that included it.
+prompt_ai.md

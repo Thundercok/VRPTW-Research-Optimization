@@ -99,6 +99,13 @@ export default function LiveDispatchView() {
     appMockRef.current.lang = state.lang;
   }, [state]);
 
+  // Event listener for opening manifest drawer from Header
+  useEffect(() => {
+    const handleOpenManifest = () => setDrawerOpen(true);
+    window.addEventListener('open-manifest', handleOpenManifest);
+    return () => window.removeEventListener('open-manifest', handleOpenManifest);
+  }, []);
+
   // Map & Simulation Controllers Initializer hook
   useEffect(() => {
     // 1. Map Controller
@@ -207,6 +214,7 @@ export default function LiveDispatchView() {
       
       if (state.lastResult.ddqn.solver_history) {
         setSolverConsoleHistory(state.lastResult.ddqn.solver_history);
+        toast('XAI Console Updated', `${state.lastResult.ddqn.solver_history.length} operator decisions logged.`, 'ok');
       } else {
         setSolverConsoleHistory([]);
       }
@@ -408,7 +416,7 @@ export default function LiveDispatchView() {
           mapControllerRef.current.clearRoutes();
           mapControllerRef.current.paintResult();
         }
-        toast('AI Repair Done', 'Manual routes polished and constraints resolved successfully.', 'ok');
+        toast('AI Repair Complete', 'Route sequence has been polished successfully.', 'ok');
       }
     } catch (err) {
       toast('AI Repair Failed', err.message || 'Error communicating with re-optimizer.', 'error');
@@ -419,6 +427,7 @@ export default function LiveDispatchView() {
 
   // Row selection handler
   const toggleSelection = (id) => {
+    if (state.selectedDataset !== 'custom') return;
     const next = new Set(selectedIds);
     if (next.has(id)) {
       next.delete(id);
@@ -445,6 +454,10 @@ export default function LiveDispatchView() {
 
   // Inline table double click edits
   const startEdit = (id, field, value) => {
+    if (state.selectedDataset !== 'custom') {
+      toast('Read-Only', 'Cannot edit demo datasets. Use Custom Import to build your own.', 'alert');
+      return;
+    }
     setEditingCell({ id, field });
     setEditValue(String(value));
   };
@@ -756,7 +769,7 @@ export default function LiveDispatchView() {
           <div className="kpi-sub">Closer to BKS is better</div>
         </div>
         <div className="kpi-card">
-          <div className="kpi-title">Total Distance (km)</div>
+          <div className="kpi-title">{t('kpiDistance')}</div>
           <div className="kpi-split">
             <div>
               <span className="kpi-label">DDQN</span>
@@ -769,7 +782,7 @@ export default function LiveDispatchView() {
           </div>
         </div>
         <div className="kpi-card">
-          <div className="kpi-title">Vehicles Dispatched</div>
+          <div className="kpi-title">{t('kpiVehicles')}</div>
           <div className="kpi-split">
             <div>
               <span className="kpi-label">DDQN</span>
@@ -782,7 +795,7 @@ export default function LiveDispatchView() {
           </div>
         </div>
         <div className="kpi-card">
-          <div className="kpi-title">Compute Time</div>
+          <div className="kpi-title">{t('kpiTime')}</div>
           <div className="kpi-split">
             <div>
               <span className="kpi-label">DDQN</span>
@@ -800,14 +813,23 @@ export default function LiveDispatchView() {
         {/* Slide-out Manifest Drawer (over the map) */}
         <div id="manifest-drawer" className={`manifest-drawer ${drawerOpen ? 'open' : ''}`}>
           <div className="drawer-header">
-            <h3>Manifest (Waypoints)</h3>
+            <h3>{t('manifestDrawerTitle')}</h3>
             <div className="drawer-header-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <button className="btn-secondary btn-sm" onClick={() => setIsAddingRow(true)}>
-                + Add Stop
+              <button 
+                className="btn-secondary btn-sm" 
+                onClick={() => setIsAddingRow(true)}
+                disabled={state.selectedDataset !== 'custom'}
+                title={state.selectedDataset !== 'custom' ? t('onlyCustomImport') : ''}
+              >
+                {t('btnAddStop')}
               </button>
               {selectedIds.size > 0 && (
-                <button className="btn-danger btn-sm" onClick={deleteSelected}>
-                  Delete Selected ({selectedIds.size})
+                <button 
+                  className="btn-danger btn-sm" 
+                  onClick={deleteSelected}
+                  disabled={state.selectedDataset !== 'custom'}
+                >
+                  {t('btnDeleteSelected')} ({selectedIds.size})
                 </button>
               )}
               <button id="btn-close-drawer" className="drawer-close-btn" onClick={() => setDrawerOpen(false)} title="Close">
@@ -820,17 +842,17 @@ export default function LiveDispatchView() {
               <thead>
                 <tr>
                   <th style={{ width: '28px' }}></th>
-                  <th style={{ width: '40px' }}>ID</th>
-                  <th>Name</th>
-                  <th>Address</th>
-                  <th>Lat</th>
-                  <th>Lng</th>
-                  <th className="num">Demand</th>
-                  <th className="num">Ready</th>
-                  <th className="num">Due</th>
-                  <th className="num">Service</th>
-                  <th style={{ width: '90px' }}>Priority</th>
-                  <th style={{ width: '100px' }}>Req. Skill</th>
+                  <th style={{ width: '40px' }}>{t('thId')}</th>
+                  <th>{t('thName')}</th>
+                  <th>{t('thAddress')}</th>
+                  <th>{t('thLat')}</th>
+                  <th>{t('thLng')}</th>
+                  <th className="num">{t('thDemand')}</th>
+                  <th className="num">{t('thReady')}</th>
+                  <th className="num">{t('thDue')}</th>
+                  <th className="num">{t('thService')}</th>
+                  <th style={{ width: '90px' }}>{t('thPriority')}</th>
+                  <th style={{ width: '100px' }}>{t('thSkill')}</th>
                   {editMode && <th style={{ width: '130px' }}>AI Route Assign</th>}
                 </tr>
               </thead>
@@ -915,8 +937,8 @@ export default function LiveDispatchView() {
                       </select>
                     </td>
                     <td>
-                      <button className="btn-primary btn-sm" onClick={saveNewRow}>Save</button>
-                      <button className="btn-text btn-sm" onClick={() => setIsAddingRow(false)}>Cancel</button>
+                      <button className="btn-primary btn-sm" onClick={saveNewRow}>{t('btnSave')}</button>
+                      <button className="btn-text btn-sm" onClick={() => setIsAddingRow(false)}>{t('btnCancel')}</button>
                     </td>
                   </tr>
                 )}
@@ -1153,7 +1175,7 @@ export default function LiveDispatchView() {
           {/* Import Paste / File Section */}
           {state.mode === 'real' && (
             <div className="manifest-import-box" style={{ padding: '12px', background: '#f8fafc', borderTop: '1px solid var(--border)' }}>
-              <h4 style={{ margin: '0 0 8px', fontSize: '11px' }}>Paste TSV / CSV Data or Import Excel</h4>
+              <h4 style={{ margin: '0 0 8px', fontSize: '11px' }}>{t('ldPasteTsv')}</h4>
               <textarea 
                 className="saas-textarea" 
                 placeholder="Pasted rows: Name, Address, Demand, Ready, Due, Service"
@@ -1162,8 +1184,8 @@ export default function LiveDispatchView() {
                 onChange={(e) => setPasteData(e.target.value)}
               />
               <div style={{ display: 'flex', gap: '8px' }}>
-                <button className="btn-secondary btn-sm" onClick={handlePasteData}>Parse Clipboard</button>
-                <button className="btn-secondary btn-sm" onClick={triggerExcelUpload}>Upload Excel/CSV</button>
+                <button className="btn-secondary btn-sm" onClick={handlePasteData}>{t('btnParseClipboard')}</button>
+                <button className="btn-secondary btn-sm" onClick={triggerExcelUpload}>{t('btnUploadExcel')}</button>
                 <input 
                   type="file" 
                   ref={fileInputRef} 
@@ -1187,9 +1209,9 @@ export default function LiveDispatchView() {
                 title="Toggle Manifest"
               >
                 <span className="drawer-toggle-icon">☰</span>
-                <span className="drawer-toggle-label">Manifest</span>
+                <span className="drawer-toggle-label">{t('manifestBtn')}</span>
               </button>
-              <h3>Geospatial View</h3>
+              <h3>{t('mapGeospatial')}</h3>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <div className="map-toggles">
@@ -1220,15 +1242,16 @@ export default function LiveDispatchView() {
                     }
                   }} 
                 />
-                <span>Show GNN Heatmap</span>
+                <span>{t('mapShowGNN')}</span>
               </label>
-              <button 
+              <button
                 id="btn-toggle-playground"
                 className={`playground-toggle-btn ${playgroundOpen ? 'active' : ''}`}
                 onClick={() => setPlaygroundOpen(!playgroundOpen)}
                 style={{ marginLeft: '8px' }}
+                aria-pressed={playgroundOpen}
               >
-                🧠 AI Playground
+                {t('mapPlayground')}
               </button>
             </div>
           </div>
@@ -1276,7 +1299,7 @@ export default function LiveDispatchView() {
 
             {/* Simulation Control Bar */}
             <div id="sim-control-panel" className="sim-control-bar hidden">
-              <button id="btn-sim-play" className="btn-sim-play">▶ Play</button>
+              <button id="btn-sim-play" className="btn-sim-play">{t('btnPlay')}</button>
               <span id="sim-time-display" className="sim-time-text">Time: 00:00m</span>
               <div className="sim-slider-container">
                 <input type="range" id="sim-slider" className="sim-slider" min="0" max="100" defaultValue="0" />
@@ -1408,7 +1431,7 @@ export default function LiveDispatchView() {
               >
                 <div style={{ textAlign: 'center', marginTop: '100px', padding: '0 16px' }}>
                   <div style={{ fontSize: '32px', marginBottom: '12px' }}>🚚</div>
-                  <h4 style={{ margin: '0 0 6px', fontSize: '13px', color: '#27272a' }}>Driver Companion Emulator</h4>
+                  <h4 style={{ margin: '0 0 6px', fontSize: '13px', color: '#27272a' }}>{t('ldDriverCompanion')}</h4>
                   <p style={{ margin: 0, fontSize: '10px', color: '#71717a', lineHeight: '1.4' }}>
                     Select an active driver above to simulate mobile deliveries, log signatures, and track live routes.
                   </p>
@@ -1420,7 +1443,7 @@ export default function LiveDispatchView() {
           {/* AI Playground Drawer */}
           <div id="playground-drawer" className={`playground-drawer ${playgroundOpen ? 'open' : ''}`}>
             <div className="drawer-header">
-              <h3 style={{ margin: 0, fontSize: '12px', fontWeight: 700, color: 'var(--text-main)' }}>🧠 AI Playground & XAI Console</h3>
+              <h3 style={{ margin: 0, fontSize: '12px', fontWeight: 700, color: 'var(--text-main)' }}>{t('ldAiPlayground')}</h3>
               <button 
                 id="btn-close-playground"
                 className="drawer-close-btn" 
@@ -1479,11 +1502,11 @@ export default function LiveDispatchView() {
               {/* Constraint Violations */}
               <div className="glass-card" style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <h4 style={{ margin: 0, fontSize: '10.5px', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-main)' }}>
-                  Live Constraint Checks
+                  {t('ldConstraints')}
                 </h4>
                 {violations.length === 0 ? (
                   <div style={{ fontSize: '10px', color: 'var(--success)', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 500 }}>
-                    <span>✅</span> <span>All manual routes are feasible.</span>
+                    <span>✅</span> <span>{t('ldRoutesFeasible')}</span>
                   </div>
                 ) : (
                   <div style={{ maxHeight: '100px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -1499,7 +1522,7 @@ export default function LiveDispatchView() {
               {/* GNN Threshold Control */}
               <div className="glass-card" style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: 600 }}>
-                  <span style={{ color: 'var(--text-main)' }}>GNN Confidence Filter</span>
+                  <span style={{ color: 'var(--text-main)' }}>{t('ldGnnFilter')}</span>
                   <span style={{ color: 'var(--primary)' }}>&ge; {Number(state.gnnThreshold ?? 0.15).toFixed(2)}</span>
                 </div>
                 <input 
@@ -1518,7 +1541,7 @@ export default function LiveDispatchView() {
                   style={{ width: '100%', cursor: 'pointer' }}
                 />
                 <p style={{ fontSize: '9.5px', color: 'var(--text-muted)', margin: 0, lineHeight: 1.3 }}>
-                  Filter edges based on predicted GNN connectivity probabilities.
+                  {t('ldGnnFilterDesc')}
                 </p>
               </div>
 
@@ -1526,7 +1549,7 @@ export default function LiveDispatchView() {
               <div className="glass-card" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px', minHeight: '160px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <h4 style={{ margin: 0, fontSize: '10.5px', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-main)' }}>
-                    🧠 DDQN Decision Log
+                    {t('ldDdqnLog')}
                   </h4>
                   {solverConsoleHistory.length > 0 && (
                     <span style={{ fontSize: '8px', background: 'var(--primary-soft)', color: 'var(--primary)', padding: '1px 4px', borderRadius: '3px', fontWeight: 700 }}>
