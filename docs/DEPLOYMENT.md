@@ -26,12 +26,16 @@ service rather than a thread in the API process.
 
 ## Live resources
 
-| Layer   | Resource                                                                              |
-| ------- | ------------------------------------------------------------------------------------- |
-| Solver  | Cloud Run `vrptw-solver`, project `august-lamp-499804-h3`, region `asia-southeast1`   |
-| Weights | [`oggishi/vrptw-ddqn-alns`](https://huggingface.co/oggishi/vrptw-ddqn-alns)            |
-| API     | Render `vrptw-backend` (see `render.yaml`)                                            |
-| Web     | Vercel `vrptw-research-optimization`                                                   |
+| Layer   | URL                                                                                     |
+| ------- | --------------------------------------------------------------------------------------- |
+| Web     | https://vrptw-research-optimization.vercel.app                                            |
+| API     | https://vrptw-backend.onrender.com (Blueprint `vrptw-production`, branch `Simplyfile`)   |
+| Solver  | https://vrptw-solver-700938471158.asia-southeast1.run.app (project `august-lamp-499804-h3`, `asia-southeast1`) |
+| Weights | [`oggishi/vrptw-ddqn-alns`](https://huggingface.co/oggishi/vrptw-ddqn-alns)               |
+
+A cold solve through the whole chain — Vercel rewrite, Render wake-up, Cloud Run
+cold start, seven algorithms — takes roughly 40 s. Warm, it is the solver time
+alone.
 
 ## How the split works
 
@@ -113,6 +117,34 @@ pays roughly 30 s of cold start on top of the solver's own.
 `vercel.json` rewrites `/api/*` to the Render service, so `constants.js` keeps
 resolving `API_BASE` to the origin-relative `/api` and no build-time API URL is
 needed. Deploy with `vercel --prod` from the repository root.
+
+`.vercelignore` keeps the backend, the research package and the datasets out of
+the upload — Vercel only ever builds `src/frontend`.
+
+One limit to know about: an external rewrite is a proxied request, so the
+synchronous `/api/reoptimize` and `/api/solve/dynamic_insert` can hit the proxy
+timeout if Render and Cloud Run are both cold at once. Solving goes through the
+async job queue and is unaffected. If those two start timing out in practice,
+the fix is `--min-instances 1` on Cloud Run, which trades the free tier for a
+warm container.
+
+## Known gap: the Render MCP server
+
+`claude mcp add render https://mcp.render.com/mcp` installs, but the connection
+fails with *"Incompatible auth server: does not support dynamic client
+registration"* — Render's hosted MCP cannot complete the OAuth handshake from
+this client. The Hugging Face MCP server connects fine.
+
+To drive Render from an agent, add the server with an API key from
+[Account Settings → API Keys](https://dashboard.render.com/u/settings#api-keys):
+
+```bash
+claude mcp add --scope user --transport http render https://mcp.render.com/mcp \
+    --header "Authorization: Bearer rnd_..."
+```
+
+Render API keys are broadly scoped — they reach every workspace and service the
+account can. The Blueprint flow in the dashboard needs no key at all.
 
 ## Verifying a deployment
 
