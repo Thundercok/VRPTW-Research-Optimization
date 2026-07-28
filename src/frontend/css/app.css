@@ -2032,12 +2032,24 @@ body.demo-active .demo-badge {
   margin-top: 2px;
 }
 
-.toast.ok { border-left: 3px solid var(--success); }
-.toast.ok .toast-icon { color: var(--success); }
-.toast.error { border-left: 3px solid var(--danger); }
-.toast.error .toast-icon { color: var(--danger); }
-.toast.warn { border-left: 3px solid var(--orange); }
-.toast.warn .toast-icon { color: var(--orange); }
+.toast.ok {
+  border-left: 3px solid var(--success);
+}
+.toast.ok .toast-icon {
+  color: var(--success);
+}
+.toast.error {
+  border-left: 3px solid var(--danger);
+}
+.toast.error .toast-icon {
+  color: var(--danger);
+}
+.toast.warn {
+  border-left: 3px solid var(--orange);
+}
+.toast.warn .toast-icon {
+  color: var(--orange);
+}
 
 .toast-close {
   background: none;
@@ -2064,14 +2076,30 @@ body.demo-active .demo-badge {
   animation: toast-progress-anim linear forwards;
 }
 
-.toast-progress-ok { background: var(--success); animation-duration: 4.2s; }
-.toast-progress-error { background: var(--danger); animation-duration: 6.5s; }
-.toast-progress-warn { background: var(--orange); animation-duration: 4.2s; }
-.toast-progress- { background: var(--primary); animation-duration: 4.2s; }
+.toast-progress-ok {
+  background: var(--success);
+  animation-duration: 4.2s;
+}
+.toast-progress-error {
+  background: var(--danger);
+  animation-duration: 6.5s;
+}
+.toast-progress-warn {
+  background: var(--orange);
+  animation-duration: 4.2s;
+}
+.toast-progress- {
+  background: var(--primary);
+  animation-duration: 4.2s;
+}
 
 @keyframes toast-progress-anim {
-  from { width: 100%; }
-  to { width: 0%; }
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
 }
 
 /* ── CONNECTION PILL ────────────────────────────────── */
@@ -2732,7 +2760,8 @@ body.demo-active .demo-badge {
   transition: all 0.2s;
 }
 
-.playground-toggle-btn:hover, .playground-toggle-btn.active {
+.playground-toggle-btn:hover,
+.playground-toggle-btn.active {
   background: var(--primary-soft);
   color: var(--primary);
   border-color: var(--primary);
@@ -2750,4 +2779,3 @@ body.demo-active .demo-badge {
   align-items: center;
   gap: 6px;
 }
-

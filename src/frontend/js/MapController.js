@@ -206,9 +206,7 @@ export class MapController {
       }
       popupContent += `</div>`;
 
-      L.marker(p, markerOptions)
-        .bindPopup(popupContent)
-        .addTo(this.markerLayer);
+      L.marker(p, markerOptions).bindPopup(popupContent).addTo(this.markerLayer);
     });
     if (bounds.length > 0) this.map.fitBounds(bounds, { padding: [40, 40] });
   }
@@ -1060,20 +1058,23 @@ export class MapController {
           color = '#f59e0b'; // High: Amber/Gold
           weight = 3.5;
           opacity = 0.85;
-        } else if (prob >= 0.40) {
+        } else if (prob >= 0.4) {
           color = '#3b82f6'; // Medium: Blue
           weight = 2.2;
           opacity = 0.65;
         }
 
         const polyline = L.polyline(
-          [[c1.lat, c1.lng], [c2.lat, c2.lng]],
+          [
+            [c1.lat, c1.lng],
+            [c2.lat, c2.lng],
+          ],
           {
             color,
             weight,
             opacity,
-            dashArray: prob < 0.40 ? '4,4' : undefined,
-            renderer: this.canvasRenderer
+            dashArray: prob < 0.4 ? '4,4' : undefined,
+            renderer: this.canvasRenderer,
           }
         );
 
@@ -1083,7 +1084,7 @@ export class MapController {
            </div>`,
           {
             sticky: true,
-            className: 'gnn-tooltip'
+            className: 'gnn-tooltip',
           }
         );
 
@@ -1091,7 +1092,7 @@ export class MapController {
           polyline.setStyle({
             color: '#10b981',
             weight: weight + 1.5,
-            opacity: 0.95
+            opacity: 0.95,
           });
         });
 
@@ -1099,7 +1100,7 @@ export class MapController {
           polyline.setStyle({
             color,
             weight,
-            opacity
+            opacity,
           });
         });
 

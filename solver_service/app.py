@@ -40,6 +40,7 @@ app = FastAPI(title="VRPTW Solver (Hugging Face Space)")
 
 # ── Auth ──────────────────────────────────────────────────────────────────────
 
+
 def _expected_token() -> str:
     return os.getenv("SOLVER_API_TOKEN", "").strip()
 
@@ -116,6 +117,7 @@ async def _startup() -> None:
 
 # ── Schemas ───────────────────────────────────────────────────────────────────
 
+
 class SolveRequest(BaseModel):
     payload: JobRequest
     matrix: list[list[float]] | None = None
@@ -128,6 +130,7 @@ class DynamicInsertRequest(BaseModel):
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────
+
 
 @app.get("/health")
 async def health() -> dict[str, Any]:
@@ -153,6 +156,7 @@ async def solve(body: SolveRequest) -> dict[str, Any]:
 @app.post("/reoptimize", dependencies=[Depends(require_token)])
 async def reoptimize(body: ReoptimizeRequest) -> dict[str, Any]:
     from services.research_adapter import build_inst, plan_to_payload
+
     from vrptw import Plan
     from vrptw.local_search import td_converge_polish
 
@@ -179,6 +183,7 @@ async def reoptimize(body: ReoptimizeRequest) -> dict[str, Any]:
 @app.post("/dynamic_insert", dependencies=[Depends(require_token)])
 async def dynamic_insert(body: DynamicInsertRequest) -> dict[str, Any]:
     from services.solomon_service import load_solomon_dataset, to_inst_payload
+
     from vrptw.config import Config
     from vrptw.core import Inst, Plan
     from vrptw.solvers import HybridDDQNSolver
@@ -200,8 +205,7 @@ async def dynamic_insert(body: DynamicInsertRequest) -> dict[str, Any]:
         raise HTTPException(
             status_code=422,
             detail=(
-                f"existing_routes contains ids outside 1..{inst.n} for dataset "
-                f"{body.dataset}: {out_of_range[:10]}."
+                f"existing_routes contains ids outside 1..{inst.n} for dataset {body.dataset}: {out_of_range[:10]}."
             ),
         )
     if body.customer_id in routed:

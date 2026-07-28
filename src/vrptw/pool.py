@@ -226,9 +226,7 @@ def _milp_cache_store(cache: dict | None, key, value) -> None:
     cache[key] = value
 
 
-def _select_milp_columns(
-    route_records: list[RouteRecord], inst: Inst, max_cols: int
-) -> list[RouteRecord]:
+def _select_milp_columns(route_records: list[RouteRecord], inst: Inst, max_cols: int) -> list[RouteRecord]:
     """Truncate the SP column set, guaranteeing every customer keeps a column.
 
     Returns exactly ``route_records[:max_cols]`` — same set, same order —

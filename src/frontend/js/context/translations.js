@@ -147,7 +147,8 @@ export const APP_COPY = {
     btnSave: 'Save',
     btnCancel: 'Cancel',
     fleetMainTitle: 'Fleet Operations & Shift Schedules',
-    fleetMainDesc: 'Define individual vehicle capacities, operating speeds, driver names, and shift constraint rules. These parameters govern route eligibility, travel times, and vehicle capacity checks.',
+    fleetMainDesc:
+      'Define individual vehicle capacities, operating speeds, driver names, and shift constraint rules. These parameters govern route eligibility, travel times, and vehicle capacity checks.',
     btnAddVehicle: '+ Add Vehicle',
     btnResetDefaults: 'Reset to Defaults',
     fleetKpiSize: 'Active Fleet Size',
@@ -207,7 +208,8 @@ export const APP_COPY = {
     btnParseClipboard: 'Parse Clipboard',
     btnUploadExcel: 'Upload Excel/CSV',
     btnPlay: '▶ Play',
-    setDesc: 'Adjust local API endpoints, toggle language, review Firebase platform connectivity, and customize map styles.',
+    setDesc:
+      'Adjust local API endpoints, toggle language, review Firebase platform connectivity, and customize map styles.',
     setApiDesc: 'Set backend server address to direct solver operations.',
     setApiUrl: 'Backend API Endpoint',
     setApiHint: 'Specify alternative host if running python backend separately from Vite.',
@@ -225,7 +227,7 @@ export const APP_COPY = {
     setDataExport: 'Data Export',
     setDataRestart: 'Restart Onboarding Tour',
     setDataClear: 'Clear All Data',
-    setShortcutsDesc: 'Speed up your workflow with these hotkeys.'
+    setShortcutsDesc: 'Speed up your workflow with these hotkeys.',
   },
   vn: {
     langButton: 'EN',
@@ -304,10 +306,7 @@ export const APP_COPY = {
         'Đọc phần so sánh',
         'Chuyển sang tab Maps để xem tuyến song song, hoặc tab Results để xem runtime, tổng quãng đường, số xe và chênh lệch tải.',
       ],
-      [
-        'Theo dõi XAI',
-        'Dùng tab Theo dõi Hạm đội để kiểm tra từng quyết định lộ trình và chỉ số chi phí.',
-      ],
+      ['Theo dõi XAI', 'Dùng tab Theo dõi Hạm đội để kiểm tra từng quyết định lộ trình và chỉ số chi phí.'],
     ],
     sbSignIn: 'Đăng nhập',
     analyticsTitle: 'Phân tích & So sánh mô hình',
@@ -379,7 +378,8 @@ export const APP_COPY = {
     btnSave: 'Lưu',
     btnCancel: 'Hủy',
     fleetMainTitle: 'Vận hành Đội Xe & Lịch Trình',
-    fleetMainDesc: 'Cấu hình tải trọng xe, tốc độ chạy, tên tài xế và quy định ca làm việc. Các tham số này quyết định điều kiện tuyến, thời gian di chuyển và giới hạn tải trọng xe.',
+    fleetMainDesc:
+      'Cấu hình tải trọng xe, tốc độ chạy, tên tài xế và quy định ca làm việc. Các tham số này quyết định điều kiện tuyến, thời gian di chuyển và giới hạn tải trọng xe.',
     btnAddVehicle: '+ Thêm Xe',
     btnResetDefaults: 'Khôi phục Mặc định',
     fleetKpiSize: 'Số Xe Hoạt Động',
@@ -457,6 +457,6 @@ export const APP_COPY = {
     setDataExport: 'Xuất Dữ liệu',
     setDataRestart: 'Bắt đầu lại Hướng dẫn (Tour)',
     setDataClear: 'Xóa Toàn bộ Dữ liệu',
-    setShortcutsDesc: 'Tăng tốc công việc của bạn với các phím tắt này.'
+    setShortcutsDesc: 'Tăng tốc công việc của bạn với các phím tắt này.',
   },
 };

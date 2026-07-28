@@ -6,7 +6,6 @@ import httpx
 from models.schemas import MatrixPoint
 from services.distance_service import distance_km
 
-
 # In-memory cache for OSRM route geometries (max 500 entries)
 _GEOMETRY_CACHE: dict[str, dict[str, Any]] = {}
 _MAX_CACHE_SIZE = 500
@@ -57,4 +56,3 @@ async def fetch_route_geometry(coords: str) -> dict[str, Any]:
 
     _GEOMETRY_CACHE[coords] = data
     return data
-

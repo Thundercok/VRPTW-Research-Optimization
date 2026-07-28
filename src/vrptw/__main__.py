@@ -152,7 +152,12 @@ def main():
     p_solve.add_argument("--polish", type=int, default=80, help="Local search polishing iterations")
     p_solve.add_argument("--seed", type=int, default=42, help="Random seed")
     p_solve.add_argument("--penalty-search", action="store_true", help="Enable penalty-based infeasible search")
-    p_solve.add_argument("--no-adaptive-feasibility", action="store_false", dest="adaptive_feasibility", help="Disable adaptive feasibility management")
+    p_solve.add_argument(
+        "--no-adaptive-feasibility",
+        action="store_false",
+        dest="adaptive_feasibility",
+        help="Disable adaptive feasibility management",
+    )
     p_solve.set_defaults(func=cmd_solve, adaptive_feasibility=True)
 
     # Benchmark command
@@ -175,7 +180,12 @@ def main():
     p_bench.add_argument("--output-dir", type=str, default=None, help="Directory to save logs/results")
     p_bench.add_argument("--max-workers", type=int, default=None, help="Maximum number of parallel workers")
     p_bench.add_argument("--penalty-search", action="store_true", help="Enable penalty-based infeasible search")
-    p_bench.add_argument("--no-adaptive-feasibility", action="store_false", dest="adaptive_feasibility", help="Disable adaptive feasibility management")
+    p_bench.add_argument(
+        "--no-adaptive-feasibility",
+        action="store_false",
+        dest="adaptive_feasibility",
+        help="Disable adaptive feasibility management",
+    )
     p_bench.set_defaults(func=cmd_benchmark, adaptive_feasibility=True)
 
     args = parser.parse_args()

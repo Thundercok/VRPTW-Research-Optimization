@@ -17,7 +17,6 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, Upl
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-
 # Ensure src is in sys.path for importing the vrptw package.
 _ROOT_PATH = Path(__file__).resolve().parents[4]
 _SRC_PATH = _ROOT_PATH / "src"
@@ -32,8 +31,8 @@ from core.config import demo_auth_bypass_enabled
 from core.firebase import is_firebase_enabled
 from core.rate_limit import GEOCODE_LIMIT, JOBS_LIMIT, limiter
 from models.schemas import JobRequest, MatrixRequest, ReoptimizeRequest
-from services.geocode_service import geocode_address, reverse_geocode_address
 from services.compute_gateway import call_remote, remote_enabled, remote_health
+from services.geocode_service import geocode_address, reverse_geocode_address
 from services.job_service import job_service
 from services.matrix_service import calculate_matrix, fetch_route_geometry
 from services.solomon_service import list_solomon_datasets, load_solomon_dataset
@@ -928,6 +927,7 @@ async def solve_dynamic_insert(
         return await call_remote("/dynamic_insert", body.model_dump())
 
     from services.solomon_service import load_solomon_dataset, to_inst_payload
+
     from vrptw.config import Config
     from vrptw.core import Inst, Plan
     from vrptw.solvers import HybridDDQNSolver
@@ -944,10 +944,7 @@ async def solve_dynamic_insert(
     if not 1 <= body.customer_id <= inst.n:
         raise HTTPException(
             status_code=422,
-            detail=(
-                f"customer_id must be between 1 and {inst.n} for dataset "
-                f"{body.dataset}; got {body.customer_id}."
-            ),
+            detail=(f"customer_id must be between 1 and {inst.n} for dataset {body.dataset}; got {body.customer_id}."),
         )
     routed = {c for route in body.existing_routes for c in route}
     out_of_range = sorted(c for c in routed if not 1 <= c <= inst.n)
@@ -955,8 +952,7 @@ async def solve_dynamic_insert(
         raise HTTPException(
             status_code=422,
             detail=(
-                f"existing_routes contains ids outside 1..{inst.n} for dataset "
-                f"{body.dataset}: {out_of_range[:10]}."
+                f"existing_routes contains ids outside 1..{inst.n} for dataset {body.dataset}: {out_of_range[:10]}."
             ),
         )
     # Re-inserting an already-routed customer would serve it twice and report
@@ -1029,4 +1025,3 @@ async def solve_stream(
         yield f"data: {json.dumps({'event': 'complete', 'status': 'finished', 'simulated': True})}\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
-
