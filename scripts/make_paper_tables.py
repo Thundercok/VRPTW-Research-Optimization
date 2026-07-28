@@ -23,7 +23,6 @@ import os
 import re
 import sys
 
-import numpy as np
 import pandas as pd
 
 _REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -84,8 +83,7 @@ def tab_ablation(df: pd.DataFrame, out: str) -> None:
     scored = df[df["bks_nv"].notna()]
     n = scored[scored["Algorithm"] == "Hybrid-DDQN"]["Instance"].nunique()
     lines = [
-        r"\caption{Ablation Analysis: Component contributions (overall $N=" + str(n) +
-        r"$ instances). "
+        r"\caption{Ablation Analysis: Component contributions (overall $N=" + str(n) + r"$ instances). "
         r"NV Diff (mean fleet gap to BKS) falls monotonically as components are added. "
         r"Raw TD Gap rises in lock-step --- an arithmetic consequence of fewer vehicles "
         r"covering the same customers, \emph{not} a quality loss; the valid, vehicle-matched "
@@ -232,9 +230,7 @@ def tab_gh200(df: pd.DataFrame, out: str) -> None:
     gh = df[~df["Instance"].map(_is_solomon) & df["bks_nv"].notna()]
     gh = gh[gh["Instance"].str.contains("_2_", na=False)]
     algos = ALGOS + (["OR-Tools"] if (gh["Algorithm"] == "OR-Tools").any() else [])
-    header = (
-        " & ".join([r"\textbf{Instance}", r"\textbf{BKS}"] + [ALGO_HEADS[a] for a in algos]) + r"\\"
-    )
+    header = " & ".join([r"\textbf{Instance}", r"\textbf{BKS}"] + [ALGO_HEADS[a] for a in algos]) + r"\\"
     lines = [
         r"\caption{Gehring--Homberger~\cite{Gehring1999} 200-customer results at 800",
         r"iterations.  Format: $NV/TD\,\text{Gap}\%$.",
@@ -266,9 +262,7 @@ def tab_gh200(df: pd.DataFrame, out: str) -> None:
             else:
                 s = rf"${nv_s}/{gap:+.2f}\%$"
             cells.append(rf"\textbf{{{s}}}" if a == "Hybrid-DDQN" else s)
-        lines.append(
-            rf"${tex_name}$ & ${bks['nv']}/{bks['td']:.2f}$" + "\n  & " + " & ".join(cells) + r"\\"
-        )
+        lines.append(rf"${tex_name}$ & ${bks['nv']}/{bks['td']:.2f}$" + "\n  & " + " & ".join(cells) + r"\\")
     lines += [r"\bottomrule", r"\end{tabular}}"]
     _w(out, "\n".join(lines) + "\n")
 

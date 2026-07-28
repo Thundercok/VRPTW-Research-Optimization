@@ -114,9 +114,7 @@ class GNNEdgePredictor(nn.Module):
         self.dst_proj = nn.Linear(hidden_dim, hidden_dim)
         self.edge_bias = nn.Parameter(torch.zeros(1))
 
-    def forward(
-        self, x_nodes: torch.Tensor, x_edges: torch.Tensor, nbr_idx: torch.Tensor
-    ) -> torch.Tensor:
+    def forward(self, x_nodes: torch.Tensor, x_edges: torch.Tensor, nbr_idx: torch.Tensor) -> torch.Tensor:
         # x_nodes: (B, N, node_dim) | x_edges: (B, N, K, edge_dim) | nbr_idx: (B, N, K)
         h_nodes = self.node_embed(x_nodes)
         h_edges = self.edge_embed(x_edges)
@@ -248,16 +246,14 @@ class GraphAttentionLayer(nn.Module):
         v = self.v_proj(h_nodes).view(B, N, self.num_heads, self.head_dim).transpose(1, 2)
 
         # Multi-head self-attention scores
-        attn = torch.matmul(q, k.transpose(-2, -1)) / (self.head_dim ** 0.5)
+        attn = torch.matmul(q, k.transpose(-2, -1)) / (self.head_dim**0.5)
         attn_weights = torch.softmax(attn, dim=-1)
 
         out = torch.matmul(attn_weights, v).transpose(1, 2).contiguous().view(B, N, H)
         return self.out_proj(out) + h_nodes
 
 
-def get_gat_embeddings(
-    inst: Inst, hidden_dim: int = 64, weights: dict | None = None
-) -> torch.Tensor:
+def get_gat_embeddings(inst: Inst, hidden_dim: int = 64, weights: dict | None = None) -> torch.Tensor:
     """
     Extracts 64-dimensional Graph Attention (GAT) spatial-temporal node embeddings for an instance.
 

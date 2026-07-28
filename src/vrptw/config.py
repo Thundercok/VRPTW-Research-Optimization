@@ -123,7 +123,6 @@ LEGACY_ALGO_LABELS = {
 }
 
 
-
 def canonical_algo_label(label: str) -> str:
     if label in LEGACY_ALGO_LABELS:
         return LEGACY_ALGO_LABELS[label]
@@ -253,7 +252,6 @@ class Config:
     sp_vehicle_penalty_scale: float = 200.0
     recombine_interval: int = 100
 
-
     # ── polish ────────────────────────────────────────────────────────────
     polish_ls_passes: int = 2
     max_ls_moves: int = 15
@@ -291,12 +289,11 @@ class Config:
     split_batch: int = 32
     split_eps_start: float = 0.30
     split_eps_end: float = 0.02
-    split_tau: float = 0.005       # soft target update rate for SplitController
-    split_trigger_interval: int = 50   # try split every N iterations
-    split_trigger_after: int = 200     # don't try before iteration 200
-    split_nv_penalty: float = 5.0      # episode reward scale for NV reduction
+    split_tau: float = 0.005  # soft target update rate for SplitController
+    split_trigger_interval: int = 50  # try split every N iterations
+    split_trigger_after: int = 200  # don't try before iteration 200
+    split_nv_penalty: float = 5.0  # episode reward scale for NV reduction
     split_infeasible_penalty: float = 10.0
-
 
     # ── OR-Tools ──────────────────────────────────────────────────────────
     ortools_time_limit: float = 15.0
@@ -388,9 +385,7 @@ class Config:
         if self.time_limit_per_customer < 0.0:
             raise ValueError(f"time_limit_per_customer must be >= 0, got {self.time_limit_per_customer}")
         if not (0.0 < self.time_limit_main_loop_frac <= 1.0):
-            raise ValueError(
-                f"time_limit_main_loop_frac must be in (0.0, 1.0], got {self.time_limit_main_loop_frac}"
-            )
+            raise ValueError(f"time_limit_main_loop_frac must be in (0.0, 1.0], got {self.time_limit_main_loop_frac}")
 
 
 # ---------------------------------------------------------------------------

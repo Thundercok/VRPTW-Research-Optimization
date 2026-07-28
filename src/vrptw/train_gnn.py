@@ -112,9 +112,7 @@ def train_gnn(epochs: int = 150, lr: float = 1e-3, save_path: str = "docs/model/
             targets = plan_to_adj_matrix(plan).to(device)  # (N+1, N+1)
 
             optimizer.zero_grad()
-            logits = model(
-                node_feats.to(device), edge_feats.to(device), nbr_idx.to(device)
-            )[0]  # (N+1, N+1)
+            logits = model(node_feats.to(device), edge_feats.to(device), nbr_idx.to(device))[0]  # (N+1, N+1)
 
             # Weighted BCE loss calculation
             # Positive edges are sparse (approx 1 in N), so we weigh positive samples by N

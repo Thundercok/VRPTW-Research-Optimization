@@ -89,6 +89,7 @@ def run_instance(
 ) -> tuple[dict, Plan | None]:
     import copy
     import inspect
+
     start = time.time()
     algo_canonical = canonical_algo_label(algo)
     use_gnn = algo_canonical.startswith("GNN-")
@@ -125,7 +126,11 @@ def run_instance(
         if "init" in sig.parameters and init_plan is not None:
             solve_kwargs["init"] = init_plan
 
-        is_transfer = target_algo in (ALGO_HYBRID_DDQN_TRANSFER, ALGO_HYBRID_DDQN_TRANSFER_RC2, ALGO_HYBRID_DDQN_TRANSFER_DR)
+        is_transfer = target_algo in (
+            ALGO_HYBRID_DDQN_TRANSFER,
+            ALGO_HYBRID_DDQN_TRANSFER_RC2,
+            ALGO_HYBRID_DDQN_TRANSFER_DR,
+        )
         if is_transfer:
             if transfer_weights is not None and hasattr(solver, "load_weights"):
                 solver.load_weights(transfer_weights)
@@ -179,7 +184,7 @@ def _benchmark_instance_worker(packed: tuple) -> list[dict]:
     print(f"    [PROCESSING] {inst.name}...", flush=True)
     t0 = time.time()
     try:
-    # Archive is isolated per-algorithm inside the loop below
+        # Archive is isolated per-algorithm inside the loop below
 
         dataset = (
             "RC1"
@@ -238,10 +243,13 @@ def _benchmark_instance_worker(packed: tuple) -> list[dict]:
                     print(
                         f"    [RUN] {inst.name} | {algo_label} | run {i + 1}/{n_runs_eff}: "
                         f"nv={res['nv']} cost={res['cost']:.1f} ({res['time']:.1f}s) | wall {elapsed_h:.2f}h",
-                        flush=True
+                        flush=True,
                     )
                 else:
-                    print(f"    [RUN] {inst.name} | {algo_label} | run {i + 1}/{n_runs_eff}: FAILED ({res['time']:.1f}s)", flush=True)
+                    print(
+                        f"    [RUN] {inst.name} | {algo_label} | run {i + 1}/{n_runs_eff}: FAILED ({res['time']:.1f}s)",
+                        flush=True,
+                    )
 
                 if (
                     algo_label
@@ -424,7 +432,9 @@ def run_benchmark(
                 needs_run = True
                 break
         if needs_run:
-            worker_args.append((inst, algorithms, cfg, transfer_weights, plans_folder, completed, completed_times, wall_start))
+            worker_args.append(
+                (inst, algorithms, cfg, transfer_weights, plans_folder, completed, completed_times, wall_start)
+            )
         else:
             # Already completed in checkpoint — print status for progress monitor
             print(f"    [PROCESSING] {inst.name}...", flush=True)

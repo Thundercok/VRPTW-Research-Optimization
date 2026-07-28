@@ -54,6 +54,7 @@ def eliminate_route_infeasible(plan, penalty_manager: PenaltyManager):
     the increase in penalized cost.
     """
     from .core import Plan
+
     inst = plan.inst
     routes = [r[:] for r in plan.routes]
     if len(routes) <= 1:
@@ -97,6 +98,7 @@ def eliminate_two_routes_infeasible(plan, penalty_manager: PenaltyManager):
     More powerful than single-route eliminate when NV is near BKS.
     """
     from .core import Plan
+
     inst = plan.inst
     routes = [r[:] for r in plan.routes]
     if len(routes) <= 2:
@@ -187,5 +189,3 @@ class AdaptiveFeasibilityManager:
 
         # Keep lam in a stable numeric range based on instance type
         self.lam = min(max(self.lam, self.lam_min), self.lam_max)
-
-
