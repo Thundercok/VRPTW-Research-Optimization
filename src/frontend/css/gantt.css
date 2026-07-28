@@ -245,7 +245,13 @@
 }
 
 .gantt-legend-swatch.travel {
-  background: repeating-linear-gradient(45deg, var(--ink-faint), var(--ink-faint) 2px, transparent 2px, transparent 4px);
+  background: repeating-linear-gradient(
+    45deg,
+    var(--ink-faint),
+    var(--ink-faint) 2px,
+    transparent 2px,
+    transparent 4px
+  );
   opacity: 0.6;
 }
 
