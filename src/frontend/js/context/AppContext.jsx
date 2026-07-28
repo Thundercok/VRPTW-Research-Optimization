@@ -41,6 +41,8 @@ export function AppContextProvider({ children }) {
     logs: [],
   });
 
+  const [backendAvailable, setBackendAvailable] = useState(null); // null = unknown, true/false = checked
+
   // Track run session state for cancelling active backend jobs
   const runSession = useRef({
     token: 0,
@@ -153,6 +155,7 @@ export function AppContextProvider({ children }) {
     }
     try {
       const response = await fetch(`${API_BASE}${path}`, { ...options, headers });
+      updateState({ backendAvailable: true });
       if (!response.ok) {
         const contentType = response.headers.get('content-type') || '';
         if (contentType.includes('application/json')) {
@@ -166,6 +169,8 @@ export function AppContextProvider({ children }) {
     } catch (error) {
       const message = String(error?.message || error || '');
       if (error instanceof TypeError || /failed to fetch|networkerror|load failed/i.test(message)) {
+        updateState({ backendAvailable: false });
+        toast('Backend Unavailable', 'The solver backend is not running. Start it with `make dev` or use Guest Demo mode.', 'error');
         throw new Error(`Cannot reach backend API at ${API_BASE}. Start the backend server on port 8000.`);
       }
       throw error;
@@ -430,6 +435,22 @@ export function AppContextProvider({ children }) {
     }
   }, [state.unlocked, state.mode]);
 
+  // Probe backend health on initial load
+  useEffect(() => {
+    const checkBackend = async () => {
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 4000);
+        const res = await fetch(`${API_BASE}/health`, { signal: controller.signal });
+        clearTimeout(timeout);
+        setBackendAvailable(res.ok);
+      } catch {
+        setBackendAvailable(false);
+      }
+    };
+    checkBackend();
+  }, []);
+
   const t = (key) => {
     const lang = state.lang === 'vn' ? 'vn' : 'en';
     return APP_COPY[lang][key] || key;
@@ -450,6 +471,7 @@ export function AppContextProvider({ children }) {
         toast,
         setStatus,
         request,
+        backendAvailable,
         submitJob,
         cancelJob,
         loginAsGuest,

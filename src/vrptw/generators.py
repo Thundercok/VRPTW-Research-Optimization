@@ -6,7 +6,7 @@ import os
 
 import numpy as np
 
-from .core import Inst
+from .core import Inst, load_solomon_instance
 
 
 class SyntheticVRPTWGenerator:
@@ -155,14 +155,7 @@ def load_datasets(base_path: str) -> dict[str, list[Inst]]:
             pat_upper = os.path.join(base_path, f"{group.upper()}*{ext}")
             files.extend(glob.glob(pat_lower) + glob.glob(pat_upper))
         files = sorted(list(set(files)))
-        insts: list[Inst] = []
-        for path in files:
-            with open(path, encoding="utf-8") as fh:
-                lines = fh.readlines()
-            name = lines[0].strip()
-            capacity = float(lines[4].strip().split()[1])
-            rows = [list(map(float, ln.split())) for ln in lines[9:] if ln.strip()]
-            insts.append(Inst({"name": name, "capacity": capacity, "data": np.array(rows)}))
+        insts: list[Inst] = [load_solomon_instance(path) for path in files]
         if insts:
             datasets[group] = insts
     return datasets

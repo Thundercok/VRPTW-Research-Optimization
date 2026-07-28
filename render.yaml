@@ -1,0 +1,43 @@
+services:
+  - type: web
+    name: vrptw-backend
+    runtime: docker
+    dockerfilePath: ./Dockerfile.render
+    dockerContext: .
+    region: singapore
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      # ── Remote solver (Hugging Face Space) ────────────────────────────────
+      # The free instance has 512 MB of RAM, which torch alone exceeds. Every
+      # solve is forwarded to the Space instead. Leave SOLVER_REMOTE_URL unset
+      # only if you have moved to a plan that can host the research stack.
+      - key: SOLVER_REMOTE_URL
+        sync: false
+      - key: SOLVER_API_TOKEN
+        sync: false
+
+      # ── Frontend wiring ───────────────────────────────────────────────────
+      # Vercel proxies /api to this service, so requests arrive same-origin and
+      # CORS is not on the hot path. These stay set for direct-origin calls
+      # (local dev against the deployed API, preview deployments).
+      - key: CORS_ALLOW_ORIGINS
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+
+      # ── Auth ──────────────────────────────────────────────────────────────
+      # Demo bypass serves every /api request as an anonymous operator. Turn it
+      # off once Firebase credentials are in place.
+      - key: DEMO_AUTH_BYPASS
+        value: "true"
+      - key: FIREBASE_SERVICE_ACCOUNT_JSON
+        sync: false
+      - key: FIREBASE_PROJECT_ID
+        sync: false
+
+      # ── Observability (optional) ──────────────────────────────────────────
+      - key: SENTRY_DSN
+        sync: false
+      - key: SENTRY_ENVIRONMENT
+        value: production

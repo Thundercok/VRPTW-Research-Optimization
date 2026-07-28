@@ -10,10 +10,17 @@
  * (no trailing slash on origin)
  */
 function resolveApiBase() {
+  // 1. Explicit localStorage override (set via Settings page)
+  if (typeof window !== 'undefined') {
+    const stored = localStorage.getItem('vrptw_api_base');
+    if (stored && stored.trim()) return stored.trim();
+  }
+  // 2. Global JS override
   if (typeof window !== 'undefined' && window.__VRPTW_API_ORIGIN__) {
     const o = String(window.__VRPTW_API_ORIGIN__).replace(/\/$/, '');
     if (o) return `${o}/api`;
   }
+  // 3. Meta tag override
   if (typeof document !== 'undefined') {
     const meta = document.querySelector('meta[name="vrptw-api-origin"]');
     if (meta?.content?.trim()) {
@@ -21,12 +28,8 @@ function resolveApiBase() {
       return `${o}/api`;
     }
   }
-  const host =
-    typeof window !== 'undefined' &&
-    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-      ? window.location.hostname
-      : '127.0.0.1';
-  return `http://${host}:8000/api`;
+  // 4. Use origin-relative path (works with Vite proxy in dev and direct serving in prod)
+  return '/api';
 }
 
 export const API_BASE = resolveApiBase();

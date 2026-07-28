@@ -11,6 +11,26 @@ Edit the Config block below to change algorithms, iteration counts, etc.
 import sys
 import os
 
+
+def _requested_sequential(argv: list[str]) -> bool:
+    for i, a in enumerate(argv):
+        if a == "--max-workers" and i + 1 < len(argv):
+            return argv[i + 1] == "1"
+        if a.startswith("--max-workers="):
+            return a.split("=", 1)[1] == "1"
+    return False
+
+
+# Pin BLAS/Numba/torch threads to 1 per process for parallel runs. The defaults
+# in vrptw.core assume 3 workers (NUMBA/OMP/MKL=4 on 12 cores), but this runner
+# defaults to cpu_count-1 workers, which oversubscribed ~4x whenever torch or
+# BLAS ran and added noise to every Time_s measurement. Must happen before
+# `import vrptw` — core.py only uses setdefault, so an explicit value here wins,
+# and spawned workers inherit it via os.environ.
+if not _requested_sequential(sys.argv):
+    for _v in ("NUMBA_NUM_THREADS", "OMP_NUM_THREADS", "MKL_NUM_THREADS"):
+        os.environ[_v] = "1"
+
 # Ensure the vrptw package is importable when run from docs/
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "src"))
@@ -90,6 +110,19 @@ if __name__ == "__main__":
         action="store_true",
         help="Enable penalty-based infeasible search"
     )
+    budget = parser.add_mutually_exclusive_group()
+    budget.add_argument(
+        "--time-limit",
+        type=float,
+        default=None,
+        help="Absolute anytime wall-clock budget per solve, in seconds (sets cfg.time_limit)"
+    )
+    budget.add_argument(
+        "--no-time-limit",
+        action="store_true",
+        help="Disable the anytime budget entirely: pure iteration-bounded runs "
+             "(sets cfg.time_limit_per_customer=0)"
+    )
 
     args = parser.parse_args()
 
@@ -99,6 +132,13 @@ if __name__ == "__main__":
         if os.path.exists(default_gnn):
             gnn_path = default_gnn
             print(f"Auto-configured GNN model path to: {default_gnn}")
+
+    budget_kwargs = {}
+    if args.no_time_limit:
+        budget_kwargs["time_limit"] = None
+        budget_kwargs["time_limit_per_customer"] = 0.0
+    elif args.time_limit is not None:
+        budget_kwargs["time_limit"] = args.time_limit
 
     cfg = Config(
         data_path=args.data_path,
@@ -112,6 +152,7 @@ if __name__ == "__main__":
         gnn_model_path=gnn_path,
         ortools_time_limit=args.ortools_time_limit,
         penalty_search_enabled=args.penalty_search,
+        **budget_kwargs,
     )
 
     # ── Load Solomon instances ─────────────────────────────────────────────

@@ -1,8 +1,9 @@
 import React from 'react';
 import { useAppContext } from '../context/AppContext.jsx';
+import { createSkillBadge } from '../skillUtils.js';
 
 export default function FleetConfigView() {
-  const { state, updateState, toast } = useAppContext();
+  const { state, updateState, toast, t } = useAppContext();
 
   const fleet = state.fleet || [];
   const activeVehicles = fleet.filter((v) => v.status === 'Active');
@@ -126,18 +127,17 @@ export default function FleetConfigView() {
     <div className="fleet-view-container">
       <div className="fleet-view-header">
         <div>
-          <h2>Fleet Operations & Shift Schedules</h2>
+          <h2>{t('fleetMainTitle')}</h2>
           <p className="section-desc">
-            Define individual vehicle capacities, operating speeds, driver names, and shift constraint rules.
-            These parameters govern route eligibility, travel times, and vehicle capacity checks.
+            {t('fleetMainDesc')}
           </p>
         </div>
         <div className="fleet-actions-row">
           <button className="btn-primary" onClick={handleAddVehicle}>
-            + Add Vehicle
+            {t('btnAddVehicle')}
           </button>
           <button className="btn-secondary" onClick={handleResetDefaults}>
-            Reset to Defaults
+            {t('btnResetDefaults')}
           </button>
         </div>
       </div>
@@ -154,34 +154,34 @@ export default function FleetConfigView() {
         }}
       >
         <div className="kpi-card" style={{ borderRight: '1px solid var(--border)' }}>
-          <div className="kpi-title">Active Fleet Size</div>
+          <div className="kpi-title">{t('fleetKpiSize')}</div>
           <div className="kpi-value">
             {activeVehicles.length} / {fleet.length}
           </div>
-          <div className="kpi-sub">Vehicles ready for dispatch</div>
+          <div className="kpi-sub">{t('fleetKpiSizeSub')}</div>
         </div>
         <div className="kpi-card" style={{ borderRight: '1px solid var(--border)' }}>
-          <div className="kpi-title">Total Active Capacity</div>
+          <div className="kpi-title">{t('fleetKpiCap')}</div>
           <div className="kpi-value">{totalCapacity}</div>
-          <div className="kpi-sub">Sum of active vehicle loads</div>
+          <div className="kpi-sub">{t('fleetKpiCapSub')}</div>
         </div>
         <div className="kpi-card" style={{ borderRight: '1px solid var(--border)' }}>
-          <div className="kpi-title">Average Speed Multiplier</div>
+          <div className="kpi-title">{t('fleetKpiSpeed')}</div>
           <div className="kpi-value">{avgSpeed}x</div>
-          <div className="kpi-sub">Efficiency across active drivers</div>
+          <div className="kpi-sub">{t('fleetKpiSpeedSub')}</div>
         </div>
         <div className="kpi-card">
-          <div className="kpi-title">Fleet Status Check</div>
+          <div className="kpi-title">{t('fleetKpiStatus')}</div>
           <div
             className={`kpi-value ${
               activeVehicles.length > 0 ? 'highlight-emerald' : 'text-danger'
             }`}
             style={{ fontWeight: 700 }}
           >
-            {activeVehicles.length > 0 ? 'READY' : 'NO VEHICLES'}
+            {activeVehicles.length > 0 ? t('fleetReady') : t('fleetNoVehicles')}
           </div>
           <div className="kpi-sub">
-            {maintenanceCount} vehicle{maintenanceCount !== 1 ? 's' : ''} in maintenance
+            {maintenanceCount} {t('fleetInMaintenance')}
           </div>
         </div>
       </section>
@@ -200,16 +200,16 @@ export default function FleetConfigView() {
           <thead>
             <tr>
               <th style={{ width: '60px' }}>ID</th>
-              <th>Driver Name</th>
-              <th style={{ width: '110px' }}>Capacity</th>
-              <th style={{ width: '90px' }}>Speed</th>
-              <th style={{ width: '110px' }}>Shift Start</th>
-              <th style={{ width: '110px' }}>Shift End</th>
-              <th style={{ width: '110px' }}>Break Start</th>
-              <th style={{ width: '90px' }}>Break</th>
-              <th style={{ width: '130px' }}>Driver Skills</th>
-              <th style={{ width: '120px' }}>Status</th>
-              <th style={{ width: '70px', textAlign: 'center' }}>Actions</th>
+              <th>{t('thDriverName')}</th>
+              <th style={{ width: '110px' }}>{t('thCapacity')}</th>
+              <th style={{ width: '90px' }}>{t('thSpeed')}</th>
+              <th style={{ width: '110px' }}>{t('thShiftStart')}</th>
+              <th style={{ width: '110px' }}>{t('thShiftEnd')}</th>
+              <th style={{ width: '110px' }}>{t('thBreakStart')}</th>
+              <th style={{ width: '90px' }}>{t('thBreak')}</th>
+              <th style={{ width: '130px' }}>{t('thDriverSkills')}</th>
+              <th style={{ width: '120px' }}>{t('thStatus')}</th>
+              <th style={{ width: '70px', textAlign: 'center' }}>{t('thActions')}</th>
             </tr>
           </thead>
           <tbody>
@@ -289,16 +289,20 @@ export default function FleetConfigView() {
                     />
                   </td>
                   <td>
-                    <select
-                      className="table-inline-input fleet-input"
-                      value={veh.skills}
-                      onChange={(e) => handleFieldChange(index, 'skills', e.target.value)}
-                      style={{ fontWeight: 500 }}
-                    >
-                      <option value="None">None (Standard)</option>
-                      <option value="Refrigerated">Refrigerated</option>
-                      <option value="Hazmat">Hazmat</option>
-                    </select>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <select
+                        className="table-inline-input fleet-input"
+                        value={veh.skills}
+                        onChange={(e) => handleFieldChange(index, 'skills', e.target.value)}
+                        style={{ fontWeight: 500, width: '120px' }}
+                      >
+                        <option value="None">None (Standard)</option>
+                        <option value="Refrigerated">Refrigerated</option>
+                        <option value="Hazmat">Hazmat</option>
+                        <option value="Express">Express</option>
+                      </select>
+                      <div dangerouslySetInnerHTML={{ __html: createSkillBadge(veh.skills) }} />
+                    </div>
                   </td>
                   <td>
                     <select
@@ -333,7 +337,7 @@ export default function FleetConfigView() {
             {fleet.length === 0 && (
               <tr>
                 <td colSpan="11" className="text-center text-muted" style={{ padding: '32px' }}>
-                  No vehicles in fleet. Click "+ Add Vehicle" to register a driver.
+                  {t('fleetEmptyMsg')}
                 </td>
               </tr>
             )}

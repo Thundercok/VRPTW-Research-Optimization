@@ -1,0 +1,25 @@
+# API-only dependency set for the Render web service.
+#
+# Deliberately omits torch, numba, scipy, matplotlib and pandas: importing torch
+# alone costs more resident memory than Render's 512 MB free instance has. Every
+# call that needs the research stack is forwarded to the Hugging Face solver
+# Space via SOLVER_REMOTE_URL (see src/backend/services/compute_gateway.py).
+#
+# Keep the shared pins in sync with requirements.txt.
+fastapi>=0.116
+uvicorn[standard]>=0.35
+httpx>=0.28
+pydantic>=2.11
+firebase-admin>=7.0
+python-dotenv>=1.0
+python-multipart>=0.0.7
+
+# Security + observability
+passlib[argon2]>=1.7.4
+argon2-cffi>=23.1
+slowapi>=0.1.9
+sentry-sdk[fastapi]>=2.0
+
+# Solomon payload conversion still goes through numpy; it is ~30 MB resident,
+# which the slim budget can absorb.
+numpy>=1.26,<2.4

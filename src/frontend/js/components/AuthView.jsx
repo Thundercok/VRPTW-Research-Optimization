@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppContext } from '../context/AppContext.jsx';
 import { firebaseService } from '../firebaseService.js';
+import RoutingCanvasBg from './RoutingCanvasBg.jsx';
 
 export default function AuthView({ onClose }) {
   const { state, updateState, toast, setStatus, request, loginAsGuest, t } = useAppContext();
@@ -56,7 +57,7 @@ export default function AuthView({ onClose }) {
 
   // Theme & Password Visibility states
   const [theme, setTheme] = useState(() => {
-    return localStorage.getItem('vrptw_theme') || localStorage.getItem('vrptw_landing_theme_v2') || 'dark';
+    return localStorage.getItem('vrptw_theme') || localStorage.getItem('vrptw_landing_theme_v2') || 'light';
   });
 
   const toggleTheme = () => {
@@ -85,26 +86,33 @@ export default function AuthView({ onClose }) {
   // Probe backend mode on mount
   useEffect(() => {
     async function probe() {
-      try {
-        const response = await fetch(`${window.location.origin}/health`, { method: 'GET' });
-        if (!response.ok) {
-          const apiBaseRes = await fetch(`${state.apiBase || 'http://localhost:8000'}/health`, { method: 'GET' });
-          if (!apiBaseRes.ok) throw new Error();
-          const data = await apiBaseRes.json();
-          setBackendMode({
-            firebase_enabled: 'firebase_enabled' in data ? Boolean(data.firebase_enabled) : true,
-            demo_mode: 'demo_mode' in data ? Boolean(data.demo_mode) : false,
-            torch: data.torch || null
-          });
-          return;
+      const tryFetch = async (url) => {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 3000);
+        try {
+          const res = await fetch(url, { method: 'GET', signal: controller.signal });
+          clearTimeout(timeout);
+          if (!res.ok) return null;
+          return await res.json();
+        } catch {
+          clearTimeout(timeout);
+          return null;
         }
-        const data = await response.json();
+      };
+
+      // Try origin-relative path first (works with Vite proxy or same-origin production)
+      let data = await tryFetch('/health');
+      // Fall back to explicit localhost if the proxy isn't set up
+      if (!data) data = await tryFetch('http://127.0.0.1:8000/health');
+
+      if (data) {
         setBackendMode({
           firebase_enabled: 'firebase_enabled' in data ? Boolean(data.firebase_enabled) : true,
           demo_mode: 'demo_mode' in data ? Boolean(data.demo_mode) : false,
           torch: data.torch || null
         });
-      } catch (e) {
+      } else {
+        // Backend unavailable — default to guest-friendly mode
         setBackendMode({
           firebase_enabled: null,
           demo_mode: null,
@@ -435,103 +443,87 @@ export default function AuthView({ onClose }) {
   const isModal = !window.location.pathname.includes('auth.html');
 
   const cardContent = (
-    <div className={`auth-card ${isModal ? 'modal-popup' : ''}`}>
-      {/* Close button for Modal Popup */}
-      {isModal && onClose && (
-        <button
-          className="auth-close-btn"
-          onClick={onClose}
-          title="Close Login"
-          type="button"
-          aria-label="Close Login"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
-        </button>
-      )}
-      {/* Theme Toggle Button */}
-      <button
-        className="auth-theme-toggle"
-        onClick={toggleTheme}
-        title="Toggle Theme"
-        type="button"
-        aria-label="Toggle Theme"
-      >
-        {theme === 'dark' ? (
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="5" />
-            <line x1="12" y1="1" x2="12" y2="3" />
-            <line x1="12" y1="21" x2="12" y2="23" />
-            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-            <line x1="1" y1="12" x2="3" y2="12" />
-            <line x1="21" y1="12" x2="23" y2="12" />
-            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-          </svg>
-        ) : (
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-          </svg>
-        )}
-      </button>
-      <p className="tag">NAMI</p>
+    <div className={`auth-card-new ${isModal ? 'modal-popup' : ''}`}>
 
-      <div className="auth-headline">
-        <h1 id="auth-title">{t('authTitle')}</h1>
-        <div className="auth-icons" aria-hidden="true">
-          <span>🚚</span>
-          <span>📍</span>
-          <span>🗺️</span>
+
+      {/* LEFT PANE */}
+      <div className="auth-left-pane">
+        <RoutingCanvasBg />
+        <div className="auth-left-top" style={{ position: 'relative', zIndex: 1 }}>
+          <div className="auth-left-logo">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--pine)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+              <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+              <line x1="12" y1="22.08" x2="12" y2="12"></line>
+            </svg>
+            <div className="auth-left-logo-text">
+              <span className="auth-left-logo-title">NAMI Dispatch</span>
+              <span className="auth-left-logo-sub">ĐIỀU PHỐI · TỐI ƯU · THEO DÕI</span>
+            </div>
+          </div>
+        </div>
+        
+        <div className="auth-left-middle" style={{ position: 'relative', zIndex: 1 }}>
+          <h2>{t('authLeftHeadline1')}<br/><span className="highlight">{t('authLeftHeadline2')}</span></h2>
+        </div>
+        
+        <div className="auth-left-bottom" style={{ position: 'relative', zIndex: 1 }}>
+          <ul className="auth-left-bullets">
+            <li>{t('authLeftBullet1')}</li>
+            <li>{t('authLeftBullet2')}</li>
+            <li>{t('authLeftBullet3')}</li>
+          </ul>
         </div>
       </div>
 
-      {/* Route illustration */}
-      <div className="auth-visual" aria-hidden="true">
-        <svg viewBox="0 0 420 100" role="img" focusable="false">
-          <defs>
-            <linearGradient id="routeGrad" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="#93c5fd" />
-              <stop offset="100%" stopColor="#2563eb" />
-            </linearGradient>
-            <filter id="neonGlow" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="3.5" result="blur" />
-              <feMerge>
-                <feMergeNode in="blur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-          </defs>
-          {/* Route path */}
-          <path
-            className="route-path"
-            d="M24 72 C90 18, 170 92, 250 44 S360 52, 396 26"
-            fill="none"
-            stroke="url(#routeGrad)"
-            strokeWidth="4"
-            strokeLinecap="round"
-            strokeDasharray="6 8"
-            filter="url(#neonGlow)"
-          />
-          {/* Depot */}
-          <circle className="route-node route-node-1" cx="24" cy="72" r="6" fill="#2563eb" />
-          {/* Waypoints */}
-          <circle className="route-node route-node-2" cx="250" cy="44" r="5" fill="#60a5fa" />
-          <circle className="route-node route-node-3" cx="396" cy="26" r="6" fill="#2563eb" />
-          {/* Truck */}
-          <g className="route-truck" transform="translate(138 52)">
-            <rect x="0" y="8" width="62" height="20" rx="5" fill="#1d4ed8" />
-            <rect x="40" y="2" width="18" height="14" rx="3" fill="#2563eb" />
-            <rect x="43" y="4" width="12" height="8" rx="2" fill="#bfdbfe" opacity="0.6" />
-            <circle cx="14" cy="30" r="5" fill="#1e3a8a" />
-            <circle cx="46" cy="30" r="5" fill="#1e3a8a" />
-          </g>
-        </svg>
-      </div>
+      {/* RIGHT PANE */}
+      <div className="auth-right-pane">
+        
+        {(view === 'login' || view === 'register') && (
+          <div className="auth-tabs">
+            <button 
+              className={`auth-tab-btn ${view === 'login' ? 'active' : ''}`}
+              onClick={() => changeView('login')}
+            >
+              {t('loginTab')}
+            </button>
+            <button 
+              className={`auth-tab-btn ${view === 'register' ? 'active' : ''}`}
+              onClick={() => changeView('register')}
+            >
+              {t('registerTab')}
+            </button>
+          </div>
+        )}
 
-      <div className="auth-views">
+        <div className="auth-headline-right">
+          {view === 'login' && (
+            <>
+              <h2>{t('loginWelcome')}</h2>
+              <p>{t('loginSub')}</p>
+            </>
+          )}
+          {view === 'register' && (
+             <>
+               <h2>{t('registerWelcome')}</h2>
+               <p>{t('registerSub')}</p>
+             </>
+          )}
+          {view === 'forgot' && (
+             <>
+               <h2>{t('forgotWelcome')}</h2>
+               <p>{t('forgotSub')}</p>
+             </>
+          )}
+          {view === 'reset' && (
+             <>
+               <h2>{t('resetWelcome')}</h2>
+               <p>{t('resetSub')}</p>
+             </>
+          )}
+        </div>
+
+        <div className="auth-views">
         {/* LOGIN VIEW */}
         {view === 'login' && (
           <div id="auth-view-login" className="auth-form auth-view active">
@@ -596,20 +588,18 @@ export default function AuthView({ onClose }) {
               onClick={localAuthDisabled ? handleGuestLogin : handleLogin}
             >
               {localAuthDisabled
-                ? (state.lang === 'vn' ? 'Vào Demo' : 'Continue Demo')
+                ? t('demoButton')
                 : t('loginButton')}
             </button>
 
             {localAuthDisabled && (
               <p id="auth-hint" className="hint auth-hint" style={{ display: 'block' }}>
-                {state.lang === 'vn'
-                  ? 'Đăng nhập bằng email đang tắt vì Firebase chưa được cấu hình trên máy này. Dùng Demo để chạy solver.'
-                  : 'Email login is disabled because Firebase is not configured on this machine. Use Demo to run the solver.'}
+                {t('demoHint')}
               </p>
             )}
 
             {!localAuthDisabled && (
-              <div className="auth-links">
+              <div className="auth-links-right">
                 <button
                   id="link-forgot-password"
                   className="link-btn"
@@ -618,29 +608,22 @@ export default function AuthView({ onClose }) {
                 >
                   {t('forgotPassword')}
                 </button>
-                <button
-                  id="btn-open-register"
-                  className="btn ghost"
-                  type="button"
-                  onClick={() => changeView('register')}
-                >
-                  {t('openRegister')}
-                </button>
               </div>
             )}
 
             {isGuestModeActive && (
               <div id="guest-block" className="auth-guest">
                 <div className="auth-divider">
-                  <span>or</span>
+                  <span>{t('orContinue')}</span>
                 </div>
                 <button
                   id="btn-guest-login"
-                  className="btn ghost guest-btn"
+                  className="btn-google"
                   type="button"
                   onClick={handleGuestLogin}
                 >
-                  {t('guestLogin')}
+                  <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                  {t('guestDemoButton')}
                 </button>
                 <p id="guest-hint" className="hint auth-hint">
                   {getGuestHint() || t('guestHint')}
@@ -653,7 +636,7 @@ export default function AuthView({ onClose }) {
               className="auth-creds clickable"
               onClick={handleAutoFill}
               style={{
-                marginTop: '16px',
+                marginTop: '8px',
                 padding: '12px',
                 background: 'rgba(245, 158, 11, 0.08)',
                 border: '1px dashed rgba(245, 158, 11, 0.3)',
@@ -665,8 +648,8 @@ export default function AuthView({ onClose }) {
                 transition: 'background 0.2s ease, border-color 0.2s ease'
               }}
             >
-              <div style={{ fontWeight: '600', color: 'var(--gold)', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span>🔑</span> Click to Auto-fill Local Credentials:
+              <div style={{ fontWeight: '600', color: 'var(--ink)', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                Demo Admin:
               </div>
               <div style={{ fontFamily: 'monospace', opacity: 0.9 }}>
                 Email: <strong style={{ color: 'var(--text-main)' }}>test@vrptw.local</strong><br />
@@ -930,6 +913,15 @@ export default function AuthView({ onClose }) {
           </div>
         )}
       </div>
+      </div>
+      
+      {/* Close Button for Modal */}
+      {isModal && onClose && (
+        <button className="auth-close-btn" onClick={onClose} title="Close Login" type="button" aria-label="Close Login">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+        </button>
+      )}
+      
     </div>
   );
 

@@ -349,7 +349,7 @@ export default function ModelAnalyticsView() {
     <div className="analytics-view-container">
       <div className="analytics-view-header">
         <div>
-          <h2>Model Diagnostics & Performance Analysis</h2>
+          <h2>{t('maMainTitle')}</h2>
           <p className="section-desc">
             Analyze training history, convergence profiles, transfer weights, and operator heatmaps. Compare the DRL solver with ALNS base models.
           </p>
@@ -391,7 +391,7 @@ export default function ModelAnalyticsView() {
 
       <div className="analytics-grid">
         <div className="saas-card chart-card">
-          <h3>Optimization Convergence Path</h3>
+          <h3>{t('maConvergence')}</h3>
           <p className="card-desc">
             Comparison of objective function minimization history (BKS distance gap %) over solver iterations.
           </p>
@@ -406,7 +406,7 @@ export default function ModelAnalyticsView() {
         </div>
 
         <div className="saas-card chart-card">
-          <h3>Hourly Operational Dispatch Volume</h3>
+          <h3>{t('maHourly')}</h3>
           <p className="card-desc">
             Job execution load logs showing total tasks submitted, completed, and failed over time.
           </p>
@@ -416,7 +416,7 @@ export default function ModelAnalyticsView() {
         </div>
 
         <div className="saas-card matrix-card">
-          <h3>DRL Operator Execution Heatmap</h3>
+          <h3>{t('maHeatmap')}</h3>
           <p className="card-desc">
             Distribution of action-selection policies. Shows selection frequency of local search moves.
           </p>
@@ -431,7 +431,7 @@ export default function ModelAnalyticsView() {
 
         {/* Multi-Algorithm Leaderboard */}
         <div className="saas-card table-card xl-card">
-          <h3>Multi-Algorithm Performance Leaderboard</h3>
+          <h3>{t('maLeaderboard')}</h3>
           <p className="card-desc">
             Head-to-head comparison across all solver variants per Solomon instance. Ranked by BKS gap.
           </p>
@@ -509,7 +509,7 @@ export default function ModelAnalyticsView() {
 
         {/* Cross-Domain Transfer Performance Table */}
         <div className="saas-card table-card xl-card">
-          <h3>DRL Cross-Domain Transfer Performance</h3>
+          <h3>{t('maTransfer')}</h3>
           <p className="card-desc">
             Transfer-learning results. Models trained on one Solomon class applied to another.
           </p>
@@ -574,7 +574,7 @@ export default function ModelAnalyticsView() {
           <div className="modal-card analysis-modal-card">
             <div className="modal-header">
               <div>
-                <h2>Cross-Domain Diagnostic Report</h2>
+                <h2>{t('maReport')}</h2>
                 <p className="text-muted">
                   Version {selectedVersion.toUpperCase()} • {analysisData?.meta?.dataset || 'Solomon'} • Filter: {instanceFilter}
                 </p>
@@ -593,7 +593,7 @@ export default function ModelAnalyticsView() {
               
               <div className="modal-split-charts">
                 <div className="saas-card">
-                  <h3>Iteration Convergence Details</h3>
+                  <h3>{t('maConvDetails')}</h3>
                   <ConvergenceChart 
                     alnsHistory={analysisData?.alns?.history}
                     ddqnHistory={analysisData?.rl_alns?.history}
@@ -602,7 +602,7 @@ export default function ModelAnalyticsView() {
                   />
                 </div>
                 <div className="saas-card">
-                  <h3>Generalization Transfer Curve</h3>
+                  <h3>{t('maTransferCurve')}</h3>
                   <GeneralizationPlot 
                     transferRows={analysisData?.transfer}
                     summaryRows={analysisData?.summary}
@@ -613,7 +613,7 @@ export default function ModelAnalyticsView() {
 
               {/* Transfer Details Grid */}
               <div className="saas-card" style={{ marginTop: '16px' }}>
-                <h3>Model Generalization Transfer Table</h3>
+                <h3>{t('maTransferTable')}</h3>
                 <div className="table-wrap">
                   <table className="saas-table">
                     <thead>

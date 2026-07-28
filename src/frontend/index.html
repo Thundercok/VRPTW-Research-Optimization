@@ -1,9 +1,18 @@
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="light">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      /* Resolve the theme before first paint so there is no flash.
+         Light is the default; only an explicit stored choice overrides it. */
+      (function () {
+        var saved = localStorage.getItem('vrptw_theme') || localStorage.getItem('vrptw_landing_theme_v2');
+        var theme = saved === 'dark' ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', theme);
+      })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#070913" />
+    <meta name="theme-color" content="#fbfbf9" />
     <meta
       name="description"
       content="NAMI combines reinforcement learning and local search to solve Vehicle Routing Problems with Time Windows in milliseconds."
@@ -13,7 +22,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@1,8..60,400;1,8..60,500&display=swap"
       rel="stylesheet"
     />
 
@@ -39,9 +48,21 @@
     <nav class="site-nav" aria-label="Primary navigation">
       <div class="nav-container">
         <a class="brand" href="#" aria-label="NAMI home">
-          <svg class="brand-logo" width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <rect width="24" height="24" rx="6" fill="#f59e0b" />
-            <path d="M6 18V6H8.5L12 11.5L15.5 6H18V18H15.5V11L12.5 15.5H11.5L8.5 11V18H6Z" fill="white" />
+          <!-- Mark: a depot and three stops on a solved leg -->
+          <svg class="brand-logo" width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true">
+            <rect width="26" height="26" rx="5" fill="var(--pine)" />
+            <path
+              d="M7 18.5 L10.5 9.5 L15 15 L19 6.5"
+              stroke="#fff"
+              stroke-width="1.6"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              opacity="0.85"
+            />
+            <circle cx="7" cy="18.5" r="2.4" fill="#fff" />
+            <circle cx="10.5" cy="9.5" r="1.5" fill="#fff" opacity="0.7" />
+            <circle cx="15" cy="15" r="1.5" fill="#fff" opacity="0.7" />
+            <circle cx="19" cy="6.5" r="1.5" fill="#fff" opacity="0.7" />
           </svg>
           <span class="brand-copy">
             <strong>NAMI</strong>
@@ -124,63 +145,69 @@
     <main id="main">
       <!-- ========== HERO ========== -->
       <section class="hero-section">
-        <!-- Live Animated Routing Diorama Background -->
-        <div class="hero-visual-bg">
+        <!-- Live R1-cluster search, running as the hero background. Masked so
+             it never competes with the headline column. -->
+        <div class="hero-visual-bg" aria-hidden="true">
           <canvas id="nc"></canvas>
-          <div class="visual-overlay-vignette"></div>
-          <div class="visual-overlay-bottom"></div>
+          <div class="hero-visual-scrim"></div>
         </div>
 
-        <div class="hero-grid"></div>
-
         <div class="container">
-          <div class="hero-content">
-            <div class="hero-badge">
-              <span data-i18n="hero.badge">v3.2 · Hybrid-DDQN · Solomon + Homberger</span>
-            </div>
-            <h1 class="hero-title">
-              <span class="nami-title" data-i18n="hero.title.nami">NAMI</span>
-              <br />
-              <span data-i18n="hero.title.desc">Plateau-Aware Deep RL Routing Engine</span>
-            </h1>
-            <p class="hero-subtitle" data-i18n="hero.subtitle">
-              Combining Deep Reinforcement Learning with Adaptive Large Neighborhood Search to solve Vehicle Routing Problems with Time Windows in milliseconds.
-            </p>
-            <div class="hero-actions">
-              <a class="btn btn-primary" href="app.html" data-i18n="hero.cta.start">Open Dispatch Portal</a>
-              <a class="btn btn-secondary" href="https://github.com/Thundercok/VRPTW-Research-Optimization" target="_blank" rel="noopener" data-i18n="hero.cta.code">View Codebase →</a>
+          <div class="hero-layout">
+            <div class="hero-content">
+              <div class="hero-badge">
+                <span data-i18n="hero.badge">v3.2 · Hybrid-DDQN · Solomon + Homberger</span>
+              </div>
+              <h1 class="hero-title">
+                <span class="nami-title" data-i18n="hero.title.nami">NAMI</span>
+                <span data-i18n="hero.title.desc">Plateau-Aware Deep RL Routing Engine</span>
+              </h1>
+              <p class="hero-subtitle" data-i18n="hero.subtitle">
+                Combining Deep Reinforcement Learning with Adaptive Large Neighborhood Search to solve Vehicle Routing
+                Problems with Time Windows in milliseconds.
+              </p>
+              <div class="hero-actions">
+                <a class="btn btn-primary" href="app.html" data-i18n="hero.cta.start">Open Dispatch Portal</a>
+                <a
+                  class="btn btn-secondary"
+                  href="https://github.com/Thundercok/VRPTW-Research-Optimization"
+                  target="_blank"
+                  rel="noopener"
+                  data-i18n="hero.cta.code"
+                  >View Codebase →</a
+                >
+              </div>
             </div>
 
-            <!-- Floating Live Telemetry Metric Strip -->
-            <div class="hero-ticker reveal">
-              <div class="ticker-item">
-                <span class="ticker-label" data-i18n="ticker.epoch">Epoch:</span>
-                <span class="ticker-val" id="ticker-epoch">48</span>
+            <!-- Telemetry readout for the background search -->
+            <div class="hero-specimen reveal">
+              <div class="specimen-bar">
+                <span class="live-dot" aria-hidden="true"></span>
+                <span data-i18n="specimen.title">Live search · R1 cluster</span>
+                <span class="specimen-coords">100 × 100</span>
               </div>
-              <div class="ticker-item">
-                <span class="ticker-label" data-i18n="ticker.cost">Cost:</span>
-                <span class="ticker-val" id="ticker-cost">1284.2</span>
-              </div>
-              <div class="ticker-item">
-                <span class="ticker-label" data-i18n="ticker.plateau">Plateau Level:</span>
-                <span class="ticker-val flex-center">
-                  <span class="plateau-bar-wrapper">
-                    <span class="plateau-bar" id="ticker-plateau-bar" style="width: 0%"></span>
+
+              <div class="hero-ticker">
+                <div class="ticker-item">
+                  <span class="ticker-label" data-i18n="ticker.epoch">Epoch</span>
+                  <span class="ticker-val" id="ticker-epoch">48</span>
+                </div>
+                <div class="ticker-item">
+                  <span class="ticker-label" data-i18n="ticker.cost">Cost</span>
+                  <span class="ticker-val" id="ticker-cost">1284.2</span>
+                </div>
+                <div class="ticker-item">
+                  <span class="ticker-label" data-i18n="ticker.plateau">Plateau</span>
+                  <span class="ticker-val flex-center">
+                    <span class="plateau-bar-wrapper">
+                      <span class="plateau-bar" id="ticker-plateau-bar" style="width: 0%"></span>
+                    </span>
+                    <span id="ticker-plateau-val">0%</span>
                   </span>
-                  <span id="ticker-plateau-val">0%</span>
-                </span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-
-        <!-- Scroll Indicator -->
-        <div class="hero-scroll-indicator">
-          <a href="#showcase" aria-label="Scroll to showcase">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 5v14M19 12l-7 7-7-7" />
-            </svg>
-          </a>
         </div>
       </section>
 
@@ -201,14 +228,17 @@
               </div>
               <h3 class="card-heading" data-i18n="pipeline.s1.title">Constructive Decoder</h3>
               <p class="card-body" data-i18n="pipeline.s1.body">
-                Initial solution generated via greedy route construction and DDQN-guided insertion heuristic initialization.
+                Initial solution generated via greedy route construction and DDQN-guided insertion heuristic
+                initialization.
               </p>
               <div class="card-visual">
-                <pre class="visual-code"><code><span class="code-keyword">def</span> <span class="code-func">decode_initial</span>(instance):
-    routes = init_greedy(instance)
-    <span class="code-keyword">for</span> c <span class="code-keyword">in</span> instance.unassigned:
-        insert_greedy_tw(routes, c)
-    <span class="code-keyword">return</span> routes</code></pre>
+                <pre
+                  class="visual-code"
+                ><code><span class="code-keyword">def</span> <span class="code-func">decode</span>(inst):
+  routes = init_greedy(inst)
+  <span class="code-keyword">for</span> c <span class="code-keyword">in</span> inst.unassigned:
+    insert_tw(routes, c)
+  <span class="code-keyword">return</span> routes</code></pre>
               </div>
             </div>
 
@@ -220,15 +250,18 @@
               </div>
               <h3 class="card-heading" data-i18n="pipeline.s2.title">Stagnation Detection</h3>
               <p class="card-body" data-i18n="pipeline.s2.body">
-                Tracks the search trajectory in real time, detecting local minima plateaus when improvement patience thresholds are violated.
+                Tracks the search trajectory in real time, detecting local minima plateaus when improvement patience
+                thresholds are violated.
               </p>
               <div class="card-visual">
-                <pre class="visual-code"><code><span class="code-keyword">def</span> <span class="code-func">check_stagnation</span>(history, limit):
-    p = get_patience(history)
-    <span class="code-keyword">if</span> p >= limit:
-        trigger_escape()
-        <span class="code-keyword">return</span> <span class="code-keyword">True</span>
-    <span class="code-keyword">return</span> <span class="code-keyword">False</span></code></pre>
+                <pre
+                  class="visual-code"
+                ><code><span class="code-keyword">def</span> <span class="code-func">stagnant</span>(hist, limit):
+  p = patience(hist)
+  <span class="code-keyword">if</span> p >= limit:
+    trigger_escape()
+    <span class="code-keyword">return</span> <span class="code-keyword">True</span>
+  <span class="code-keyword">return</span> <span class="code-keyword">False</span></code></pre>
               </div>
             </div>
 
@@ -240,13 +273,16 @@
               </div>
               <h3 class="card-heading" data-i18n="pipeline.s3.title">DDQN Guided Repair</h3>
               <p class="card-body" data-i18n="pipeline.s3.body">
-                Double Deep Q-Network selects optimal combinations of destroy and repair operators to successfully break search basin stagnation.
+                Double Deep Q-Network selects optimal combinations of destroy and repair operators to successfully break
+                search basin stagnation.
               </p>
               <div class="card-visual">
-                <pre class="visual-code"><code><span class="code-keyword">def</span> <span class="code-func">select_escape_operator</span>(state, model):
-    q_vals = model.predict(state)
-    action = argmax_expl(q_vals)
-    <span class="code-keyword">return</span> operators[action]</code></pre>
+                <pre
+                  class="visual-code"
+                ><code><span class="code-keyword">def</span> <span class="code-func">select_op</span>(state, q):
+  vals = q.predict(state)
+  a = argmax_expl(vals)
+  <span class="code-keyword">return</span> operators[a]</code></pre>
               </div>
             </div>
 
@@ -258,19 +294,20 @@
               </div>
               <h3 class="card-heading" data-i18n="pipeline.s4.title">Optima Convergence</h3>
               <p class="card-body" data-i18n="pipeline.s4.body">
-                Performs local search optimization and Set Partitioning formulation to recombine elite routes into the final feasible route plan.
+                Performs local search optimization and Set Partitioning formulation to recombine elite routes into the
+                final feasible route plan.
               </p>
               <div class="card-visual">
-                <pre class="visual-code"><code><span class="code-keyword">def</span> <span class="code-func">finalize_routes</span>(elite_pool):
-    sol = milp_set_partition(elite_pool)
-    <span class="code-keyword">return</span> verify_and_save(sol)</code></pre>
+                <pre
+                  class="visual-code"
+                ><code><span class="code-keyword">def</span> <span class="code-func">finalize</span>(pool):
+  sol = set_partition(pool)
+  <span class="code-keyword">return</span> verify(sol)</code></pre>
               </div>
             </div>
           </div>
         </div>
       </section>
-
-      <div class="section-divider section-divider--dotted"></div>
 
       <!-- ========== STATS BANNER (Research Summary Strip) ========== -->
       <section class="stats-section" id="stats">
@@ -296,8 +333,6 @@
         </div>
       </section>
 
-      <div class="section-divider"></div>
-
       <!-- ========== FEATURES BENTO GRID ========== -->
       <section class="features-section" id="features">
         <div class="container">
@@ -308,7 +343,7 @@
 
           <div class="bento-grid reveal-stagger">
             <!-- Card 1: DDQN Plateau Controller -->
-            <div class="bento-card bento-card--ddqn reveal">
+            <div class="bento-card reveal">
               <div class="bento-badge-mono">DQN</div>
               <div class="bento-card-title" data-i18n="features.f1.title">DDQN Plateau Controller</div>
               <ul class="bento-card-list">
@@ -319,7 +354,7 @@
             </div>
 
             <!-- Card 2: Adaptive Search Engine -->
-            <div class="bento-card bento-card--timewindow reveal">
+            <div class="bento-card reveal">
               <div class="bento-badge-mono">ALNS</div>
               <div class="bento-card-title" data-i18n="features.f2.title">Adaptive Search Engine</div>
               <ul class="bento-card-list">
@@ -330,7 +365,7 @@
             </div>
 
             <!-- Card 3: LAC -->
-            <div class="bento-card bento-card--solomon reveal">
+            <div class="bento-card reveal">
               <div class="bento-badge-mono">LAC</div>
               <div class="bento-card-title" data-i18n="features.f3.title">Learned Acceptance Criterion (LAC)</div>
               <ul class="bento-card-list">
@@ -341,7 +376,7 @@
             </div>
 
             <!-- Card 4: Route Pool Set Partitioning -->
-            <div class="bento-card bento-card--zeroshot reveal">
+            <div class="bento-card reveal">
               <div class="bento-badge-mono">MILP</div>
               <div class="bento-card-title" data-i18n="features.f5.title">Set-Partitioning MILP Recombinator</div>
               <ul class="bento-card-list">
@@ -353,8 +388,6 @@
           </div>
         </div>
       </section>
-
-      <div class="section-divider section-divider--glow"></div>
 
       <!-- ========== BENCHMARKS ========== -->
       <section class="benchmarks-section" id="benchmarks">
@@ -382,7 +415,7 @@
                   <tr class="table-group-header">
                     <td colspan="6" data-i18n="table.group.100">100-Customer Instances (Solomon Benchmarks)</td>
                   </tr>
-                  <tr class="row-rc1">
+                  <tr>
                     <td class="td-instance">RC101 (Solomon)</td>
                     <td>100 Clients</td>
                     <td class="td-bks">14 / 1622.9</td>
@@ -393,9 +426,11 @@
 
                   <!-- 200-Customer scale -->
                   <tr class="table-group-header">
-                    <td colspan="6" data-i18n="table.group.200">200-Customer Instances (Gehring-Homberger Benchmarks)</td>
+                    <td colspan="6" data-i18n="table.group.200">
+                      200-Customer Instances (Gehring-Homberger Benchmarks)
+                    </td>
                   </tr>
-                  <tr class="row-c1">
+                  <tr>
                     <td class="td-instance">c1_2_1 (Homberger)</td>
                     <td>200 Clients</td>
                     <td class="td-bks">20 / 2684.5</td>
@@ -406,9 +441,11 @@
 
                   <!-- 400-Customer scale -->
                   <tr class="table-group-header">
-                    <td colspan="6" data-i18n="table.group.400">400-Customer Instances (Gehring-Homberger Benchmarks)</td>
+                    <td colspan="6" data-i18n="table.group.400">
+                      400-Customer Instances (Gehring-Homberger Benchmarks)
+                    </td>
                   </tr>
-                  <tr class="row-c2">
+                  <tr>
                     <td class="td-instance">c2_4_1 (Homberger)</td>
                     <td>400 Clients</td>
                     <td class="td-bks">10 / 1929.3</td>
@@ -416,7 +453,7 @@
                     <td class="td-alns">13.00 / --<sup>†</sup></td>
                     <td class="td-pvalue best">p = 0.0078*</td>
                   </tr>
-                  <tr class="row-r2">
+                  <tr>
                     <td class="td-instance">r2_4_1 (Homberger)</td>
                     <td>400 Clients</td>
                     <td class="td-bks">4 / 2764.0</td>
@@ -424,43 +461,66 @@
                     <td class="td-alns">8.80 / --<sup>†</sup></td>
                     <td class="td-pvalue best">p = 0.0156*</td>
                   </tr>
-                  <tr class="row-rc2">
+                  <tr>
                     <td class="td-instance">rc2_4_1 (Homberger)</td>
                     <td>400 Clients</td>
                     <td class="td-bks">10 / 2483.4</td>
                     <td class="td-nami">12.50 / --<sup>†</sup></td>
                     <td class="td-alns">12.80 / --<sup>†</sup></td>
-                    <td class="td-pvalue text-muted">p = 0.3750</td>
+                    <td class="td-pvalue">p = 0.3750</td>
                   </tr>
                 </tbody>
                 <tfoot>
                   <tr class="table-summary-row">
-                    <td colspan="6" data-i18n="table.summary">Summary: NAMI Hybrid-DDQN matches BKS vehicle floors at 100/200 scale and achieves statistically significant (p &lt; 0.05) vehicle reductions at 400 scale.</td>
+                    <td colspan="6" data-i18n="table.summary">
+                      Summary: NAMI Hybrid-DDQN matches BKS vehicle floors at 100/200 scale and achieves statistically
+                      significant (p &lt; 0.05) vehicle reductions at 400 scale.
+                    </td>
                   </tr>
                 </tfoot>
               </table>
             </div>
           </div>
 
-          <div class="benchmarks-footnotes" style="font-size: 0.75rem; color: var(--text-muted); margin-top: 16px; display: flex; flex-direction: column; gap: 4px;">
-            <div data-i18n="results.footnote.dagger">† Travel Distance (TD) comparisons are excluded when vehicle counts (NV) are not matched, as extra vehicle capacity artificially distorts travel distance.</div>
-            <div data-i18n="results.footnote.coldstart">Note: Standalone solver results are generated under strict independent cold-start conditions starting from <code>build_greedy</code> in a cleared directory, without multi-stage warm-starts.</div>
-            <div data-i18n="results.footnote.wilcoxon">* Statistically significant difference between NAMI Hybrid and ALNS Baseline (Wilcoxon signed-rank test p &lt; 0.05).</div>
+          <div
+            class="benchmarks-footnotes"
+            style="
+              font-size: 0.75rem;
+              color: var(--text-muted);
+              margin-top: 16px;
+              display: flex;
+              flex-direction: column;
+              gap: 4px;
+            "
+          >
+            <div data-i18n="results.footnote.dagger">
+              † Travel Distance (TD) comparisons are excluded when vehicle counts (NV) are not matched, as extra vehicle
+              capacity artificially distorts travel distance.
+            </div>
+            <div data-i18n="results.footnote.coldstart">
+              Note: Standalone solver results are generated under strict independent cold-start conditions starting from
+              <code>build_greedy</code> in a cleared directory, without multi-stage warm-starts.
+            </div>
+            <div data-i18n="results.footnote.wilcoxon">
+              * Statistically significant difference between NAMI Hybrid and ALNS Baseline (Wilcoxon signed-rank test p
+              &lt; 0.05).
+            </div>
           </div>
 
           <div class="citation-card reveal">
             <div class="citation-icon-text">CITE</div>
             <div>
-              <div class="citation-title" data-i18n="results.citation.title">Plateau-Aware Deep RL for Combinatorial Search</div>
+              <div class="citation-title" data-i18n="results.citation.title">
+                Plateau-Aware Deep RL for Combinatorial Search
+              </div>
               <p class="citation-body" data-i18n="results.citation.body">
-                Our thesis work analyzes DQN-guided escape operators under severe local stagnation states, outperforming traditional static ALNS variants in 7 of 8 benchmark scenarios.
+                Our thesis work analyzes DQN-guided escape operators under severe local stagnation states, outperforming
+                traditional static ALNS variants in 7 of 8 benchmark scenarios.
               </p>
             </div>
           </div>
         </div>
       </section>
-
-      <div class="section-divider section-divider--dotted"></div>
 
       <!-- ========== QUICKSTART ========== -->
       <section class="local-run-section" id="local-run">
@@ -472,11 +532,6 @@
 
           <div class="cli-display-wrapper reveal">
             <div class="cli-header-bar">
-              <div class="cli-dots">
-                <span class="cli-dot red"></span>
-                <span class="cli-dot yellow"></span>
-                <span class="cli-dot green"></span>
-              </div>
               <div class="cli-title-text">Workspace: VRPTW-Research-Optimization</div>
               <div class="cli-tabs">
                 <button class="cli-tab-btn active" data-target="pane-docker">Docker</button>
@@ -485,105 +540,81 @@
               </div>
             </div>
 
-            <div class="cli-main-layout">
-              <!-- Left Sidebar: File Tree Explorer -->
-              <div class="cli-sidebar">
-                <div class="sidebar-header" data-i18n="cli.explorer">EXPLORER</div>
-                <div class="file-tree">
-                  <div class="tree-item folder open">
-                    <span class="tree-icon">▼</span>
-                    <span class="tree-label">src</span>
-                  </div>
-                  <div class="tree-item folder open indent-1">
-                    <span class="tree-icon">▼</span>
-                    <span class="tree-label">vrptw</span>
-                  </div>
-                  <div class="tree-item file indent-2">
-                    <span class="tree-icon">·</span>
-                    <span class="tree-label">config.py</span>
-                  </div>
-                  <div class="tree-item file indent-2">
-                    <span class="tree-icon">·</span>
-                    <span class="tree-label">core.py</span>
-                  </div>
-                  <div class="tree-item file indent-2">
-                    <span class="tree-icon">·</span>
-                    <span class="tree-label">rl.py</span>
-                  </div>
-                  <div class="tree-item file indent-2">
-                    <span class="tree-icon">·</span>
-                    <span class="tree-label">solvers.py</span>
-                  </div>
-                  <div class="tree-item folder indent-1">
-                    <span class="tree-icon">▶</span>
-                    <span class="tree-label">backend</span>
-                  </div>
-                  <div class="tree-item folder indent-1">
-                    <span class="tree-icon">▶</span>
-                    <span class="tree-label">frontend</span>
-                  </div>
-                  <div class="tree-item folder">
-                    <span class="tree-icon">▶</span>
-                    <span class="tree-label">scripts</span>
-                  </div>
-                  <div class="tree-item file">
-                    <span class="tree-icon">·</span>
-                    <span class="tree-label">main.py</span>
-                  </div>
-                  <div class="tree-item file">
-                    <span class="tree-icon">·</span>
-                    <span class="tree-label">pyproject.toml</span>
-                  </div>
-                </div>
+            <div class="cli-content-wrapper">
+              <!-- Pane 1: Docker -->
+              <div class="cli-pane active" id="pane-docker">
+                <button class="btn-copy-code" aria-label="Copy code snippet">
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    style="margin-right: 4px"
+                  >
+                    <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                    <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+                  </svg>
+                  <span class="btn-copy-text">Copy</span>
+                  <span class="copy-success-tooltip">Copied!</span>
+                </button>
+                <pre
+                  class="cli-code-block"
+                ><code><span class="cli-comment"># Pull and run the pre-built container from DockerHub</span>
+<span class="cli-command">docker run -p 8000:8000 -p 5050:80 thundercock/vrptw-nami:latest</span></code></pre>
               </div>
 
-              <!-- Right Terminal Content -->
-              <div class="cli-content-wrapper">
-                <!-- Pane 1: Docker -->
-                <div class="cli-pane active" id="pane-docker">
-                  <button class="btn-copy-code" aria-label="Copy code snippet">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;">
-                      <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
-                      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
-                    </svg>
-                    <span class="btn-copy-text">Copy</span>
-                    <span class="copy-success-tooltip">Copied!</span>
-                  </button>
-                  <pre class="cli-code-block"><code><span class="cli-comment"># Pull and run the pre-built container from DockerHub</span>
-<span class="cli-command">docker run -p 8000:8000 -p 5050:80 thundercock/vrptw-nami:latest</span></code></pre>
-                </div>
-
-                <!-- Pane 2: uv (Local) -->
-                <div class="cli-pane" id="pane-venv">
-                  <button class="btn-copy-code" aria-label="Copy code snippet">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;">
-                      <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
-                      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
-                    </svg>
-                    <span class="btn-copy-text">Copy</span>
-                    <span class="copy-success-tooltip">Copied!</span>
-                  </button>
-                  <pre class="cli-code-block"><code><span class="cli-comment"># Clone and install dependencies with uv</span>
+              <!-- Pane 2: uv (Local) -->
+              <div class="cli-pane" id="pane-venv">
+                <button class="btn-copy-code" aria-label="Copy code snippet">
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    style="margin-right: 4px"
+                  >
+                    <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                    <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+                  </svg>
+                  <span class="btn-copy-text">Copy</span>
+                  <span class="copy-success-tooltip">Copied!</span>
+                </button>
+                <pre
+                  class="cli-code-block"
+                ><code><span class="cli-comment"># Clone and install dependencies with uv</span>
 <span class="cli-command">git clone https://github.com/Thundercok/VRPTW-Research-Optimization.git</span>
 <span class="cli-command">cd VRPTW-Research-Optimization</span>
 <span class="cli-command">uv venv .venv --python 3.12 && source .venv/bin/activate</span>
 <span class="cli-command">uv pip install -r requirements.txt</span>
 <span class="cli-command">python main.py</span></code></pre>
-                </div>
+              </div>
 
-                <!-- Pane 3: Benchmark -->
-                <div class="cli-pane" id="pane-benchmark">
-                  <button class="btn-copy-code" aria-label="Copy code snippet">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;">
-                      <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
-                      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
-                    </svg>
-                    <span class="btn-copy-text">Copy</span>
-                    <span class="copy-success-tooltip">Copied!</span>
-                  </button>
-                  <pre class="cli-code-block"><code><span class="cli-comment"># Run multi-scale Solomon benchmark suite sweep</span>
+              <!-- Pane 3: Benchmark -->
+              <div class="cli-pane" id="pane-benchmark">
+                <button class="btn-copy-code" aria-label="Copy code snippet">
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    style="margin-right: 4px"
+                  >
+                    <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                    <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+                  </svg>
+                  <span class="btn-copy-text">Copy</span>
+                  <span class="copy-success-tooltip">Copied!</span>
+                </button>
+                <pre
+                  class="cli-code-block"
+                ><code><span class="cli-comment"># Run multi-scale Solomon benchmark suite sweep</span>
 <span class="cli-command">./run_all_benchmarks.sh --instances RC101-RC108 --epochs 50</span></code></pre>
-                </div>
               </div>
             </div>
           </div>
@@ -592,7 +623,6 @@
     </main>
 
     <!-- Footer -->
-    <!-- Footer -->
     <footer class="site-footer">
       <div class="container">
         <div class="footer-simple-row">
@@ -600,7 +630,9 @@
             <span>&copy; 2026 VRPTW Research · MIT License</span>
           </div>
           <div class="footer-right">
-            <a href="https://github.com/Thundercok/VRPTW-Research-Optimization" target="_blank" rel="noopener">GitHub</a>
+            <a href="https://github.com/Thundercok/VRPTW-Research-Optimization" target="_blank" rel="noopener"
+              >GitHub</a
+            >
             <span class="bullet-divider">·</span>
             <a href="feedback.html">Feedback</a>
             <span class="bullet-divider">·</span>

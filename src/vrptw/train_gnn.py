@@ -7,7 +7,7 @@ import torch.nn as nn
 import torch.optim as optim
 
 from .config import default_data_path
-from .core import Inst, Plan
+from .core import Plan, load_solomon_instance
 from .generators import load_datasets
 from .gnn import GNNEdgePredictor, get_gnn_features, plan_to_adj_matrix
 
@@ -51,16 +51,25 @@ def train_gnn(epochs: int = 150, lr: float = 1e-3, save_path: str = "docs/model/
         for inst in group:
             insts[inst.name.upper()] = inst
 
-    # Also load Homberger-200 instances manually
+    # Also load Homberger-200 instances manually.
+    # This used to call Inst(path) — but Inst takes a parsed dict, not a path, so
+    # every instance raised TypeError straight into the bare `except: pass` and
+    # the Homberger set silently never reached the training data.
     homberger_dir = os.path.join("data", "Gehring_Homberger", "homberger_200_customer_instances")
     if os.path.exists(homberger_dir):
-        for f in os.listdir(homberger_dir):
-            if f.endswith((".TXT", ".txt")):
-                try:
-                    inst = Inst(os.path.join(homberger_dir, f))
-                    insts[inst.name.upper()] = inst
-                except Exception:
-                    pass
+        loaded = 0
+        for f in sorted(os.listdir(homberger_dir)):
+            if not f.endswith((".TXT", ".txt")):
+                continue
+            path = os.path.join(homberger_dir, f)
+            try:
+                inst = load_solomon_instance(path)
+            except Exception as e:
+                print(f"  Warning: failed to load {f}: {e}")
+                continue
+            insts[inst.name.upper()] = inst
+            loaded += 1
+        print(f"Loaded {loaded} Homberger-200 instances from {homberger_dir}.")
 
     # 2. Find matching elite plans
     elite_plan_paths = find_elite_plans()
@@ -99,11 +108,13 @@ def train_gnn(epochs: int = 150, lr: float = 1e-3, save_path: str = "docs/model/
         epoch_loss = 0.0
 
         for inst, plan in training_data:
-            node_feats, edge_feats = get_gnn_features(inst)
+            node_feats, edge_feats, nbr_idx = get_gnn_features(inst)
             targets = plan_to_adj_matrix(plan).to(device)  # (N+1, N+1)
 
             optimizer.zero_grad()
-            logits = model(node_feats.to(device), edge_feats.to(device))[0]  # (N+1, N+1)
+            logits = model(
+                node_feats.to(device), edge_feats.to(device), nbr_idx.to(device)
+            )[0]  # (N+1, N+1)
 
             # Weighted BCE loss calculation
             # Positive edges are sparse (approx 1 in N), so we weigh positive samples by N

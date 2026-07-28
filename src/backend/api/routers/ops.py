@@ -1,6 +1,7 @@
 # ruff: noqa: E402
 from __future__ import annotations
 
+import asyncio
 import json
 import multiprocessing as mp
 import os
@@ -13,7 +14,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+
 
 # Ensure src is in sys.path for importing the vrptw package.
 _ROOT_PATH = Path(__file__).resolve().parents[4]
@@ -30,6 +33,7 @@ from core.firebase import is_firebase_enabled
 from core.rate_limit import GEOCODE_LIMIT, JOBS_LIMIT, limiter
 from models.schemas import JobRequest, MatrixRequest, ReoptimizeRequest
 from services.geocode_service import geocode_address, reverse_geocode_address
+from services.compute_gateway import call_remote, remote_enabled, remote_health
 from services.job_service import job_service
 from services.matrix_service import calculate_matrix, fetch_route_geometry
 from services.solomon_service import list_solomon_datasets, load_solomon_dataset
@@ -66,7 +70,7 @@ def _version_key(version: str) -> tuple[int, ...]:
 async def health() -> dict[str, object]:
     fb = is_firebase_enabled()
     bypass = demo_auth_bypass_enabled()
-    return {
+    payload: dict[str, object] = {
         "status": "ok",
         "firebase_enabled": fb,
         "demo_auth_bypass": bypass,
@@ -74,6 +78,11 @@ async def health() -> dict[str, object]:
         "torch": device_summary(),
         "model": transfer_weights_summary(),
     }
+    if remote_enabled():
+        # In the Render deployment the local torch/model fields are both empty
+        # by design; the Space is what actually answers a solve.
+        payload["remote_solver"] = await remote_health()
+    return payload
 
 
 @router.get("/geocode")
@@ -370,6 +379,9 @@ async def reoptimize(
     body: ReoptimizeRequest,
     _: dict[str, str] = Depends(require_user),
 ) -> dict[str, Any]:
+    if remote_enabled():
+        return await call_remote("/reoptimize", body.model_dump())
+
     try:
         from services.research_adapter import build_inst, plan_to_payload
 
@@ -788,11 +800,30 @@ def run_smoke_test_thread():
             task_manager.smoke_test_state["error"] = str(e)
 
 
+def _reject_if_research_offloaded(operation: str) -> None:
+    """Block the long-running research jobs when the solver lives off-box.
+
+    Benchmarks and training runs take hours and write into ``docs/logs``. They
+    are local research operations, not something the slim API container or a
+    request-scoped Space call can carry, so fail loudly instead of starting a
+    thread that dies on ``import vrptw``.
+    """
+    if remote_enabled():
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                f"{operation} is disabled in this deployment: the solver runs on a remote "
+                "compute service and this operation must be run locally against the research stack."
+            ),
+        )
+
+
 @router.post("/benchmark")
 async def start_benchmark(
     body: BenchmarkSubmitRequest,
     _: dict[str, str] = Depends(require_user),
 ):
+    _reject_if_research_offloaded("Benchmarking")
     global task_manager
     with task_manager.lock:
         if task_manager.benchmark_state["status"] == "running":
@@ -819,6 +850,7 @@ async def start_train_dr(
     body: DRTrainSubmitRequest,
     _: dict[str, str] = Depends(require_user),
 ):
+    _reject_if_research_offloaded("Domain randomization training")
     global task_manager
     with task_manager.lock:
         if task_manager.training_state["status"] == "running":
@@ -834,6 +866,7 @@ async def start_train_transfer(
     body: TransferTrainSubmitRequest,
     _: dict[str, str] = Depends(require_user),
 ):
+    _reject_if_research_offloaded("Transfer learning training")
     global task_manager
     with task_manager.lock:
         if task_manager.training_state["status"] == "running":
@@ -857,6 +890,7 @@ async def get_train_status(
 async def start_smoke_test(
     _: dict[str, str] = Depends(require_user),
 ):
+    _reject_if_research_offloaded("Smoke test")
     global task_manager
     with task_manager.lock:
         if task_manager.smoke_test_state["status"] == "running":
@@ -874,3 +908,125 @@ async def get_smoke_test_status(
     global task_manager
     with task_manager.lock:
         return task_manager.smoke_test_state
+
+
+class DynamicInsertRequest(BaseModel):
+    dataset: str = "C101"
+    customer_id: int
+    existing_routes: list[list[int]]
+
+
+@router.post("/solve/dynamic_insert")
+async def solve_dynamic_insert(
+    body: DynamicInsertRequest,
+    _: dict[str, str] = Depends(require_user),
+):
+    """
+    Real-time dynamic order insertion endpoint without full solver restart.
+    """
+    if remote_enabled():
+        return await call_remote("/dynamic_insert", body.model_dump())
+
+    from services.solomon_service import load_solomon_dataset, to_inst_payload
+    from vrptw.config import Config
+    from vrptw.core import Inst, Plan
+    from vrptw.solvers import HybridDDQNSolver
+
+    try:
+        inst = Inst(to_inst_payload(load_solomon_dataset(body.dataset)))
+    except (ValueError, FileNotFoundError) as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    # Customers are nodes 1..inst.n (node 0 is the depot). Without this check an
+    # out-of-range id raises IndexError out of the handler as a 500, and a
+    # negative id silently wraps under numpy indexing and inserts the wrong
+    # customer while echoing the requested id back to the caller.
+    if not 1 <= body.customer_id <= inst.n:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"customer_id must be between 1 and {inst.n} for dataset "
+                f"{body.dataset}; got {body.customer_id}."
+            ),
+        )
+    routed = {c for route in body.existing_routes for c in route}
+    out_of_range = sorted(c for c in routed if not 1 <= c <= inst.n)
+    if out_of_range:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"existing_routes contains ids outside 1..{inst.n} for dataset "
+                f"{body.dataset}: {out_of_range[:10]}."
+            ),
+        )
+    # Re-inserting an already-routed customer would serve it twice and report
+    # nv/td/pareto_metrics over that invalid plan without complaint.
+    if body.customer_id in routed:
+        raise HTTPException(
+            status_code=409,
+            detail=f"customer_id {body.customer_id} is already served by existing_routes.",
+        )
+
+    plan = Plan(body.existing_routes, inst)
+    solver = HybridDDQNSolver(inst, Config())
+
+    updated_plan = solver.insert_dynamic_customer(plan, body.customer_id)
+    return {
+        "dataset": body.dataset,
+        "inserted_customer": body.customer_id,
+        "routes": updated_plan.routes,
+        "nv": updated_plan.nv,
+        "td": updated_plan.cost,
+        "pareto_metrics": updated_plan.calculate_pareto_metrics(),
+    }
+
+
+@router.get("/solve/stream")
+async def solve_stream(
+    dataset: str = Query(default="C101"),
+    iterations: int = Query(default=100, ge=10, le=1000),
+    _: dict[str, str] = Depends(require_user),
+):
+    """
+    Server-Sent Events (SSE) transport demo for solver progress.
+
+    NOTE: this endpoint does **not** run the solver. The ``nv``/``td``/``mode``
+    values are a fixed synthetic ramp used to exercise the SSE wiring, and every
+    payload carries ``"simulated": true`` to say so. Streaming real progress
+    needs a per-iteration callback on ``HybridDDQNSolver.solve()`` (which does
+    not exist yet) plus running the solve off the event loop; until then, do not
+    present these numbers as solver output.
+    """
+
+    async def event_generator():
+        from services.solomon_service import load_solomon_dataset
+
+        # Parsing the .txt blocks for a moment on a large dataset, so keep it off
+        # the event loop. Only the customer count is needed for the synthetic
+        # ramp below, so this deliberately avoids building a vrptw ``Inst`` —
+        # that would drag the research stack into the slim Render image.
+        def _customer_count() -> int:
+            return max(0, len(load_solomon_dataset(dataset).get("customers", [])) - 1)
+
+        n_customers = await asyncio.to_thread(_customer_count)
+
+        yield f"data: {json.dumps({'event': 'start', 'dataset': dataset, 'max_iters': iterations, 'simulated': True})}\n\n"
+
+        for step in range(1, 6):
+            # await, not time.sleep: this generator runs on the ASGI event loop.
+            await asyncio.sleep(0.05)
+            payload = {
+                "event": "progress",
+                "simulated": True,
+                "progress_pct": step * 20,
+                "current_it": int(step * (iterations / 5)),
+                "nv": int(max(1, n_customers // 10)),
+                "td": float(round(1000.0 - step * 20.0, 2)),
+                "mode": "Default" if step < 3 else "Intensify",
+            }
+            yield f"data: {json.dumps(payload)}\n\n"
+
+        yield f"data: {json.dumps({'event': 'complete', 'status': 'finished', 'simulated': True})}\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+

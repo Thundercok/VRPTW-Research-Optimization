@@ -9,9 +9,10 @@ import SettingsView from './components/SettingsView.jsx';
 import LoadingOverlay from './components/LoadingOverlay.jsx';
 import ToastContainer from './components/ToastContainer.jsx';
 import AuthView from './components/AuthView.jsx';
+import OnboardingTour from './components/OnboardingTour.jsx';
 
 function AppContent() {
-  const { state, isLoadingUser } = useAppContext();
+  const { state, isLoadingUser, t } = useAppContext();
 
   if (isLoadingUser) {
     return (
@@ -20,19 +21,19 @@ function AppContent() {
         height: '100vh',
         alignItems: 'center',
         justifyContent: 'center',
-        background: '#0f172a',
-        color: '#f8fafc',
-        fontFamily: 'sans-serif'
+        background: 'var(--paper)',
+        color: 'var(--ink-muted)',
+        fontFamily: 'var(--font-sans)'
       }}>
         <div style={{ textAlign: 'center' }}>
           <div className="spinner" style={{
-            border: '4px solid rgba(255,255,255,0.1)',
-            borderTop: '4px solid #3b82f6',
+            border: '2px solid var(--rule)',
+            borderTopColor: 'var(--pine)',
             borderRadius: '50%',
-            width: '40px',
-            height: '40px',
-            animation: 'spin 1s linear infinite',
-            margin: '0 auto 16px'
+            width: '28px',
+            height: '28px',
+            animation: 'spin 0.8s linear infinite',
+            margin: '0 auto 14px'
           }}></div>
           <style>{`
             @keyframes spin {
@@ -40,7 +41,13 @@ function AppContent() {
               100% { transform: rotate(360deg); }
             }
           `}</style>
-          <div>Loading NAMI Ops Dashboard...</div>
+          <div style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: '0.6875rem',
+            fontWeight: 500,
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase'
+          }}>{t('loadingConsole')}</div>
         </div>
       </div>
     );
@@ -54,21 +61,25 @@ function AppContent() {
       {state.activeTab === 'settings' && <SettingsView />}
       <LoadingOverlay />
       <ToastContainer />
+      <OnboardingTour />
 
       {state.showLoginModal && (
         <div id="auth-screen" style={{
           position: 'fixed',
           inset: 0,
           display: 'flex',
-          alignItems: 'center',
+          // flex-start + margin:auto on the card, NOT alignItems:center — a
+          // centred child taller than the overlay has its top pushed outside
+          // the scrollable area and can never be reached.
+          alignItems: 'flex-start',
           justifyContent: 'center',
           zIndex: 9999,
-          background: 'rgba(15, 23, 42, 0.65)',
-          backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)',
+          background: 'rgba(21, 26, 24, 0.55)',
+          backdropFilter: 'blur(6px)',
+          WebkitBackdropFilter: 'blur(6px)',
           animation: 'fadeIn 0.3s ease-out',
-          overflow: 'auto',
-          padding: '20px'
+          overflowY: 'auto',
+          padding: '24px'
         }}>
           <style>{`
             @keyframes fadeIn {
@@ -76,7 +87,7 @@ function AppContent() {
               to { opacity: 1; }
             }
           `}</style>
-          <AuthView onClose={() => updateState({ showLoginModal: false })} />
+          <AuthView onClose={() => { window.location.href = 'index.html'; }} />
         </div>
       )}
     </AppLayout>

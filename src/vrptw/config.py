@@ -332,6 +332,19 @@ class Config:
     # ── Split Controller ──────────────────────────────────────────────────
     split_enabled: bool = True
 
+    # ── Anytime wall-clock budget ─────────────────────────────────────────
+    # The search is otherwise bounded only by iteration count, which makes run
+    # times unpredictable (measured ~5.6h/run at n=400) and makes the OR-Tools
+    # comparison non-iso-time. When ``time_limit`` is None it is derived per
+    # instance as ``time_limit_per_customer * inst.n``; set it explicitly (or set
+    # ``time_limit_per_customer`` to 0.0) to opt out.
+    time_limit: float | None = None
+    time_limit_per_customer: float = 0.6
+    # Fraction of the budget the main destroy/repair loop may consume. The
+    # remainder is reserved for the tail phases (route elimination, TD polish,
+    # recombination), which contribute most of the final TD quality.
+    time_limit_main_loop_frac: float = 0.80
+
     def __post_init__(self) -> None:
         if self.per_beta_auto_scale:
             self.per_beta_steps = self.hybrid_iterations * 10
@@ -370,6 +383,14 @@ class Config:
             raise ValueError(f"lac_batch must be >= 16, got {self.lac_batch}")
         if self.ctrl_start_floor < 1:
             raise ValueError(f"ctrl_start_floor must be >= 1, got {self.ctrl_start_floor}")
+        if self.time_limit is not None and self.time_limit <= 0.0:
+            raise ValueError(f"time_limit must be > 0 when set, got {self.time_limit}")
+        if self.time_limit_per_customer < 0.0:
+            raise ValueError(f"time_limit_per_customer must be >= 0, got {self.time_limit_per_customer}")
+        if not (0.0 < self.time_limit_main_loop_frac <= 1.0):
+            raise ValueError(
+                f"time_limit_main_loop_frac must be in (0.0, 1.0], got {self.time_limit_main_loop_frac}"
+            )
 
 
 # ---------------------------------------------------------------------------

@@ -1,4 +1,6 @@
 import os
+import random
+
 import numpy as np
 from vrptw.core import Inst, Plan
 from vrptw.rl import EliteArchive
@@ -34,41 +36,39 @@ def test_crossover_complete_plans():
     assert child.feasible
     assert len(child.routes) > 0
 
-def test_crossover_missing_customers_sorting():
+def test_crossover_offspring_feasible_exact_cover():
+    """SREX offspring must be a feasible exact cover. The old implementation
+    produced feasible but heavily fragmented offspring (inflated route count),
+    so 0/600 measured offspring could pass the ``alt.nv < best.nv`` acceptance
+    gate — crossover never contributed a usable plan to the search."""
     inst = load_inst_rc202()
     arch = EliteArchive(k=5)
-    
+
     p1 = build_greedy(inst)
-    
-    # Dynamically select 4 customers from the second half of p1 routes to drop
-    second_half_customers = [c for r in p1.routes[len(p1.routes)//2:] for c in r]
+    assert p1.feasible
+
+    # A second parent with a different route topology: reversed route order and
+    # 4 dropped customers repaired back in by the crossover itself.
+    second_half_customers = [c for r in p1.routes[len(p1.routes) // 2:] for c in r]
     assert len(second_half_customers) >= 4
     drop_set = set(second_half_customers[:4])
-    
-    routes2 = [[c for c in r if c not in drop_set] for r in p1.routes]
-    p2 = Plan(routes2, inst, "synth")
-    
-    # We temporarily bypass the feasibility check on archive update to insert p2
-    key = inst.name
-    bucket = arch._plans.setdefault(key, [])
+    routes2 = [[c for c in r if c not in drop_set] for r in p1.routes[::-1]]
+    p2 = Plan([r for r in routes2 if r], inst, "synth")
+
+    bucket = arch._plans.setdefault(inst.name, [])
     bucket.append(p1.copy())
     bucket.append(p2.copy())
-    
-    child = arch.crossover(inst.name)
-    assert child is not None
-    
-    # Locate the leftover route containing the missing customers
-    leftover_route = None
-    for r in child.routes:
-        if any(c in drop_set for c in r):
-            leftover_route = r
-            break
-            
-    assert leftover_route is not None, "Leftover route containing missing customers must exist"
-    # The missing customers must be exactly the ones we dropped
-    missing_found = [c for c in leftover_route if c in drop_set]
-    assert set(missing_found) == drop_set
-    
-    # Assert they are sorted chronologically by inst.ready_times
-    ready_times = [inst.ready_times[c] for c in missing_found]
-    assert ready_times == sorted(ready_times), f"Missing customers in the leftover route must be sorted by ready times: {missing_found} (ready_times: {ready_times})"
+
+    random.seed(7)
+    produced = 0
+    for _ in range(20):
+        child = arch.crossover(inst.name)
+        if child is None:
+            continue  # the exchange may be judged too destructive — allowed
+        produced += 1
+        assert child.feasible, "SREX offspring must be feasible by construction"
+        served = [c for r in child.routes for c in r]
+        assert len(served) == inst.n and len(set(served)) == inst.n, (
+            "offspring must serve every customer exactly once"
+        )
+    assert produced > 0, "crossover must produce at least one feasible offspring in 20 tries"

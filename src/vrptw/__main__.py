@@ -22,17 +22,9 @@ def cmd_solve(args):
         sys.exit(1)
 
     print(f"Loading instance from {args.file}...")
-    # Read the instance using Solomon format
-    import numpy as np
+    from .core import load_solomon_instance
 
-    from .core import Inst
-
-    with open(args.file, encoding="utf-8") as fh:
-        lines = fh.readlines()
-    name = lines[0].strip()
-    capacity = float(lines[4].strip().split()[1])
-    rows = [list(map(float, ln.split())) for ln in lines[9:] if ln.strip()]
-    inst = Inst({"name": name, "capacity": capacity, "data": np.array(rows)})
+    inst = load_solomon_instance(args.file)
 
     print(
         f"Solving instance {inst.name} (capacity={inst.capacity}, customers={len(inst.demands) - 1}) with {args.algo}..."

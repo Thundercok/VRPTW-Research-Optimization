@@ -49,6 +49,10 @@ class Inst:
             dists = self.dist[i].copy()
             dists[0] = float("inf")  # exclude depot
             dists[i] = float("inf")  # exclude self
+            # NB: argpartition would be asymptotically cheaper here, but it breaks
+            # ties among equidistant customers differently from argsort, which
+            # perturbs every downstream kNN filter and changes search results.
+            # The saving (~0.16s at n=1000, once per instance) is not worth it.
             nearest = list(np.argsort(dists)[:k_neighbors])
             self.neighbors_k.append(nearest)
 
@@ -65,7 +69,25 @@ class Inst:
             + 0.4 * self.temporal_rel
             + 0.1 * self.demand_rel
         )
+        # Optional roadmap extensions: Multi-depot coordinates & Heterogeneous vehicle capacities
+        self.multi_depots = raw.get("multi_depots", None)
+        self.vehicle_capacities = raw.get("vehicle_capacities", None)
 
+
+
+
+def load_solomon_instance(path: str) -> Inst:
+    """Parse a Solomon / Gehring-Homberger instance file into an :class:`Inst`.
+
+    Note that :class:`Inst` takes an already-parsed dict, not a path — passing a
+    path silently produced a TypeError at several call sites.
+    """
+    with open(path, encoding="utf-8") as fh:
+        lines = fh.readlines()
+    name = lines[0].strip()
+    capacity = float(lines[4].strip().split()[1])
+    rows = [list(map(float, ln.split())) for ln in lines[9:] if ln.strip()]
+    return Inst({"name": name, "capacity": capacity, "data": np.array(rows)})
 
 
 @njit(cache=True)
@@ -243,6 +265,32 @@ class Plan:
         self._route_arrays = None
         self._violation_capacity = None
         self._violation_tw = None
+
+    def calculate_workload_balance(self) -> float:
+        """
+        Calculates driver workload balance as the variance of route durations.
+        Lower variance indicates more balanced work distribution among drivers.
+        """
+        if not self.routes:
+            return 0.0
+        durations = [_route_duration_no_return(r, self.inst) for r in self.routes]
+        return float(np.var(durations))
+
+    def calculate_pareto_metrics(self) -> dict[str, float]:
+        """
+        Generates multi-objective Pareto evaluation metrics for enterprise dispatchers:
+        - nv: Fleet size
+        - td: Total travel distance
+        - workload_variance: Driver workload balance variance
+        - delay_risk: Time window tightness / risk score
+        """
+        return {
+            "nv": float(self.nv),
+            "td": float(self.cost),
+            "workload_variance": self.calculate_workload_balance(),
+            "delay_risk": float(1.0 - self.on_time_rate),
+        }
+
 
 
 def _invalidate(plan: Plan) -> Plan:

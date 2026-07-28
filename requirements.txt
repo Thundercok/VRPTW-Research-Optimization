@@ -12,7 +12,9 @@ argon2-cffi>=23.1
 slowapi>=0.1.9
 sentry-sdk[fastapi]>=2.0
 
-numpy>=1.26,<2.3
+# <2.4 is numba 0.63.1's ceiling; the V2 sweep + golden fingerprints were
+# validated under numpy 2.3.5, so the ceiling must stay above 2.3.
+numpy>=1.26,<2.4
 pandas>=2.2
 scipy>=1.13
 numba>=0.60
