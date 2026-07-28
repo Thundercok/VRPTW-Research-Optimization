@@ -1174,7 +1174,7 @@ export default function LiveDispatchView() {
 
           {/* Import Paste / File Section */}
           {state.mode === 'real' && (
-            <div className="manifest-import-box" style={{ padding: '12px', background: '#f8fafc', borderTop: '1px solid var(--border)' }}>
+            <div className="manifest-import-box" style={{ padding: '12px', background: 'var(--surface-sunk)', borderTop: '1px solid var(--border)' }}>
               <h4 style={{ margin: '0 0 8px', fontSize: '11px' }}>{t('ldPasteTsv')}</h4>
               <textarea 
                 className="saas-textarea" 

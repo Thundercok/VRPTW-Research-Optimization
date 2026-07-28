@@ -225,7 +225,57 @@ export const APP_COPY = {
     setDataExport: 'Data Export',
     setDataRestart: 'Restart Onboarding Tour',
     setDataClear: 'Clear All Data',
-    setShortcutsDesc: 'Speed up your workflow with these hotkeys.'
+    setShortcutsDesc: 'Speed up your workflow with these hotkeys.',
+    setApiReload: 'Save & Reload',
+    setApiInvalid: 'Enter a full URL such as http://127.0.0.1:8000/api, or leave it blank to use this host.',
+    setDataExportHint: 'Downloads customers, fleet and workspace preferences as one JSON file.',
+    setShortcutsHelp: 'Open this shortcut list',
+    setShortcutsRun: 'Run the solver',
+    setShortcutsExport: 'Export the workspace',
+    setShortcutsTabs: 'Jump to view 1–4',
+    setShortcutsTour: 'Replay the guided tour',
+    setResetPrefs: 'Reset Preferences',
+
+    /* Onboarding tour */
+    tourAria: 'Product tour',
+    tourStepLabel: 'Step',
+    tourBack: 'Back',
+    tourSkip: 'Skip',
+    tourNext: 'Next',
+    tourDone: 'Start dispatching',
+    tour_welcome_title: 'Welcome to NAMI Dispatch',
+    tour_welcome_desc:
+      'This is your control tower for vehicle routing with time windows. The next minute walks you through planning a run, reading the results, and where everything lives. Use ← → to move, Esc to leave.',
+    tour_zones_title: 'Two workspaces, one rail',
+    tour_zones_desc:
+      'The sidebar splits into PLANNING — where you build and dispatch a run — and INTELLIGENCE, where you inspect how the model performed. Each zone has its own accent colour.',
+    tour_dataset_title: 'Pick your problem',
+    tour_dataset_desc:
+      'Start from a classic Solomon benchmark, or choose Custom Import to paste a manifest or upload your own CSV/Excel.',
+    tour_fleetSize_title: 'Size the fleet',
+    tour_fleetSize_desc:
+      'Vehicles and capacity set the constraints the solver has to respect. Change either one and the fleet roster updates to match.',
+    tour_run_title: 'Run the hybrid solver',
+    tour_run_desc:
+      'Execute Solver launches the DDQN-ALNS hybrid alongside a plain ALNS baseline, so every result arrives with something to compare against.',
+    tour_manifest_title: 'Edit the manifest inline',
+    tour_manifest_desc:
+      'Open the manifest to review each stop and edit demand, time windows or service time directly in the table. Changes apply on the next run.',
+    tour_playground_title: 'AI Playground & XAI console',
+    tour_playground_desc:
+      'Reassign stops by hand, watch the constraint checks respond live, and read the decision log explaining why the model routed the way it did.',
+    tour_fleet_title: 'Fleet Config',
+    tour_fleet_desc:
+      'Per-driver capacity, speed, shift window, break and skills. Shift and break times are validated as you type, so infeasible schedules never reach the solver.',
+    tour_analytics_title: 'Model Analytics',
+    tour_analytics_desc:
+      'Convergence curves, operator heatmaps, the algorithm leaderboard and cross-domain transfer results — the evidence behind each run.',
+    tour_settings_title: 'Settings',
+    tour_settings_desc:
+      'Point the app at a different backend, switch language or theme, export your workspace, and replay this tour whenever you want it.',
+    tour_finish_title: "That's the whole tour",
+    tour_finish_desc:
+      'You are set. Pick a dataset, size the fleet and press Execute Solver. You can replay this walkthrough any time from Settings → Workspace Data Management.',
   },
   vn: {
     langButton: 'EN',
@@ -457,6 +507,56 @@ export const APP_COPY = {
     setDataExport: 'Xuất Dữ liệu',
     setDataRestart: 'Bắt đầu lại Hướng dẫn (Tour)',
     setDataClear: 'Xóa Toàn bộ Dữ liệu',
-    setShortcutsDesc: 'Tăng tốc công việc của bạn với các phím tắt này.'
+    setShortcutsDesc: 'Tăng tốc công việc của bạn với các phím tắt này.',
+    setApiReload: 'Lưu & Tải lại',
+    setApiInvalid: 'Nhập URL đầy đủ, ví dụ http://127.0.0.1:8000/api, hoặc để trống để dùng host hiện tại.',
+    setDataExportHint: 'Tải về khách hàng, đội xe và tùy chọn workspace trong một tệp JSON.',
+    setShortcutsHelp: 'Mở danh sách phím tắt này',
+    setShortcutsRun: 'Chạy solver',
+    setShortcutsExport: 'Xuất workspace',
+    setShortcutsTabs: 'Chuyển nhanh tới màn hình 1–4',
+    setShortcutsTour: 'Xem lại hướng dẫn',
+    setResetPrefs: 'Đặt lại Tùy chọn',
+
+    /* Onboarding tour */
+    tourAria: 'Hướng dẫn sử dụng',
+    tourStepLabel: 'Bước',
+    tourBack: 'Quay lại',
+    tourSkip: 'Bỏ qua',
+    tourNext: 'Tiếp tục',
+    tourDone: 'Bắt đầu điều phối',
+    tour_welcome_title: 'Chào mừng đến NAMI Dispatch',
+    tour_welcome_desc:
+      'Đây là trung tâm điều phối tuyến đường có khung thời gian (VRPTW). Một phút tới sẽ đưa bạn qua cách lập kế hoạch, đọc kết quả và vị trí của từng tính năng. Dùng ← → để chuyển bước, Esc để thoát.',
+    tour_zones_title: 'Hai khu vực trên cùng một thanh điều hướng',
+    tour_zones_desc:
+      'Thanh bên chia thành PLANNING — nơi bạn dựng và chạy phương án điều phối — và INTELLIGENCE, nơi bạn phân tích chất lượng mô hình. Mỗi khu vực có màu nhấn riêng.',
+    tour_dataset_title: 'Chọn bài toán',
+    tour_dataset_desc:
+      'Bắt đầu từ bộ benchmark Solomon kinh điển, hoặc chọn Custom Import để dán manifest hay tải lên tệp CSV/Excel của bạn.',
+    tour_fleetSize_title: 'Cấu hình quy mô đội xe',
+    tour_fleetSize_desc:
+      'Số xe và tải trọng chính là ràng buộc mà solver phải tuân thủ. Thay đổi một trong hai, danh sách đội xe sẽ tự cập nhật theo.',
+    tour_run_title: 'Chạy solver lai',
+    tour_run_desc:
+      'Execute Solver chạy song song DDQN-ALNS và ALNS gốc, nên mỗi kết quả luôn có một mốc để so sánh.',
+    tour_manifest_title: 'Sửa manifest ngay trên bảng',
+    tour_manifest_desc:
+      'Mở manifest để xem từng điểm giao và sửa trực tiếp nhu cầu, khung thời gian hay thời gian phục vụ. Thay đổi áp dụng ở lần chạy kế tiếp.',
+    tour_playground_title: 'AI Playground & bảng XAI',
+    tour_playground_desc:
+      'Gán lại điểm giao thủ công, xem kiểm tra ràng buộc phản hồi tức thì, và đọc nhật ký giải thích vì sao mô hình chọn tuyến đó.',
+    tour_fleet_title: 'Cấu hình đội xe',
+    tour_fleet_desc:
+      'Tải trọng, tốc độ, ca làm, giờ nghỉ và kỹ năng của từng tài xế. Ca và giờ nghỉ được kiểm tra ngay khi nhập, nên lịch bất khả thi không lọt tới solver.',
+    tour_analytics_title: 'Phân tích mô hình',
+    tour_analytics_desc:
+      'Đường hội tụ, heatmap toán tử, bảng xếp hạng thuật toán và kết quả chuyển miền — toàn bộ bằng chứng phía sau mỗi lần chạy.',
+    tour_settings_title: 'Cài đặt',
+    tour_settings_desc:
+      'Trỏ ứng dụng sang backend khác, đổi ngôn ngữ hoặc giao diện, xuất workspace, và xem lại hướng dẫn này bất cứ lúc nào.',
+    tour_finish_title: 'Vậy là xong phần hướng dẫn',
+    tour_finish_desc:
+      'Bạn đã sẵn sàng. Chọn bộ dữ liệu, đặt quy mô đội xe rồi nhấn Execute Solver. Có thể xem lại hướng dẫn bất cứ lúc nào ở Cài đặt → Quản lý dữ liệu workspace.',
   },
 };

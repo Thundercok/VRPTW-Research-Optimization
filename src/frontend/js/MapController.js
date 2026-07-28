@@ -50,16 +50,7 @@ export class MapController {
 
     L.control.zoom({ position: 'bottomright' }).addTo(this.map);
 
-    const savedTheme = localStorage.getItem('vrptw_map_theme') || 'carto-light';
-    const tileUrl =
-      savedTheme === 'carto-dark'
-        ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-        : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
-
-    L.tileLayer(tileUrl, {
-      maxZoom: 19,
-      attribution: '&copy; CARTO',
-    }).addTo(this.map);
+    this.setTileTheme(localStorage.getItem('vrptw_map_theme') || 'carto-light');
 
     this.canvasRenderer = L.canvas({ padding: 0.5 });
     this.markerLayer = L.layerGroup().addTo(this.map);
@@ -75,6 +66,28 @@ export class MapController {
     // Switch listeners are dynamically updated in App.js when solver runs,
     // but we setup standard ones here as a fallback.
     this.currentView = 'ddqn';
+  }
+
+  /**
+   * Swap the basemap in place. Settings calls this so a style change is visible
+   * immediately instead of waiting for the next full page load.
+   */
+  setTileTheme(theme) {
+    if (!this.map) return;
+    const tileUrl =
+      theme === 'carto-dark'
+        ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+        : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+
+    if (this.tileLayer) {
+      this.map.removeLayer(this.tileLayer);
+    }
+    this.tileLayer = L.tileLayer(tileUrl, {
+      maxZoom: 19,
+      attribution: '&copy; CARTO',
+    }).addTo(this.map);
+    this.tileLayer.bringToBack();
+    this.mapTheme = theme;
   }
 
   getRouteLayer(algoName) {

@@ -112,22 +112,94 @@
 
 .saas-nav {
   flex: 1;
-  padding: 10px 10px;
+  padding: 12px 10px;
+}
+
+/* ── Nav zones ─────────────────────────────────────────
+   PLANNING and INTELLIGENCE are two distinct workspaces, not two adjacent
+   labels. Each zone is a boxed group with its own rule, so the section title
+   clearly outranks the items nested beneath it. */
+.nav-group {
+  position: relative;
+  padding: 4px 0 8px;
+}
+
+.nav-group + .nav-group {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+/* The items of a zone hang off a hairline that starts under the label dot,
+   which is what makes them read as children of the title. */
+.nav-group .nav-item {
+  margin-left: 9px;
+  border-left: 2px solid transparent;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
 }
 
 .nav-label {
-  font-size: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10.5px;
   text-transform: uppercase;
-  color: var(--text-muted);
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  margin-bottom: 4px;
-  margin-top: 14px;
-  padding-left: 6px;
+  color: var(--text-main);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  margin: 0 0 10px;
+  padding-left: 4px;
 }
 
-.nav-label:first-child {
-  margin-top: 4px;
+.nav-label-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--border-strong);
+  transition: background 0.2s ease;
+}
+
+/* Each zone gets its own accent so the two halves are told apart at a glance. */
+.nav-group-planning .nav-label-dot {
+  background: var(--primary);
+  box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.16);
+}
+
+.nav-group-intelligence .nav-label-dot {
+  background: var(--orange);
+  box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.16);
+}
+
+/* The label text is followed by a rule that runs to the edge of the rail. */
+.nav-label-text {
+  flex-shrink: 0;
+}
+
+.nav-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, var(--border) 0%, transparent 100%);
+}
+
+/* Collapsed rail: no room for text, so the zones are separated by a rule. */
+.nav-group-rule {
+  height: 1px;
+  background: var(--border);
+  margin: 0 6px 10px;
+}
+
+.saas-sidebar.collapsed .nav-group + .nav-group {
+  margin-top: 14px;
+  padding-top: 10px;
+}
+
+.saas-sidebar.collapsed .nav-group .nav-item {
+  margin-left: 0;
+  border-left: none;
+  border-radius: var(--r-sm);
 }
 
 .nav-item {
@@ -139,10 +211,11 @@
   border-radius: var(--r-sm);
   font-weight: 500;
   font-size: 13px;
-  margin-bottom: 1px;
+  margin-bottom: 2px;
   transition:
     background 0.15s,
     color 0.15s,
+    border-color 0.15s,
     padding-left 0.15s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -156,6 +229,20 @@
   background: var(--primary-soft);
   color: var(--primary);
   font-weight: 600;
+}
+
+.nav-group-planning .nav-item.active {
+  border-left-color: var(--primary);
+}
+
+.nav-group-intelligence .nav-item.active {
+  background: var(--orange-soft);
+  color: var(--orange);
+  border-left-color: var(--orange);
+}
+
+.nav-group-intelligence .nav-item:hover:not(.active) {
+  color: var(--orange);
 }
 
 .sidebar-footer {
@@ -454,53 +541,87 @@ body.demo-active .demo-badge {
   color: var(--orange);
 }
 
-/* ── FORM ELEMENTS ──────────────────────────────────── */
-.saas-input-small {
-  width: 68px;
-  padding: 5px 8px;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--r-sm);
+/* ── FORM ELEMENTS ──────────────────────────────────────
+   All text-entry controls share one light field skin (see --field-* in
+   style.css). Resting state is near-borderless; contrast is added on hover
+   and focus instead of being carried permanently by a heavy grey outline. */
+.saas-input,
+.saas-input-small,
+.saas-textarea,
+.saas-select {
+  border: 1px solid var(--field-border);
+  border-radius: var(--r);
+  background-color: var(--field-bg);
+  color: var(--field-text);
   font-family: var(--font-main);
   font-size: 13px;
   font-weight: 500;
-  background: var(--bg-surface);
-  color: var(--text-main);
-  text-align: center;
   outline: none;
+  box-shadow: var(--field-shadow);
   transition:
-    border-color 0.13s,
-    box-shadow 0.13s;
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
-.saas-input-small:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.1);
+.saas-input:hover:not(:focus),
+.saas-input-small:hover:not(:focus),
+.saas-textarea:hover:not(:focus),
+.saas-select:hover:not(:focus) {
+  border-color: var(--field-border-hover);
+  background-color: var(--field-bg-hover);
+}
+
+.saas-input:focus,
+.saas-input-small:focus,
+.saas-textarea:focus,
+.saas-select:focus {
+  border-color: var(--field-border-focus);
+  box-shadow: 0 0 0 3px var(--field-ring);
+  background-color: var(--bg-surface);
+}
+
+.saas-input::placeholder,
+.saas-input-small::placeholder,
+.saas-textarea::placeholder {
+  color: var(--field-placeholder);
+  font-weight: 400;
+}
+
+.saas-input:disabled,
+.saas-input-small:disabled,
+.saas-textarea:disabled,
+.saas-select:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.saas-input {
+  width: 100%;
+  padding: 9px 12px;
+}
+
+.saas-textarea {
+  width: 100%;
+  padding: 9px 12px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.saas-input-small {
+  width: 68px;
+  padding: 5px 8px;
+  text-align: center;
 }
 
 .saas-select {
   padding: 6px 28px 6px 10px;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--r-sm);
-  background: var(--bg-surface);
-  color: var(--text-main);
-  font-family: var(--font-main);
-  font-size: 13px;
-  font-weight: 500;
-  outline: none;
   cursor: pointer;
   appearance: none;
   -webkit-appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 12 12'%3E%3Cpath fill='%23a8b3c2' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 9px center;
-  transition:
-    border-color 0.13s,
-    box-shadow 0.13s;
-}
-
-.saas-select:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.1);
 }
 
 /* ── BUTTONS ───────────────────────────────────────── */
@@ -969,22 +1090,35 @@ body.demo-active .demo-badge {
   width: 100%;
   box-sizing: border-box;
   padding: 4px 8px;
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--field-border);
   border-radius: var(--r-sm);
-  background: var(--bg-surface);
-  color: var(--text-main);
+  background-color: var(--field-bg);
+  color: var(--field-text);
   font-family: var(--font-main);
   font-size: 12px;
   outline: none;
   transition:
     border-color 0.12s,
+    background-color 0.12s,
     box-shadow 0.12s;
+}
+
+.table-inline-input::placeholder,
+.table-edit-input::placeholder {
+  color: var(--field-placeholder);
+  font-weight: 400;
+}
+
+.table-inline-input:hover:not(:focus),
+.table-edit-input:hover:not(:focus) {
+  border-color: var(--field-border-hover);
+  background-color: var(--field-bg-hover);
 }
 
 .table-inline-input:focus,
 .table-edit-input:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 2px var(--primary-soft);
+  border-color: var(--field-border-focus);
+  box-shadow: 0 0 0 2px var(--field-ring);
 }
 
 .table-inline-readonly {
@@ -994,13 +1128,16 @@ body.demo-active .demo-badge {
   padding: 4px 8px;
 }
 
-.saas-table th:nth-child(3),
-.saas-table td:nth-child(3) {
+/* Manifest-only column floors. Scoped to .table-container: the fleet table has
+   a different column order, where these indices are Capacity and Speed and the
+   180px floor pushed the whole grid past its container. */
+.table-container .saas-table th:nth-child(3),
+.table-container .saas-table td:nth-child(3) {
   min-width: 120px; /* Name column min-width */
 }
 
-.saas-table th:nth-child(4),
-.saas-table td:nth-child(4) {
+.table-container .saas-table th:nth-child(4),
+.table-container .saas-table td:nth-child(4) {
   min-width: 180px; /* Address column min-width */
 }
 
@@ -2032,12 +2169,24 @@ body.demo-active .demo-badge {
   margin-top: 2px;
 }
 
-.toast.ok { border-left: 3px solid var(--success); }
-.toast.ok .toast-icon { color: var(--success); }
-.toast.error { border-left: 3px solid var(--danger); }
-.toast.error .toast-icon { color: var(--danger); }
-.toast.warn { border-left: 3px solid var(--orange); }
-.toast.warn .toast-icon { color: var(--orange); }
+.toast.ok {
+  border-left: 3px solid var(--success);
+}
+.toast.ok .toast-icon {
+  color: var(--success);
+}
+.toast.error {
+  border-left: 3px solid var(--danger);
+}
+.toast.error .toast-icon {
+  color: var(--danger);
+}
+.toast.warn {
+  border-left: 3px solid var(--orange);
+}
+.toast.warn .toast-icon {
+  color: var(--orange);
+}
 
 .toast-close {
   background: none;
@@ -2064,14 +2213,30 @@ body.demo-active .demo-badge {
   animation: toast-progress-anim linear forwards;
 }
 
-.toast-progress-ok { background: var(--success); animation-duration: 4.2s; }
-.toast-progress-error { background: var(--danger); animation-duration: 6.5s; }
-.toast-progress-warn { background: var(--orange); animation-duration: 4.2s; }
-.toast-progress- { background: var(--primary); animation-duration: 4.2s; }
+.toast-progress-ok {
+  background: var(--success);
+  animation-duration: 4.2s;
+}
+.toast-progress-error {
+  background: var(--danger);
+  animation-duration: 6.5s;
+}
+.toast-progress-warn {
+  background: var(--orange);
+  animation-duration: 4.2s;
+}
+.toast-progress- {
+  background: var(--primary);
+  animation-duration: 4.2s;
+}
 
 @keyframes toast-progress-anim {
-  from { width: 100%; }
-  to { width: 0%; }
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
 }
 
 /* ── CONNECTION PILL ────────────────────────────────── */
@@ -2136,28 +2301,72 @@ body.demo-active .demo-badge {
   display: flex;
   gap: 12px;
 }
+/* ── Fleet table: sticky header ──────────────────────────
+   The header row docks while the body scrolls, so it must be fully opaque and
+   sit in front of the rows. Two things previously let data show through it:
+   the scroll box had 16px of padding (rows scrolled into the strip the header
+   docks over) and the table used `border-collapse: collapse`, where the cell
+   border belongs to the table grid and stays behind with the rows instead of
+   travelling with the header. Hence separate borders + an inset shadow rule. */
+.fleet-table-scroll {
+  flex: 1;
+  min-height: 0;
+  margin-top: 16px;
+  overflow: auto;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  box-shadow: var(--shadow);
+}
+
+.fleet-config-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
 .fleet-config-table th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
   font-weight: 600;
+  background: var(--bg-surface);
+  border-bottom: none;
+  box-shadow:
+    inset 0 -1px 0 var(--border-strong),
+    0 1px 0 var(--border-strong);
+}
+
+.fleet-config-table td {
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+}
+
+.fleet-config-table tbody tr:last-child td {
+  border-bottom: none;
 }
 .table-inline-input {
   width: 100%;
   border: 1px solid transparent;
-  background: transparent;
+  background-color: transparent;
   padding: 4px 8px;
   border-radius: var(--r-sm);
-  color: var(--text-main);
+  color: var(--field-text);
   font-family: var(--font-main);
   font-size: 13px;
-  transition: all 0.1s;
+  transition:
+    border-color 0.12s ease,
+    background-color 0.12s ease,
+    box-shadow 0.12s ease;
 }
-.table-inline-input:hover {
-  background: var(--bg-base);
-  border-color: var(--border);
+.table-inline-input:hover:not(:focus) {
+  background-color: var(--field-bg-hover);
+  border-color: var(--field-border);
 }
 .table-inline-input:focus {
-  background: var(--bg-surface);
-  border-color: var(--primary);
-  box-shadow: 0 0 0 2px var(--primary-soft);
+  background-color: var(--bg-surface);
+  border-color: var(--field-border-focus);
+  box-shadow: 0 0 0 2px var(--field-ring);
   outline: none;
 }
 .table-inline-input.num {
@@ -2732,7 +2941,8 @@ body.demo-active .demo-badge {
   transition: all 0.2s;
 }
 
-.playground-toggle-btn:hover, .playground-toggle-btn.active {
+.playground-toggle-btn:hover,
+.playground-toggle-btn.active {
   background: var(--primary-soft);
   color: var(--primary);
   border-color: var(--primary);
@@ -2751,3 +2961,427 @@ body.demo-active .demo-badge {
   gap: 6px;
 }
 
+/* ═══════════════════════════════════════════════════════
+   ONBOARDING TOUR
+   A guided first-run walkthrough. The scrim is a single box carrying a
+   viewport-sized spread shadow, which punches a genuinely transparent hole
+   over the step target instead of tinting it, and the card docks to whichever
+   side of that target has room.
+   ═══════════════════════════════════════════════════════ */
+.tour-root {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 0.28s ease;
+  --tour-scrim: rgba(8, 13, 24, 0.62);
+}
+
+.tour-root.is-in {
+  opacity: 1;
+}
+
+.tour-scrim {
+  position: absolute;
+  border-radius: 10px;
+  pointer-events: none;
+  box-shadow: 0 0 0 9999px var(--tour-scrim);
+  transition:
+    top 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    left 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    width 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    height 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.tour-scrim.is-full {
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+}
+
+/* Breathing ring drawn on top of the hole edge. */
+.tour-halo {
+  position: absolute;
+  border-radius: 10px;
+  pointer-events: none;
+  border: 2px solid var(--primary);
+  box-shadow:
+    0 0 0 4px rgba(var(--primary-rgb), 0.24),
+    0 0 26px 4px rgba(var(--primary-rgb), 0.4);
+  animation: tour-breathe 2.1s ease-in-out infinite;
+  transition:
+    top 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    left 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    width 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    height 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes tour-breathe {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 3px rgba(var(--primary-rgb), 0.2),
+      0 0 20px 2px rgba(var(--primary-rgb), 0.32);
+  }
+  50% {
+    box-shadow:
+      0 0 0 8px rgba(var(--primary-rgb), 0.1),
+      0 0 34px 8px rgba(var(--primary-rgb), 0.46);
+  }
+}
+
+/* ── Card ─────────────────────────────────────────────── */
+.tour-card {
+  position: absolute;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px 18px 14px;
+  box-shadow:
+    0 1px 2px rgba(8, 13, 24, 0.1),
+    0 24px 60px -18px rgba(8, 13, 24, 0.45);
+  transition:
+    top 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    left 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  animation: tour-card-in 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* A thin gradient cap ties the card to the accent used on the halo. */
+.tour-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  border-radius: 14px 14px 0 0;
+  background: linear-gradient(90deg, var(--primary) 0%, var(--orange) 100%);
+}
+
+.tour-card.is-hero {
+  padding-top: 22px;
+}
+
+@keyframes tour-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.tour-arrow {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  transform: rotate(45deg);
+}
+
+.tour-arrow--top {
+  top: -7px;
+  left: 34px;
+  border-right: none;
+  border-bottom: none;
+}
+
+.tour-arrow--bottom {
+  bottom: -7px;
+  left: 34px;
+  border-left: none;
+  border-top: none;
+}
+
+.tour-arrow--left {
+  left: -7px;
+  top: 42px;
+  border-right: none;
+  border-top: none;
+}
+
+.tour-arrow--right {
+  right: -7px;
+  top: 42px;
+  border-left: none;
+  border-bottom: none;
+}
+
+.tour-card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.tour-badge {
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: linear-gradient(140deg, var(--primary) 0%, var(--primary-hover) 100%);
+  box-shadow: 0 6px 16px -6px rgba(var(--primary-rgb), 0.8);
+}
+
+.tour-badge svg {
+  width: 19px;
+  height: 19px;
+}
+
+.tour-card-heading {
+  flex: 1;
+  min-width: 0;
+}
+
+.tour-eyebrow {
+  display: block;
+  font-family: var(--font-data);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--primary);
+  margin-bottom: 3px;
+}
+
+.tour-card h3 {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.3;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.tour-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  padding: 4px;
+  border-radius: 50%;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.tour-close:hover {
+  background: var(--bg-base);
+  color: var(--text-main);
+}
+
+.tour-body {
+  margin: 12px 0 14px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.tour-progress {
+  height: 3px;
+  border-radius: 3px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.tour-progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--primary) 0%, var(--orange) 100%);
+  transition: width 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.tour-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.tour-dots {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.tour-dot {
+  width: 6px;
+  height: 6px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--border-strong);
+  cursor: pointer;
+  transition:
+    width 0.25s ease,
+    background 0.25s ease;
+}
+
+.tour-dot.is-done {
+  background: rgba(var(--primary-rgb), 0.45);
+}
+
+.tour-dot.is-active {
+  width: 18px;
+  border-radius: 3px;
+  background: var(--primary);
+}
+
+.tour-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tour-btn {
+  font-family: var(--font-main);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 7px 13px;
+  border-radius: 7px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.tour-btn-ghost {
+  background: none;
+  color: var(--text-muted);
+}
+
+.tour-btn-ghost:hover {
+  background: var(--bg-base);
+  color: var(--text-main);
+}
+
+.tour-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--primary);
+  color: #fff;
+  box-shadow: 0 4px 12px -4px rgba(var(--primary-rgb), 0.8);
+}
+
+.tour-btn-primary:hover {
+  background: var(--primary-hover);
+  transform: translateY(-1px);
+}
+
+.tour-btn-chev {
+  font-size: 15px;
+  line-height: 1;
+  transition: transform 0.15s ease;
+}
+
+.tour-btn-primary:hover .tour-btn-chev {
+  transform: translateX(2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tour-root,
+  .tour-scrim,
+  .tour-halo,
+  .tour-card,
+  .tour-progress-fill {
+    transition: none;
+    animation: none;
+  }
+}
+
+/* ── KEYBOARD SHORTCUTS ─────────────────────────────────
+   Shared by the Settings card and the Shift+? overlay. */
+.shortcuts-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.shortcuts-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.shortcuts-list li:last-child {
+  border-bottom: none;
+}
+
+.shortcut-desc {
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.shortcut-keys {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.shortcut-keys kbd {
+  font-family: var(--font-data);
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--text-main);
+  background: var(--bg-base);
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 4px 6px;
+  white-space: nowrap;
+}
+
+.shortcuts-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(8, 13, 24, 0.5);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  animation: tour-card-in 0.2s ease both;
+}
+
+.shortcuts-panel {
+  width: 100%;
+  max-width: 420px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: 0 24px 60px -18px rgba(8, 13, 24, 0.45);
+}
+
+.shortcuts-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.shortcuts-head h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-main);
+}

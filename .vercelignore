@@ -1,0 +1,41 @@
+# Vercel only builds the Vite frontend. Everything below is backend, research
+# or local tooling, and uploading it makes the build context orders of
+# magnitude larger for no benefit.
+.venv/
+.vercel_python_packages/
+__pycache__/
+*.pyc
+
+src/vrptw/
+src/backend/
+solver_service/
+scripts/
+tests/
+data/
+docs/
+logs/
+outputs/
+outputs_test/
+outputs_test2/
+output_*/
+results/
+scratch/
+elite_plans/
+web/
+vercel-static-deploy/
+
+*.safetensors
+*.pt
+*.pptx
+*.png
+*.csv
+uv.lock
+
+Dockerfile
+Dockerfile.*
+docker-compose.yml
+render.yaml
+requirements*.txt
+pyproject.toml
+Makefile
+*.sh

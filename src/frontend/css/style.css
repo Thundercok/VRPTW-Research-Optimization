@@ -88,6 +88,22 @@
   --shadow-lg: 0 2px 4px rgba(21, 26, 24, 0.05), 0 18px 40px -16px rgba(21, 26, 24, 0.16);
 }
 
+/* ── Form field tokens ─────────────────────────────────
+   Text fields used to borrow --rule-strong (#cbd5e1), which reads as a heavy
+   grey box around every input. Fields get their own, lighter scale: the
+   resting border is barely there, and weight is added only on hover/focus. */
+:root {
+  --field-bg: var(--surface);
+  --field-bg-hover: var(--surface);
+  --field-border: #eef2f7;
+  --field-border-hover: #dbe3ec;
+  --field-border-focus: var(--pine);
+  --field-text: var(--ink-soft);
+  --field-placeholder: #a8b3c2;
+  --field-ring: rgba(var(--primary-rgb), 0.14);
+  --field-shadow: inset 0 1px 1px rgba(15, 23, 42, 0.02);
+}
+
 /* ── Reset ────────────────────────────────────────────── */
 * {
   box-sizing: border-box;
@@ -297,6 +313,15 @@ body {
     --glass-border: rgba(30, 41, 59, 0.6);
     --primary-glow: rgba(56, 189, 248, 0.28);
 
+    --field-bg: rgba(148, 163, 184, 0.06);
+    --field-bg-hover: rgba(148, 163, 184, 0.1);
+    --field-border: rgba(148, 163, 184, 0.16);
+    --field-border-hover: rgba(148, 163, 184, 0.3);
+    --field-text: var(--ink);
+    --field-placeholder: #64748b;
+    --field-ring: rgba(56, 189, 248, 0.22);
+    --field-shadow: none;
+
     color-scheme: dark;
   }
 }
@@ -333,6 +358,15 @@ body {
   --glass-bg: rgba(15, 23, 42, 0.72);
   --glass-border: rgba(30, 41, 59, 0.6);
   --primary-glow: rgba(56, 189, 248, 0.28);
+
+  --field-bg: rgba(148, 163, 184, 0.06);
+  --field-bg-hover: rgba(148, 163, 184, 0.1);
+  --field-border: rgba(148, 163, 184, 0.16);
+  --field-border-hover: rgba(148, 163, 184, 0.3);
+  --field-text: var(--ink);
+  --field-placeholder: #64748b;
+  --field-ring: rgba(56, 189, 248, 0.22);
+  --field-shadow: none;
 
   color-scheme: dark;
 }
