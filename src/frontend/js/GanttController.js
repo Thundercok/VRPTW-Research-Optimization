@@ -114,17 +114,60 @@ export class GanttController {
       }
     });
 
+    // Redraw on theme flips — the canvas bakes in its colours, so unlike the
+    // CSS chrome around it, it cannot follow a token change on its own.
+    this.themeObserver = new MutationObserver(() => {
+      if (this.result && !this.panel.classList.contains('hidden')) {
+        this.draw();
+      }
+    });
+    this.themeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme'],
+    });
+
     // Create offscreen patterns for Travel and Wait fills
     this.createFillPatterns();
   }
 
-  createFillPatterns() {
+  /**
+   * Canvas2D rejects `var(--token)` outright — assigning one leaves the
+   * previous fillStyle in place, which is how driver names and axis ticks
+   * ended up painted in the same colour as their own background. Resolve the
+   * tokens to real values up front instead.
+   */
+  resolveTheme() {
+    const cs = getComputedStyle(document.documentElement);
+    const read = (name, fallback) => cs.getPropertyValue(name).trim() || fallback;
+
+    return {
+      textMain: read('--text-main', '#0f172a'),
+      textMuted: read('--text-muted', '#475569'),
+      border: read('--border', '#e2e8f0'),
+      laneBg: read('--surface-sunk', '#f1f5f9'),
+      surface: read('--bg-surface', '#ffffff'),
+      danger: read('--danger', '#dc2626'),
+      warning: read('--warning', '#d97706'),
+      hatch: read('--ink-faint', '#64748b'),
+    };
+  }
+
+  createFillPatterns(theme) {
+    const hatch = theme?.hatch || '#64748b';
+    const wait = theme?.warning || '#d97706';
+
+    // Regenerating on every frame would be wasteful during playback, so the
+    // patterns are rebuilt only when the palette behind them actually moves.
+    if (this._patternKey === `${hatch}|${wait}`) return;
+    this._patternKey = `${hatch}|${wait}`;
+
     // 1. Travel stripe pattern (45deg lines)
     this.travelPatternCanvas = document.createElement('canvas');
     this.travelPatternCanvas.width = 10;
     this.travelPatternCanvas.height = 10;
     const tCtx = this.travelPatternCanvas.getContext('2d');
-    tCtx.strokeStyle = 'rgba(100, 116, 139, 0.4)';
+    tCtx.strokeStyle = hatch;
+    tCtx.globalAlpha = 0.5;
     tCtx.lineWidth = 1.8;
     tCtx.beginPath();
     tCtx.moveTo(0, 10);
@@ -136,10 +179,20 @@ export class GanttController {
     this.waitPatternCanvas.width = 6;
     this.waitPatternCanvas.height = 6;
     const wCtx = this.waitPatternCanvas.getContext('2d');
-    wCtx.fillStyle = '#f59e0b';
+    wCtx.fillStyle = wait;
     wCtx.beginPath();
     wCtx.arc(3, 3, 1.2, 0, 2 * Math.PI);
     wCtx.fill();
+  }
+
+  /** Clips a lane label to the fixed-width label gutter. */
+  truncate(text, maxWidth) {
+    if (this.ctx.measureText(text).width <= maxWidth) return text;
+    let out = text;
+    while (out.length > 1 && this.ctx.measureText(`${out}…`).width > maxWidth) {
+      out = out.slice(0, -1);
+    }
+    return `${out}…`;
   }
 
   toggleCollapse() {
@@ -240,17 +293,19 @@ export class GanttController {
     const algoResult = this.result?.[this.activeAlgo];
     if (!algoResult || !algoResult.routes) return;
 
+    const theme = this.resolveTheme();
+    this.createFillPatterns(theme);
     const width = this.canvas.width / (window.devicePixelRatio || 1);
     const height = this.canvas.height / (window.devicePixelRatio || 1);
 
     this.ctx.clearRect(0, 0, width, height);
 
     // 1. Draw Grid lines & X-axis Header
-    this.ctx.fillStyle = '#f8fafc'; // light grid header
+    this.ctx.fillStyle = theme.laneBg;
     this.ctx.fillRect(LABEL_WIDTH, 0, width - LABEL_WIDTH, HEADER_HEIGHT);
 
     // Bottom border of axis header
-    this.ctx.strokeStyle = 'var(--border)';
+    this.ctx.strokeStyle = theme.border;
     this.ctx.lineWidth = 1;
     this.ctx.beginPath();
     this.ctx.moveTo(0, HEADER_HEIGHT);
@@ -261,16 +316,18 @@ export class GanttController {
       const x = LABEL_WIDTH + t * this.scaleX;
 
       // Vertical line
-      this.ctx.strokeStyle = 'rgba(228, 232, 240, 0.7)';
+      this.ctx.strokeStyle = theme.border;
+      this.ctx.globalAlpha = 0.7;
       this.ctx.lineWidth = 1;
       this.ctx.beginPath();
       this.ctx.moveTo(x, HEADER_HEIGHT);
       this.ctx.lineTo(x, height);
       this.ctx.stroke();
+      this.ctx.globalAlpha = 1;
 
       // Tick labels
-      this.ctx.fillStyle = 'var(--text-muted)';
-      this.ctx.font = '600 9.5px var(--font-main, sans-serif)';
+      this.ctx.fillStyle = theme.textMuted;
+      this.ctx.font = '600 9.5px Archivo, ui-sans-serif, system-ui, sans-serif';
       this.ctx.textAlign = 'center';
       this.ctx.textBaseline = 'middle';
       this.ctx.fillText(this.formatTime(t), x, HEADER_HEIGHT / 2);
@@ -284,7 +341,7 @@ export class GanttController {
       const barY = y + (ROW_HEIGHT - ROW_BAR_HEIGHT) / 2;
 
       // Row separator
-      this.ctx.strokeStyle = 'var(--border)';
+      this.ctx.strokeStyle = theme.border;
       this.ctx.lineWidth = 1;
       this.ctx.beginPath();
       this.ctx.moveTo(0, y + ROW_HEIGHT);
@@ -296,22 +353,26 @@ export class GanttController {
         this.app.state.fleet?.[route.vehicle_id] || this.app.state.fleet?.find((v) => v.id === route.vehicle_id);
       const driverName = fleetVehicle ? fleetVehicle.driver : `Driver #${route.vehicle_id + 1}`;
 
-      this.ctx.fillStyle = '#f8fafc'; // label block background
+      this.ctx.fillStyle = theme.laneBg; // label block background
       this.ctx.fillRect(0, y, LABEL_WIDTH, ROW_HEIGHT);
 
+      // Colour key tying the lane back to its route on the map
+      this.ctx.fillStyle = this.colorForRoute(idx);
+      this.ctx.fillRect(0, y + 7, 3, ROW_HEIGHT - 14);
+
       // Vertical border separating labels and timeline
-      this.ctx.strokeStyle = 'var(--border)';
+      this.ctx.strokeStyle = theme.border;
       this.ctx.lineWidth = 1;
       this.ctx.beginPath();
       this.ctx.moveTo(LABEL_WIDTH, y);
       this.ctx.lineTo(LABEL_WIDTH, y + ROW_HEIGHT);
       this.ctx.stroke();
 
-      this.ctx.fillStyle = 'var(--text-main)';
-      this.ctx.font = 'bold 11px var(--font-main, sans-serif)';
+      this.ctx.fillStyle = theme.textMain;
+      this.ctx.font = 'bold 11px Archivo, ui-sans-serif, system-ui, sans-serif';
       this.ctx.textAlign = 'left';
       this.ctx.textBaseline = 'middle';
-      this.ctx.fillText(driverName, 12, y + ROW_HEIGHT / 2);
+      this.ctx.fillText(this.truncate(driverName, LABEL_WIDTH - 26), 14, y + ROW_HEIGHT / 2);
 
       // Render Schedule Segments
       if (!route.schedule || route.schedule.length === 0) return;
@@ -362,7 +423,7 @@ export class GanttController {
           const w = waitDur * this.scaleX;
 
           // Light amber background
-          this.ctx.fillStyle = '#f59e0b';
+          this.ctx.fillStyle = theme.warning;
           this.ctx.globalAlpha = 0.12;
           this.ctx.fillRect(x, barY, w, ROW_BAR_HEIGHT);
 
@@ -407,7 +468,7 @@ export class GanttController {
           // Draw stop label inside if space fits
           const stopLabel = `#${step.customer_id}`;
           this.ctx.fillStyle = '#ffffff';
-          this.ctx.font = 'bold 8.5px var(--font-data, monospace)';
+          this.ctx.font = "bold 9px 'IBM Plex Mono', ui-monospace, monospace";
           this.ctx.textAlign = 'center';
           this.ctx.textBaseline = 'middle';
           const textWidth = this.ctx.measureText(stopLabel).width;
@@ -440,7 +501,7 @@ export class GanttController {
     if (this.simTime > 0) {
       const cursorX = LABEL_WIDTH + this.simTime * this.scaleX;
 
-      this.ctx.strokeStyle = '#dc2626'; // var(--danger)
+      this.ctx.strokeStyle = theme.danger;
       this.ctx.lineWidth = 1.5;
       this.ctx.setLineDash([3, 3]);
       this.ctx.beginPath();
@@ -450,7 +511,7 @@ export class GanttController {
       this.ctx.setLineDash([]); // reset
 
       // Cursor circle anchor
-      this.ctx.fillStyle = '#dc2626';
+      this.ctx.fillStyle = theme.danger;
       this.ctx.beginPath();
       this.ctx.arc(cursorX, HEADER_HEIGHT, 4.5, 0, 2 * Math.PI);
       this.ctx.fill();
@@ -558,6 +619,7 @@ export class GanttController {
   }
 
   destroy() {
+    if (this.themeObserver) this.themeObserver.disconnect();
     if (this.tooltip) this.tooltip.remove();
     if (this.panel) this.panel.remove();
   }

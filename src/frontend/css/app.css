@@ -813,6 +813,10 @@ body.demo-active .demo-badge {
   overflow: hidden;
   display: flex;
   position: relative;
+  /* The KPI strip, the pane chrome and the Gantt are all fixed height, so on a
+     short viewport the map was the only thing left to squeeze — it collapsed to
+     a sliver. It now keeps a working height and the view scrolls instead. */
+  min-height: 380px;
 }
 
 .pane {
@@ -845,41 +849,224 @@ body.demo-active .demo-badge {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* ── MAP PANE BAR ───────────────────────────────────────
+   The pane's only chrome row: solver overlays on the left, map tools on the
+   right. Keeping it to one row is what stops the header stack from eating the
+   map's height. */
+.map-algo-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 14px;
+  background: var(--bg-base);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+.map-algo-bar-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  padding-left: 10px;
+  border-left: 1px solid var(--border);
+}
+
+.map-algo-bar-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* A solved instance can add seven overlays. They scroll sideways instead of
+   wrapping the whole header into a three-line block. */
+.map-toggles-scroll {
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 8px, #000 calc(100% - 20px), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 8px, #000 calc(100% - 20px), transparent 100%);
+}
+
+.map-toggles-scroll::-webkit-scrollbar {
+  display: none;
 }
 
 /* Map view toggle pill */
 .map-toggles {
-  display: flex;
+  display: inline-flex;
   gap: 2px;
   background: var(--bg-surface);
   border: 1px solid var(--border);
   border-radius: var(--r-sm);
   padding: 2px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
+  width: max-content;
 }
 
 .map-toggles label {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 4px 11px;
-  border-radius: 4px;
+  padding: 5px 12px;
+  border-radius: 3px;
   cursor: pointer;
   color: var(--text-muted);
   transition: all 0.12s;
   user-select: none;
+  white-space: nowrap;
+  /* MapController re-renders these labels; keep them free of stale margins. */
+  margin: 0 !important;
+  font-size: 12px !important;
 }
 
 .map-toggles input[type='radio'] {
   display: none;
 }
 
+.map-toggles label:hover {
+  color: var(--text-main);
+  background: color-mix(in srgb, var(--text-main) 4%, transparent);
+}
+
 .map-toggles label:has(input:checked) {
-  background: var(--bg-base);
-  color: var(--primary);
+  background: var(--primary-soft);
+  color: var(--primary) !important;
   font-weight: 600;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 35%, transparent);
+}
+
+/* ── HEADER TOOLS ───────────────────────────────────── */
+.map-header-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 6px 12px;
+  font-size: 11.5px;
+  font-weight: 600;
+  font-family: var(--font-main);
+  color: var(--text-main);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+
+.map-header-btn:hover {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.driver-app-btn.is-open {
+  background: color-mix(in srgb, var(--success) 12%, transparent);
+  border-color: var(--success);
+  color: var(--success);
+}
+
+.driver-app-notif {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.driver-app-notif.is-visible {
+  display: inline-flex;
+}
+
+/* GNN heatmap switch — a real toggle rather than a bare checkbox, so it reads
+   as a mode you flip and matches the other pill-shaped controls. */
+.gnn-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px 5px 9px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--bg-surface);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+
+.gnn-toggle:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.gnn-toggle-input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.gnn-toggle-track {
+  position: relative;
+  width: 26px;
+  height: 15px;
+  border-radius: 8px;
+  background: var(--border-strong);
+  flex-shrink: 0;
+  transition: background 0.18s ease;
+}
+
+.gnn-toggle-track::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--bg-surface);
   box-shadow: var(--shadow-xs);
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.gnn-toggle:has(.gnn-toggle-input:checked) {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+.gnn-toggle-input:checked + .gnn-toggle-track {
+  background: var(--primary);
+}
+
+.gnn-toggle-input:checked + .gnn-toggle-track::after {
+  transform: translateX(11px);
+}
+
+.gnn-toggle-input:focus-visible + .gnn-toggle-track {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 .map-view {
@@ -930,7 +1117,9 @@ body.demo-active .demo-badge {
   width: 680px;
   max-width: calc(100% - 40px);
   height: calc(100% - 20px);
-  z-index: 900;
+  /* Above Leaflet's own control layer (1000), which otherwise punches its zoom
+     buttons and attribution through any drawer opened over the map. */
+  z-index: 1050;
   background: color-mix(in srgb, var(--bg-surface) 93%, transparent);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
@@ -994,30 +1183,13 @@ body.demo-active .demo-badge {
   border-color: var(--alert);
 }
 
-.drawer-toggle-btn {
-  display: flex;
+/* The manifest trigger now lives in the app header next to the dataset
+   picker; the map pane no longer carries a second copy. */
+.manifest-btn {
+  display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 5px 10px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r-sm);
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-main);
-  cursor: pointer;
-  transition: all 0.15s;
-  font-family: var(--font-main);
-}
-
-.drawer-toggle-btn:hover {
-  border-color: var(--primary);
-  color: var(--primary);
-  background: var(--primary-soft);
-}
-
-.drawer-toggle-icon {
-  font-size: 14px;
+  white-space: nowrap;
 }
 
 /* ── TABLE ──────────────────────────────────────────── */
@@ -1187,13 +1359,26 @@ body.demo-active .demo-badge {
   color: var(--text-main);
 }
 
+/* ── MAP OVERLAY GEOMETRY ───────────────────────────────
+   Three overlays share the map: the playback bar along the bottom, the driver
+   rail down the right, and the GNN legend. They used to be positioned
+   independently and landed on top of each other, so the offsets below are
+   derived from one set of tokens instead. */
+.pane-map-full {
+  --map-gutter: 14px;
+  --map-rail-w: 268px;
+  --map-bar-h: 52px;
+}
+
 /* ── SIMULATION CONTROL BAR ────────────────────────── */
 .sim-control-bar {
   position: absolute;
-  bottom: 16px;
-  left: 16px;
-  right: 16px;
+  bottom: var(--map-gutter);
+  left: var(--map-gutter);
+  /* Stops short of the driver rail rather than sliding underneath it. */
+  right: calc(var(--map-rail-w) + var(--map-gutter) * 2);
   z-index: 800;
+  flex-wrap: nowrap;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -1327,17 +1512,263 @@ body.demo-active .demo-badge {
 /* ── VEHICLE STATUS PANEL ───────────────────────────── */
 .sim-vehicle-panel {
   position: absolute;
-  top: 52px;
-  right: 8px;
+  /* Anchored top and bottom so it can never grow into the playback bar. */
+  top: var(--map-gutter);
+  bottom: var(--map-gutter);
+  right: var(--map-gutter);
   z-index: 800;
-  width: 270px;
-  max-height: calc(100% - 120px);
+  width: var(--map-rail-w);
   overflow-y: auto;
+  overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 8px;
+  padding-right: 2px;
   scrollbar-width: thin;
+}
+
+/* ── DRIVER RAIL TABS ───────────────────────────────── */
+.sim-panel-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  gap: 3px;
+  padding: 4px;
+  border-radius: var(--r);
+  background: color-mix(in srgb, var(--bg-surface) 88%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid color-mix(in srgb, var(--text-main) 10%, transparent);
+  box-shadow: var(--shadow-sm);
+  flex-shrink: 0;
+}
+
+.btn-sim-tab {
+  flex: 1;
+  border: none;
+  padding: 6px 8px;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-main);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+
+.btn-sim-tab:hover {
+  color: var(--text-main);
+  background: color-mix(in srgb, var(--text-main) 5%, transparent);
+}
+
+.btn-sim-tab.is-active {
+  background: var(--bg-surface);
+  color: var(--primary);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ── DRIVER CARD CHIPS ──────────────────────────────── */
+.sim-chip-focus {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: color-mix(in srgb, var(--text-main) 6%, transparent);
+  padding: 2px 6px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+.sim-skill-gap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--alert-wash);
+  color: var(--danger);
+  border: 1px solid color-mix(in srgb, var(--danger) 25%, transparent);
+  font-size: 10px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  padding: 4px 8px;
+  border-radius: var(--r-sm);
+}
+
+.sim-telemetry-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 10px;
+  color: var(--text-muted);
+  margin: 4px 0 6px;
+  padding-top: 5px;
+  border-top: 1px solid var(--border);
+}
+
+.sim-card-actions {
+  display: flex;
+  gap: 5px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border);
+}
+
+.btn-sim-incident {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  font-family: var(--font-main);
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 5px 6px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+
+.btn-sim-incident.incident-breakdown {
+  background: var(--alert-wash);
+  color: var(--danger);
+  border: 1px solid color-mix(in srgb, var(--danger) 25%, transparent);
+}
+
+.btn-sim-incident.incident-breakdown.is-active {
+  background: var(--danger);
+  color: #fff;
+}
+
+.btn-sim-incident.incident-traffic {
+  background: var(--warn-wash);
+  color: var(--warning);
+  border: 1px solid color-mix(in srgb, var(--warning) 25%, transparent);
+}
+
+.btn-sim-incident.incident-traffic.is-active {
+  background: var(--warning);
+  color: #fff;
+}
+
+.sim-panel-empty {
+  padding: 24px 16px;
+  font-size: 11px;
+  text-align: center;
+  color: var(--text-muted);
+  background: color-mix(in srgb, var(--bg-surface) 88%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+}
+
+/* ── GNN LEGEND ─────────────────────────────────────── */
+.gnn-legend-overlay {
+  position: absolute;
+  top: var(--map-gutter);
+  left: var(--map-gutter);
+  /* Below the manifest drawer (900) so opening the drawer covers it. */
+  z-index: 700;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 186px;
+  padding: 10px 13px;
+  background: color-mix(in srgb, var(--bg-surface) 90%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid color-mix(in srgb, var(--text-main) 10%, transparent);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-lg);
+  font-family: var(--font-main);
+  pointer-events: none;
+}
+
+.gnn-legend-title {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-main);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 5px;
+}
+
+.gnn-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+
+.gnn-legend-swatch {
+  flex-shrink: 0;
+  width: 15px;
+  border-radius: 1px;
+}
+
+.gnn-legend-swatch.high {
+  height: 4px;
+  background: var(--warning);
+}
+
+.gnn-legend-swatch.mid {
+  height: 2.5px;
+  background: var(--blue);
+}
+
+.gnn-legend-swatch.low {
+  height: 0;
+  border-top: 2px dashed var(--purple);
+}
+
+/* Leaflet's own controls sit bottom-right by default, straight on top of the
+   driver rail. Push them clear only while the simulation overlays are up. */
+.map-view.sim-active .leaflet-bottom.leaflet-right {
+  margin-right: calc(var(--map-rail-w) + var(--map-gutter));
+  margin-bottom: calc(var(--map-bar-h) + var(--map-gutter));
+}
+
+/* ── NARROW VIEWPORTS ───────────────────────────────── */
+@media (max-width: 1180px) {
+  .pane-map-full {
+    --map-rail-w: 224px;
+  }
+
+  /* The overlay scroller gives up its label first — the tools on the right are
+     the ones users reach for. */
+  .map-algo-bar-label {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .pane-map-full {
+    --map-rail-w: 0px;
+    --map-gutter: 10px;
+  }
+
+  /* No room for a side rail: the driver list drops below the playback bar and
+     the bar reclaims the full width. */
+  .sim-control-bar {
+    right: var(--map-gutter);
+  }
+
+  .sim-vehicle-panel {
+    top: auto;
+    bottom: calc(var(--map-bar-h) + var(--map-gutter) * 2);
+    left: var(--map-gutter);
+    right: var(--map-gutter);
+    width: auto;
+    max-height: 42%;
+  }
+
+  .map-view.sim-active .leaflet-bottom.leaflet-right {
+    margin-right: 0;
+  }
 }
 
 .sim-vehicle-card {
@@ -1989,11 +2420,14 @@ body.demo-active .demo-badge {
 }
 
 .loading-console {
-  max-height: 80px;
+  max-height: 96px;
   overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
+  align-items: stretch;
   gap: 4px;
+  overscroll-behavior: contain;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
 }
@@ -2008,6 +2442,10 @@ body.demo-active .demo-badge {
 }
 
 .loading-console-line {
+  /* Never let the flex container squeeze a line below its line box, otherwise
+     `overflow: hidden` clips the glyphs vertically once logs overflow. */
+  flex: 0 0 auto;
+  min-height: 1.4em;
   font-size: 11px;
   line-height: 1.4;
   color: var(--ok); /* Soft neon green/teal text */
@@ -2263,6 +2701,13 @@ body.demo-active .demo-badge {
   flex-direction: column;
   overflow: hidden;
   position: relative;
+}
+
+/* Dispatch is the one view whose blocks have hard minimums; let it scroll
+   rather than crush the map. */
+#view-dispatch {
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 .view-panel.hidden {
   display: none !important;
@@ -2838,16 +3283,18 @@ body.demo-active .demo-badge {
 
 /* ── PHONE EMULATOR STYLING ──────────────────────────── */
 .driver-app-mockup {
-  position: absolute;
-  bottom: 135px;
-  right: 20px;
+  /* Fixed, not absolute: the map pane clips its overflow, which used to cut
+     the bottom half of the handset off entirely. */
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
   width: 310px;
-  height: 490px;
+  height: min(490px, calc(100vh - 120px));
   background: var(--ink);
   border-radius: 38px;
   padding: 10px;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
-  z-index: 1001;
+  z-index: 1100;
   border: 4px solid var(--ink-soft);
   display: flex;
   flex-direction: column;
@@ -2906,7 +3353,8 @@ body.demo-active .demo-badge {
   width: 420px;
   max-width: calc(100% - 40px);
   height: calc(100% - 20px);
-  z-index: 900;
+  /* See `.manifest-drawer` — must clear Leaflet's control layer. */
+  z-index: 1050;
   background: color-mix(in srgb, var(--bg-surface) 93%, transparent);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
@@ -2927,7 +3375,7 @@ body.demo-active .demo-badge {
 }
 
 .playground-toggle-btn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
   background: var(--bg-surface);
@@ -2936,16 +3384,26 @@ body.demo-active .demo-badge {
   padding: 6px 12px;
   font-size: 11.5px;
   font-weight: 600;
+  font-family: var(--font-main);
   color: var(--text-main);
   cursor: pointer;
-  transition: all 0.2s;
+  white-space: nowrap;
+  transition: all 0.15s;
 }
 
-.playground-toggle-btn:hover,
-.playground-toggle-btn.active {
+.playground-toggle-btn:hover {
   background: var(--primary-soft);
   color: var(--primary);
   border-color: var(--primary);
+}
+
+/* Active reads as "this drawer is open", so it inverts rather than tinting —
+   otherwise it is indistinguishable from its own hover state. */
+.playground-toggle-btn.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(var(--primary-rgb), 0.25);
 }
 
 .violation-tag {

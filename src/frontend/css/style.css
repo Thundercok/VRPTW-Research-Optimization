@@ -458,31 +458,7 @@ body {
   right: 0;
 }
 
-.playground-toggle-btn {
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  color: var(--text-main);
-  font-size: 11px;
-  font-weight: 600;
-  padding: 6px 12px;
-  border-radius: var(--r);
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  transition: all 0.2s ease;
-}
-.playground-toggle-btn:hover {
-  background: var(--primary-soft);
-  border-color: var(--primary);
-  color: var(--primary);
-}
-.playground-toggle-btn.active {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: var(--surface);
-  box-shadow: none;
-}
+/* `.playground-toggle-btn` is styled once, in app.css. */
 
 .drawer-header {
   display: flex;
