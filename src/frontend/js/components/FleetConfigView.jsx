@@ -128,9 +128,7 @@ export default function FleetConfigView() {
       <div className="fleet-view-header">
         <div>
           <h2>{t('fleetMainTitle')}</h2>
-          <p className="section-desc">
-            {t('fleetMainDesc')}
-          </p>
+          <p className="section-desc">{t('fleetMainDesc')}</p>
         </div>
         <div className="fleet-actions-row">
           <button className="btn-primary" onClick={handleAddVehicle}>
@@ -173,9 +171,7 @@ export default function FleetConfigView() {
         <div className="kpi-card">
           <div className="kpi-title">{t('fleetKpiStatus')}</div>
           <div
-            className={`kpi-value ${
-              activeVehicles.length > 0 ? 'highlight-emerald' : 'text-danger'
-            }`}
+            className={`kpi-value ${activeVehicles.length > 0 ? 'highlight-emerald' : 'text-danger'}`}
             style={{ fontWeight: 700 }}
           >
             {activeVehicles.length > 0 ? t('fleetReady') : t('fleetNoVehicles')}
@@ -186,17 +182,11 @@ export default function FleetConfigView() {
         </div>
       </section>
 
-      <div
-        className="saas-card"
-        style={{
-          marginTop: '16px',
-          overflow: 'auto',
-          flex: 1,
-          border: '1px solid var(--border)',
-          borderRadius: 'var(--r)',
-        }}
-      >
-        <table className="saas-table fleet-config-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+      {/* The scroll container carries no padding and no hover transform: the
+          sticky header docks to the top of *this* box, so anything between it
+          and the table edge would show through as the rows scroll past. */}
+      <div className="fleet-table-scroll">
+        <table className="saas-table fleet-config-table">
           <thead>
             <tr>
               <th style={{ width: '60px' }}>ID</th>
