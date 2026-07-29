@@ -3988,9 +3988,9 @@ export class App {
 
     this.mapController.initSimulation(result);
 
-    // Dynamic map view radios in the DOM
-    const toggleContainer = document.querySelector('.map-toggles');
-    if (toggleContainer) {
+    // Dynamic map view options in the KPI strip's overlay dropdown
+    const overlaySelect = document.getElementById('map-view-select');
+    if (overlaySelect) {
       const labels = {
         ddqn: 'Hybrid DDQN (Transfer)',
         alns: 'ALNS Base',
@@ -4002,21 +4002,22 @@ export class App {
       };
 
       let html = '';
-      const currentSelected = this.mapController.currentView || 'ddqn';
+      const algoNames = Object.keys(result);
+      const current = this.mapController.currentView;
+      const currentSelected = algoNames.includes(current) ? current : algoNames[0];
 
-      Object.keys(result).forEach((algoName) => {
-        const isChecked = algoName === currentSelected ? 'checked' : '';
+      algoNames.forEach((algoName) => {
         const label = labels[algoName] || algoName;
-        html += `<label><input type="radio" name="map_view" value="${algoName}" ${isChecked} /> ${label}</label>`;
+        html += `<option value="${algoName}">${label}</option>`;
       });
-      toggleContainer.innerHTML = html;
+      overlaySelect.innerHTML = html;
+      overlaySelect.value = currentSelected;
 
-      const radios = toggleContainer.querySelectorAll('input[name="map_view"]');
-      radios.forEach((radio) => {
-        radio.addEventListener('change', (e) => {
-          this.mapController.switchView(e.target.value);
-        });
-      });
+      // Assigned rather than added: the select survives re-renders, so stacking
+      // listeners here would fire switchView once per past solve.
+      overlaySelect.onchange = (e) => {
+        this.mapController.switchView(e.target.value);
+      };
     }
 
     const initialView = result.ddqn ? 'ddqn' : Object.keys(result)[0];

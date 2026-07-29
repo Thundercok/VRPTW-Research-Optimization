@@ -705,16 +705,20 @@ body.demo-active .demo-badge {
 }
 
 /* ── KPI ROW ── */
+/* Four metrics plus the map-controls cell. The metric columns stay equal; the
+   controls cell takes what it needs so the dropdown and the three map surfaces
+   sit on one line. */
 .kpi-row {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(0, auto);
   background: var(--bg-surface);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
 
+/* Deliberately short: every pixel saved here goes to the map below. */
 .kpi-card {
-  padding: 14px 20px;
+  padding: 8px 16px 9px;
   border-right: 1px solid var(--border);
   transition: background 0.12s;
   position: relative;
@@ -740,22 +744,22 @@ body.demo-active .demo-badge {
 }
 
 .kpi-title {
-  font-size: 10px;
+  font-size: 9.5px;
   text-transform: uppercase;
   letter-spacing: 0.07em;
   color: var(--text-muted);
   font-weight: 600;
-  margin-bottom: 7px;
+  margin-bottom: 5px;
 }
 
 .kpi-value {
   font-family: var(--font-data);
-  font-size: 24px;
+  font-size: 19px;
   font-weight: 500;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
   color: var(--text-main);
-  margin-bottom: 3px;
+  margin-bottom: 0;
   line-height: 1;
 }
 
@@ -764,7 +768,7 @@ body.demo-active .demo-badge {
 }
 
 .kpi-sub {
-  font-size: 10.5px;
+  font-size: 9.5px;
   color: var(--text-muted);
   margin-top: 2px;
 }
@@ -800,10 +804,41 @@ body.demo-active .demo-badge {
 
 .kpi-split strong {
   font-family: var(--font-data);
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 500;
   font-variant-numeric: tabular-nums;
   color: var(--text-main);
+}
+
+/* ── MAP CONTROLS CELL ──────────────────────────────────
+   The fifth KPI cell. Holds the overlay dropdown and the three map surfaces
+   that used to sit in a separate bar above the map. */
+.kpi-card-tools {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border-right: none;
+  border-left: 1px solid var(--border);
+  background: var(--bg-base);
+}
+
+.kpi-card-tools:hover {
+  background: var(--bg-base);
+}
+
+.kpi-tools-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* The overlay picker sits in the header next to the dataset select and wears
+   the same .saas-select chrome; it only needs a width cap so a long algorithm
+   name can't shove the fleet controls off the row. */
+.map-overlay-select {
+  max-width: 200px;
+  text-overflow: ellipsis;
 }
 
 /* ── WORKSPACE ──────────────────────────────────────── */
@@ -852,102 +887,9 @@ body.demo-active .demo-badge {
   white-space: nowrap;
 }
 
-/* ── MAP PANE BAR ───────────────────────────────────────
-   The pane's only chrome row: solver overlays on the left, map tools on the
-   right. Keeping it to one row is what stops the header stack from eating the
-   map's height. */
-.map-algo-bar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 7px 14px;
-  background: var(--bg-base);
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-  min-width: 0;
-}
-
-.map-algo-bar-tools {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-  padding-left: 10px;
-  border-left: 1px solid var(--border);
-}
-
-.map-algo-bar-label {
-  font-size: 9.5px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.09em;
-  color: var(--text-muted);
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-/* A solved instance can add seven overlays. They scroll sideways instead of
-   wrapping the whole header into a three-line block. */
-.map-toggles-scroll {
-  flex: 1;
-  min-width: 0;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: none;
-  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 8px, #000 calc(100% - 20px), transparent 100%);
-  mask-image: linear-gradient(to right, transparent 0, #000 8px, #000 calc(100% - 20px), transparent 100%);
-}
-
-.map-toggles-scroll::-webkit-scrollbar {
-  display: none;
-}
-
-/* Map view toggle pill */
-.map-toggles {
-  display: inline-flex;
-  gap: 2px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r-sm);
-  padding: 2px;
-  font-size: 12px;
-  font-weight: 500;
-  width: max-content;
-}
-
-.map-toggles label {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 5px 12px;
-  border-radius: 3px;
-  cursor: pointer;
-  color: var(--text-muted);
-  transition: all 0.12s;
-  user-select: none;
-  white-space: nowrap;
-  /* MapController re-renders these labels; keep them free of stale margins. */
-  margin: 0 !important;
-  font-size: 12px !important;
-}
-
-.map-toggles input[type='radio'] {
-  display: none;
-}
-
-.map-toggles label:hover {
-  color: var(--text-main);
-  background: color-mix(in srgb, var(--text-main) 4%, transparent);
-}
-
-.map-toggles label:has(input:checked) {
-  background: var(--primary-soft);
-  color: var(--primary) !important;
-  font-weight: 600;
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 35%, transparent);
-}
-
-/* ── HEADER TOOLS ───────────────────────────────────── */
+/* ── MAP TOOLS ──────────────────────────────────────────
+   These controls now live in the KPI strip's last cell (.kpi-card-tools); the
+   map pane itself carries no chrome row. */
 .map-header-btn {
   display: inline-flex;
   align-items: center;
@@ -955,7 +897,7 @@ body.demo-active .demo-badge {
   background: var(--bg-surface);
   border: 1px solid var(--border);
   border-radius: var(--r-sm);
-  padding: 6px 12px;
+  padding: 5px 10px;
   font-size: 11.5px;
   font-weight: 600;
   font-family: var(--font-main);
@@ -1001,8 +943,8 @@ body.demo-active .demo-badge {
 .gnn-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 5px 12px 5px 9px;
+  gap: 7px;
+  padding: 4px 10px 4px 8px;
   border: 1px solid var(--border);
   border-radius: var(--r-sm);
   background: var(--bg-surface);
@@ -1079,22 +1021,11 @@ body.demo-active .demo-badge {
   font-family: var(--font-main) !important;
 }
 
+/* The +/- buttons are gone — scroll wheel, pinch and double-click still zoom.
+   Belt-and-braces with `zoomControl: false` in MapController, in case a plugin
+   adds one back. */
 .leaflet-control-zoom {
-  border: 1px solid var(--border) !important;
-  border-radius: var(--r-sm) !important;
-  box-shadow: var(--shadow-sm) !important;
-  overflow: hidden;
-}
-
-.leaflet-control-zoom a {
-  background: var(--bg-surface) !important;
-  color: var(--text-muted) !important;
-  border-bottom: 1px solid var(--border) !important;
-}
-
-.leaflet-control-zoom a:hover {
-  background: var(--primary-soft) !important;
-  color: var(--primary) !important;
+  display: none !important;
 }
 
 .leaflet-popup-content-wrapper {
@@ -1738,10 +1669,16 @@ body.demo-active .demo-badge {
     --map-rail-w: 224px;
   }
 
-  /* The overlay scroller gives up its label first — the tools on the right are
-     the ones users reach for. */
-  .map-algo-bar-label {
+  /* The controls cell drops its button captions before it wraps — the icons
+     stay tappable and the KPI strip stays one row tall. */
+  .kpi-card-tools .map-header-btn span:not([aria-hidden]):not(.driver-app-notif),
+  .kpi-card-tools .playground-toggle-btn span:not([aria-hidden]),
+  .kpi-card-tools .gnn-toggle-text {
     display: none;
+  }
+
+  .map-overlay-select {
+    max-width: 150px;
   }
 }
 
@@ -1749,6 +1686,18 @@ body.demo-active .demo-badge {
   .pane-map-full {
     --map-rail-w: 0px;
     --map-gutter: 10px;
+  }
+
+  /* Metrics stack two-up and the controls cell takes the full width below
+     them, rather than squeezing five columns into a phone. */
+  .kpi-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .kpi-card-tools {
+    grid-column: 1 / -1;
+    border-left: none;
+    border-top: 1px solid var(--border);
   }
 
   /* No room for a side rail: the driver list drops below the playback bar and
@@ -2369,14 +2318,18 @@ body.demo-active .demo-badge {
 }
 
 /* Monospace Live Console Feed */
+/* A recessed log panel on the card's own palette. It used to be a black
+   terminal with neon-green text: the only inverted surface in the product, and
+   because it painted `var(--ink)` on `var(--ok)` it turned white-on-mint —
+   effectively invisible — under the dark theme. */
 .loading-console-wrapper {
   margin-top: 4px;
   margin-bottom: 20px;
   border-radius: var(--r-md, 8px);
-  border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
-  background: var(--ink); /* terminal */
+  border: 1px solid var(--border);
+  background: var(--surface-sunk);
   padding: 10px 14px;
-  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.4);
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.03);
   font-family: var(--font-data), Monaco, Consolas, monospace;
 }
 
@@ -2386,7 +2339,7 @@ body.demo-active .demo-badge {
   align-items: center;
   margin-bottom: 6px;
   padding-bottom: 4px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--border);
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -2429,7 +2382,7 @@ body.demo-active .demo-badge {
   gap: 4px;
   overscroll-behavior: contain;
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+  scrollbar-color: var(--border-strong) transparent;
 }
 
 .loading-console::-webkit-scrollbar {
@@ -2437,7 +2390,7 @@ body.demo-active .demo-badge {
 }
 
 .loading-console::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--border-strong);
   border-radius: 2px;
 }
 
@@ -2448,16 +2401,38 @@ body.demo-active .demo-badge {
   min-height: 1.4em;
   font-size: 11px;
   line-height: 1.4;
-  color: var(--ok); /* Soft neon green/teal text */
+  color: var(--text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   animation: console-fade-in 0.22s ease-out forwards;
 }
 
+/* Log lines read as a list, so each carries a marker and the newest one is
+   promoted — that is the step actually running. */
+.loading-console-line::before {
+  content: '›';
+  margin-right: 8px;
+  color: var(--primary);
+  opacity: 0.65;
+}
+
+.loading-console-line:last-child {
+  color: var(--text-main);
+  font-weight: 500;
+}
+
+.loading-console-line:last-child::before {
+  opacity: 1;
+}
+
 .loading-console-line.placeholder {
   color: var(--text-muted);
   font-style: italic;
+}
+
+.loading-console-line.placeholder::before {
+  content: none;
 }
 
 @keyframes console-fade-in {
@@ -2529,9 +2504,12 @@ body.demo-active .demo-badge {
 }
 
 /* ── TOAST NOTIFICATIONS ───────────────────────────── */
+/* Anchored bottom-right: the top-right corner belongs to the header controls,
+   and toasts landing there covered the dataset and overlay pickers. Newest
+   toast sits closest to the corner and pushes older ones upward. */
 .toast-root {
   position: fixed;
-  top: 16px;
+  bottom: 16px;
   right: 16px;
   z-index: 10000;
   display: flex;
@@ -3381,7 +3359,7 @@ body.demo-active .demo-badge {
   background: var(--bg-surface);
   border: 1px solid var(--border);
   border-radius: var(--r-sm);
-  padding: 6px 12px;
+  padding: 5px 10px;
   font-size: 11.5px;
   font-weight: 600;
   font-family: var(--font-main);

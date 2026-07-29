@@ -98,10 +98,10 @@ export class GanttController {
     const select = this.panel.querySelector('#gantt-select-algo');
     select.addEventListener('change', (e) => {
       const selectedAlgo = e.target.value;
-      const radio = document.querySelector(`input[name="map_view"][value="${selectedAlgo}"]`);
-      if (radio) {
-        radio.checked = true;
-        radio.dispatchEvent(new Event('change'));
+      const overlaySelect = document.getElementById('map-view-select');
+      if (overlaySelect) {
+        overlaySelect.value = selectedAlgo;
+        overlaySelect.dispatchEvent(new Event('change'));
       }
     });
 
@@ -542,7 +542,7 @@ export class GanttController {
 
       if (hovered.type === 'travel') {
         html += `
-          <div class="gantt-tooltip-row"><span class="gantt-tooltip-label">Activity:</span><span class="gantt-tooltip-value">🚚 Traveling</span></div>
+          <div class="gantt-tooltip-row"><span class="gantt-tooltip-label">Activity:</span><span class="gantt-tooltip-value is-travel">🚚 Traveling</span></div>
           <div class="gantt-tooltip-row"><span class="gantt-tooltip-label">Heading:</span><span class="gantt-tooltip-value">${hovered.data.destination}</span></div>
           <div class="gantt-tooltip-row"><span class="gantt-tooltip-label">Depart:</span><span class="gantt-tooltip-value">${this.formatClockTime(hovered.data.from)}</span></div>
           <div class="gantt-tooltip-row"><span class="gantt-tooltip-label">Arrive:</span><span class="gantt-tooltip-value">${this.formatClockTime(hovered.data.to)}</span></div>
@@ -550,7 +550,7 @@ export class GanttController {
         `;
       } else if (hovered.type === 'wait') {
         html += `
-          <div class="gantt-tooltip-row"><span class="gantt-tooltip-label">Activity:</span><span class="gantt-tooltip-value" style="color:#f59e0b">⏳ Waiting</span></div>
+          <div class="gantt-tooltip-row"><span class="gantt-tooltip-label">Activity:</span><span class="gantt-tooltip-value is-wait">⏳ Waiting</span></div>
           <div class="gantt-tooltip-row"><span class="gantt-tooltip-label">Location:</span><span class="gantt-tooltip-value">${hovered.data.stopName}</span></div>
           <div class="gantt-tooltip-row"><span class="gantt-tooltip-label">Arrived:</span><span class="gantt-tooltip-value">${this.formatClockTime(hovered.data.from)}</span></div>
           <div class="gantt-tooltip-row"><span class="gantt-tooltip-label">Start Work:</span><span class="gantt-tooltip-value">${this.formatClockTime(hovered.data.to)}</span></div>
@@ -558,7 +558,7 @@ export class GanttController {
         `;
       } else if (hovered.type === 'service') {
         html += `
-          <div class="gantt-tooltip-row"><span class="gantt-tooltip-label">Activity:</span><span class="gantt-tooltip-value" style="color:var(--success)">🔧 Dropoff/Service</span></div>
+          <div class="gantt-tooltip-row"><span class="gantt-tooltip-label">Activity:</span><span class="gantt-tooltip-value is-service">🔧 Dropoff/Service</span></div>
           <div class="gantt-tooltip-row"><span class="gantt-tooltip-label">Customer:</span><span class="gantt-tooltip-value">#${hovered.data.customerId} - ${hovered.data.stopName}</span></div>
           <div class="gantt-tooltip-row"><span class="gantt-tooltip-label">Start:</span><span class="gantt-tooltip-value">${this.formatClockTime(hovered.data.from)}</span></div>
           <div class="gantt-tooltip-row"><span class="gantt-tooltip-label">Complete:</span><span class="gantt-tooltip-value">${this.formatClockTime(hovered.data.to)}</span></div>

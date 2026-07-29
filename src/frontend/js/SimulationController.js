@@ -43,12 +43,9 @@ export class SimulationController {
       this.speed = Number(e.target.value) || 10;
     });
 
-    // Sync radio buttons to update simulation layers immediately
-    const mapToggles = document.querySelectorAll('input[name="map_view"]');
-    mapToggles.forEach((radio) => {
-      radio.addEventListener('change', () => {
-        this.updateFrame();
-      });
+    // Follow the overlay dropdown so simulation layers redraw immediately
+    document.getElementById('map-view-select')?.addEventListener('change', () => {
+      this.updateFrame();
     });
 
     // Toggle driver app companion
@@ -324,11 +321,15 @@ export class SimulationController {
     }
   }
 
+  /** Overlay currently picked in the KPI strip's dropdown (ddqn, alns, …). */
+  getActiveAlgo() {
+    return document.getElementById('map-view-select')?.value || 'ddqn';
+  }
+
   getRouteForVehicle(vehicleId) {
     const result = this.app.state.lastResult;
     if (!result) return null;
-    const mapModeElement = document.querySelector('input[name="map_view"]:checked');
-    const activeAlgo = mapModeElement ? mapModeElement.value : 'ddqn';
+    const activeAlgo = this.getActiveAlgo();
     const algoResult = result[activeAlgo];
     if (!algoResult || !algoResult.routes) return null;
     return algoResult.routes.find((r) => r.vehicle_id === Number(vehicleId));
@@ -344,8 +345,7 @@ export class SimulationController {
     if (!result) return;
 
     // Determine current view (e.g. ddqn, alns, ortools, etc.)
-    const mapModeElement = document.querySelector('input[name="map_view"]:checked');
-    const activeAlgo = mapModeElement ? mapModeElement.value : 'ddqn';
+    const activeAlgo = this.getActiveAlgo();
     const algoResult = result[activeAlgo];
 
     if (!algoResult || !algoResult.routes) return;
@@ -849,8 +849,7 @@ export class SimulationController {
 
     const result = this.app.state.lastResult;
     if (!result) return;
-    const mapModeElement = document.querySelector('input[name="map_view"]:checked');
-    const activeAlgo = mapModeElement ? mapModeElement.value : 'ddqn';
+    const activeAlgo = this.getActiveAlgo();
     const algoResult = result[activeAlgo];
     if (!algoResult || !algoResult.routes) return;
 
@@ -884,8 +883,7 @@ export class SimulationController {
 
     const result = this.app.state.lastResult;
     if (!result) return;
-    const mapModeElement = document.querySelector('input[name="map_view"]:checked');
-    const activeAlgo = mapModeElement ? mapModeElement.value : 'ddqn';
+    const activeAlgo = this.getActiveAlgo();
     const algoResult = result[activeAlgo];
     if (!algoResult || !algoResult.routes) return;
 
