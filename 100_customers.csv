@@ -1,0 +1,102 @@
+name,address,demand,ready,due,service
+Kho - ĐH Tôn Đức Thắng,"19 Nguyễn Hữu Thọ, Phường Tân Hưng, TP.HCM",0,0,1440,0
+Khách hàng 1,"12 Nguyễn Huệ, Quận 1, TP.HCM",20,480,600,10
+Khách hàng 2,"45 Lê Lợi, Quận 1, TP.HCM",12,510,630,10
+Khách hàng 3,"55 Tôn Đức Thắng, Quận 1, TP.HCM",21,480,570,10
+Khách hàng 4,"100 Võ Văn Kiệt, Quận 1, TP.HCM",11,600,750,10
+Khách hàng 5,"220 Hai Bà Trưng, Quận 1, TP.HCM",15,660,810,10
+Khách hàng 6,"35 Mạc Đĩnh Chi, Quận 1, TP.HCM",10,510,630,10
+Khách hàng 7,"120 Nguyễn Thái Học, Quận 1, TP.HCM",17,780,930,10
+Khách hàng 8,"85 Trần Hưng Đạo, Quận 1, TP.HCM",14,840,1020,10
+Khách hàng 9,"160 Pasteur, Quận 3, TP.HCM",18,480,570,10
+Khách hàng 10,"250 Võ Thị Sáu, Quận 3, TP.HCM",12,630,780,10
+Khách hàng 11,"75 Nguyễn Đình Chiểu, Quận 3, TP.HCM",9,570,720,10
+Khách hàng 12,"90 Nguyễn Thị Minh Khai, Quận 3, TP.HCM",10,540,660,10
+Khách hàng 13,"280 Nam Kỳ Khởi Nghĩa, Quận 3, TP.HCM",23,780,960,10
+Khách hàng 14,"110 Cao Thắng, Quận 3, TP.HCM",16,660,840,10
+Khách hàng 15,"227 Nguyễn Văn Cừ, Quận 5, TP.HCM",19,510,660,10
+Khách hàng 16,"90 Hồng Bàng, Quận 5, TP.HCM",8,840,990,10
+Khách hàng 17,"350 Trần Hưng Đạo, Quận 5, TP.HCM",22,510,630,10
+Khách hàng 18,"180 An Dương Vương, Quận 5, TP.HCM",16,540,720,10
+Khách hàng 19,"50 Hùng Vương, Quận 5, TP.HCM",10,840,960,10
+Khách hàng 20,"130 Hải Thượng Lãn Ông, Quận 5, TP.HCM",13,600,750,10
+Khách hàng 21,"200 Nguyễn Trãi, Quận 5, TP.HCM",18,690,870,10
+Khách hàng 22,"75 Châu Văn Liêm, Quận 5, TP.HCM",7,900,1020,10
+Khách hàng 23,"300 Nguyễn Thị Thập, Quận 7, TP.HCM",18,600,720,10
+Khách hàng 24,"75 Nguyễn Văn Linh, Quận 7, TP.HCM",18,660,810,10
+Khách hàng 25,"420 Huỳnh Tấn Phát, Quận 7, TP.HCM",20,810,990,10
+Khách hàng 26,"180 Nguyễn Hữu Thọ, Quận 7, TP.HCM",11,480,630,10
+Khách hàng 27,"85 Hoàng Quốc Việt, Quận 7, TP.HCM",15,540,690,10
+Khách hàng 28,"320 Lê Văn Lương, Quận 7, TP.HCM",24,780,930,10
+Khách hàng 29,"120 Lâm Văn Bền, Quận 7, TP.HCM",9,870,1020,10
+Khách hàng 30,"40 Đường số 41, Quận 7, TP.HCM",13,510,660,10
+Khách hàng 31,"180 Cao Lỗ, Quận 8, TP.HCM",14,570,750,10
+Khách hàng 32,"200 Phạm Hùng, Quận 8, TP.HCM",14,600,720,10
+Khách hàng 33,"50 Bến Bình Đông, Quận 8, TP.HCM",13,840,990,10
+Khách hàng 34,"350 Tạ Quang Bửu, Quận 8, TP.HCM",21,480,630,10
+Khách hàng 35,"125 Dương Bá Trạc, Quận 8, TP.HCM",10,660,780,10
+Khách hàng 36,"260 Phạm Thế Hiển, Quận 8, TP.HCM",17,810,960,10
+Khách hàng 37,"480 Cách Mạng Tháng Tám, Quận 10, TP.HCM",21,780,930,10
+Khách hàng 38,"88 Thành Thái, Quận 10, TP.HCM",14,600,720,10
+Khách hàng 39,"120 Đường 3 Tháng 2, Quận 10, TP.HCM",17,540,690,10
+Khách hàng 40,"200 Nguyễn Tri Phương, Quận 10, TP.HCM",13,660,840,10
+Khách hàng 41,"220 Lý Thường Kiệt, Quận 10, TP.HCM",13,660,780,10
+Khách hàng 42,"150 Tô Hiến Thành, Quận 10, TP.HCM",20,510,630,10
+Khách hàng 43,"65 Sư Vạn Hạnh, Quận 10, TP.HCM",8,870,1020,10
+Khách hàng 44,"300 Điện Biên Phủ, Bình Thạnh, TP.HCM",15,540,690,10
+Khách hàng 45,"450 Phan Văn Trị, Bình Thạnh, TP.HCM",17,810,990,10
+Khách hàng 46,"320 Xô Viết Nghệ Tĩnh, Bình Thạnh, TP.HCM",19,600,780,10
+Khách hàng 47,"90 Nguyễn Hữu Cảnh, Bình Thạnh, TP.HCM",12,480,600,10
+Khách hàng 48,"180 Bạch Đằng, Bình Thạnh, TP.HCM",10,840,960,10
+Khách hàng 49,"240 Nơ Trang Long, Bình Thạnh, TP.HCM",22,690,870,10
+Khách hàng 50,"70 Ung Văn Khiêm, Bình Thạnh, TP.HCM",14,570,720,10
+Khách hàng 51,"80 Phan Xích Long, Phú Nhuận, TP.HCM",7,900,1020,10
+Khách hàng 52,"65 Hoàng Văn Thụ, Phú Nhuận, TP.HCM",19,540,690,10
+Khách hàng 53,"720 Nguyễn Kiệm, Phú Nhuận, TP.HCM",15,540,660,10
+Khách hàng 54,"130 Huỳnh Văn Bánh, Phú Nhuận, TP.HCM",12,510,630,10
+Khách hàng 55,"119 Phan Xích Long, Phú Nhuận, TP.HCM",18,660,840,10
+Khách hàng 56,"95 Đào Duy Anh, Phú Nhuận, TP.HCM",9,810,990,10
+Khách hàng 57,"120 Cộng Hòa, Tân Bình, TP.HCM",25,660,840,10
+Khách hàng 58,"250 Lạc Long Quân, Tân Bình, TP.HCM",20,480,660,10
+Khách hàng 59,"80 Trường Chinh, Tân Bình, TP.HCM",14,690,840,10
+Khách hàng 60,"300 Hoàng Hoa Thám, Tân Bình, TP.HCM",9,780,960,10
+Khách hàng 61,"160 Âu Cơ, Tân Bình, TP.HCM",16,540,690,10
+Khách hàng 62,"90 Bàu Cát, Tân Bình, TP.HCM",11,840,1020,10
+Khách hàng 63,"220 Lý Thường Kiệt, Tân Bình, TP.HCM",18,510,630,10
+Khách hàng 64,"30 Nguyễn Sơn, Tân Phú, TP.HCM",18,780,960,10
+Khách hàng 65,"350 Tân Kỳ Tân Quý, Tân Phú, TP.HCM",17,540,690,10
+Khách hàng 66,"200 Lũy Bán Bích, Tân Phú, TP.HCM",13,630,780,10
+Khách hàng 67,"120 Thoại Ngọc Hầu, Tân Phú, TP.HCM",8,840,990,10
+Khách hàng 68,"480 Âu Cơ, Tân Phú, TP.HCM",21,480,630,10
+Khách hàng 69,"75 Vườn Lài, Tân Phú, TP.HCM",15,660,840,10
+Khách hàng 70,"500 Quang Trung, Gò Vấp, TP.HCM",22,810,990,10
+Khách hàng 71,"10 Nguyễn Oanh, Gò Vấp, TP.HCM",17,840,1020,10
+Khách hàng 72,"398 Nguyễn Văn Nghi, Gò Vấp, TP.HCM",11,600,750,10
+Khách hàng 73,"250 Lê Đức Thọ, Gò Vấp, TP.HCM",18,840,1020,10
+Khách hàng 74,"180 Phan Huy Ích, Gò Vấp, TP.HCM",20,510,660,10
+Khách hàng 75,"90 Nguyễn Văn Lượng, Gò Vấp, TP.HCM",14,570,720,10
+Khách hàng 76,"350 Thống Nhất, Gò Vấp, TP.HCM",9,780,930,10
+Khách hàng 77,"25 Trần Não, TP. Thủ Đức, TP.HCM",16,510,660,10
+Khách hàng 78,"400 Phạm Văn Đồng, TP. Thủ Đức, TP.HCM",9,780,930,10
+Khách hàng 79,"110 Quốc Hương, TP. Thủ Đức, TP.HCM",10,780,900,10
+Khách hàng 80,"250 Xa lộ Hà Nội, TP. Thủ Đức, TP.HCM",23,510,690,10
+Khách hàng 81,"120 Kha Vạn Cân, TP. Thủ Đức, TP.HCM",16,570,750,10
+Khách hàng 82,"Vincom Thủ Đức, TP. Thủ Đức, TP.HCM",8,780,900,10
+Khách hàng 83,"360 Võ Nguyên Giáp, TP. Thủ Đức, TP.HCM",20,480,630,10
+Khách hàng 84,"150 Đỗ Xuân Hợp, TP. Thủ Đức, TP.HCM",14,660,810,10
+Khách hàng 85,"75 Nguyễn Duy Trinh, TP. Thủ Đức, TP.HCM",19,840,1020,10
+Khách hàng 86,"220 Lê Văn Việt, TP. Thủ Đức, TP.HCM",11,540,690,10
+Khách hàng 87,"500 Nguyễn Xiển, TP. Thủ Đức, TP.HCM",24,780,960,10
+Khách hàng 88,"80 Tô Ngọc Vân, TP. Thủ Đức, TP.HCM",13,600,750,10
+Khách hàng 89,"150 Nguyễn Ảnh Thủ, Quận 12, TP.HCM",18,510,660,10
+Khách hàng 90,"400 Lê Văn Khương, Quận 12, TP.HCM",22,810,990,10
+Khách hàng 91,"230 Hà Huy Giáp, Quận 12, TP.HCM",15,570,750,10
+Khách hàng 92,"75 Tô Ký, Quận 12, TP.HCM",10,840,1020,10
+Khách hàng 93,"300 Quốc lộ 1A, Bình Tân, TP.HCM",25,480,660,10
+Khách hàng 94,"120 Tên Lửa, Bình Tân, TP.HCM",17,690,840,10
+Khách hàng 95,"Aeon Mall Bình Tân, Bình Tân, TP.HCM",20,780,960,10
+Khách hàng 96,"80 Mã Lò, Bình Tân, TP.HCM",12,540,690,10
+Khách hàng 97,"350 Tỉnh lộ 10, Bình Tân, TP.HCM",19,840,1020,10
+Khách hàng 98,"200 Nguyễn Văn Quá, Quận 12, TP.HCM",14,600,750,10
+Khách hàng 99,"60 Song Hành, Quận 12, TP.HCM",9,780,930,10
+Khách hàng 100,"180 Trường Chinh, Quận 12, TP.HCM",21,510,690,10

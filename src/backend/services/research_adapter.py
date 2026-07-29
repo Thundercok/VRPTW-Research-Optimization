@@ -35,12 +35,45 @@ def _project(points: list[Point]) -> np.ndarray:
     return np.stack([x, y], axis=1)
 
 
-def build_inst(points: list[Point], capacity: int, name: str = "WebInput") -> Inst:
-    """Build an `Inst` from web points. Index 0 must be depot."""
+def _solomon_xy(points: list[Point], dataset: str) -> np.ndarray | None:
+    """Recover original Solomon XY by inverting `solomon_service._to_lat_lng`."""
+    if not dataset:
+        return None
+    from services.solomon_service import solomon_frame
+
+    frame = solomon_frame(dataset)
+    if frame is None:
+        return None
+
+    lat0 = frame["lat_origin"]
+    lng0 = frame["lng_origin"]
+    scale = frame["scale"]
+    x = np.array([(float(p.lng) - lng0) / scale for p in points], dtype=np.float64)
+    y = np.array([(float(p.lat) - lat0) / scale for p in points], dtype=np.float64)
+    return np.stack([x, y], axis=1)
+
+
+def build_inst(
+    points: list[Point],
+    capacity: int,
+    name: str = "WebInput",
+    dataset: str = "",
+) -> Inst:
+    """Build an `Inst` from web points. Index 0 must be depot.
+
+    When ``dataset`` names a bundled Solomon instance, the planar coordinates
+    are recovered by inverting the affine that produced the map lat/lng, so the
+    solver optimises the published instance itself and ``plan.cost`` lands in
+    Solomon units — the only form comparable to `BKS`. Everything else (custom
+    imports, the built-in HCMC demos) keeps the local-Mercator projection, which
+    gives kilometres but no BKS reference point.
+    """
     if len(points) < 2:
         raise ValueError("Need at least depot + 1 customer")
 
-    xy = _project(points)
+    xy = _solomon_xy(points, dataset)
+    if xy is None:
+        xy = _project(points)
     n = len(points)
     data = np.zeros((n, 7), dtype=np.float64)
     for i, p in enumerate(points):
@@ -142,6 +175,10 @@ def plan_to_payload(
         "runtime_sec": runtime_sec,
         "total_distance_km": total_km,
         "vehicles_used": len(routes_out),
+        # Objective in the instance's own units. `total_distance_km` above is a
+        # haversine re-measurement of the same routes for display; it is not
+        # comparable to `BKS[...]["td"]`, so the BKS gap is computed from this.
+        "cost": float(plan.cost),
         "routes": routes_out,
     }
 

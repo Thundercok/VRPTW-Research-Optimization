@@ -1,3 +1,5 @@
+import { algoColor, overlayKeysFor, resolveActiveOverlay } from './algoMeta.js';
+
 function darkenHex(hex, percent) {
   if (!hex || !hex.startsWith('#')) return hex;
   let raw = hex.replace('#', '');
@@ -118,12 +120,8 @@ export class MapController {
   switchView(view) {
     this.currentView = view;
 
-    // The dropdown is what the rest of the app reads for the active overlay,
-    // so keep it in step with programmatic switches too.
-    const overlaySelect = document.getElementById('map-view-select');
-    if (overlaySelect && overlaySelect.value !== view) {
-      overlaySelect.value = view;
-    }
+    // No dropdown sync here: `state.activeOverlay` is the single source of
+    // truth and LiveDispatchView drives this method from it.
 
     // Remove all route and vehicle layers
     if (this.routeLayers) {
@@ -936,20 +934,10 @@ export class MapController {
     this.clearRoutes();
     const routeCapacity = Number(this.app.state.lastRunFleet?.capacity ?? this.app.state.capacity);
 
-    const colors = {
-      ddqn: '#0b8a65',
-      alns: '#2563eb',
-      ortools: '#e11d48',
-      hybrid_fixed: '#d97706',
-      hybrid_ddqn: '#7c3aed',
-      hybrid_ddqn_transfer_rc1: '#0284c7',
-      hybrid_ddqn_transfer_dr: '#4f46e5',
-      hybrid: '#0b8a65',
-    };
-
-    for (const algoName in result) {
-      const color = colors[algoName] || '#6b7280';
-      this.renderAlgoRoutes(result[algoName], algoName, color, routeCapacity);
+    // overlayKeysFor, not `for...in`: the result map also carries the
+    // `_failed_algos` bookkeeping key, which has no routes to draw.
+    for (const algoName of overlayKeysFor(result)) {
+      this.renderAlgoRoutes(result[algoName], algoName, algoColor(algoName), routeCapacity);
     }
 
     if (result.ddqn && result.alns) {
@@ -958,39 +946,10 @@ export class MapController {
 
     this.initSimulation(result);
 
-    // Dynamic map view options in the KPI strip's overlay dropdown
-    const overlaySelect = document.getElementById('map-view-select');
-    if (overlaySelect) {
-      const labels = {
-        ddqn: 'Hybrid DDQN (Transfer)',
-        alns: 'ALNS Base',
-        ortools: 'OR-Tools',
-        hybrid_fixed: 'Hybrid Fixed',
-        hybrid_ddqn: 'Hybrid DDQN (Random)',
-        hybrid_ddqn_transfer_rc1: 'Hybrid DDQN (RC1)',
-        hybrid_ddqn_transfer_dr: 'Hybrid DDQN (DR)',
-      };
-
-      let html = '';
-      const algoNames = Object.keys(result);
-      const currentSelected = algoNames.includes(this.currentView) ? this.currentView : algoNames[0];
-
-      algoNames.forEach((algoName) => {
-        const label = labels[algoName] || algoName;
-        html += `<option value="${algoName}">${label}</option>`;
-      });
-      overlaySelect.innerHTML = html;
-      overlaySelect.value = currentSelected;
-
-      // Assigned, not addEventListener: the select outlives every re-render, so
-      // a listener per solve would stack up.
-      overlaySelect.onchange = (e) => {
-        this.switchView(e.target.value);
-      };
-    }
-
-    const initialView = result.ddqn ? 'ddqn' : Object.keys(result)[0];
-    this.switchView(initialView);
+    // The overlay dropdown is rendered by Header from `availableOverlays`; this
+    // method no longer writes its options or its change handler. It only has to
+    // show whichever overlay state already points at.
+    this.switchView(resolveActiveOverlay(result, this.app.state.activeOverlay));
     this.updateGnnHeatmapOverlay();
 
     this.fetchRoadGeometries(result)

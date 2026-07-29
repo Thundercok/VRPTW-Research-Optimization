@@ -3,9 +3,10 @@ import { useAppContext } from '../context/AppContext.jsx';
 import { MapController } from '../MapController.js';
 import { SimulationController } from '../SimulationController.js';
 import { GanttController } from '../GanttController.js';
+import { algoLabel, BASELINE_ALGO } from '../algoMeta.js';
 
 export default function LiveDispatchView() {
-  const { state, updateState, toast, setStatus, request, t } = useAppContext();
+  const { state, updateState, toast, setStatus, request, setActiveOverlay, t } = useAppContext();
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [showGnnLegend, setShowGnnLegend] = useState(false);
@@ -49,6 +50,9 @@ export default function LiveDispatchView() {
     escapeHtml: (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'),
     request,
     setStatus,
+    // Lets the Gantt panel — plain DOM, outside the React tree — move the
+    // overlay selection through state rather than poking the header <select>.
+    setActiveOverlay,
     mapController: null,
     simulationController: null,
     ganttController: null,
@@ -97,6 +101,7 @@ export default function LiveDispatchView() {
   useEffect(() => {
     appMockRef.current.state = state;
     appMockRef.current.lang = state.lang;
+    appMockRef.current.setActiveOverlay = setActiveOverlay;
   }, [state]);
 
   // Event listener for opening manifest drawer from Header
@@ -194,8 +199,8 @@ export default function LiveDispatchView() {
       });
 
       simulationControllerRef.current.start(maxTime + 30);
-      ganttControllerRef.current.render(state.lastResult, 'ddqn');
-      
+      ganttControllerRef.current.render(state.lastResult, state.activeOverlay);
+
       const emptyDdqn = document.getElementById('map-empty-ddqn');
       const emptyAlns = document.getElementById('map-empty-alns');
       emptyDdqn?.classList.add('hidden');
@@ -203,23 +208,35 @@ export default function LiveDispatchView() {
     }
   }, [state.lastResult]);
 
+  // Drive the imperative controllers from the selected overlay. This replaces
+  // the old wiring, where the header <select> owned the choice and each
+  // controller reached into the DOM to read or mutate it.
+  useEffect(() => {
+    if (!state.lastResult || !state.activeOverlay) return;
+    mapControllerRef.current?.switchView(state.activeOverlay);
+    ganttControllerRef.current?.setActiveAlgo(state.activeOverlay);
+    simulationControllerRef.current?.updateFrame();
+  }, [state.activeOverlay, state.lastResult]);
+
   // Sync solver history and routes to local state
   useEffect(() => {
-    if (state.lastResult && state.lastResult.ddqn) {
+    const primaryKey = state.activeOverlay || Object.keys(state.lastResult || {})[0];
+    const primaryResult = state.lastResult?.[primaryKey];
+    if (primaryResult) {
       const initial = {};
-      state.lastResult.ddqn.routes.forEach((r) => {
+      (primaryResult.routes || []).forEach((r) => {
         initial[r.vehicle_id] = [...r.stops];
       });
       setManualRoutes(initial);
       
-      if (state.lastResult.ddqn.solver_history) {
-        setSolverConsoleHistory(state.lastResult.ddqn.solver_history);
-        toast('XAI Console Updated', `${state.lastResult.ddqn.solver_history.length} operator decisions logged.`, 'ok');
+      if (primaryResult.solver_history) {
+        setSolverConsoleHistory(primaryResult.solver_history);
+        toast('XAI Console Updated', `${primaryResult.solver_history.length} operator decisions logged.`, 'ok');
       } else {
         setSolverConsoleHistory([]);
       }
     }
-  }, [state.lastResult]);
+  }, [state.lastResult, state.activeOverlay]);
 
   // Global callback bridges for Leaflet map markers to interact with React state
   useEffect(() => {
@@ -372,6 +389,8 @@ export default function LiveDispatchView() {
         .filter((r) => r && r.length > 0);
         
       const body = {
+        // Keeps the polish on the same geometry the solve ran on.
+        dataset: state.mode === 'sample' ? (state.selectedDataset || '') : '',
         fleet: {
           vehicles: Number(state.lastRunFleet?.vehicles ?? state.vehicles ?? 5),
           capacity: Number(state.lastRunFleet?.capacity ?? state.capacity ?? 100)
@@ -399,14 +418,26 @@ export default function LiveDispatchView() {
       
       if (res && res.routes) {
         const updatedResult = { ...state.lastResult };
+        // `runtime_sec`, matching the solver payload — this used to write
+        // `runtime_s`, a key nothing reads.
+        //
+        // The BKS figures are dropped rather than carried over: /reoptimize
+        // returns a different plan, so the cost and gap computed for the
+        // original one no longer describe what is on the map. Without a
+        // comparable `cost` the card falls back to the baseline delta.
+        const keptDdqn = { ...(updatedResult.ddqn || {}) };
+        delete keptDdqn.cost;
+        delete keptDdqn.bks;
+        delete keptDdqn.td_gap_pct;
+        delete keptDdqn.nv_diff;
         updatedResult.ddqn = {
-          ...updatedResult.ddqn,
+          ...keptDdqn,
           routes: res.routes,
           total_distance_km: res.total_distance_km,
           vehicles_used: res.vehicles_used,
-          runtime_s: res.runtime_sec
+          runtime_sec: res.runtime_sec,
         };
-        
+
         updateState({ lastResult: updatedResult });
         setEditMode(false);
         updateState({ editMode: false });
@@ -726,10 +757,65 @@ export default function LiveDispatchView() {
               skill: c.skill || 'None'
             });
           });
+        return { customers: list };
+        });
+        const geocodedText = resData.geocoded_count !== undefined
+          ? ` (${resData.geocoded_count}/${resData.total_count} geocoded)`
+          : '';
+        setStatus(`Successfully imported ${incoming.length} customers${geocodedText}.`, 'ok');
+        toast('Import Successful', `Loaded ${incoming.length} rows${geocodedText}.`, 'ok');
+      } else if (nameLower.endsWith('.txt')) {
+        setStatus('Đang parse file text và geocoding địa chỉ... (có thể mất 1-2 phút)', 'info');
+        toast('Text Import', 'Đang xử lý file text với auto-geocoding...', 'info');
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const headers = {};
+        if (state.token && state.token !== 'demo-guest') {
+          headers.Authorization = `Bearer ${state.token}`;
+        }
+        
+        const response = await fetch(`${API_BASE}/solomon/import-text`, {
+          method: 'POST',
+          headers,
+          body: formData,
+        });
+        
+        if (!response.ok) {
+          const errData = await response.json().catch(() => null);
+          throw new Error(errData?.detail || `HTTP ${response.status}`);
+        }
+        
+        const resData = await response.json();
+        const incoming = Array.isArray(resData?.customers) ? resData.customers : [];
+        if (!incoming.length) throw new Error('No valid customer rows found after parsing.');
+        
+        updateState((prev) => {
+          const list = [...prev.customers];
+          incoming.forEach((c) => {
+            const isFirst = list.length === 0;
+            list.push({
+              id: isFirst ? 0 : Math.max(...list.map(item => item.id)) + 1,
+              name: c.name,
+              address: c.address,
+              lat: c.lat,
+              lng: c.lng,
+              demand: isFirst ? 0 : c.demand,
+              ready: c.ready,
+              due: c.due,
+              service: c.service,
+              isDepot: c.isDepot,
+              priority: c.priority || 'Normal',
+              skill: c.skill || 'None'
+            });
+          });
           return { customers: list };
         });
-        setStatus(`Successfully imported ${incoming.length} customers from CSV file.`, 'ok');
-        toast('Import Successful', `Loaded ${incoming.length} rows from CSV.`, 'ok');
+        
+        setStatus(`Imported ${incoming.length} customers.`, 'ok');
+        toast('Import Complete', 
+          `Đã geocode ${resData.geocoded_count}/${resData.total_count} địa chỉ thành công.`, 
+          resData.geocoded_count === resData.total_count ? 'ok' : 'warn');
       } else {
         // Excel file parsing via sheetjs XLSX
         if (typeof window.XLSX === 'undefined') throw new Error('SheetJS XLSX library is not loaded');
@@ -749,63 +835,135 @@ export default function LiveDispatchView() {
     }
   };
 
-  // Solver Metrics Math
-  const dRes = state.lastResult?.ddqn || {};
-  const aRes = state.lastResult?.alns || {};
+  // ── Solver KPI metrics ────────────────────────────────────────────────────
+  //
+  // The cards describe the overlay selected in the header, measured against the
+  // ALNS baseline. They used to hardcode ddqn-vs-alns, which left the other
+  // five solvers the backend runs with nowhere to report.
+  //
+  // Field names come straight from `plan_to_payload`: total_distance_km,
+  // runtime_sec, vehicles_used. The earlier `distance_km` / `runtime_s` reads
+  // matched no key in the payload, so those cards were pinned at zero on every
+  // run — `distance_km` exists only inside each element of `routes`.
+  const activeKey = state.activeOverlay;
+  const activeRes = state.lastResult?.[activeKey] || null;
+  const baseRes = state.lastResult?.[BASELINE_ALGO] || null;
+  const isBaselineActive = activeKey === BASELINE_ALGO;
 
-  const gapPct = (dRes.distance_km && aRes.distance_km) 
-    ? (((dRes.distance_km - aRes.distance_km) / aRes.distance_km) * 100).toFixed(2)
-    : '-0.00';
+  const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : null);
+  const fmt = (v, digits = 2, suffix = '') => (v === null ? '—' : `${v.toFixed(digits)}${suffix}`);
+
+  const activeDist = num(activeRes?.total_distance_km);
+  const baseDist = num(baseRes?.total_distance_km);
+  const activeVeh = num(activeRes?.vehicles_used) ?? num(activeRes?.routes?.length);
+  const baseVeh = num(baseRes?.vehicles_used) ?? num(baseRes?.routes?.length);
+  const activeTime = num(activeRes?.runtime_sec);
+  const baseTime = num(baseRes?.runtime_sec);
+  const fleetSize = num(state.lastRunFleet?.vehicles);
+
+  // Percentage delta against the baseline. Guarded on the divisor rather than
+  // on truthiness, so a genuine zero is not mistaken for missing data.
+  const distDeltaPct =
+    activeDist !== null && baseDist !== null && baseDist > 0
+      ? ((activeDist - baseDist) / baseDist) * 100
+      : null;
+
+  // Gap to the best-known solution, computed by the backend on the instance's
+  // own Solomon geometry. It is absent for custom imports and for the built-in
+  // HCMC demo sets, which have no published BKS — in that case the card falls
+  // back to the baseline delta and says so, rather than printing a 0.00% that
+  // reads like a tie.
+  const bks = activeRes?.bks || null;
+  const tdGapPct = num(activeRes?.td_gap_pct);
+  const nvDiff = num(activeRes?.nv_diff);
+  const hasBks = Boolean(bks) && tdGapPct !== null;
+
+  // With no BKS to score against, the baseline has nothing to be measured
+  // against but itself — show a dash rather than a 0.00% that reads as a tie.
+  const gapValue = hasBks ? tdGapPct : isBaselineActive ? null : distDeltaPct;
+  const gapTone = gapValue === null ? '' : gapValue <= 0 ? 'highlight-emerald' : 'text-danger';
+  const gapLabel = hasBks
+    ? `${t('kpiGapBks')} · ${bks.instance}`
+    : isBaselineActive
+      ? t('kpiGapIsBaseline')
+      : `${t('kpiGapBaseline')} ${algoLabel(BASELINE_ALGO)}`;
+
+  const signed = (v, digits = 2) => (v === null ? '—' : `${v > 0 ? '+' : ''}${v.toFixed(digits)}%`);
 
   return (
     <div id="view-dispatch" className="view-panel">
       {/* Solver KPI Metrics cards */}
       <section className="kpi-row">
         <div className="kpi-card">
-          <div className="kpi-title">Algorithm Gap (DDQN vs ALNS)</div>
-          <div className={`kpi-value ${Number(gapPct) <= 0 ? 'highlight-emerald' : 'text-danger'}`}>
-            {gapPct}%
+          <div className="kpi-title">{hasBks ? t('kpiGapTitleBks') : t('kpiGapTitleBaseline')}</div>
+          <div className={`kpi-value ${gapTone}`} id="kpi-gap">
+            {gapValue === null ? '—' : signed(gapValue)}
           </div>
-          <div className="kpi-sub">Closer to BKS is better</div>
+          <div className="kpi-sub">
+            {activeRes ? gapLabel : t('kpiNotRun')}
+            {hasBks && nvDiff !== null && (
+              <> · NV {nvDiff > 0 ? `+${nvDiff}` : nvDiff} vs {bks.nv}</>
+            )}
+          </div>
         </div>
         <div className="kpi-card">
           <div className="kpi-title">{t('kpiDistance')}</div>
           <div className="kpi-split">
             <div>
-              <span className="kpi-label">DDQN</span>
-              <strong id="kpi-dist-ddqn">{Number(dRes.distance_km || 0).toFixed(2)}</strong>
+              <span className="kpi-label">{algoLabel(activeKey)}</span>
+              <strong id="kpi-dist-active">{fmt(activeDist)}</strong>
             </div>
-            <div>
-              <span className="kpi-label">ALNS</span>
-              <strong id="kpi-dist-alns">{Number(aRes.distance_km || 0).toFixed(2)}</strong>
-            </div>
+            {!isBaselineActive && (
+              <div>
+                <span className="kpi-label">{algoLabel(BASELINE_ALGO)}</span>
+                <strong id="kpi-dist-base">{fmt(baseDist)}</strong>
+              </div>
+            )}
           </div>
+          {!isBaselineActive && distDeltaPct !== null && (
+            <div className={`kpi-sub ${distDeltaPct <= 0 ? 'highlight-emerald' : 'text-danger'}`}>
+              {signed(distDeltaPct)} {t('kpiVsBaseline')}
+            </div>
+          )}
         </div>
         <div className="kpi-card">
           <div className="kpi-title">{t('kpiVehicles')}</div>
           <div className="kpi-split">
             <div>
-              <span className="kpi-label">DDQN</span>
-              <strong id="kpi-veh-ddqn">{dRes.routes?.length || 0}</strong>
+              <span className="kpi-label">{algoLabel(activeKey)}</span>
+              <strong id="kpi-veh-active">
+                {activeVeh === null ? '—' : fleetSize !== null ? `${activeVeh} / ${fleetSize}` : activeVeh}
+              </strong>
             </div>
-            <div>
-              <span className="kpi-label">ALNS</span>
-              <strong id="kpi-veh-alns">{aRes.routes?.length || 0}</strong>
-            </div>
+            {!isBaselineActive && (
+              <div>
+                <span className="kpi-label">{algoLabel(BASELINE_ALGO)}</span>
+                <strong id="kpi-veh-base">{baseVeh === null ? '—' : baseVeh}</strong>
+              </div>
+            )}
           </div>
+          {activeVeh !== null && fleetSize !== null && (
+            <div className="kpi-sub">{t('kpiFleetUsed')}</div>
+          )}
         </div>
         <div className="kpi-card">
           <div className="kpi-title">{t('kpiTime')}</div>
           <div className="kpi-split">
             <div>
-              <span className="kpi-label">DDQN</span>
-              <strong id="kpi-time-ddqn">{Number(dRes.runtime_s || 0).toFixed(1)}s</strong>
+              <span className="kpi-label">{algoLabel(activeKey)}</span>
+              <strong id="kpi-time-active">{fmt(activeTime, 1, 's')}</strong>
             </div>
-            <div>
-              <span className="kpi-label">ALNS</span>
-              <strong id="kpi-time-alns">{Number(aRes.runtime_s || 0).toFixed(1)}s</strong>
-            </div>
+            {!isBaselineActive && (
+              <div>
+                <span className="kpi-label">{algoLabel(BASELINE_ALGO)}</span>
+                <strong id="kpi-time-base">{fmt(baseTime, 1, 's')}</strong>
+              </div>
+            )}
           </div>
+          {/* Every solver in a run shares one process pool, so these are
+              wall-clock times under CPU contention — not isolated benchmarks.
+              Saying so here keeps the number from being read as a speed claim. */}
+          {activeTime !== null && <div className="kpi-sub">{t('kpiTimeParallel')}</div>}
         </div>
 
         {/* The three map surfaces (heatmap, driver app, playground) ride in the
@@ -1238,7 +1396,7 @@ export default function LiveDispatchView() {
                   type="file" 
                   ref={fileInputRef} 
                   style={{ display: 'none' }} 
-                  accept=".csv,.xlsx,.xls"
+                  accept=".csv,.xlsx,.xls,.txt"
                   onChange={handleFileUploadChange}
                 />
               </div>

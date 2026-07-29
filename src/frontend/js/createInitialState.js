@@ -1,3 +1,5 @@
+import { PREFERRED_ALGO } from './algoMeta.js';
+
 export function createInitialState() {
   const savedEmail = localStorage.getItem('vrptw_email') || '';
   const unlocked = Boolean(localStorage.getItem('vrptw_token'));
@@ -66,6 +68,10 @@ export function createInitialState() {
     analysisActivity: null,
     adminFeedback: [],
     lastResult: null,
+    // Which solver overlay the map, Gantt and KPI strip are describing. React
+    // owns this now; the controllers read it off state instead of scraping the
+    // `#map-view-select` DOM node.
+    activeOverlay: PREFERRED_ALGO,
     activeTab: 'dispatch',
     unlocked,
     showLoginModal: !unlocked,

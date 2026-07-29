@@ -2,6 +2,8 @@
    GANTT CHART — Driver Schedule Timeline Controller
    =================================================================== */
 
+import { algoLabel, overlayKeysFor, PREFERRED_ALGO } from './algoMeta.js';
+
 const ROW_HEIGHT = 38;
 const LABEL_WIDTH = 140;
 const HEADER_HEIGHT = 28;
@@ -16,7 +18,7 @@ export class GanttController {
     this.tooltip = null;
 
     this.isCollapsed = false;
-    this.activeAlgo = 'ddqn';
+    this.activeAlgo = PREFERRED_ALGO;
     this.result = null;
     this.simTime = 0;
     this.maxTime = 240;
@@ -95,14 +97,13 @@ export class GanttController {
       this.toggleCollapse();
     });
 
+    // Picking an algorithm here moves the whole dashboard, so it goes through
+    // app state. Poking the header <select> and firing a synthetic change event
+    // skipped React entirely, leaving the map on one solver and the KPI strip
+    // on another.
     const select = this.panel.querySelector('#gantt-select-algo');
     select.addEventListener('change', (e) => {
-      const selectedAlgo = e.target.value;
-      const overlaySelect = document.getElementById('map-view-select');
-      if (overlaySelect) {
-        overlaySelect.value = selectedAlgo;
-        overlaySelect.dispatchEvent(new Event('change'));
-      }
+      this.app.setActiveOverlay?.(e.target.value);
     });
 
     this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
@@ -206,9 +207,19 @@ export class GanttController {
     }
   }
 
+  /** Redraw for a different overlay without re-supplying the result set. */
+  setActiveAlgo(algo) {
+    if (!algo || algo === this.activeAlgo) return;
+    if (!this.result) {
+      this.activeAlgo = algo;
+      return;
+    }
+    this.render(this.result, algo);
+  }
+
   render(result, activeAlgo) {
     this.result = result;
-    this.activeAlgo = activeAlgo || 'ddqn';
+    this.activeAlgo = activeAlgo || PREFERRED_ALGO;
 
     if (!result || Object.keys(result).length === 0) {
       this.panel.classList.add('hidden');
@@ -226,27 +237,16 @@ export class GanttController {
       return;
     }
 
-    // Update Dropdown Options
+    // Update Dropdown Options — same key order as the header overlay picker.
     const select = this.panel.querySelector('#gantt-select-algo');
-    const labels = {
-      ddqn: 'Hybrid DDQN (Transfer)',
-      alns: 'ALNS Base',
-      ortools: 'OR-Tools',
-      hybrid_fixed: 'Hybrid Fixed',
-      hybrid_ddqn: 'Hybrid DDQN (Random)',
-      hybrid_ddqn_transfer_rc1: 'Hybrid DDQN (RC1)',
-      hybrid_ddqn_transfer_dr: 'Hybrid DDQN (DR)',
-      hybrid: 'Hybrid DDQN',
-    };
-
-    select.innerHTML = Object.keys(result)
+    select.innerHTML = overlayKeysFor(result)
       .map(
-        (key) => `<option value="${key}" ${key === this.activeAlgo ? 'selected' : ''}>${labels[key] || key}</option>`
+        (key) => `<option value="${key}" ${key === this.activeAlgo ? 'selected' : ''}>${algoLabel(key)}</option>`
       )
       .join('');
 
     const badge = this.panel.querySelector('#gantt-badge');
-    badge.textContent = (labels[this.activeAlgo] || this.activeAlgo).toUpperCase();
+    badge.textContent = algoLabel(this.activeAlgo).toUpperCase();
 
     // Calculate max time duration for scheduling
     let maxTime = 120;

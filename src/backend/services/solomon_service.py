@@ -208,6 +208,47 @@ def _is_builtin(name: str) -> bool:
     return name.strip().lower() in {"demo", "builtin", "sample", "c1_demo", "r1_demo"}
 
 
+def solomon_frame(dataset: str) -> dict[str, Any] | None:
+    """Describe the affine that mapped ``dataset`` into map coordinates.
+
+    Returns ``None`` unless ``dataset`` names a real Solomon file. The built-in
+    HCMC demos carry genuine lat/lng and were never passed through
+    :func:`_to_lat_lng`, so inverting the affine on them would produce nonsense;
+    they also have no published BKS to compare against.
+
+    Callers use this to rebuild the instance in its original Solomon frame.
+    Re-projecting the mapped lat/lng instead (as the generic web path does)
+    scales x by ``cos(lat)`` and y by 1, squashing the geometry ~1.7% along one
+    axis — small, but enough to make a gap-to-BKS figure meaningless.
+    """
+    raw_name = (dataset or "").strip().lower()
+    if not raw_name or _is_builtin(raw_name):
+        return None
+    if not re.fullmatch(r"[a-z]+\d{3}", raw_name):
+        return None
+    if _find_solomon_file(raw_name) is None:
+        return None
+    return {
+        "instance": raw_name.upper(),
+        "lat_origin": _LAT_ORIGIN,
+        "lng_origin": _LNG_ORIGIN,
+        "scale": _XY_SCALE,
+    }
+
+
+def best_known_solution(dataset: str) -> dict[str, Any] | None:
+    """Published BKS for ``dataset``, or ``None`` when there is no entry."""
+    frame = solomon_frame(dataset)
+    if frame is None:
+        return None
+    from vrptw import BKS
+
+    entry = BKS.get(frame["instance"])
+    if entry is None:
+        return None
+    return {"instance": frame["instance"], "nv": int(entry["nv"]), "td": float(entry["td"])}
+
+
 def load_solomon_dataset(name: str = "demo") -> dict[str, Any]:
     raw_name = (name or "demo").strip().lower()
 

@@ -407,7 +407,9 @@ def transfer_weights_summary() -> dict[str, Any]:
 def _run_ddqn_alns(payload: JobRequest) -> dict[str, Any]:
     runtime = _load_solver_runtime()
     config = _get_web_config()
-    inst = runtime.build_inst(payload.customers, capacity=payload.fleet.capacity, name="DDQN-ALNS")
+    inst = runtime.build_inst(
+        payload.customers, capacity=payload.fleet.capacity, name="DDQN-ALNS", dataset=payload.dataset
+    )
     solver = runtime.plateau_hybrid_solver(inst, config)
     _load_transfer_weights(solver)
     solver.ctrl.eps = config.ctrl_eps_end
@@ -431,7 +433,9 @@ def _run_ddqn_alns(payload: JobRequest) -> dict[str, Any]:
 def _run_alns(payload: JobRequest) -> dict[str, Any]:
     runtime = _load_solver_runtime()
     config = _get_web_config()
-    inst = runtime.build_inst(payload.customers, capacity=payload.fleet.capacity, name="ALNS")
+    inst = runtime.build_inst(
+        payload.customers, capacity=payload.fleet.capacity, name="ALNS", dataset=payload.dataset
+    )
     solver = runtime.alns_solver(inst, config)
     start = time.time()
     plan, _ = solver.solve(seed=config.seed)
@@ -494,7 +498,9 @@ def _run_algo_generic(payload: JobRequest, algo: str) -> dict[str, Any]:
     config = _get_web_config()
     import vrptw
 
-    inst = runtime.build_inst(payload.customers, capacity=payload.fleet.capacity, name=algo)
+    inst = runtime.build_inst(
+        payload.customers, capacity=payload.fleet.capacity, name=algo, dataset=payload.dataset
+    )
 
     if algo == "ortools":
         plan, elapsed = vrptw.run_ortools(inst, config)
@@ -635,10 +641,40 @@ async def solve_model(payload: JobRequest, matrix: list[list[float]] | None = No
         tasks[algo] = loop.run_in_executor(pool, _run_solver_in_process, algo, payload_dict)
 
     results = {}
+    failed: list[str] = []
     for algo, task in tasks.items():
         try:
             results[algo] = await task
         except Exception as e:
             logger.error("Failed running algorithm pipeline %s: %s", algo, e)
+            failed.append(algo)
 
+    _attach_bks(results, payload.dataset)
+    if failed:
+        results["_failed_algos"] = failed
     return results
+
+
+def _attach_bks(results: dict[str, Any], dataset: str) -> None:
+    """Score each plan against the published best-known solution, in place.
+
+    Only meaningful for bundled Solomon instances: `build_inst` rebuilds those
+    in their native frame, so `cost` and `BKS[...]["td"]` share units. For
+    anything else the keys are simply left off and the UI falls back to a
+    baseline comparison.
+    """
+    from services.solomon_service import best_known_solution
+
+    bks = best_known_solution(dataset)
+    if bks is None:
+        return
+
+    for res in results.values():
+        if not isinstance(res, dict):
+            continue
+        cost = res.get("cost")
+        if cost is None:
+            continue
+        res["bks"] = bks
+        res["td_gap_pct"] = (float(cost) - bks["td"]) / bks["td"] * 100.0
+        res["nv_diff"] = int(res.get("vehicles_used", 0)) - bks["nv"]

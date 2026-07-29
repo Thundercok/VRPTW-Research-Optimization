@@ -37,6 +37,7 @@ from services.compute_gateway import call_remote, remote_enabled, remote_health
 from services.job_service import job_service
 from services.matrix_service import calculate_matrix, fetch_route_geometry
 from services.solomon_service import list_solomon_datasets, load_solomon_dataset
+from services.text_block_parser import is_vietnamese_text_block, parse_vietnamese_text_block
 from services.solver_service import device_summary, transfer_weights_summary
 
 router = APIRouter(tags=["ops"])
@@ -173,6 +174,10 @@ async def import_csv_file(
     if not rows:
         raise HTTPException(status_code=400, detail="Empty CSV file.")
 
+    # ── Auto-detect Vietnamese text-block format ─────────────────────
+    if is_vietnamese_text_block(text):
+        return await _geocode_text_block(text)
+
     headers = [str(cell).strip() for cell in rows[0]]
 
     name_idx = find_col_index(headers, ["name", "customer name", "customer", "client", "store", "shop"])
@@ -267,6 +272,59 @@ async def import_csv_file(
         )
 
     return {"customers": customers}
+
+
+async def _geocode_text_block(text: str) -> dict[str, Any]:
+    """Shared helper: parse Vietnamese text-block, geocode, return customers."""
+    customers = parse_vietnamese_text_block(text)
+    total = len(customers)
+    geocoded = 0
+
+    for cust in customers:
+        if cust["lat"] is not None:
+            geocoded += 1
+            continue
+        addr = cust.get("address", "")
+        if not addr:
+            continue
+        try:
+            geo = await geocode_address(addr, limit=1)
+            if geo.get("items"):
+                cust["lat"] = float(geo["items"][0]["lat"])
+                cust["lng"] = float(geo["items"][0]["lng"])
+                geocoded += 1
+        except Exception:
+            pass
+        # Nominatim rate limit: max 1 request per second
+        await asyncio.sleep(1.1)
+
+    customers = [c for c in customers if c["lat"] is not None and c["lng"] is not None]
+    return {"customers": customers, "geocoded_count": geocoded, "total_count": total}
+
+
+@router.post("/solomon/import-text")
+async def import_text_file(
+    file: UploadFile = File(...),
+    _: dict[str, str] = Depends(require_user),
+) -> dict[str, Any]:
+    """Parse a Vietnamese text-block file and auto-geocode addresses."""
+    content = await file.read()
+    try:
+        text = content.decode("utf-8")
+    except UnicodeDecodeError:
+        try:
+            text = content.decode("latin1")
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail="Invalid file encoding.") from exc
+
+    if not is_vietnamese_text_block(text):
+        raise HTTPException(
+            status_code=400,
+            detail="File does not appear to be in Vietnamese text-block format. "
+                   "Use /solomon/import-csv for CSV files.",
+        )
+
+    return await _geocode_text_block(text)
 
 
 @router.get("/analysis/versions")
@@ -394,7 +452,9 @@ async def reoptimize(
         ) from exc
 
     try:
-        inst = build_inst(body.customers, capacity=body.fleet.capacity, name="Reoptimize")
+        inst = build_inst(
+            body.customers, capacity=body.fleet.capacity, name="Reoptimize", dataset=body.dataset
+        )
     except ValueError as val_err:
         raise HTTPException(status_code=400, detail=str(val_err)) from val_err
 

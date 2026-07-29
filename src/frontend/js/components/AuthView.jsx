@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAppContext } from '../context/AppContext.jsx';
 import { firebaseService } from '../firebaseService.js';
 import RoutingCanvasBg from './RoutingCanvasBg.jsx';
+import { API_BASE } from '../constants.js';
 
 export default function AuthView({ onClose }) {
   const { state, updateState, toast, setStatus, request, loginAsGuest, t } = useAppContext();
@@ -12,7 +13,7 @@ export default function AuthView({ onClose }) {
     return params.get('screen') || sessionStorage.getItem('vrptw_auth_screen') || 'login';
   });
 
-  // Backend mode settings fetched from /health
+  // Backend mode settings fetched from /api/health
   const [backendMode, setBackendMode] = useState({
     firebase_enabled: null,
     demo_mode: null,
@@ -100,10 +101,12 @@ export default function AuthView({ onClose }) {
         }
       };
 
-      // Try origin-relative path first (works with Vite proxy or same-origin production)
-      let data = await tryFetch('/health');
+      // The backend only ever exposed /api/health; the bare /health this used
+      // to probe 404'd in production, so the page always fell through to its
+      // "backend unavailable" defaults.
+      let data = await tryFetch(`${API_BASE}/health`);
       // Fall back to explicit localhost if the proxy isn't set up
-      if (!data) data = await tryFetch('http://127.0.0.1:8000/health');
+      if (!data) data = await tryFetch('http://127.0.0.1:8000/api/health');
 
       if (data) {
         setBackendMode({
