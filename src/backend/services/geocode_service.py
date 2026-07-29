@@ -92,6 +92,38 @@ async def geocode_address(q: str, limit: int) -> dict[str, Any]:
     return result
 
 
+async def bulk_geocode_addresses(addresses: list[str]) -> list[dict[str, Any]]:
+    import asyncio
+    sem = asyncio.Semaphore(15)
+    headers = {"User-Agent": "vrptw-dashboard/1.0"}
+    
+    async def fetch_one(addr: str, client: httpx.AsyncClient) -> dict[str, Any]:
+        cache_key = addr.strip().lower()
+        if cache_key in GEOCODE_CACHE:
+            return GEOCODE_CACHE[cache_key]
+        async with sem:
+            try:
+                resp = await client.get(
+                    "https://photon.komoot.io/api/",
+                    params={"q": f"{addr}, Vietnam", "limit": "1"},
+                    headers=headers
+                )
+                resp.raise_for_status()
+                photon_data = resp.json().get("features", [])
+                if photon_data:
+                    coords = photon_data[0].get("geometry", {}).get("coordinates", [0, 0])
+                    res = {"items": [{"lat": coords[1], "lng": coords[0]}]}
+                    GEOCODE_CACHE[cache_key] = res
+                    return res
+            except Exception:
+                pass
+            return {"items": []}
+
+    async with httpx.AsyncClient(timeout=8.0) as client:
+        tasks = [fetch_one(addr, client) for addr in addresses]
+        return await asyncio.gather(*tasks)
+
+
 async def reverse_geocode_address(lat: float, lng: float) -> dict[str, Any]:
     cache_key = (round(float(lat), 6), round(float(lng), 6))
     cached = REVERSE_GEOCODE_CACHE.get(cache_key)
