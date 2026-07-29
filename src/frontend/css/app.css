@@ -449,7 +449,7 @@ body.demo-active .demo-badge {
   display: flex;
   align-items: center;
   gap: 10px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .fleet-toggles {
