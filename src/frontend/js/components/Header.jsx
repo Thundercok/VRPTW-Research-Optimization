@@ -125,8 +125,21 @@ export default function Header() {
 
       {state.activeTab === 'dispatch' && (
         <div className="header-right">
-          <select 
-            id="dataset-select" 
+          {/* Map overlay picker. Lives here, next to the dataset select, rather
+              than over the map — MapController/App repopulate its options after
+              every solve. No caption: the option text names the overlay. */}
+          <select
+            id="map-view-select"
+            className="saas-select map-overlay-select"
+            defaultValue="ddqn"
+            aria-label={t('mapOverlay')}
+            title={t('mapOverlay')}
+          >
+            <option value="ddqn">DDQN</option>
+            <option value="alns">ALNS Base</option>
+          </select>
+          <select
+            id="dataset-select"
             className="saas-select"
             value={state.mode === 'sample' ? (state.selectedDataset || 'demo') : 'custom'}
             onChange={handleDatasetChange}

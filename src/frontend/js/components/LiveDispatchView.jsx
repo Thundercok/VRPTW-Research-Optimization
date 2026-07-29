@@ -807,6 +807,54 @@ export default function LiveDispatchView() {
             </div>
           </div>
         </div>
+
+        {/* The three map surfaces (heatmap, driver app, playground) ride in the
+            KPI strip rather than in a bar above the map, which is what gives
+            the map back a full row of height. The overlay picker sits in the
+            app header, beside the dataset select. */}
+        <div className="kpi-card kpi-card-tools">
+          <div className="kpi-title">{t('kpiMapTools')}</div>
+          <div className="kpi-tools-row">
+            <label className="gnn-toggle" title={t('mapShowGNN')}>
+              <input
+                type="checkbox"
+                id="chk-gnn-heatmap"
+                className="gnn-toggle-input"
+                checked={showGnnLegend}
+                onChange={(e) => {
+                  setShowGnnLegend(e.target.checked);
+                  if (window.app && window.app.mapController) {
+                    window.app.mapController.updateGnnHeatmapOverlay();
+                  }
+                }}
+              />
+              <span className="gnn-toggle-track" aria-hidden="true"></span>
+              <span className="gnn-toggle-text">{t('mapShowGNN')}</span>
+            </label>
+
+            <button
+              id="btn-toggle-driver-app"
+              className="map-header-btn driver-app-btn hidden"
+              type="button"
+              title={t('mapDriverApp')}
+            >
+              <span aria-hidden="true">📱</span>
+              <span>{t('mapDriverApp')}</span>
+              <span id="driver-app-notif" className="driver-app-notif">1</span>
+            </button>
+
+            <button
+              id="btn-toggle-playground"
+              className={`playground-toggle-btn ${playgroundOpen ? 'active' : ''}`}
+              onClick={() => setPlaygroundOpen(!playgroundOpen)}
+              aria-pressed={playgroundOpen}
+              title={t('mapPlayground')}
+            >
+              <span aria-hidden="true">✨</span>
+              <span>{t('mapPlayground')}</span>
+            </button>
+          </div>
+        </div>
       </section>
 
       <section className="workspace-full" style={{ position: 'relative' }}>
@@ -1200,59 +1248,9 @@ export default function LiveDispatchView() {
 
         {/* Full-width Map Pane */}
         <div className="pane pane-map-full" style={{ position: 'relative' }}>
-          {/* Single pane bar: the solver overlay picker on the left (its own
-              scroller, so a long algorithm list never crowds anything), map
-              tools pinned right. The manifest lives in the app header. */}
-          <div className="map-algo-bar">
-            <span className="map-algo-bar-label">{t('mapOverlay')}</span>
-            <div className="map-toggles-scroll">
-              <div className="map-toggles">
-                <label><input type="radio" name="map_view" value="ddqn" defaultChecked /> DDQN</label>
-                <label><input type="radio" name="map_view" value="alns" /> ALNS Base</label>
-              </div>
-            </div>
-
-            <div className="map-algo-bar-tools">
-              <label className="gnn-toggle" title={t('mapShowGNN')}>
-                <input
-                  type="checkbox"
-                  id="chk-gnn-heatmap"
-                  className="gnn-toggle-input"
-                  checked={showGnnLegend}
-                  onChange={(e) => {
-                    setShowGnnLegend(e.target.checked);
-                    if (window.app && window.app.mapController) {
-                      window.app.mapController.updateGnnHeatmapOverlay();
-                    }
-                  }}
-                />
-                <span className="gnn-toggle-track" aria-hidden="true"></span>
-                <span className="gnn-toggle-text">{t('mapShowGNN')}</span>
-              </label>
-
-              {/* Companion-app trigger. Docked here rather than floating over the
-                  map, where it used to sit on top of the driver cards. */}
-              <button
-                id="btn-toggle-driver-app"
-                className="map-header-btn driver-app-btn hidden"
-                type="button"
-              >
-                <span aria-hidden="true">📱</span>
-                <span>{t('mapDriverApp')}</span>
-                <span id="driver-app-notif" className="driver-app-notif">1</span>
-              </button>
-
-              <button
-                id="btn-toggle-playground"
-                className={`playground-toggle-btn ${playgroundOpen ? 'active' : ''}`}
-                onClick={() => setPlaygroundOpen(!playgroundOpen)}
-                aria-pressed={playgroundOpen}
-              >
-                <span aria-hidden="true">✨</span>
-                <span>{t('mapPlayground')}</span>
-              </button>
-            </div>
-          </div>
+          {/* No chrome row here any more — the overlay picker and the map
+              tools moved up into the KPI strip, so the pane is map all the way
+              to its top edge. */}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', minHeight: 0 }}>
             {/* Direct Leaflet Canvas Container */}
             <div id="map-container" className="map-view" style={{ flex: 1 }}></div>

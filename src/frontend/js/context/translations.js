@@ -119,7 +119,7 @@ export const APP_COPY = {
     headerCtxIntelligence: 'Intelligence',
     headerVehicles: 'Vehicles',
     headerCapacity: 'Capacity',
-    headerExecute: 'Execute Solver',
+    headerExecute: 'Execute',
     headerCustomImport: 'Custom Import...',
     manifestBtn: 'Manifest',
     mapGeospatial: 'Geospatial View',
@@ -135,6 +135,7 @@ export const APP_COPY = {
     kpiDistance: 'Total Distance (km)',
     kpiVehicles: 'Vehicles Dispatched',
     kpiTime: 'Compute Time',
+    kpiMapTools: 'Map Tools',
     thId: 'ID',
     thName: 'Name',
     thAddress: 'Address',
@@ -259,7 +260,7 @@ export const APP_COPY = {
       'Vehicles and capacity set the constraints the solver has to respect. Change either one and the fleet roster updates to match.',
     tour_run_title: 'Run the hybrid solver',
     tour_run_desc:
-      'Execute Solver launches the DDQN-ALNS hybrid alongside a plain ALNS baseline, so every result arrives with something to compare against.',
+      'Execute launches the DDQN-ALNS hybrid alongside a plain ALNS baseline, so every result arrives with something to compare against.',
     tour_manifest_title: 'Edit the manifest inline',
     tour_manifest_desc:
       'Open the manifest to review each stop and edit demand, time windows or service time directly in the table. Changes apply on the next run.',
@@ -277,7 +278,7 @@ export const APP_COPY = {
       'Point the app at a different backend, switch language or theme, export your workspace, and replay this tour whenever you want it.',
     tour_finish_title: "That's the whole tour",
     tour_finish_desc:
-      'You are set. Pick a dataset, size the fleet and press Execute Solver. You can replay this walkthrough any time from Settings → Workspace Data Management.',
+      'You are set. Pick a dataset, size the fleet and press Execute. You can replay this walkthrough any time from Settings → Workspace Data Management.',
   },
   vn: {
     langButton: 'EN',
@@ -419,6 +420,7 @@ export const APP_COPY = {
     kpiDistance: 'Tổng Quãng Đường (km)',
     kpiVehicles: 'Số Xe Điều Động',
     kpiTime: 'Thời Gian Tính',
+    kpiMapTools: 'Công Cụ Bản Đồ',
     thId: 'ID',
     thName: 'Tên',
     thAddress: 'Địa chỉ',
@@ -543,7 +545,7 @@ export const APP_COPY = {
       'Số xe và tải trọng chính là ràng buộc mà solver phải tuân thủ. Thay đổi một trong hai, danh sách đội xe sẽ tự cập nhật theo.',
     tour_run_title: 'Chạy solver lai',
     tour_run_desc:
-      'Execute Solver chạy song song DDQN-ALNS và ALNS gốc, nên mỗi kết quả luôn có một mốc để so sánh.',
+      'Nút Chạy Mô Hình khởi chạy song song DDQN-ALNS và ALNS gốc, nên mỗi kết quả luôn có một mốc để so sánh.',
     tour_manifest_title: 'Sửa manifest ngay trên bảng',
     tour_manifest_desc:
       'Mở manifest để xem từng điểm giao và sửa trực tiếp nhu cầu, khung thời gian hay thời gian phục vụ. Thay đổi áp dụng ở lần chạy kế tiếp.',
@@ -561,6 +563,6 @@ export const APP_COPY = {
       'Trỏ ứng dụng sang backend khác, đổi ngôn ngữ hoặc giao diện, xuất workspace, và xem lại hướng dẫn này bất cứ lúc nào.',
     tour_finish_title: 'Vậy là xong phần hướng dẫn',
     tour_finish_desc:
-      'Bạn đã sẵn sàng. Chọn bộ dữ liệu, đặt quy mô đội xe rồi nhấn Execute Solver. Có thể xem lại hướng dẫn bất cứ lúc nào ở Cài đặt → Quản lý dữ liệu workspace.',
+      'Bạn đã sẵn sàng. Chọn bộ dữ liệu, đặt quy mô đội xe rồi nhấn Chạy Mô Hình. Có thể xem lại hướng dẫn bất cứ lúc nào ở Cài đặt → Quản lý dữ liệu workspace.',
   },
 };

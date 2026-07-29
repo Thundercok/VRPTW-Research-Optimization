@@ -48,7 +48,8 @@ export class MapController {
     this.ddqnMap = this.map;
     this.alnsMap = this.map;
 
-    L.control.zoom({ position: 'bottomright' }).addTo(this.map);
+    // No +/- control: the buttons crowded the driver rail and every zoom
+    // gesture (wheel, pinch, double-click, box-zoom) still works without them.
 
     this.setTileTheme(localStorage.getItem('vrptw_map_theme') || 'carto-light');
 
@@ -116,6 +117,13 @@ export class MapController {
 
   switchView(view) {
     this.currentView = view;
+
+    // The dropdown is what the rest of the app reads for the active overlay,
+    // so keep it in step with programmatic switches too.
+    const overlaySelect = document.getElementById('map-view-select');
+    if (overlaySelect && overlaySelect.value !== view) {
+      overlaySelect.value = view;
+    }
 
     // Remove all route and vehicle layers
     if (this.routeLayers) {
@@ -950,9 +958,9 @@ export class MapController {
 
     this.initSimulation(result);
 
-    // Dynamic map view radios in the DOM
-    const toggleContainer = document.querySelector('.map-toggles');
-    if (toggleContainer) {
+    // Dynamic map view options in the KPI strip's overlay dropdown
+    const overlaySelect = document.getElementById('map-view-select');
+    if (overlaySelect) {
       const labels = {
         ddqn: 'Hybrid DDQN (Transfer)',
         alns: 'ALNS Base',
@@ -964,23 +972,21 @@ export class MapController {
       };
 
       let html = '';
-      const currentSelected = this.currentView || 'ddqn';
+      const algoNames = Object.keys(result);
+      const currentSelected = algoNames.includes(this.currentView) ? this.currentView : algoNames[0];
 
-      Object.keys(result).forEach((algoName) => {
-        const isChecked = algoName === currentSelected ? 'checked' : '';
+      algoNames.forEach((algoName) => {
         const label = labels[algoName] || algoName;
-        // Styling lives in `.map-toggles label` — keep the markup bare so the
-        // segmented control stays consistent after a re-render.
-        html += `<label><input type="radio" name="map_view" value="${algoName}" ${isChecked} /> ${label}</label>`;
+        html += `<option value="${algoName}">${label}</option>`;
       });
-      toggleContainer.innerHTML = html;
+      overlaySelect.innerHTML = html;
+      overlaySelect.value = currentSelected;
 
-      const radios = toggleContainer.querySelectorAll('input[name="map_view"]');
-      radios.forEach((radio) => {
-        radio.addEventListener('change', (e) => {
-          this.switchView(e.target.value);
-        });
-      });
+      // Assigned, not addEventListener: the select outlives every re-render, so
+      // a listener per solve would stack up.
+      overlaySelect.onchange = (e) => {
+        this.switchView(e.target.value);
+      };
     }
 
     const initialView = result.ddqn ? 'ddqn' : Object.keys(result)[0];
