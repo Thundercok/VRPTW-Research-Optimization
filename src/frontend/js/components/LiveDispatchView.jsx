@@ -905,35 +905,7 @@ export default function LiveDispatchView() {
 
   return (
     <div id="view-dispatch" className="view-panel">
-      {isUploading && (
-        <div style={{
-          position: 'fixed',
-          top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(255, 255, 255, 0.75)',
-          zIndex: 9999,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backdropFilter: 'blur(3px)'
-        }}>
-          <div className="spinner" style={{
-            border: '3px solid var(--rule)',
-            borderTopColor: 'var(--primary)',
-            borderRadius: '50%',
-            width: '44px',
-            height: '44px',
-            animation: 'spin 0.8s linear infinite',
-            marginBottom: '16px'
-          }}></div>
-          <div style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-main)' }}>
-            Processing File...
-          </div>
-          <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '6px', maxWidth: '300px', textAlign: 'center' }}>
-            Uploading, parsing, and geocoding addresses. This may take a minute for large files.
-          </div>
-        </div>
-      )}
+
       {/* Solver KPI Metrics cards */}
       <section className="kpi-row">
         <div className="kpi-card">
@@ -1060,6 +1032,36 @@ export default function LiveDispatchView() {
       <section className="workspace-full" style={{ position: 'relative' }}>
         {/* Slide-out Manifest Drawer (over the map) */}
         <div id="manifest-drawer" className={`manifest-drawer ${drawerOpen ? 'open' : ''}`}>
+          {isUploading && (
+            <div style={{
+              position: 'absolute',
+              top: 0, left: 0, right: 0, bottom: 0,
+              background: 'rgba(255, 255, 255, 0.85)',
+              zIndex: 10,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backdropFilter: 'blur(3px)',
+              borderRadius: 'inherit'
+            }}>
+              <div className="spinner" style={{
+                border: '3px solid var(--rule)',
+                borderTopColor: 'var(--primary)',
+                borderRadius: '50%',
+                width: '40px',
+                height: '40px',
+                animation: 'spin 0.8s linear infinite',
+                marginBottom: '16px'
+              }}></div>
+              <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-main)' }}>
+                Processing File...
+              </div>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px', maxWidth: '300px', textAlign: 'center' }}>
+                Uploading, parsing, and geocoding. You can close this drawer to let it run in the background.
+              </div>
+            </div>
+          )}
           <div className="drawer-header">
             <h3>{t('manifestDrawerTitle')}</h3>
             <div className="drawer-header-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
