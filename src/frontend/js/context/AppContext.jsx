@@ -377,7 +377,7 @@ export function AppContextProvider({ children }) {
       updateState({ solomonDatasets: list });
       return list;
     } catch (error) {
-      setStatus('Could not load Solomon list. Keeping demo dataset only.', 'error');
+      setStatus('Failed to load datasets. Using demo.', 'error');
       toast('Solomon List Failed', error.message || 'Error loading Solomon datasets', 'error');
       return [];
     }
