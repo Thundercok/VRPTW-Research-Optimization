@@ -147,31 +147,7 @@ export default function Header() {
 
       {state.activeTab === 'dispatch' && (
         <div className="header-right">
-          {/* Map overlay picker. Lives here, next to the dataset select, rather
-              than over the map. Options come from the result set in state — no
-              imperative repopulation, so the list can never describe a solver
-              the current result does not contain. Disabled until a solve lands:
-              the old hardcoded DDQN/ALNS pair looked live but had no handler
-              attached, because the handler was only wired inside paintResult. */}
-          <select
-            id="map-view-select"
-            className="saas-select map-overlay-select"
-            value={availableOverlays.includes(state.activeOverlay) ? state.activeOverlay : (availableOverlays[0] || '')}
-            onChange={(e) => setActiveOverlay(e.target.value)}
-            disabled={!availableOverlays.length}
-            aria-label={t('mapOverlay')}
-            title={t('mapOverlay')}
-          >
-            {availableOverlays.length ? (
-              availableOverlays.map((key) => (
-                <option key={key} value={key}>
-                  {algoLabel(key)}
-                </option>
-              ))
-            ) : (
-              <option value="">{t('mapOverlayEmpty')}</option>
-            )}
-          </select>
+
           <select
             id="dataset-select"
             className="saas-select"
