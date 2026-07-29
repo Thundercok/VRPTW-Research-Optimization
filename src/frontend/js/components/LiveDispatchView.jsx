@@ -15,6 +15,7 @@ export default function LiveDispatchView() {
   const [editingCell, setEditingCell] = useState(null); // { id, field }
   const [editValue, setEditValue] = useState('');
   const [pasteData, setPasteData] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
 
   // AI Playground states
   const [playgroundOpen, setPlaygroundOpen] = useState(false);
@@ -717,6 +718,7 @@ export default function LiveDispatchView() {
     const [file] = e.target.files || [];
     if (!file) return;
 
+    setIsUploading(true);
     try {
       const nameLower = file.name.toLowerCase();
       if (nameLower.endsWith('.csv')) {
@@ -837,6 +839,12 @@ export default function LiveDispatchView() {
       }
     } catch (error) {
       toast('Import Failed', error.message, 'error');
+    } finally {
+      setIsUploading(false);
+      // Reset input so the same file can be uploaded again if needed
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -897,6 +905,35 @@ export default function LiveDispatchView() {
 
   return (
     <div id="view-dispatch" className="view-panel">
+      {isUploading && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(255, 255, 255, 0.75)',
+          zIndex: 9999,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backdropFilter: 'blur(3px)'
+        }}>
+          <div className="spinner" style={{
+            border: '3px solid var(--rule)',
+            borderTopColor: 'var(--primary)',
+            borderRadius: '50%',
+            width: '44px',
+            height: '44px',
+            animation: 'spin 0.8s linear infinite',
+            marginBottom: '16px'
+          }}></div>
+          <div style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-main)' }}>
+            Processing File...
+          </div>
+          <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '6px', maxWidth: '300px', textAlign: 'center' }}>
+            Uploading, parsing, and geocoding addresses. This may take a minute for large files.
+          </div>
+        </div>
+      )}
       {/* Solver KPI Metrics cards */}
       <section className="kpi-row">
         <div className="kpi-card">
