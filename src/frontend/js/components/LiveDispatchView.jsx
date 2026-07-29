@@ -216,7 +216,11 @@ export default function LiveDispatchView() {
     if (!state.lastResult || !state.activeOverlay) return;
     mapControllerRef.current?.switchView(state.activeOverlay);
     ganttControllerRef.current?.setActiveAlgo(state.activeOverlay);
-    simulationControllerRef.current?.updateFrame();
+    if (simulationControllerRef.current) {
+      simulationControllerRef.current.updateDriverAppSelect();
+      simulationControllerRef.current.updateDriverAppScreen();
+      simulationControllerRef.current.updateFrame();
+    }
   }, [state.activeOverlay, state.lastResult]);
 
   // Sync solver history and routes to local state
