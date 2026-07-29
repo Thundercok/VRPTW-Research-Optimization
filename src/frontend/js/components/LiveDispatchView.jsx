@@ -4,6 +4,7 @@ import { MapController } from '../MapController.js';
 import { SimulationController } from '../SimulationController.js';
 import { GanttController } from '../GanttController.js';
 import { algoLabel, BASELINE_ALGO } from '../algoMeta.js';
+import { API_BASE } from '../constants.js';
 
 export default function LiveDispatchView() {
   const { state, updateState, toast, setStatus, request, setActiveOverlay, t } = useAppContext();
