@@ -1404,7 +1404,7 @@ export class App {
       const hasCurrentValue = datasets.some((ds) => ds.name === currentValue);
       this.el.datasetSelect.value = hasCurrentValue ? currentValue : 'demo';
     } catch (error) {
-      this.setStatus('Failed to load datasets. Using demo.', 'error');
+
       this.toast('Solomon List Failed', this.parseApiError(error), 'error');
     }
   }
