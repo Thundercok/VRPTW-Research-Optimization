@@ -1902,7 +1902,7 @@ requires-dist = [
     { name = "httpx", specifier = ">=0.28" },
     { name = "matplotlib", specifier = ">=3.8" },
     { name = "numba", specifier = ">=0.60" },
-    { name = "numpy", specifier = ">=1.26,<2.3" },
+    { name = "numpy", specifier = ">=1.26,<2.4" },
     { name = "pandas", specifier = ">=2.2" },
     { name = "passlib", extras = ["argon2"], specifier = ">=1.7.4" },
     { name = "playwright", marker = "extra == 'dev'", specifier = ">=1.41" },
