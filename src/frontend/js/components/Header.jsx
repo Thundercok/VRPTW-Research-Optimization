@@ -142,11 +142,16 @@ export default function Header() {
             )}
             <option value="custom">{t('headerCustomImport')}</option>
           </select>
-          <button 
-            className="btn-secondary btn-sm" 
+          {/* The only manifest trigger in the app — the map pane no longer
+              carries a duplicate. Usable on every dataset; the drawer itself
+              stays read-only for the bundled demo sets. */}
+          <button
+            id="btn-toggle-drawer"
+            className="btn-secondary btn-sm manifest-btn"
             onClick={() => window.dispatchEvent(new CustomEvent('open-manifest'))}
-            disabled={state.selectedDataset !== 'custom'}
+            title={t('manifestDrawerTitle')}
           >
+            <span aria-hidden="true">☰</span>
             {t('manifestBtn')}
           </button>
           <div className="fleet-toggles">

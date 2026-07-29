@@ -57,7 +57,8 @@ export class SimulationController {
     btnToggleApp?.addEventListener('click', () => {
       appEmulator?.classList.toggle('hidden');
       const isHidden = appEmulator?.classList.contains('hidden');
-      btnToggleApp.style.background = isHidden ? 'var(--primary)' : 'var(--success)';
+      btnToggleApp.classList.toggle('is-open', !isHidden);
+      btnToggleApp.setAttribute('aria-pressed', String(!isHidden));
       this.updateDriverAppScreen();
     });
 
@@ -96,16 +97,22 @@ export class SimulationController {
   showPanels(visible) {
     const btnToggle = document.getElementById('btn-toggle-driver-app');
     const driverApp = document.getElementById('driver-app-emulator');
+    // Lets the map's own controls step aside for the playback bar and rail.
+    const mapEl = document.getElementById('map-container');
+
     if (visible) {
       this.controlPanel?.classList.remove('hidden');
       this.vehicleList?.classList.remove('hidden');
       btnToggle?.classList.remove('hidden');
+      mapEl?.classList.add('sim-active');
       this.updateDriverAppSelect();
     } else {
       this.controlPanel?.classList.add('hidden');
       this.vehicleList?.classList.add('hidden');
       btnToggle?.classList.add('hidden');
+      btnToggle?.classList.remove('is-open');
       driverApp?.classList.add('hidden');
+      mapEl?.classList.remove('sim-active');
       this.stopLoop();
     }
   }
@@ -459,11 +466,14 @@ export class SimulationController {
     };
     const color = colors[algoName] || '#3b82f6';
 
+    const tab = (key, label) =>
+      `<button class="btn-sim-tab ${this.activeSubTab === key ? 'is-active' : ''}" data-tab="${key}">${label}</button>`;
+
     let html = `
-      <div class="sim-panel-tabs" style="display: flex; gap: 4px; background: rgba(230, 235, 245, 0.9); padding: 4px; border-radius: var(--r); margin-bottom: 12px; border: 1px solid var(--border);">
-        <button class="btn-sim-tab" data-tab="vehicles" style="flex: 1; border: none; padding: 6px 10px; font-size: 11px; font-weight: 600; border-radius: 4px; cursor: pointer; transition: all 0.2s; background: ${this.activeSubTab === 'vehicles' ? '#ffffff' : 'transparent'}; color: ${this.activeSubTab === 'vehicles' ? 'var(--text-main)' : 'var(--text-muted)'}; box-shadow: ${this.activeSubTab === 'vehicles' ? 'var(--shadow-sm)' : 'none'};">Drivers</button>
-        <button class="btn-sim-tab" data-tab="alerts" style="flex: 1; border: none; padding: 6px 10px; font-size: 11px; font-weight: 600; border-radius: 4px; cursor: pointer; transition: all 0.2s; background: ${this.activeSubTab === 'alerts' ? '#ffffff' : 'transparent'}; color: ${this.activeSubTab === 'alerts' ? 'var(--text-main)' : 'var(--text-muted)'}; box-shadow: ${this.activeSubTab === 'alerts' ? 'var(--shadow-sm)' : 'none'};">Alerts</button>
-        <button class="btn-sim-tab" data-tab="pod" style="flex: 1; border: none; padding: 6px 10px; font-size: 11px; font-weight: 600; border-radius: 4px; cursor: pointer; transition: all 0.2s; background: ${this.activeSubTab === 'pod' ? '#ffffff' : 'transparent'}; color: ${this.activeSubTab === 'pod' ? 'var(--text-main)' : 'var(--text-muted)'}; box-shadow: ${this.activeSubTab === 'pod' ? 'var(--shadow-sm)' : 'none'};">POD Logs</button>
+      <div class="sim-panel-tabs">
+        ${tab('vehicles', 'Drivers')}
+        ${tab('alerts', 'Alerts')}
+        ${tab('pod', 'POD Logs')}
       </div>
     `;
 
@@ -533,7 +543,7 @@ export class SimulationController {
             <div class="sim-card-header">
               <span class="sim-veh-id" style="border-left: 3px solid ${color}; padding-left: 8px;">${driverName}</span>
               <div style="display: flex; align-items: center; gap: 6px;">
-                <span class="focus-lbl" style="font-size: 9px; font-weight: 600; color: var(--text-muted); background: rgba(0,0,0,0.05); padding: 2px 6px; border-radius: 4px;">🔍 Focus</span>
+                <span class="focus-lbl sim-chip-focus">🔍 Focus</span>
                 <span class="sim-badge ${statusClass}">${state.status}</span>
               </div>
             </div>
@@ -541,14 +551,12 @@ export class SimulationController {
               <p class="sim-detail-text" style="font-size: 11px; margin-bottom: 8px; color: var(--text-muted); line-height: 1.4;">${state.detail}</p>
               ${
                 mismatches.length > 0
-                  ? `<div style="background: rgba(239, 68, 68, 0.1); color: var(--danger); font-size: 10px; margin-bottom: 8px; padding: 4px 8px; border-radius: 4px; display: flex; align-items: center; gap: 4px; border: 1px solid rgba(239, 68, 68, 0.2); font-weight: 600;">
-                     ⚠️ Skill Gap: Needs ${[...new Set(mismatches)].join(', ')}
-                   </div>`
+                  ? `<div class="sim-skill-gap">⚠️ Skill Gap: Needs ${[...new Set(mismatches)].join(', ')}</div>`
                   : ''
               }
 
               <!-- Telemetry indicators row -->
-              <div style="display: flex; justify-content: space-between; font-size: 10px; color: var(--text-muted); margin-bottom: 6px; margin-top: 4px; border-top: 1px solid rgba(0,0,0,0.04); padding-top: 4px;">
+              <div class="sim-telemetry-row">
                 <span>🔋 Fuel: <strong>${fuelLevel}%</strong></span>
                 <span>🌱 CO2: <strong>${co2Value} kg</strong></span>
               </div>
@@ -557,16 +565,16 @@ export class SimulationController {
                 <span>Stops: ${stopsDone}/${totalStops}</span>
                 <span>Load: ${route.load}/${vehCap} (${loadPercent}%)</span>
               </div>
-              <div class="sim-progress-bar" style="background: rgba(0,0,0,0.06); height: 4px; border-radius: 2px; overflow: hidden; margin-bottom: 6px;">
+              <div class="sim-progress-bar" style="background: color-mix(in srgb, var(--text-main) 8%, transparent); height: 4px; border-radius: 2px; overflow: hidden; margin-bottom: 6px;">
                 <div class="sim-progress-fill" style="width: ${percent}%; background-color: ${color}; height: 100%;"></div>
               </div>
 
               <!-- Interactive disruption buttons -->
-              <div class="sim-card-actions" style="display: flex; gap: 4px; margin-top: 8px; border-top: 1px dashed var(--border); padding-top: 8px;">
-                <button class="btn-sim-incident btn-trigger-breakdown" data-vehicle-id="${route.vehicle_id}" style="flex: 1; font-size: 9px; padding: 4px 6px; background: ${isBreakdown ? '#ef4444' : 'rgba(239, 68, 68, 0.08)'}; color: ${isBreakdown ? '#ffffff' : '#ef4444'}; border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 4px; cursor: pointer; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 3px;">
+              <div class="sim-card-actions">
+                <button class="btn-sim-incident incident-breakdown btn-trigger-breakdown ${isBreakdown ? 'is-active' : ''}" data-vehicle-id="${route.vehicle_id}">
                   ⚠️ ${isBreakdown ? 'Clear incident' : 'Breakdown'}
                 </button>
-                <button class="btn-sim-incident btn-trigger-traffic" data-vehicle-id="${route.vehicle_id}" style="flex: 1; font-size: 9px; padding: 4px 6px; background: ${isTraffic ? '#f59e0b' : 'rgba(245, 158, 11, 0.08)'}; color: ${isTraffic ? '#ffffff' : '#f59e0b'}; border: 1px solid rgba(245, 158, 11, 0.2); border-radius: 4px; cursor: pointer; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 3px;">
+                <button class="btn-sim-incident incident-traffic btn-trigger-traffic ${isTraffic ? 'is-active' : ''}" data-vehicle-id="${route.vehicle_id}">
                   🚦 ${isTraffic ? 'Clear congestion' : 'Traffic Jam'}
                 </button>
               </div>
@@ -579,7 +587,7 @@ export class SimulationController {
       let alertsHtml = `<div class="sim-alerts-container">`;
       if (this.alerts.length === 0) {
         alertsHtml += `
-          <div class="text-center text-muted" style="padding: 24px 16px; font-size: 11px; background: rgba(255,255,255,0.9); border-radius: var(--r); border: 1px solid var(--border);">
+          <div class="sim-panel-empty">
             No dispatcher alerts logged yet. Run simulation to stream live updates.
           </div>
         `;
@@ -867,8 +875,8 @@ export class SimulationController {
       container.innerHTML = `
         <div style="text-align: center; margin-top: 100px; padding: 0 16px;">
             <div style="font-size: 32px; margin-bottom: 12px; animation: bounce 2s infinite;">🚚</div>
-            <h4 style="margin: 0 0 6px; font-size: 13px; color: #27272a; font-weight: 700;">Driver Companion Emulator</h4>
-            <p style="margin: 0; font-size: 10.5px; color: #71717a; line-height: 1.45;">Select an active driver above to simulate mobile deliveries, log signatures, and track live routes.</p>
+            <h4 style="margin: 0 0 6px; font-size: 13px; color: var(--text-main); font-weight: 700;">Driver Companion Emulator</h4>
+            <p style="margin: 0; font-size: 10.5px; color: var(--text-muted); line-height: 1.45;">Select an active driver above to simulate mobile deliveries, log signatures, and track live routes.</p>
         </div>
       `;
       return;
@@ -883,7 +891,7 @@ export class SimulationController {
 
     const route = algoResult.routes.find((r) => r.vehicle_id === Number(selectedVehId));
     if (!route) {
-      container.innerHTML = `<div style="text-align: center; padding: 20px; font-size: 11px; color: #71717a;">No active route found for this driver.</div>`;
+      container.innerHTML = `<div style="text-align: center; padding: 20px; font-size: 11px; color: var(--text-muted);">No active route found for this driver.</div>`;
       return;
     }
 
@@ -891,11 +899,11 @@ export class SimulationController {
     const driverSkills = fleetVehicle ? fleetVehicle.skills || 'None' : 'None';
 
     let html = `
-      <div style="display: flex; justify-content: space-between; align-items: center; background: white; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border); box-shadow: var(--shadow-sm); margin-bottom: 8px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-surface); padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border); box-shadow: var(--shadow-sm); margin-bottom: 8px;">
         <span style="font-size: 10.5px; color: var(--text-muted); font-weight: 500;">Route Cargo: <strong>${route.load} units</strong></span>
         ${createSkillBadge(driverSkills)}
       </div>
-      <div style="font-size: 11px; font-weight: 700; color: #27272a; margin-top: 6px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.03em;">Manifest Queue:</div>
+      <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-top: 6px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.03em;">Manifest Queue:</div>
       <div style="display: flex; flex-direction: column; gap: 8px;">
     `;
 
@@ -921,24 +929,24 @@ export class SimulationController {
         this.t_sim < arrTime &&
         (idx === 0 || (route.schedule[idx - 1] && this.t_sim >= route.schedule[idx - 1].departure + activeDelay));
 
-      let bg = '#ffffff';
+      let bg = 'var(--bg-surface)';
       let border = 'var(--border)';
       let statusText = 'Pending';
-      let statusColor = '#71717a';
+      let statusColor = 'var(--text-muted)';
 
       if (isCompleted) {
-        bg = 'rgba(16,185,129,0.05)';
-        border = 'rgba(16,185,129,0.2)';
+        bg = 'color-mix(in srgb, var(--success) 8%, var(--bg-surface))';
+        border = 'color-mix(in srgb, var(--success) 30%, transparent)';
         statusText = 'Delivered';
         statusColor = 'var(--success)';
       } else if (isServicing) {
-        bg = 'rgba(245,158,11,0.05)';
-        border = 'rgba(245,158,11,0.3)';
+        bg = 'color-mix(in srgb, var(--warning) 8%, var(--bg-surface))';
+        border = 'color-mix(in srgb, var(--warning) 30%, transparent)';
         statusText = 'Active / Servicing';
         statusColor = 'var(--orange)';
       } else if (isNext) {
-        bg = 'rgba(59,130,246,0.05)';
-        border = 'rgba(59,130,246,0.3)';
+        bg = 'color-mix(in srgb, var(--primary) 8%, var(--bg-surface))';
+        border = 'color-mix(in srgb, var(--primary) 30%, transparent)';
         statusText = 'En Route / Next';
         statusColor = 'var(--primary)';
       }
@@ -946,14 +954,14 @@ export class SimulationController {
       html += `
         <div class="driver-app-card" style="background: ${bg}; border-color: ${border};">
           <div style="display: flex; justify-content: space-between; align-items: center;">
-            <strong style="color: #18181b; font-size: 11px;">Stop #${stopId} - ${this.app.escapeHtml(customer.name)}</strong>
+            <strong style="color: var(--text-main); font-size: 11px;">Stop #${stopId} - ${this.app.escapeHtml(customer.name)}</strong>
             <span style="font-size: 9px; font-weight: 700; color: ${statusColor}; text-transform: uppercase;">${statusText}</span>
           </div>
-          <div style="font-size: 10px; color: #71717a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+          <div style="font-size: 10px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
             📍 ${this.app.escapeHtml(customer.address || 'Delivered Destination')}
           </div>
           
-          <div style="font-size: 9px; color: #a1a1aa; margin-top: 2px; display: flex; justify-content: space-between;">
+          <div style="font-size: 9px; color: var(--text-muted); opacity: 0.85; margin-top: 2px; display: flex; justify-content: space-between;">
             <span>Window: ${this.formatTimeStr(customer.ready)} - ${this.formatTimeStr(customer.due)}</span>
             <span>ETA: ${this.formatTimeStr(arrTime)}</span>
           </div>

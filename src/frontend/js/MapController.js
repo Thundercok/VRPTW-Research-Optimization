@@ -969,9 +969,9 @@ export class MapController {
       Object.keys(result).forEach((algoName) => {
         const isChecked = algoName === currentSelected ? 'checked' : '';
         const label = labels[algoName] || algoName;
-        html += `<label style="margin-right: 12px; display: inline-flex; align-items: center; gap: 4px; font-weight: 500; cursor: pointer; color: var(--text-main); font-size: 11px;">
-          <input type="radio" name="map_view" value="${algoName}" ${isChecked} /> ${label}
-        </label>`;
+        // Styling lives in `.map-toggles label` — keep the markup bare so the
+        // segmented control stays consistent after a re-render.
+        html += `<label><input type="radio" name="map_view" value="${algoName}" ${isChecked} /> ${label}</label>`;
       });
       toggleContainer.innerHTML = html;
 

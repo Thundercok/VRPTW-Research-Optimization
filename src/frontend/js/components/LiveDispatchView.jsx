@@ -1200,58 +1200,56 @@ export default function LiveDispatchView() {
 
         {/* Full-width Map Pane */}
         <div className="pane pane-map-full" style={{ position: 'relative' }}>
-          <div className="pane-header">
-            <div className="pane-header-left" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <button 
-                id="btn-toggle-drawer" 
-                className={`drawer-toggle-btn ${drawerOpen ? 'active' : ''}`} 
-                onClick={() => setDrawerOpen(!drawerOpen)}
-                title="Toggle Manifest"
-              >
-                <span className="drawer-toggle-icon">☰</span>
-                <span className="drawer-toggle-label">{t('manifestBtn')}</span>
-              </button>
-              <h3>{t('mapGeospatial')}</h3>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {/* Single pane bar: the solver overlay picker on the left (its own
+              scroller, so a long algorithm list never crowds anything), map
+              tools pinned right. The manifest lives in the app header. */}
+          <div className="map-algo-bar">
+            <span className="map-algo-bar-label">{t('mapOverlay')}</span>
+            <div className="map-toggles-scroll">
               <div className="map-toggles">
                 <label><input type="radio" name="map_view" value="ddqn" defaultChecked /> DDQN</label>
                 <label><input type="radio" name="map_view" value="alns" /> ALNS Base</label>
               </div>
-              <label className="gnn-heatmap-toggle-label" style={{ 
-                display: 'inline-flex', 
-                alignItems: 'center', 
-                gap: '6px', 
-                fontSize: '11px', 
-                fontWeight: '600', 
-                color: 'var(--primary)', 
-                cursor: 'pointer', 
-                borderLeft: '1px solid var(--border)', 
-                paddingLeft: '12px',
-                userSelect: 'none'
-              }}>
-                <input 
-                  type="checkbox" 
-                  id="chk-gnn-heatmap" 
-                  checked={showGnnLegend} 
+            </div>
+
+            <div className="map-algo-bar-tools">
+              <label className="gnn-toggle" title={t('mapShowGNN')}>
+                <input
+                  type="checkbox"
+                  id="chk-gnn-heatmap"
+                  className="gnn-toggle-input"
+                  checked={showGnnLegend}
                   onChange={(e) => {
-                    const checked = e.target.checked;
-                    setShowGnnLegend(checked);
+                    setShowGnnLegend(e.target.checked);
                     if (window.app && window.app.mapController) {
                       window.app.mapController.updateGnnHeatmapOverlay();
                     }
-                  }} 
+                  }}
                 />
-                <span>{t('mapShowGNN')}</span>
+                <span className="gnn-toggle-track" aria-hidden="true"></span>
+                <span className="gnn-toggle-text">{t('mapShowGNN')}</span>
               </label>
+
+              {/* Companion-app trigger. Docked here rather than floating over the
+                  map, where it used to sit on top of the driver cards. */}
+              <button
+                id="btn-toggle-driver-app"
+                className="map-header-btn driver-app-btn hidden"
+                type="button"
+              >
+                <span aria-hidden="true">📱</span>
+                <span>{t('mapDriverApp')}</span>
+                <span id="driver-app-notif" className="driver-app-notif">1</span>
+              </button>
+
               <button
                 id="btn-toggle-playground"
                 className={`playground-toggle-btn ${playgroundOpen ? 'active' : ''}`}
                 onClick={() => setPlaygroundOpen(!playgroundOpen)}
-                style={{ marginLeft: '8px' }}
                 aria-pressed={playgroundOpen}
               >
-                {t('mapPlayground')}
+                <span aria-hidden="true">✨</span>
+                <span>{t('mapPlayground')}</span>
               </button>
             </div>
           </div>
@@ -1261,37 +1259,18 @@ export default function LiveDispatchView() {
 
             {/* GNN Heatmap Legend Overlay */}
             {showGnnLegend && (
-              <div className="gnn-legend-overlay" style={{
-                position: 'absolute',
-                bottom: '16px',
-                left: '16px',
-                zIndex: 1000,
-                background: 'rgba(255, 255, 255, 0.95)',
-                backdropFilter: 'blur(4px)',
-                padding: '10px 14px',
-                borderRadius: '8px',
-                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1)',
-                border: '1px solid #e2e8f0',
-                fontFamily: 'var(--font-main)',
-                pointerEvents: 'none',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '6px',
-                minWidth: '180px'
-              }}>
-                <div style={{ fontWeight: 700, fontSize: '10.5px', textTransform: 'uppercase', color: '#1e293b', borderBottom: '1px solid #e2e8f0', paddingBottom: '4px', marginBottom: '2px', letterSpacing: '0.5px' }}>
-                  GNN Edge Probability
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', color: '#334155' }}>
-                  <span style={{ display: 'inline-block', width: '14px', height: '4px', background: '#f59e0b', borderRadius: '1px' }}></span>
+              <div className="gnn-legend-overlay">
+                <div className="gnn-legend-title">GNN Edge Probability</div>
+                <div className="gnn-legend-row">
+                  <span className="gnn-legend-swatch high"></span>
                   <span>High Confidence (&ge; 75%)</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', color: '#334155' }}>
-                  <span style={{ display: 'inline-block', width: '14px', height: '2.5px', background: '#3b82f6', borderRadius: '1px' }}></span>
+                <div className="gnn-legend-row">
+                  <span className="gnn-legend-swatch mid"></span>
                   <span>Medium (40% - 75%)</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', color: '#334155' }}>
-                  <span style={{ display: 'inline-block', width: '14px', height: '0px', borderTop: '2px dashed #a855f7' }}></span>
+                <div className="gnn-legend-row">
+                  <span className="gnn-legend-swatch low"></span>
                   <span>Low Confidence (15% - 40%)</span>
                 </div>
               </div>
@@ -1312,57 +1291,14 @@ export default function LiveDispatchView() {
                 <option value="50">50x Speed</option>
               </select>
             </div>
+
+            {/* Driver rail. Kept inside the map wrapper so its offsets are
+                measured against the map, not the pane header. */}
+            <div id="sim-vehicle-panel" className="sim-vehicle-panel hidden"></div>
           </div>
 
-          {/* Vehicle Status Panel */}
-          <div id="sim-vehicle-panel" className="sim-vehicle-panel hidden"></div>
-
-          {/* Floating Mobile Companion App Emulator Trigger Button */}
-          <button
-            id="btn-toggle-driver-app"
-            className="hidden"
-            style={{
-              position: 'absolute',
-              bottom: '85px',
-              right: '20px',
-              zIndex: 1000,
-              background: 'var(--primary)',
-              color: 'white',
-              padding: '10px 18px',
-              borderRadius: '30px',
-              fontSize: '11px',
-              fontWeight: 700,
-              boxShadow: 'var(--shadow-md)',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              transition: 'all 0.2s',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-            }}
-          >
-            <span>📱 Driver App Companion</span>
-            <span
-              id="driver-app-notif"
-              style={{
-                background: 'var(--danger)',
-                color: 'white',
-                fontSize: '8px',
-                fontWeight: 800,
-                borderRadius: '50%',
-                width: '14px',
-                height: '14px',
-                display: 'none',
-                alignItems: 'center',
-                justifyContent: 'center',
-                lineHeight: 1,
-              }}
-            >
-              1
-            </span>
-          </button>
-
-          {/* Mobile Driver App Emulator Mockup Container */}
+          {/* Mobile Driver App Emulator Mockup Container.
+              Trigger button lives in the pane header (see above). */}
           <div id="driver-app-emulator" className="driver-app-mockup hidden">
             <div
               style={{
@@ -1431,8 +1367,8 @@ export default function LiveDispatchView() {
               >
                 <div style={{ textAlign: 'center', marginTop: '100px', padding: '0 16px' }}>
                   <div style={{ fontSize: '32px', marginBottom: '12px' }}>🚚</div>
-                  <h4 style={{ margin: '0 0 6px', fontSize: '13px', color: '#27272a' }}>{t('ldDriverCompanion')}</h4>
-                  <p style={{ margin: 0, fontSize: '10px', color: '#71717a', lineHeight: '1.4' }}>
+                  <h4 style={{ margin: '0 0 6px', fontSize: '13px', color: 'var(--text-main)' }}>{t('ldDriverCompanion')}</h4>
+                  <p style={{ margin: 0, fontSize: '10px', color: 'var(--text-muted)', lineHeight: '1.4' }}>
                     Select an active driver above to simulate mobile deliveries, log signatures, and track live routes.
                   </p>
                 </div>

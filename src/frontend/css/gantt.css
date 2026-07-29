@@ -18,7 +18,9 @@
     max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1),
     opacity 0.25s ease,
     transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  max-height: 600px;
+  /* Capped against the viewport so a large fleet cannot push the map off the
+     bottom of the screen. */
+  max-height: min(600px, 42vh);
   opacity: 1;
   transform: translateY(0);
   flex-shrink: 0;
@@ -139,14 +141,15 @@
 /* ── Canvas Wrapper ──────────────────────────────────── */
 .gantt-canvas-wrap {
   padding: 8px 12px 12px;
-  overflow-x: auto;
-  overflow-y: hidden;
+  overflow: auto;
+  max-height: calc(min(600px, 42vh) - 74px);
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;
 }
 
 .gantt-canvas-wrap::-webkit-scrollbar {
   height: 6px;
+  width: 6px;
 }
 
 .gantt-canvas-wrap::-webkit-scrollbar-thumb {

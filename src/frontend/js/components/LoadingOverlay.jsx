@@ -6,7 +6,7 @@ export default function LoadingOverlay() {
   const [isMinimized, setIsMinimized] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const timerRef = useRef(null);
-  const consoleEndRef = useRef(null);
+  const consoleRef = useRef(null);
 
   // Keep track of active elapsed time counter
   useEffect(() => {
@@ -27,10 +27,12 @@ export default function LoadingOverlay() {
     };
   }, [loadingState.active]);
 
-  // Auto-scroll console terminal to bottom on new logs
+  // Auto-scroll console terminal to bottom on new logs (scroll the pane itself,
+  // not the whole card via scrollIntoView)
   useEffect(() => {
-    if (consoleEndRef.current) {
-      consoleEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    const pane = consoleRef.current;
+    if (pane) {
+      pane.scrollTop = pane.scrollHeight;
     }
   }, [loadingState.logs]);
 
@@ -126,19 +128,18 @@ export default function LoadingOverlay() {
 
         {/* Real-time Console Log Terminal */}
         <div className="loading-console-wrapper">
-          <div class="loading-console-header">
+          <div className="loading-console-header">
             <span>Live Solver Feed</span>
-            <span class="loading-console-dot"></span>
+            <span className="loading-console-dot"></span>
           </div>
-          <div id="loading-console" className="loading-console">
+          <div id="loading-console" className="loading-console" ref={consoleRef}>
             {loadingState.logs.length === 0 ? (
               <div className="loading-console-line placeholder">Connecting to optimizer...</div>
             ) : (
               loadingState.logs.map((log, index) => (
-                <div key={index} className="loading-console-line">{log}</div>
+                <div key={index} className="loading-console-line" title={log}>{log}</div>
               ))
             )}
-            <div ref={consoleEndRef} />
           </div>
         </div>
 
