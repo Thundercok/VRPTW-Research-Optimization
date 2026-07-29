@@ -53,12 +53,28 @@ async def geocode_address(q: str, limit: int) -> dict[str, Any]:
         except httpx.HTTPError:
             try:
                 mapsco_resp = await client.get(
-                    "https://geocode.maps.co/search",
-                    params={"q": f"{q}, Vietnam"},
+                    "https://photon.komoot.io/api/",
+                    params={"q": f"{q}, Vietnam", "limit": str(limit)},
                     headers=headers,
                 )
                 mapsco_resp.raise_for_status()
-                data = (mapsco_resp.json() or [])[: max(1, int(limit))]
+                photon_data = mapsco_resp.json().get("features", [])
+                
+                # Convert photon format to the expected format
+                data = []
+                for feat in photon_data:
+                    coords = feat.get("geometry", {}).get("coordinates", [0, 0])
+                    props = feat.get("properties", {})
+                    name = props.get("name", "")
+                    street = props.get("street", "")
+                    city = props.get("city", "")
+                    display = ", ".join(filter(bool, [name, street, city]))
+                    data.append({
+                        "display_name": display,
+                        "lat": coords[1],
+                        "lon": coords[0]
+                    })
+                data = data[: max(1, int(limit))]
             except httpx.HTTPError:
                 data = []
 
@@ -97,15 +113,23 @@ async def reverse_geocode_address(lat: float, lng: float) -> dict[str, Any]:
         response.raise_for_status()
         return response.json()
 
-    async def fetch_mapsco(client: httpx.AsyncClient) -> dict[str, Any]:
-        url = "https://geocode.maps.co/reverse"
+    async def fetch_photon(client: httpx.AsyncClient) -> dict[str, Any]:
+        url = "https://photon.komoot.io/reverse"
         params = {
             "lat": str(lat),
             "lon": str(lng),
         }
         response = await client.get(url, params=params, headers=headers)
         response.raise_for_status()
-        return response.json()
+        photon_data = response.json().get("features", [])
+        if photon_data:
+            props = photon_data[0].get("properties", {})
+            name = props.get("name", "")
+            street = props.get("street", "")
+            city = props.get("city", "")
+            display = ", ".join(filter(bool, [name, street, city]))
+            return {"display_name": display, "address": props}
+        return {}
 
     async def fetch_bigdatacloud(client: httpx.AsyncClient) -> dict[str, Any]:
         url = "https://api.bigdatacloud.net/data/reverse-geocode-client"
@@ -140,7 +164,7 @@ async def reverse_geocode_address(lat: float, lng: float) -> dict[str, Any]:
             data = await fetch_nominatim(client)
         except httpx.HTTPError:
             try:
-                data = await fetch_mapsco(client)
+                data = await fetch_photon(client)
             except httpx.HTTPError:
                 try:
                     data = await fetch_bigdatacloud(client)

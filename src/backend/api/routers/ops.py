@@ -229,6 +229,8 @@ async def import_csv_file(
                     lng = float(geo["items"][0]["lng"])
             except Exception:
                 pass
+            # Nominatim rate limit: max 1 request per second
+            await asyncio.sleep(1.1)
 
         if lat is None or lng is None:
             continue
