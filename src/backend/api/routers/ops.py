@@ -32,7 +32,7 @@ from core.config import demo_auth_bypass_enabled
 from core.firebase import is_firebase_enabled
 from core.rate_limit import GEOCODE_LIMIT, JOBS_LIMIT, limiter
 from models.schemas import JobRequest, MatrixRequest, ReoptimizeRequest
-from services.geocode_service import geocode_address, reverse_geocode_address
+from services.geocode_service import geocode_address, bulk_geocode_addresses, reverse_geocode_address
 from services.compute_gateway import call_remote, remote_enabled, remote_health
 from services.job_service import job_service
 from services.matrix_service import calculate_matrix, fetch_route_geometry
@@ -221,20 +221,6 @@ async def import_csv_file(
         except ValueError:
             lat, lng = None, None
 
-        if (lat is None or lng is None) and address:
-            try:
-                geo = await geocode_address(address, limit=1)
-                if geo.get("items"):
-                    lat = float(geo["items"][0]["lat"])
-                    lng = float(geo["items"][0]["lng"])
-            except Exception:
-                pass
-            # Nominatim rate limit: max 1 request per second
-            await asyncio.sleep(1.1)
-
-        if lat is None or lng is None:
-            continue
-
         try:
             demand = int(float(demand_str))
         except ValueError:
@@ -273,6 +259,19 @@ async def import_csv_file(
             }
         )
 
+    # Bulk geocode missing coords
+    to_geocode = [c for c in customers if c["lat"] is None and c["address"]]
+    if to_geocode:
+        addresses = [c["address"] for c in to_geocode]
+        results = await bulk_geocode_addresses(addresses)
+        for cust, geo in zip(to_geocode, results):
+            if geo.get("items"):
+                cust["lat"] = float(geo["items"][0]["lat"])
+                cust["lng"] = float(geo["items"][0]["lng"])
+
+    # Filter out any that still don't have coords
+    customers = [c for c in customers if c["lat"] is not None and c["lng"] is not None]
+
     return {"customers": customers}
 
 
@@ -282,23 +281,19 @@ async def _geocode_text_block(text: str) -> dict[str, Any]:
     total = len(customers)
     geocoded = 0
 
+    to_geocode = []
     for cust in customers:
-        if cust["lat"] is not None:
-            geocoded += 1
-            continue
-        addr = cust.get("address", "")
-        if not addr:
-            continue
-        try:
-            geo = await geocode_address(addr, limit=1)
+        if cust["lat"] is None and cust.get("address"):
+            to_geocode.append(cust)
+
+    if to_geocode:
+        addresses = [c["address"] for c in to_geocode]
+        results = await bulk_geocode_addresses(addresses)
+        for cust, geo in zip(to_geocode, results):
             if geo.get("items"):
                 cust["lat"] = float(geo["items"][0]["lat"])
                 cust["lng"] = float(geo["items"][0]["lng"])
                 geocoded += 1
-        except Exception:
-            pass
-        # Nominatim rate limit: max 1 request per second
-        await asyncio.sleep(1.1)
 
     customers = [c for c in customers if c["lat"] is not None and c["lng"] is not None]
     return {"customers": customers, "geocoded_count": geocoded, "total_count": total}
