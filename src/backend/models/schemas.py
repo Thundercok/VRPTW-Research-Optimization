@@ -79,6 +79,10 @@ class MatrixRequest(BaseModel):
 
 class JobRequest(BaseModel):
     mode: str = "sample"
+    # Name of the bundled instance the points came from ("rc101", "demo", ...).
+    # Empty for custom imports. Lets the solver rebuild the instance in its
+    # native Solomon frame and score the plan against the published BKS.
+    dataset: str = ""
     fleet: FleetConfig
     customers: list[Point]
 
@@ -116,6 +120,10 @@ class JobState:
 
 
 class ReoptimizeRequest(BaseModel):
+    # Same role as on JobRequest: keeps the polish step in the same coordinate
+    # frame the original solve used, so it cannot "improve" a route by a
+    # fraction of a percent that is really just a projection difference.
+    dataset: str = ""
     fleet: FleetConfig
     customers: list[Point]
     routes: list[list[int]]

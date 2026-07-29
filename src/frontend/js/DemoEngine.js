@@ -6,7 +6,7 @@
  * removal, simulated-annealing acceptance) so the demo runs without any
  * backend server.
  *
- * Also generates realistic fake admin / activity telemetry for the dashboard.
+ * The HCMC demo dataset lives here too (getHCMCDemoDataset).
  */
 
 // ── Distance helpers ─────────────────────────────────────────────────────────
@@ -275,11 +275,29 @@ function toOutput(routes, dist, points, runtimeSec, activeFleet = null) {
 
 /**
  * Solve a VRPTW instance entirely in JS (no backend needed).
+ *
+ * Returns exactly one result, under the `alns` key, because exactly one
+ * algorithm runs here: the browser ALNS above. It previously returned three
+ * keys — `ddqn`, `hybrid`, `alns` — presented as a solver comparison. They were
+ * not one. All three were this same ALNS at different iteration budgets, and
+ * their reported figures were then overwritten outright:
+ *
+ *     alnsResult.total_distance_km = +(baseD * 1.15).toFixed(2);
+ *     alnsResult.runtime_sec = +(3.2 + Math.random() * 1.0).toFixed(2);
+ *
+ * so the "ALNS" distance was the "DDQN" distance times 1.15 and every runtime
+ * was a random number. Any gap read off that comparison was manufactured.
+ *
+ * There is no DDQN in the browser — it needs the trained network — so this
+ * cannot honestly produce a DDQN-vs-ALNS comparison at all. It reports the one
+ * plan it actually computed, with its measured distance and measured runtime,
+ * and tags it so the UI can say where the numbers came from.
+ *
  * @param {Array} customers  - Array of {lat, lng, demand, id?, isDepot?}
  * @param {number} vehicles
  * @param {number} capacity
  * @param {Array|null} fleet
- * @returns {{ ddqn: Object, alns: Object }}
+ * @returns {{ alns: Object }}
  */
 export function solveDemo(customers, vehicles, capacity, fleet = null) {
   const n = customers.length;
@@ -290,119 +308,34 @@ export function solveDemo(customers, vehicles, capacity, fleet = null) {
   const numVehicles = activeFleet ? activeFleet.length : vehicles;
   const capacities = activeFleet ? activeFleet.map((v) => Number(v.capacity) || capacity) : null;
 
-  // ALNS baseline proxy: nearest-neighbour
+  const startedAt = (typeof performance !== 'undefined' ? performance : Date).now();
+
   const nnRoutes = nearestNeighbour(n, dist, demands, numVehicles, capacity, capacities);
-  const alnsResult = toOutput(nnRoutes, dist, customers, 0, activeFleet);
-
-  // Hybrid++ proxy: ALNS with fewer iterations
-  const midIters = Math.min(200, Math.max(75, n * 4));
-  const { routes: hybridRoutes } = runALNS(
+  const iterations = Math.min(400, Math.max(150, n * 8));
+  const { routes } = runALNS(
     nnRoutes.map((r) => [...r]),
     dist,
     demands,
     capacity,
     numVehicles,
-    midIters,
+    iterations,
     capacities
   );
-  const hybridResult = toOutput(hybridRoutes, dist, customers, 0, activeFleet);
 
-  // DDQN-ALNS proxy: run full adaptive large-neighbourhood search to get superior result
-  const iters = Math.min(400, Math.max(150, n * 8));
-  const { routes: ddqnRoutes } = runALNS(
-    nnRoutes.map((r) => [...r]),
-    dist,
-    demands,
-    capacity,
-    numVehicles,
-    iters,
-    capacities
-  );
-  const ddqnResult = toOutput(ddqnRoutes, dist, customers, 0, activeFleet);
+  const elapsedSec = ((typeof performance !== 'undefined' ? performance : Date).now() - startedAt) / 1000;
+  const result = toOutput(routes, dist, customers, elapsedSec, activeFleet);
 
-  // --- Enforce Research Narrative (Stagger metrics so DDQN wins) ---
-  const baseD = ddqnResult.total_distance_km;
+  // Provenance travels with the numbers so a screenshot cannot be mistaken for
+  // a backend run. `cost` is deliberately absent: without it the KPI strip
+  // cannot compute a BKS gap, which is correct — these are haversine kilometres
+  // on the map projection, not the instance's own units.
+  result.engine = 'browser-alns';
+  result.iterations = iterations;
 
-  // DDQN is fastest and has best distance
-  ddqnResult.runtime_sec = +(0.8 + Math.random() * 0.4).toFixed(2);
-
-  // Hybrid++ is medium speed and medium distance (+5%)
-  hybridResult.runtime_sec = +(1.5 + Math.random() * 0.5).toFixed(2);
-  hybridResult.total_distance_km = +(baseD * 1.05).toFixed(2);
-
-  // ALNS Pure is slowest and worst distance (+15%)
-  alnsResult.runtime_sec = +(3.2 + Math.random() * 1.0).toFixed(2);
-  alnsResult.total_distance_km = +(baseD * 1.15).toFixed(2);
-
-  return { ddqn: ddqnResult, hybrid: hybridResult, alns: alnsResult };
+  return { alns: result };
 }
 
-// ── Demo admin / activity telemetry ──────────────────────────────────────────
-
-const DEMO_USERS = [
-  { email: 'admin@nami.local', role: 'admin', status: 'online' },
-  { email: 'operator1@nami.local', role: 'operator', status: 'online' },
-  { email: 'operator2@nami.local', role: 'operator', status: 'offline' },
-  { email: 'viewer@nami.local', role: 'viewer', status: 'offline' },
-];
-
-const DEMO_ACTIVITY_HOURS = 24;
-
-/**
- * Returns fake admin user list matching the /admin/users API shape.
- */
-export function getDemoAdminUsers() {
-  const now = Math.floor(Date.now() / 1000);
-  return {
-    items: DEMO_USERS.map((u, i) => ({
-      email: u.email,
-      role: u.role,
-      status: u.status,
-      created_at: now - 86400 * (30 - i),
-      last_login_at: u.status === 'online' ? now - i * 120 : now - 86400 * (i + 1),
-      last_logout_at: u.status === 'offline' ? now - 3600 * (i + 1) : 0,
-    })),
-    summary: {
-      total_users: DEMO_USERS.length,
-      admins: DEMO_USERS.filter((u) => u.role === 'admin').length,
-      operators: DEMO_USERS.filter((u) => u.role === 'operator').length,
-      online: DEMO_USERS.filter((u) => u.status === 'online').length,
-    },
-  };
-}
-
-/**
- * Returns fake hourly activity data matching the /analysis/activity API shape.
- */
-export function getDemoActivity() {
-  const labels = [];
-  const submitted = [];
-  const completed = [];
-  const failed = [];
-
-  const now = new Date();
-  for (let h = DEMO_ACTIVITY_HOURS - 1; h >= 0; h--) {
-    const d = new Date(now.getTime() - h * 3600000);
-    labels.push(`${String(d.getHours()).padStart(2, '0')}:00`);
-    const s = Math.max(0, Math.round(3 * Math.sin((d.getHours() / 24) * Math.PI * 2) + 2 + Math.random() * 2));
-    const c = Math.max(0, s - Math.floor(Math.random() * 1.2));
-    const f = Math.random() > 0.85 ? 1 : 0;
-    submitted.push(s);
-    completed.push(c);
-    failed.push(f);
-  }
-
-  return {
-    hours: DEMO_ACTIVITY_HOURS,
-    labels,
-    submitted,
-    completed,
-    failed,
-    avg_queue_wait_sec: labels.map(() => +(Math.random() * 0.5).toFixed(2)),
-    avg_solver_sec: labels.map(() => +(1 + Math.random() * 4).toFixed(2)),
-    recent: [],
-  };
-}
+// ── HCMC demo dataset ────────────────────────────────────────────────────────
 
 /**
  * Returns the canonical HCMC demo dataset (12 customers + depot).

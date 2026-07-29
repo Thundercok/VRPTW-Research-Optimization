@@ -41,6 +41,13 @@ export default function AppLayout({ children }) {
         <Header />
         {children}
       </main>
+      <div 
+        className="mobile-sidebar-backdrop" 
+        onClick={() => {
+          document.getElementById('app-shell')?.classList.remove('mobile-open');
+          document.querySelector('.saas-sidebar')?.classList.remove('mobile-open');
+        }} 
+      />
       <ShortcutsOverlay open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
     </div>
   );

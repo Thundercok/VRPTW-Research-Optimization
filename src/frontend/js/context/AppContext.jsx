@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useMemo } from 'react';
 import { createInitialState } from '../createInitialState.js';
+import { overlayKeysFor, resolveActiveOverlay } from '../algoMeta.js';
 import { firebaseService, auth, db } from '../firebaseService.js';
 import { API_BASE } from '../constants.js';
 import { APP_COPY } from './translations.js';
@@ -65,6 +66,26 @@ export function AppContextProvider({ children }) {
       return { ...prev, ...next };
     });
   };
+
+  // Overlays the current result set can actually render. Derived rather than
+  // stored so a result and its dropdown can never disagree.
+  const availableOverlays = useMemo(() => overlayKeysFor(state.lastResult), [state.lastResult]);
+
+  const setActiveOverlay = (key) => {
+    if (!key) return;
+    updateState({ activeOverlay: key });
+  };
+
+  // A re-solve can drop an algorithm (solve_all_algorithms logs and skips a
+  // solver that raised), so the selected overlay may no longer exist. Snap it
+  // back to something renderable instead of leaving the map blank.
+  useEffect(() => {
+    if (!state.lastResult) return;
+    const next = resolveActiveOverlay(state.lastResult, state.activeOverlay);
+    if (next !== state.activeOverlay) {
+      updateState({ activeOverlay: next });
+    }
+  }, [state.lastResult]);
 
   const toast = (title, message = '', tone = '') => {
     const id = Math.random().toString(36).substring(2, 9);
@@ -205,6 +226,11 @@ export function AppContextProvider({ children }) {
 
       const payload = {
         mode: state.mode,
+        // Names the bundled instance so the backend can solve it in its native
+        // Solomon frame and attach the matching best-known solution. Custom
+        // imports send '', which turns the BKS comparison off rather than
+        // scoring against an unrelated instance.
+        dataset: state.mode === 'sample' ? (state.selectedDataset || '') : '',
         fleet: { vehicles: state.vehicles, capacity: state.capacity },
         customers: state.customers,
       };
@@ -318,6 +344,14 @@ export function AppContextProvider({ children }) {
         setLoadingState((prev) => ({ ...prev, active: false }));
         setStatus('Received optimization results from backend.', 'ok');
         toast('Model Completed', 'Results have been rendered on the dashboard.', 'ok');
+
+        // A solver that raised is dropped from the result map server-side. It
+        // used to just vanish from the overlay dropdown, so a run with three
+        // dead algorithms looked identical to a run that only scheduled four.
+        const failed = Array.isArray(data.result?._failed_algos) ? data.result._failed_algos : [];
+        if (failed.length) {
+          toast('Some Solvers Failed', `No result from: ${failed.join(', ')}.`, 'error');
+        }
         return;
       }
       if (data.status === 'failed') {
@@ -472,6 +506,8 @@ export function AppContextProvider({ children }) {
         setStatus,
         request,
         backendAvailable,
+        availableOverlays,
+        setActiveOverlay,
         submitJob,
         cancelJob,
         loginAsGuest,

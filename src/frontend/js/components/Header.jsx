@@ -1,9 +1,21 @@
 import React from 'react';
 import { useAppContext } from '../context/AppContext.jsx';
 import { SAMPLE_SOLOMON_RC } from '../constants.js';
+import { algoLabel } from '../algoMeta.js';
 
 export default function Header() {
-  const { state, updateState, status, statusTone, submitJob, loadSolomonDataset, backendAvailable, t } = useAppContext();
+  const {
+    state,
+    updateState,
+    status,
+    statusTone,
+    submitJob,
+    loadSolomonDataset,
+    backendAvailable,
+    availableOverlays,
+    setActiveOverlay,
+    t,
+  } = useAppContext();
 
   const handleDatasetChange = (e) => {
     const value = e.target.value;
@@ -109,6 +121,16 @@ export default function Header() {
   return (
     <header className="saas-header">
       <div className="header-left">
+        <button 
+          className="mobile-hamburger" 
+          onClick={() => {
+            document.getElementById('app-shell')?.classList.toggle('mobile-open');
+            document.querySelector('.saas-sidebar')?.classList.toggle('mobile-open');
+          }}
+          aria-label="Toggle Menu"
+        >
+          ☰
+        </button>
         <div className="page-title-group">
           <h1 className="page-title">{getPageTitle()}</h1>
           <span className="page-subtitle">{getPageContext()}</span>
@@ -126,17 +148,29 @@ export default function Header() {
       {state.activeTab === 'dispatch' && (
         <div className="header-right">
           {/* Map overlay picker. Lives here, next to the dataset select, rather
-              than over the map — MapController/App repopulate its options after
-              every solve. No caption: the option text names the overlay. */}
+              than over the map. Options come from the result set in state — no
+              imperative repopulation, so the list can never describe a solver
+              the current result does not contain. Disabled until a solve lands:
+              the old hardcoded DDQN/ALNS pair looked live but had no handler
+              attached, because the handler was only wired inside paintResult. */}
           <select
             id="map-view-select"
             className="saas-select map-overlay-select"
-            defaultValue="ddqn"
+            value={availableOverlays.includes(state.activeOverlay) ? state.activeOverlay : (availableOverlays[0] || '')}
+            onChange={(e) => setActiveOverlay(e.target.value)}
+            disabled={!availableOverlays.length}
             aria-label={t('mapOverlay')}
             title={t('mapOverlay')}
           >
-            <option value="ddqn">DDQN</option>
-            <option value="alns">ALNS Base</option>
+            {availableOverlays.length ? (
+              availableOverlays.map((key) => (
+                <option key={key} value={key}>
+                  {algoLabel(key)}
+                </option>
+              ))
+            ) : (
+              <option value="">{t('mapOverlayEmpty')}</option>
+            )}
           </select>
           <select
             id="dataset-select"

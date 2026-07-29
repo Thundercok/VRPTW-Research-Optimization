@@ -7,10 +7,6 @@
     {
       "source": "/api/:path*",
       "destination": "https://vrptw-backend.onrender.com/api/:path*"
-    },
-    {
-      "source": "/health",
-      "destination": "https://vrptw-backend.onrender.com/health"
     }
   ],
   "headers": [

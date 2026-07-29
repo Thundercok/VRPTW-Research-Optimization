@@ -1,4 +1,5 @@
 import { createSkillBadge } from './skillUtils.js';
+import { PREFERRED_ALGO } from './algoMeta.js';
 
 export class SimulationController {
   constructor(app) {
@@ -43,10 +44,10 @@ export class SimulationController {
       this.speed = Number(e.target.value) || 10;
     });
 
-    // Follow the overlay dropdown so simulation layers redraw immediately
-    document.getElementById('map-view-select')?.addEventListener('change', () => {
-      this.updateFrame();
-    });
+    // No listener on the overlay dropdown: that node is remounted by React
+    // whenever the dispatch tab is left and re-entered, which silently orphaned
+    // this listener. LiveDispatchView calls updateFrame() from its
+    // `state.activeOverlay` effect instead.
 
     // Toggle driver app companion
     const btnToggleApp = document.getElementById('btn-toggle-driver-app');
@@ -321,9 +322,9 @@ export class SimulationController {
     }
   }
 
-  /** Overlay currently picked in the KPI strip's dropdown (ddqn, alns, …). */
+  /** Overlay currently selected in app state (ddqn, alns, …). */
   getActiveAlgo() {
-    return document.getElementById('map-view-select')?.value || 'ddqn';
+    return this.app.state.activeOverlay || PREFERRED_ALGO;
   }
 
   getRouteForVehicle(vehicleId) {

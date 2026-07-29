@@ -5,6 +5,7 @@ from typing import Any
 import httpx
 
 REVERSE_GEOCODE_CACHE: dict[tuple[float, float], dict[str, Any]] = {}
+GEOCODE_CACHE: dict[str, dict[str, Any]] = {}
 
 
 def _extract_short_address(data: dict[str, Any]) -> str:
@@ -27,6 +28,10 @@ def _extract_short_address(data: dict[str, Any]) -> str:
 
 
 async def geocode_address(q: str, limit: int) -> dict[str, Any]:
+    cache_key = q.strip().lower()
+    if limit == 1 and cache_key in GEOCODE_CACHE:
+        return GEOCODE_CACHE[cache_key]
+
     headers = {"User-Agent": "vrptw-dashboard/1.0"}
 
     async with httpx.AsyncClient(timeout=8.0) as client:
@@ -65,7 +70,10 @@ async def geocode_address(q: str, limit: int) -> dict[str, Any]:
         }
         for it in data
     ]
-    return {"items": items}
+    result = {"items": items}
+    if limit == 1 and items:
+        GEOCODE_CACHE[cache_key] = result
+    return result
 
 
 async def reverse_geocode_address(lat: float, lng: float) -> dict[str, Any]:

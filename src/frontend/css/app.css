@@ -1720,6 +1720,111 @@ body.demo-active .demo-badge {
   }
 }
 
+.mobile-hamburger {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm, 6px);
+  color: var(--text-main);
+  font-size: 18px;
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.mobile-sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 9998;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.mobile-sidebar-backdrop.visible {
+  display: block;
+  opacity: 1;
+}
+
+.customer-table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  flex: 1;
+  min-height: 0;
+}
+
+@media (max-width: 600px) {
+  .saas-layout {
+    grid-template-columns: 1fr;
+  }
+  .saas-sidebar {
+    position: fixed;
+    left: -100%;
+    top: 0;
+    bottom: 0;
+    width: 280px;
+    z-index: 9999;
+    transition: left 0.3s;
+    box-shadow: 4px 0 24px rgba(0,0,0,0.3);
+  }
+  .saas-sidebar.mobile-open {
+    left: 0;
+  }
+  .mobile-hamburger {
+    display: flex !important;
+  }
+  .saas-header {
+    padding: 8px 12px;
+    min-height: 48px;
+    gap: 8px;
+  }
+  .page-title {
+    font-size: 13px;
+  }
+  .kpi-row {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 4px;
+  }
+  .kpi-card-tools {
+    grid-column: 1 / -1;
+  }
+  .pane-map-full {
+    min-height: 280px;
+  }
+  .customer-table-wrapper table {
+    min-width: 580px;
+  }
+  .header-right {
+    gap: 6px;
+  }
+  .header-right .btn-secondary {
+    padding: 5px 8px;
+    font-size: 10px;
+  }
+  .gantt-container {
+    max-height: 150px;
+  }
+}
+
+@media (max-width: 380px) {
+  .saas-header {
+    padding: 6px 8px;
+    min-height: 42px;
+  }
+  .kpi-card {
+    padding: 6px 8px;
+  }
+  .kpi-value {
+    font-size: 16px;
+  }
+  .kpi-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 .sim-vehicle-card {
   background: color-mix(in srgb, var(--bg-surface) 80%, transparent);
   backdrop-filter: blur(12px);

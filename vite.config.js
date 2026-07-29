@@ -7,12 +7,9 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
+      // The backend mounts everything under /api, health included, so this one
+      // rule covers the whole surface.
       '/api': {
-        target: 'http://127.0.0.1:8000',
-        changeOrigin: true,
-        secure: false,
-      },
-      '/health': {
         target: 'http://127.0.0.1:8000',
         changeOrigin: true,
         secure: false,
