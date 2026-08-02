@@ -24,7 +24,7 @@ LOG_DIR = os.path.join(OUTPUT_BASE, "runtime_logs")
 LIVE_LOG = os.path.join(ROOT, "results", "live_terminal_stream.log")
 
 # Benchmark Configurations
-ALGS = ["ALNS-Base", "Hybrid-Fixed", "Hybrid-Rule", "Hybrid-DDQN", "OR-Tools"]
+ALGS = ["ALNS-Base", "Hybrid-Fixed", "Hybrid-Rule", "Hybrid-DDQN", "GNN-Hybrid-DDQN", "OR-Tools"]
 SHARDS = {
     1: {
         "name": "Clustered (C1/C2)",
@@ -452,10 +452,13 @@ def run_analyze():
     df = pd.concat(all_dfs, ignore_index=True)
     df["Algorithm"] = df["Algorithm"].str.strip()
     
-    # Find instances with all 5 algorithms completed successfully (with valid metrics)
+    # Find instances completed successfully by all present algorithms (with valid metrics)
+    present_algs = [a for a in ALGS if a in df["Algorithm"].values]
+    if not present_algs:
+        present_algs = df["Algorithm"].unique().tolist()
     algo_counts = df.dropna(subset=["NV_mean"]).groupby("Instance")["Algorithm"].nunique()
-    valid_instances = algo_counts[algo_counts == len(ALGS)].index.tolist()
-    print(f"Analyzing {len(valid_instances)} instances completed by all {len(ALGS)} algorithms:")
+    valid_instances = algo_counts[algo_counts == len(present_algs)].index.tolist()
+    print(f"Analyzing {len(valid_instances)} instances completed by all {len(present_algs)} present algorithms ({present_algs}):")
     
     df = df[df["Instance"].isin(valid_instances)]
     
@@ -471,7 +474,7 @@ def run_analyze():
     print("-" * 60)
     for g in sorted(groups):
         insts_g = dataset_map[dataset_map == g].index
-        for algo in ["OR-Tools", "ALNS-Base", "Hybrid-Fixed", "Hybrid-Rule", "Hybrid-DDQN"]:
+        for algo in ["OR-Tools", "ALNS-Base", "Hybrid-Fixed", "Hybrid-Rule", "Hybrid-DDQN", "GNN-Hybrid-DDQN"]:
             if algo in nv_df.columns and algo in td_df.columns:
                 avg_nv = nv_df.loc[insts_g, algo].mean()
                 avg_td = td_df.loc[insts_g, algo].mean()
@@ -499,6 +502,13 @@ def run_analyze():
             if comparison in nv_df.columns:
                 run_test(nv_df["Hybrid-DDQN"], nv_df[comparison], "Hybrid-DDQN", comparison, "NV")
                 run_test(td_df["Hybrid-DDQN"], td_df[comparison], "Hybrid-DDQN", comparison, "TD")
+                print()
+
+    if "GNN-Hybrid-DDQN" in nv_df.columns:
+        for comparison in ["ALNS-Base", "Hybrid-DDQN", "OR-Tools"]:
+            if comparison in nv_df.columns:
+                run_test(nv_df["GNN-Hybrid-DDQN"], nv_df[comparison], "GNN-Hybrid-DDQN", comparison, "NV")
+                run_test(td_df["GNN-Hybrid-DDQN"], td_df[comparison], "GNN-Hybrid-DDQN", comparison, "TD")
                 print()
 
 def main():

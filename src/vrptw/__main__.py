@@ -30,6 +30,9 @@ def cmd_solve(args):
         f"Solving instance {inst.name} (capacity={inst.capacity}, customers={len(inst.demands) - 1}) with {args.algo}..."
     )
 
+    use_gnn = args.algo.startswith("GNN-")
+    target_algo = args.algo[4:] if use_gnn else args.algo
+
     cfg = Config(
         alns_iterations=args.iters,
         hybrid_iterations=args.iters,
@@ -39,17 +42,29 @@ def cmd_solve(args):
         adaptive_feasibility=args.adaptive_feasibility,
     )
 
-    if args.algo == "ALNS-Base":
+    if use_gnn:
+        gnn_path = args.gnn_path
+        if gnn_path is None:
+            default_gnn = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "docs", "model", "gnn_edge_predictor.pt")
+            if os.path.exists(default_gnn):
+                gnn_path = default_gnn
+        cfg.gnn_model_path = gnn_path
+
+    if target_algo == "ALNS-Base":
         solver = ALNSSolver(inst, cfg)
-    elif args.algo == "Hybrid-Fixed":
+    elif target_algo == "Hybrid-Fixed":
         solver = HybridFixedSolver(inst, cfg)
-    elif args.algo == "Hybrid-Rule":
+    elif target_algo == "Hybrid-Rule":
         solver = HybridRuleSolver(inst, cfg)
-    elif args.algo == "Hybrid-DDQN":
+    elif target_algo == "Hybrid-DDQN":
         solver = HybridDDQNSolver(inst, cfg)
     else:
         print(f"Error: Unknown algorithm: {args.algo}")
         sys.exit(1)
+
+    if use_gnn and hasattr(solver, "load_gnn_model") and cfg.gnn_model_path:
+        print(f"Loading GNN model from {cfg.gnn_model_path}...")
+        solver.load_gnn_model(cfg.gnn_model_path)
 
     import time
 
@@ -84,6 +99,13 @@ def cmd_benchmark(args):
         penalty_search_enabled=args.penalty_search,
         adaptive_feasibility=args.adaptive_feasibility,
     )
+
+    gnn_path = args.gnn_path
+    if gnn_path is None:
+        default_gnn = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "docs", "model", "gnn_edge_predictor.pt")
+        if os.path.exists(default_gnn):
+            gnn_path = default_gnn
+    cfg.gnn_model_path = gnn_path
 
     print(f"Loading datasets from: {cfg.data_path}")
     datasets = load_datasets(cfg.data_path)
@@ -144,13 +166,17 @@ def main():
         "--algo",
         type=str,
         default="Hybrid-DDQN",
-        choices=["ALNS-Base", "Hybrid-Fixed", "Hybrid-Rule", "Hybrid-DDQN"],
+        choices=[
+            "ALNS-Base", "Hybrid-Fixed", "Hybrid-Rule", "Hybrid-DDQN",
+            "GNN-ALNS-Base", "GNN-Hybrid-Fixed", "GNN-Hybrid-Rule", "GNN-Hybrid-DDQN"
+        ],
         help="Optimization solver to run",
     )
     p_solve.add_argument("--iters", type=int, default=1200, help="Solver iteration limit")
     p_solve.add_argument("--early-stop", type=int, default=250, help="Early stop patience")
     p_solve.add_argument("--polish", type=int, default=80, help="Local search polishing iterations")
     p_solve.add_argument("--seed", type=int, default=42, help="Random seed")
+    p_solve.add_argument("--gnn-path", type=str, default=None, help="Path to pre-trained GNN model weights")
     p_solve.add_argument("--penalty-search", action="store_true", help="Enable penalty-based infeasible search")
     p_solve.add_argument("--no-adaptive-feasibility", action="store_false", dest="adaptive_feasibility", help="Disable adaptive feasibility management")
     p_solve.set_defaults(func=cmd_solve, adaptive_feasibility=True)
@@ -163,7 +189,7 @@ def main():
         "--algorithms",
         nargs="+",
         dest="algo",
-        default=["ALNS-Base", "Hybrid-Fixed", "Hybrid-Rule", "Hybrid-DDQN"],
+        default=["ALNS-Base", "Hybrid-Fixed", "Hybrid-Rule", "Hybrid-DDQN", "GNN-Hybrid-DDQN"],
         help="Algorithms to include in benchmark",
     )
     p_bench.add_argument("--runs", type=int, default=3, help="Number of runs per algorithm/instance combo")
@@ -171,6 +197,7 @@ def main():
     p_bench.add_argument("--early-stop", type=int, default=250, help="Early stop patience")
     p_bench.add_argument("--polish", type=int, default=80, help="Polish iterations")
     p_bench.add_argument("--seed", type=int, default=42, help="Random seed")
+    p_bench.add_argument("--gnn-path", type=str, default=None, help="Path to pre-trained GNN model weights")
     p_bench.add_argument("--data-path", type=str, default=None, help="Path to Solomon datasets")
     p_bench.add_argument("--output-dir", type=str, default=None, help="Directory to save logs/results")
     p_bench.add_argument("--max-workers", type=int, default=None, help="Maximum number of parallel workers")

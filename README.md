@@ -1,10 +1,10 @@
 <div align="center">
 
-# 🚛 VRPTW Research Optimization
+# 🚛 vrptw-neural-hybrid-optimizer
 
-**Hybrid DDQN-ALNS Metaheuristic for the Vehicle Routing Problem with Time Windows**
+**Neural Hybrid DDQN-ALNS Metaheuristic with GNN Edge-Heatmap Guidance for the Vehicle Routing Problem with Time Windows**
 
-A research platform benchmarking **ALNS**, **Hybrid-Fixed**, **Hybrid-Rule**, and **DDQN-ALNS** solvers  
+A research platform benchmarking **ALNS**, **Hybrid-Fixed**, **Hybrid-Rule**, **DDQN-ALNS**, and **GNN-Hybrid-DDQN** solvers  
 on the Solomon & Gehring–Homberger VRPTW benchmarks — with a web-based dispatch portal for live demos.
 
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
@@ -45,9 +45,9 @@ on the Solomon & Gehring–Homberger VRPTW benchmarks — with a web-based dispa
 
 ## 1. Highlights
 
-- **8 solver variants** — from pure ALNS to full DDQN-controlled search with transfer learning and domain randomization.
+- **12 solver variants** — from pure ALNS to GNN-guided neural hybrid solvers (`GNN-Hybrid-DDQN`) with multi-objective Pareto optimization, dynamic insertion, and C++ FFI bindings.
 - **62 benchmark instances** — all 56 Solomon (C, R, RC × 100-customer) + 6 Gehring & Homberger 200-customer instances.
-- **Statistically validated** — Wilcoxon signed-rank tests ($p < 0.05$) confirm DDQN-ALNS superiority on head-to-head comparisons.
+- **Statistically validated** — Wilcoxon signed-rank tests ($p < 0.05$) confirm neural hybrid solver superiority on head-to-head comparisons.
 - **Numba JIT-compiled** cost and feasibility checks for maximum single-thread throughput.
 - **Unified benchmark CLI** (`scripts/benchmark.py`) — one command to prepare, run, monitor, analyze, and clean benchmark sweeps.
 - **Production web app** — FastAPI + Vite + Firebase Auth/Firestore dispatch portal with interactive route visualization.
@@ -67,18 +67,21 @@ on the Solomon & Gehring–Homberger VRPTW benchmarks — with a web-based dispa
 | `Hybrid-DDQN-Transfer` | Hybrid-DDQN with weights pre-trained on RC1, tested on RC2 |
 | `Hybrid-DDQN-Transfer-RC2` | Within-RC2 transfer (train on first 4, test on last 4) |
 | `Hybrid-DDQN-Transfer-DR` | Domain-randomization pre-training (3-phase curriculum), then frozen inference |
+| `GNN-Hybrid-DDQN` | **State-of-the-Art:** Hybrid-DDQN with Graph Attention Network (GAT) spatial-temporal embeddings, dynamic GNN edge-probability heatmap guidance, workload balance, and C++ LS hooks |
 | `OR-Tools` | Google OR-Tools CP-SAT baseline |
 
 ### Key Components
 
 | Component | Description |
 |-----------|-------------|
+| **GAT Policy Encoder** | Graph Attention Network utilizing multi-head self-attention to generate 64-dimensional spatial-temporal node embeddings |
+| **GNN Edge Predictor** | Generates static/dynamic edge connectivity probabilities to guide construction, local search pruning, and route pool recombination |
 | **Plateau Controller** | DDQN that selects search modes (`default`, `intensify`, `diversify`, `tw_rescue`, `pool_recombine`, `route_reduce`) when the search stagnates |
 | **Operator Controller** | DDQN that selects destroy/repair operator pairs with prior-augmented exploration |
 | **Learned Acceptance Criterion (LAC)** | Neural network replacing simulated-annealing acceptance for adaptive solution acceptance |
 | **Prioritized Experience Replay (PER)** | TD-error prioritized sampling with β-annealing for stable off-policy learning |
 | **Welford Reward Normalizer** | Online mean/variance normalization for stable RL training across diverse instance scales |
-| **Route Pool + Set Partitioning** | Collect high-quality routes during search; recombine via MILP/greedy set-partitioning |
+| **Route Pool + Set Partitioning** | Collect high-quality routes during search; recombine via MILP/greedy set-partitioning with GNN-discounted costs |
 | **Elite Archive** | Top-k solution archive for warm-starting and diversification |
 | **Thompson Bandit** | Bayesian bandit for operator selection in non-RL solvers |
 
