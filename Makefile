@@ -99,3 +99,22 @@ docker-down:
 
 docker-logs:
 	docker compose logs -f
+
+# ── Neural Hybrid Solver & GNN Targets ──────────────────────────────
+train-gnn:
+	PYTHONPATH=./src python3 -m vrptw.train_gnn
+
+smoke-test:
+	PYTHONPATH=./src python3 -m vrptw smoke-test --nodes 25 --dist RC
+
+solve-c101:
+	PYTHONPATH=./src python3 -m vrptw solve data/Solomon/C101.txt --algo GNN-Hybrid-DDQN --iters 150 --early-stop 50
+
+benchmark:
+	PYTHONPATH=./src python3 scripts/benchmark.py run
+
+benchmark-status:
+	PYTHONPATH=./src python3 scripts/benchmark.py status
+
+benchmark-analyze:
+	PYTHONPATH=./src python3 scripts/benchmark.py analyze

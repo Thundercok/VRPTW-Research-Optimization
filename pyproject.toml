@@ -1,7 +1,7 @@
 [project]
-name = "vrptw-research-optimization"
+name = "vrptw-neural-hybrid-optimizer"
 version = "0.1.0"
-description = "VRPTW DDQN-ALNS research and FastAPI demo"
+description = "Neural Hybrid DDQN-ALNS with GNN Edge-Heatmap Guidance for VRPTW"
 readme = "README.md"
 requires-python = ">=3.11,<3.13"
 dependencies = [

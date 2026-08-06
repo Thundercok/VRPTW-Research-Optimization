@@ -2,8 +2,9 @@ import csv
 import re
 import os
 
-input_file = r'C:\D\Github\VRPTW-Research-Optimization\100_customers.csv'
-output_file = r'C:\D\Github\VRPTW-Research-Optimization\100_customers.csv.tmp'
+base_dir = os.path.dirname(os.path.abspath(__file__))
+input_file = os.path.join(base_dir, '100_customers.csv')
+output_file = input_file + '.tmp'
 
 def parse_time(t_str):
     h, m = t_str.strip().split(':')

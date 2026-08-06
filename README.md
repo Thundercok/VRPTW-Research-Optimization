@@ -90,7 +90,7 @@ on the Solomon & Gehring–Homberger VRPTW benchmarks — with a web-based dispa
 ## 3. Project Structure
 
 ```
-VRPTW-Research-Optimization/
+vrptw-neural-hybrid-optimizer/
 ├── src/
 │   ├── vrptw/                        # Research solver package
 │   │   ├── __init__.py               # Public API (all exports)
@@ -154,8 +154,8 @@ VRPTW-Research-Optimization/
 ### Option A — uv (recommended, ~30 s)
 
 ```bash
-git clone https://github.com/Thundercok/VRPTW-Research-Optimization.git
-cd VRPTW-Research-Optimization
+git clone https://github.com/Thundercok/vrptw-neural-hybrid-optimizer.git
+cd vrptw-neural-hybrid-optimizer
 
 uv venv .venv --python 3.12
 source .venv/bin/activate          # macOS/Linux
@@ -168,8 +168,8 @@ npm install                        # frontend dependencies
 ### Option B — plain pip
 
 ```bash
-git clone https://github.com/Thundercok/VRPTW-Research-Optimization.git
-cd VRPTW-Research-Optimization
+git clone https://github.com/Thundercok/vrptw-neural-hybrid-optimizer.git
+cd vrptw-neural-hybrid-optimizer
 
 python3.12 -m venv .venv
 source .venv/bin/activate
